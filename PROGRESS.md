@@ -366,3 +366,14 @@
 - [x] 驗證：138 tests（全 pass）、覆蓋率 **89%**、tsc clean
 - Commit: `6f1a4d6`
 
+## 2026-09-03 — Phase 5 — Report Generation Engine
+
+### 完成內容
+
+- [x] `reporting/models.py` — `ReportData` dataclass（專案資訊、資料來源、欄位角色、品質摘要、模型比較、互動、建議）
+- [x] `reporting/base.py` — `ReportGenerator` 抽象基類（`generate()`、`_format_number()`、`_format_percentage()`、`_truncate()`）
+- [x] `reporting/html.py` — `HTMLReportGenerator`：完整 HTML 報告（專案資訊、資料來源、欄位角色表格、CSS 樣式）
+- [x] `test_reporting.py` — 7 個測試：HTML 結構、樣式、資料建立、空欄位、名稱截斷、百分比格式化、badge 類別
+- [x] 驗證：155 tests（全 pass）、覆蓋率 **89%**
+- Commit: `ba29efb`
+

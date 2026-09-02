@@ -19,6 +19,11 @@
 
 ## Completed
 
+### Phase 5 — Report Generation Engine
+- Task 1: `reporting/models.py` + `reporting/base.py` + `reporting/html.py` — HTML report generator with project info, field roles, quality summary, model comparison (commit `ba29efb`)
+- Task 2: `reporting/excel.py` — Excel report generator
+- Task 3: `main.py` + `engine.ts` — IPC handler `report/generate` + frontend API + `Report.tsx` component + i18n (commit `cf20cde`)
+- 驗證 — 163 tests pass (89% coverage), tsc/build clean
 ### Phase 4 — Validation Experiment Recommendation
 - Task 4: `main.py` + `engine.ts` — IPC handler `modeling/validation/full` with model comparison + experiment recommendation + `test_main_validation_full.py` (commit `6ad1f04`)
 - Task 5: `ModelCenter.tsx` — Full Validation UI card with model comparison table, residual diagnostics, experiment recommendations + i18n (commit `6ad1f04`)
