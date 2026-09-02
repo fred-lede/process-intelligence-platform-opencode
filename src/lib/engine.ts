@@ -722,3 +722,43 @@ export interface MonteCarloParams {
 export async function analyzeMonteCarlo(params: MonteCarloParams): Promise<MonteCarloAnalysisResult> {
   return engineCall<MonteCarloAnalysisResult>('monte_carlo/run', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 10: Interactive Prediction (What-if) --------------------------------
+
+export interface PredictionResult {
+  success: boolean
+  predicted: number
+  equation: string
+  inputs: string[]
+  model_type: string
+}
+
+export interface ModelInfo {
+  success: boolean
+  model_type: string
+  inputs: string[]
+  coefficients: Record<string, number>
+  equation: string
+  n_train: number
+  target: string
+}
+
+export interface InputRange {
+  min: number
+  max: number
+  mean: number
+  std: number
+}
+
+export async function predictOutput(params: {
+  model_id: string
+  input_values: Record<string, number>
+}): Promise<PredictionResult> {
+  return engineCall<PredictionResult>('prediction/predict', params)
+}
+
+export async function getModelInfo(params: {
+  model_id: string
+}): Promise<ModelInfo> {
+  return engineCall<ModelInfo>('prediction/model_info', params)
+}
