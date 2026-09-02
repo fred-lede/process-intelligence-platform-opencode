@@ -133,3 +133,52 @@
 
 - [ ] DOE 實驗設計（factor/screen/response 範本）
 - [ ] AI 混合建模、模型比較、驗證實驗、蒙地卡羅模擬、互動預測、報告匯出
+
+## 2026-09-02 — Phase 3a 完成（模型中心：DOE + AI + 混合模型）
+
+### 完成內容
+
+- [x] 3.1 模型比較指標 `modeling/metrics.py`（TDD）：RMSE, MSE, MAE, R², Adjusted R²；R² 在 ss_tot=0 且有殘差時回傳 -1.0
+- [x] 3.2 模型配適器 `modeling/fitters.py`（TDD）：
+  - DOE 線性 / DOE 二次（`_design_matrix` 含 intercept + 平方 + 交互項）
+  - 隨機樹回歸（sklearn RandomForestRegressor）
+  - 殘差混合模型（Y = f_DOE(X) + r_RF(X)，先 shuffle 分 train/test）
+  - `ModelFit` dataclass + `to_dto()`（JSON 安全）
+- [x] 3.3 不可變版本登錄 `modeling/registry.py`（TDD）：
+  - `ModelRegistry`（thread-safe，threading.Lock）
+  - 單調遞增版本號、永不覆寫
+  - 狀態機：draft → pending_validation → validated → approved；任一狀態可 → retired
+- [x] 3.4 main.py IPC handlers（TDD）：`modeling/fit`、`modeling/list`、`modeling/transition`
+- [x] 3.5 前端 modeling API：`src/lib/engine.ts` 新增 ModelType/ModelStatus/ModelMetrics/ModelFitDTO 型別 + fitModel/listModels/transitionModel
+- [x] Code quality 修正：移除 main.py 未使用 import、registry `_get_unlocked` 改名 + docstring 修正 + 2 補充測試
+
+### 驗證結果
+
+- 引擎：**93 tests passed**（Phase 0-2: 68 + Phase 3a: 25），覆蓋率 **88%**
+- Rust：`cargo check` ✅（1 warning, EngineManager::stop dead_code, 非回歸）
+- 前端：`tsc --noEmit` ✅、`npm run build` ✅（plotly 大檔 warning，非回歸）
+
+### Commits（phase3-model-center 分支）
+
+| Hash | 說明 |
+|------|------|
+| da6079d | feat(modeling): add regression comparison metrics |
+| 28c8c55 | feat(modeling): DOE linear/quadratic, random forest, residual hybrid fits |
+| 419ea2b | feat(modeling): include mse in model comparison metrics |
+| d677820 | fix(modeling): correct adj_r2 feature count, always shuffle hybrid split, expose intercept |
+| 68c36ef | feat(modeling): immutable model registry with status machine |
+| 9761d9b | docs: update TASK.md for Phase 3a model registry |
+| ce94297 | refactor(modeling): private lock-holder helper, accurate immutability doc, retire/unknown-status tests |
+| be9d996 | feat(modeling): expose modeling/fit, modeling/list, modeling/transition IPC |
+| 82ae1bb | chore(modeling): remove unused InvalidStatusTransition import |
+| ff735a6 | feat(modeling): add frontend model API types |
+
+### 待辦 (Phase 3b — 模型中心 UI)
+
+- [ ] DOE 設計庫（full factorial / fractional / CCD / Box-Behnken / Latin Hypercube / OptSpace）
+- [ ] 交互作用分析（二因素交互、三因素交互）
+- [ ] 模型比較 / 模型中心前端 UI
+- [ ] 驗證實驗推薦
+- [ ] SHAP 可解釋性
+- [ ] 外插風險評分
+- [ ] Logistic / 計數 / 可靠度模型
