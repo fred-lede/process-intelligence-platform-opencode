@@ -6,6 +6,12 @@
 - Task 3: `ModelCenter.tsx` — 熱圖 UI + i18n (commit `9632e7e`)
 - Task 4: 驗證 — 117 tests (89% coverage), tsc/build clean
 
+### Phase 3b-5 — SHAP 可解釋性
+- Task 1: `shap_explainer.py` — SHAP 值計算 (commit `826986c`)
+- Task 2: `main.py` + `engine.ts` — IPC handler + API wrapper (commit `5ef27f3`)
+- Task 3: `ModelCenter.tsx` — 特徵重要性圖 + SHAP 摘要圖 (commit `866699e`)
+- Task 4: 驗證 — 123 tests (89% coverage), tsc/build clean
+
 ## Completed
 
 ### Phase 3a — Model Center Engine Core
