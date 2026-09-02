@@ -42,7 +42,10 @@
   },
   "assistant": {
     "title": "AI Assistant",
-    "placeholder": "Ask about this analysis..."
+    "placeholder": "Type your message...",
+    "welcome": "Hello! I'm your AI assistant. I can help you analyze data, explain models, and suggest experiments. How can I help you today?",
+    "online": "Online",
+    "offline": "Offline"
   },
   "project": {
     "welcome": "Welcome to Process Intelligence Platform",

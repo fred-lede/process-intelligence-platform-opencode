@@ -490,3 +490,38 @@ export async function getAuditLog(limit: number = 100): Promise<{ log: AuditEntr
 export async function listUsers(): Promise<{ users: UserRecord[] }> {
   return engineCall<{ users: UserRecord[] }>('users/list', {})
 }
+
+// --- Phase 7: Ollama AI Assistant ------------------------------------------
+
+export interface AIChatMessage {
+  role: 'user' | 'assistant' | 'system'
+  content: string
+}
+
+export interface AIChatResult {
+  success: boolean
+  response?: string
+  error?: string
+}
+
+export interface AIModelsResult {
+  success: boolean
+  models?: string[]
+  error?: string
+}
+
+export interface AIHealthResult {
+  healthy: boolean
+}
+
+export async function aiChat(messages: AIChatMessage[], model?: string): Promise<AIChatResult> {
+  return engineCall<AIChatResult>('ai/chat', { messages, model })
+}
+
+export async function listAIModels(): Promise<AIModelsResult> {
+  return engineCall<AIModelsResult>('ai/models', {})
+}
+
+export async function checkAIHealth(): Promise<AIHealthResult> {
+  return engineCall<AIHealthResult>('ai/health', {})
+}

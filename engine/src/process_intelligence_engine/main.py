@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import sys
+import asyncio
 import threading
 import traceback
 import uuid
@@ -48,6 +49,7 @@ from process_intelligence_engine.reporting.html import HTMLReportGenerator
 from process_intelligence_engine.reporting.excel import ExcelReportGenerator
 from process_intelligence_engine.auth.models import UserRole, AuditAction
 from process_intelligence_engine.auth.manager import AuthManager
+from process_intelligence_engine.ai.ollama_client import get_ollama_client
 
 
 def _plain_types(value):
@@ -530,6 +532,39 @@ def _handle_current_user(params: dict) -> dict:
     return {"username": None, "role": None}
 
 
+def _handle_ai_chat(params: dict) -> dict:
+    """Handle AI chat request."""
+    client = get_ollama_client()
+    messages = params.get("messages", [])
+    model = params.get("model", "gemma4:e2b-mlx")
+
+    if model != client.model:
+        client.model = model
+
+    try:
+        response = asyncio.run(client.chat(messages))
+        return {"success": True, "response": response}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _handle_ai_models(params: dict) -> dict:
+    """List available Ollama models."""
+    client = get_ollama_client()
+    try:
+        models = asyncio.run(client.list_models())
+        return {"success": True, "models": [m["name"] for m in models]}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _handle_ai_health(params: dict) -> dict:
+    """Check Ollama health."""
+    client = get_ollama_client()
+    is_healthy = asyncio.run(client.health_check())
+    return {"healthy": is_healthy}
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -613,6 +648,13 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_users_list(params)
     if method == "auth/current":
         return _handle_current_user(params)
+
+    if method == "ai/chat":
+        return _handle_ai_chat(params)
+    if method == "ai/models":
+        return _handle_ai_models(params)
+    if method == "ai/health":
+        return _handle_ai_health(params)
 
     raise ValueError(f"Unknown method: {method}")
 
