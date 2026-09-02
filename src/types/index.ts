@@ -1,7 +1,6 @@
 export type AppTab =
   | 'project'
   | 'dataImport'
-  | 'dataCheck'
   | 'processDefine'
   | 'exploration'
   | 'modelCenter'

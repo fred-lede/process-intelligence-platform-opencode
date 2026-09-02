@@ -3,7 +3,6 @@ import { Layout, Menu, Select, Typography, Button, Modal } from 'antd'
 import {
   DashboardOutlined,
   ImportOutlined,
-  CheckCircleOutlined,
   ApartmentOutlined,
   BarChartOutlined,
   ExperimentOutlined,
@@ -27,7 +26,6 @@ interface SidebarProps {
 const tabItems = [
   { key: 'project', icon: <DashboardOutlined /> },
   { key: 'dataImport', icon: <ImportOutlined /> },
-  { key: 'dataCheck', icon: <CheckCircleOutlined /> },
   { key: 'processDefine', icon: <ApartmentOutlined /> },
   { key: 'exploration', icon: <BarChartOutlined /> },
   { key: 'modelCenter', icon: <ExperimentOutlined /> },

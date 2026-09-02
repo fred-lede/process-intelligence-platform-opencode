@@ -5,7 +5,6 @@
   "nav": {
     "project": "專案總覽",
     "dataImport": "資料匯入",
-    "dataCheck": "資料檢查",
     "processDefine": "製程定義",
     "exploration": "探索分析",
     "modelCenter": "模型中心",

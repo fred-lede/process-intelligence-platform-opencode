@@ -5,7 +5,6 @@
   "nav": {
     "project": "Project Overview",
     "dataImport": "Data Import",
-    "dataCheck": "Data Check",
     "processDefine": "Process Definition",
     "exploration": "Exploration",
     "modelCenter": "Model Center",
