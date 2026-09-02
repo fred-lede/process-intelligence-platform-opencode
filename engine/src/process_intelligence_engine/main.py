@@ -56,6 +56,7 @@ from process_intelligence_engine.spc import (
     compute_xbar_s,
     compute_capability,
 )
+from process_intelligence_engine.monte_carlo import run_monte_carlo
 from process_intelligence_engine.settings import get_settings_manager
 
 
@@ -643,6 +644,39 @@ def _handle_spc_capability(params: dict) -> dict:
     return {"success": True, "capability": capability}
 
 
+def _handle_monte_carlo_run(params: dict) -> dict:
+    """Run Monte Carlo simulation."""
+    did = params["dataset_id"]
+    model_id = params["model_id"]
+    df = REGISTRY.get(did)
+    fit = MODEL_REGISTRY.get(model_id)
+
+    if fit.model_type not in ("doe_linear", "doe_quadratic"):
+        raise ValueError(f"Monte Carlo only supports doe_linear and doe_quadratic models, got {fit.model_type}")
+
+    n_simulations = params.get("n_simulations", 10000)
+    seed = params.get("seed", 42)
+    enable_anomalies = params.get("enable_anomalies", False)
+    anomalies = params.get("anomalies", [])
+    lsl = params.get("lsl")
+    usl = params.get("usl")
+
+    result = run_monte_carlo(
+        df=df,
+        model_type=fit.model_type,
+        coefficients=fit.coefficients or {},
+        input_columns=fit.inputs,
+        output_column=fit.target,
+        n_simulations=n_simulations,
+        seed=seed,
+        enable_anomalies=enable_anomalies,
+        anomalies=anomalies,
+        lsl=lsl,
+        usl=usl,
+    )
+    return {"success": True, "result": result}
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -745,6 +779,9 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_spc_analyze(params)
     if method == "spc/capability":
         return _handle_spc_capability(params)
+
+    if method == "monte_carlo/run":
+        return _handle_monte_carlo_run(params)
 
     raise ValueError(f"Unknown method: {method}")
 
