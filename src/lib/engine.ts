@@ -646,3 +646,79 @@ export async function getSPCCapability(params: {
 }): Promise<SPCCapabilityResult> {
   return engineCall<SPCCapabilityResult>('spc/capability', params)
 }
+
+// --- Phase 9: Monte Carlo Simulation ----------------------------------------
+
+export interface MonteCarloHistogram {
+  bins: number[]
+  counts: number[]
+}
+
+export interface MonteCarloCDFData {
+  x: number[]
+  y: number[]
+}
+
+export interface MonteCarloBoxplotData {
+  normal: number[]
+  single_anomaly: number[]
+  multi_anomaly: number[]
+}
+
+export interface MonteCarloAnomalyRanking {
+  anomaly_id: string
+  name: string
+  ng_contribution: number
+  probability: number
+}
+
+export interface MonteCarloPercentiles {
+  p1: number
+  p5: number
+  p50: number
+  p95: number
+  p99: number
+}
+
+export interface MonteCarloResult {
+  n_simulations: number
+  seed: number
+  ng_count: number
+  ng_probability: number
+  output_mean: number
+  output_std: number
+  output_median: number
+  percentiles: MonteCarloPercentiles
+  histogram: MonteCarloHistogram
+  cdf_data: MonteCarloCDFData
+  boxplot_data: MonteCarloBoxplotData
+  anomaly_rankings: MonteCarloAnomalyRanking[]
+  multi_anomaly_ng: number
+}
+
+export interface MonteCarloAnalysisResult {
+  success: boolean
+  result: MonteCarloResult
+}
+
+export interface MonteCarloParams {
+  dataset_id: string
+  model_id: string
+  n_simulations?: number
+  seed?: number
+  enable_anomalies?: boolean
+  anomalies?: Array<{
+    anomaly_id: string
+    name: string
+    target_input: string
+    direction: 'above' | 'below'
+    occurrence_probability: number
+    magnitude_distribution: Record<string, unknown>
+  }>
+  lsl?: number
+  usl?: number
+}
+
+export async function analyzeMonteCarlo(params: MonteCarloParams): Promise<MonteCarloAnalysisResult> {
+  return engineCall<MonteCarloAnalysisResult>('monte_carlo/run', params as unknown as Record<string, unknown>)
+}
