@@ -100,6 +100,13 @@
 ### Settings AI Provider 修復
 - Task 1: 修復 `test_connection()` 跨 module import 錯誤（`settings/__init__.py` → `..ai.ollama_client`）（commit `514aed2`）
 - Task 2: 新增 provider-aware 連線測試（ollama 用 OllamaClient，openai/azure/custom 用 HTTP GET /models）（commit `514aed2`）
+- 驗證 — 195 passed, 1 skipped (87% coverage), tsc/build clean
+
+### 修復：設定持久化 + AI 模型同步
+- Task 1: 修復 `test_connection()` 跨 module import 錯誤（`settings/__init__.py` → `..ai.ollama_client`）（commit `514aed2`）
+- Task 2: 新增 provider-aware 連線測試（ollama 用 OllamaClient，openai/azure/custom 用 HTTP GET /models）（commit `514aed2`）
 - Task 3: 統一模型配置至設定頁，移除 AssistantPanel 中的模型下拉選單（commit `a05e74d`）
 - Task 4: 模型欄位改為 Select 下拉，支援從 Ollama API 載入可用模型列表，允許搜尋/自訂輸入（commit `21ee4d3`）
+- Task 5: 修復 Form 無法載入已儲存設定的問題 — 改用 `form.setFieldsValue()` 同步 async 載入的設定（commit `1ee4fa1`）
+- Task 6: 修復 AI 聊天仍用舊模型的問題 — 每次 chat 請求時從 settings 同步 `base_url` 和 `model`（commit `8a5ba8c`）
 - 驗證 — 195 passed, 1 skipped (87% coverage), tsc/build clean

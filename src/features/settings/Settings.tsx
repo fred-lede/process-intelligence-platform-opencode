@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined } from '@ant-design/icons'
+import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons'
 import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels } from '../../lib/engine'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
@@ -50,21 +50,22 @@ export default function Settings() {
     }
   }
 
+  const [loadingModels, setLoadingModels] = useState(false)
   const loadModels = async () => {
     try {
+      setLoadingModels(true)
       const result = await listAIModels()
       if (result.success && result.models) {
         setAvailableModels(result.models)
       }
     } catch { /* ignore */ }
+    finally {
+      setLoadingModels(false)
+    }
   }
 
   useEffect(() => {
-    if (aiConfig.provider === 'ollama') {
-      loadModels()
-    } else {
-      setAvailableModels([])
-    }
+    loadModels()
   }, [aiConfig.provider])
 
   const loadData = async () => {
@@ -275,6 +276,9 @@ export default function Settings() {
 
             <Form.Item>
               <Space>
+                <Button onClick={loadModels} loading={loadingModels} icon={<ReloadOutlined />}>
+                  {t('settings.refreshModels')}
+                </Button>
                 <Button type="primary" onClick={handleSaveAIConfig} loading={savingAI}>
                   {t('settings.save')}
                 </Button>
