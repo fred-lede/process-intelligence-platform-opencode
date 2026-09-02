@@ -262,5 +262,15 @@
     "preview": "HTML Preview",
     "generateSuccess": "Report generated successfully",
     "generateError": "Failed to generate report"
+  },
+  "about": {
+    "title": "About",
+    "appName": "Process Intelligence Platform",
+    "description": "An interpretable, traceable, and model-switchable process analysis platform. Supports macOS / Windows desktop applications, combining traditional DOE with AI-assisted analysis.",
+    "author": "Author",
+    "version": "Version",
+    "license": "License",
+    "github": "GitHub: fred-lede/process-intelligence-platform-opencode",
+    "close": "Close"
   }
 }

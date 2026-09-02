@@ -262,5 +262,15 @@
     "preview": "HTML 預覽",
     "generateSuccess": "報告產生成功",
     "generateError": "報告產生失敗"
+  },
+  "about": {
+    "title": "關於",
+    "appName": "Process Intelligence Platform",
+    "description": "可解釋、可追溯、可切換模型的製程分析平台。支援 macOS / Windows 桌面應用，結合傳統 DOE 與 AI 輔助分析。",
+    "author": "作者",
+    "version": "版本",
+    "license": "授權",
+    "github": "GitHub: fred-lede/process-intelligence-platform-opencode",
+    "close": "關閉"
   }
 }
