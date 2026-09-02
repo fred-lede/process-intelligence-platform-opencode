@@ -28,9 +28,28 @@ class ColumnStats:
     numeric: bool
     non_null_count: int
     unique_count: int
+    mean: float | None = None
+    std: float | None = None
+    min: float | None = None
+    max: float | None = None
 
     def __getitem__(self, key: str):
         return getattr(self, key)
+
+
+def _compute_numeric_stats(values: list) -> dict:
+    """Compute mean/std/min/max for a column of numeric values."""
+    if pd is None:
+        return {"mean": None, "std": None, "min": None, "max": None}
+    nums = pd.to_numeric(pd.Series(values), errors="coerce").dropna()
+    if nums.empty:
+        return {"mean": None, "std": None, "min": None, "max": None}
+    return {
+        "mean": float(nums.mean()),
+        "std": float(nums.std()) if len(nums) > 1 else 0.0,
+        "min": float(nums.min()),
+        "max": float(nums.max()),
+    }
 
 
 @dataclass
@@ -199,10 +218,12 @@ def _import_csv(path: Path, preview_rows: int = 50) -> ImportResult:
         for col in columns:
             values = frame[col].tolist()
             non_null = [v for v in values if v is not None and str(v).strip() != ""]
+            ns = _compute_numeric_stats(values)
             column_stats[col] = ColumnStats(
                 numeric=_infer_numeric(values),
                 non_null_count=len(non_null),
                 unique_count=len(set(non_null)),
+                **ns,
             )
         stats = ImportStats(row_count=row_count, column_count=column_count, column_stats=column_stats)
 
@@ -247,10 +268,12 @@ def _import_excel(path: Path, preview_rows: int = 50) -> ImportResult:
     for col in columns:
         values = frame[col].tolist()
         non_null = [v for v in values if v is not None and not (isinstance(v, float) and pd.isna(v)) and str(v).strip() != ""]
+        ns = _compute_numeric_stats(values)
         column_stats[col] = ColumnStats(
             numeric=_infer_numeric([str(v) if v is not None else None for v in values]),
             non_null_count=len(non_null),
             unique_count=len(set(non_null)),
+            **ns,
         )
     stats = ImportStats(row_count=row_count, column_count=column_count, column_stats=column_stats)
 

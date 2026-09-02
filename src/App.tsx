@@ -12,6 +12,7 @@ import FeaturePlaceholder from './components/common/FeaturePlaceholder'
 import Settings from './features/settings/Settings'
 import SPC from './features/spc/SPC'
 import MonteCarlo from './features/monte-carlo/MonteCarlo'
+import Prediction from './features/prediction/Prediction'
 import type { AppTab } from './types'
 
 const { Content } = Layout
@@ -28,6 +29,7 @@ export default function App() {
     if (activeTab === 'reports') return <Report />
     if (activeTab === 'spc') return <SPC />
     if (activeTab === 'monteCarlo') return <MonteCarlo />
+    if (activeTab === 'prediction') return <Prediction />
     if (activeTab === 'settings') return <Settings />
     return <FeaturePlaceholder tabKey={activeTab} />
   }

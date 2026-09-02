@@ -81,6 +81,10 @@
 - Sidebar + App.tsx 路由整合
 - 驗證 — 239 passed, 1 skipped (88% coverage), tsc/build clean
 
+### Phase 10 — Interactive Prediction (What-if)
+- `engine.ts` — `PredictionResult`, `ModelInfo`, `InputRange` TypeScript 類型 + `predictOutput()` + `getModelInfo()` API 函數
+- TypeScript compile clean, build clean
+
 ## In Progress
 - None
 
@@ -90,4 +94,4 @@
 ---
 **測試狀態**：239 passed, 1 skipped (88% coverage)
 **Code Stats**：~4,100 lines total
-**Commits**：87 (main branch fully deployed)
+**Commits**：88 (main branch fully deployed)

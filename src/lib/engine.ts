@@ -37,6 +37,10 @@ export interface ColumnStats {
   numeric: boolean
   non_null_count: number
   unique_count: number
+  mean?: number
+  std?: number
+  min?: number
+  max?: number
 }
 
 export interface ImportResult {

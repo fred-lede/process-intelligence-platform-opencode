@@ -338,6 +338,22 @@
     "selectModelFirst": "請選擇模型並按「執行模擬」。",
     "noData": "請先匯入資料。"
   },
+  "prediction": {
+    "title": "互動預測 (What-if)",
+    "selectModel": "選擇模型",
+    "noModels": "尚未訓練模型。請先到模型中心訓練。",
+    "equation": "方程式",
+    "inputValue": "輸入值",
+    "predictedOutput": "預測輸出",
+    "ngStatus": "規格判定",
+    "inSpec": "在規格內",
+    "belowLSL": "低於 LSL",
+    "aboveUSL": "高於 USL",
+    "distanceToLimit": "距離邊界",
+    "restoreDefaults": "還原預設值",
+    "noData": "請先匯入資料。",
+    "selectModelFirst": "請選擇模型。"
+  },
   "spc": {
     "title": "SPC 統計製程控制",
     "dataSource": "資料來源",

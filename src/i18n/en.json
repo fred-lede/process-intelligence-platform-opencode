@@ -338,6 +338,22 @@
     "selectModelFirst": "Please select a model and click Run Simulation.",
     "noData": "Please import data first."
   },
+  "prediction": {
+    "title": "Interactive Prediction (What-if)",
+    "selectModel": "Select Model",
+    "noModels": "No trained models yet. Go to Model Center to train one first.",
+    "equation": "Equation",
+    "inputValue": "Input Value",
+    "predictedOutput": "Predicted Output",
+    "ngStatus": "NG Status",
+    "inSpec": "In Spec",
+    "belowLSL": "Below LSL",
+    "aboveUSL": "Above USL",
+    "distanceToLimit": "Distance to Limit",
+    "restoreDefaults": "Restore Defaults",
+    "noData": "Please import data first.",
+    "selectModelFirst": "Please select a model."
+  },
   "spc": {
     "title": "SPC Control",
     "dataSource": "Data Source",
