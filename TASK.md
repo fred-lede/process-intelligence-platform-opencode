@@ -110,4 +110,5 @@
 - Task 5: 修復 Form 無法載入已儲存設定的問題 — 改用 `form.setFieldsValue()` 同步 async 載入的設定（commit `1ee4fa1`）
 - Task 6: 修復 AI 聊天仍用舊模型的問題 — 每次 chat 請求時從 settings 同步 `base_url` 和 `model`（commit `8a5ba8c`）
 - Task 7: 修復模型下拉選單無法載入的問題 — 加入 enginePing 就緒檢查 + 自動重試機制（commit `6683e85`）
+- Task 8: AI 助手加入思考動畫（Spin + LoadingOutlined），Enter 鍵支援已內建（commit `7da6b9a`）
 - 驗證 — 195 passed, 1 skipped (87% coverage), tsc/build clean

@@ -41,12 +41,13 @@ export default function Settings() {
   const loadSettings = async () => {
     try {
       const result = await getSettings()
+      console.log('[Settings] Loaded config:', result.config)
       if (result.config) {
         setAiConfig(result.config)
         aiForm.setFieldsValue(result.config)
       }
-    } catch {
-      // Use defaults
+    } catch (e) {
+      console.error('[Settings] Load error:', e)
     }
   }
 
@@ -135,14 +136,17 @@ export default function Settings() {
   }
 
   const handleSaveAIConfig = async () => {
+    console.log('[Settings] Saving aiConfig:', aiConfig)
     setSavingAI(true)
     try {
       const result = await updateSettings(aiConfig)
+      console.log('[Settings] Save result:', result)
       if (result.success) {
         setAiConfig(result.config)
         messageApi.success(t('settings.aiConfigSaved'))
       }
-    } catch {
+    } catch (e) {
+      console.error('[Settings] Save error:', e)
       messageApi.error(t('settings.aiConfigSaveFailed'))
     } finally {
       setSavingAI(false)
