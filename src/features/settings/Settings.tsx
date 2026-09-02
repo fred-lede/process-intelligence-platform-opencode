@@ -145,7 +145,6 @@ export default function Settings() {
   }
 
   const handleSaveAIConfig = async () => {
-    console.log('[Settings] Saving aiConfig:', aiConfig)
     setSavingAI(true)
     try {
       const result = await updateSettings(aiConfig)
