@@ -273,5 +273,20 @@
     "license": "License",
     "github": "GitHub: fred-lede/process-intelligence-platform-opencode",
     "close": "Close"
+  },
+  "settings": {
+    "currentUser": "Current User",
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register User",
+    "username": "Username",
+    "password": "Password",
+    "role": "Role",
+    "notLoggedIn": "Not logged in. Please login or register.",
+    "users": "Users",
+    "auditLog": "Audit Log",
+    "viewer": "Viewer",
+    "engineer": "Engineer",
+    "admin": "Admin"
   }
 }

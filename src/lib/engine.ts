@@ -439,3 +439,54 @@ export interface ReportResult {
 export async function generateReport(params: ReportParams): Promise<ReportResult> {
   return engineCall<ReportResult>('report/generate', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 6: Auth & Audit -----------------------------------------------
+
+export type UserRole = 'admin' | 'engineer' | 'viewer'
+
+export interface AuthResult {
+  success: boolean
+  username?: string
+  role?: UserRole
+  error?: string
+}
+
+export interface UserRecord {
+  username: string
+  role: UserRole
+  created_at: string
+  is_active: boolean
+}
+
+export interface AuditEntry {
+  id: string
+  timestamp: string
+  username: string
+  action: string
+  target: string
+  details: Record<string, unknown>
+}
+
+export async function login(username: string, password: string): Promise<AuthResult> {
+  return engineCall<AuthResult>('auth/login', { username, password })
+}
+
+export async function logout(): Promise<AuthResult> {
+  return engineCall<AuthResult>('auth/logout', {})
+}
+
+export async function registerUser(username: string, role: UserRole): Promise<AuthResult> {
+  return engineCall<AuthResult>('auth/register', { username, role })
+}
+
+export async function getCurrentUser(): Promise<{ username: string | null; role: UserRole | null }> {
+  return engineCall<{ username: string | null; role: UserRole | null }>('auth/current', {})
+}
+
+export async function getAuditLog(limit: number = 100): Promise<{ log: AuditEntry[] }> {
+  return engineCall<{ log: AuditEntry[] }>('audit/log', { limit })
+}
+
+export async function listUsers(): Promise<{ users: UserRecord[] }> {
+  return engineCall<{ users: UserRecord[] }>('users/list', {})
+}

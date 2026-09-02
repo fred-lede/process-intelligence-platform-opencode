@@ -9,6 +9,7 @@ import Exploration from './features/exploration/Exploration'
 import ModelCenter from './features/model-center/ModelCenter'
 import Report from './features/report/Report'
 import FeaturePlaceholder from './components/common/FeaturePlaceholder'
+import Settings from './features/settings/Settings'
 import type { AppTab } from './types'
 
 const { Content } = Layout
@@ -23,6 +24,7 @@ export default function App() {
     if (activeTab === 'exploration') return <Exploration />
     if (activeTab === 'modelCenter') return <ModelCenter />
     if (activeTab === 'reports') return <Report />
+    if (activeTab === 'settings') return <Settings />
     return <FeaturePlaceholder tabKey={activeTab} />
   }
 

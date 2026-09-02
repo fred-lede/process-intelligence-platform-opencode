@@ -46,6 +46,8 @@ from process_intelligence_engine.modeling.registry import ModelRegistry
 from process_intelligence_engine.reporting.models import ReportData
 from process_intelligence_engine.reporting.html import HTMLReportGenerator
 from process_intelligence_engine.reporting.excel import ExcelReportGenerator
+from process_intelligence_engine.auth.models import UserRole, AuditAction
+from process_intelligence_engine.auth.manager import AuthManager
 
 
 def _plain_types(value):
@@ -105,6 +107,7 @@ class DatasetRegistry:
 # Registry shared across requests within a single engine process.
 REGISTRY = DatasetRegistry()
 MODEL_REGISTRY = ModelRegistry()
+AUTH_MANAGER = AuthManager()
 
 
 def _handle_import(params: dict) -> dict:
@@ -486,6 +489,47 @@ def _handle_doe_generate(params: dict) -> dict:
     )
 
 
+def _handle_auth_login(params: dict) -> dict:
+    username = params.get("username", "")
+    password = params.get("password", "")
+    user = AUTH_MANAGER.authenticate(username, password)
+    if user:
+        return {"success": True, "username": user.username, "role": user.role.value}
+    return {"success": False, "error": "Invalid credentials"}
+
+
+def _handle_auth_logout(params: dict) -> dict:
+    AUTH_MANAGER.logout()
+    return {"success": True}
+
+
+def _handle_auth_register(params: dict) -> dict:
+    username = params.get("username", "")
+    role = params.get("role", "viewer")
+    try:
+        user_role = UserRole(role)
+    except ValueError:
+        raise ValueError(f"Invalid role: {role}")
+    user = AUTH_MANAGER.register_user(username, user_role)
+    return {"success": True, "username": user.username, "role": user.role.value}
+
+
+def _handle_audit_log(params: dict) -> dict:
+    limit = params.get("limit", 100)
+    return {"log": AUTH_MANAGER.get_audit_log(limit)}
+
+
+def _handle_users_list(params: dict) -> dict:
+    return {"users": AUTH_MANAGER.get_users()}
+
+
+def _handle_current_user(params: dict) -> dict:
+    user = AUTH_MANAGER.current_user
+    if user:
+        return {"username": user.username, "role": user.role.value}
+    return {"username": None, "role": None}
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -556,6 +600,19 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "report/generate":
         return _handle_report_generate(params)
+
+    if method == "auth/login":
+        return _handle_auth_login(params)
+    if method == "auth/logout":
+        return _handle_auth_logout(params)
+    if method == "auth/register":
+        return _handle_auth_register(params)
+    if method == "audit/log":
+        return _handle_audit_log(params)
+    if method == "users/list":
+        return _handle_users_list(params)
+    if method == "auth/current":
+        return _handle_current_user(params)
 
     raise ValueError(f"Unknown method: {method}")
 
