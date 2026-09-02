@@ -34,3 +34,4 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --cov=process_intelligence_engine"
+asyncio_mode = "auto"

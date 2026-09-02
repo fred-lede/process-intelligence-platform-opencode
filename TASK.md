@@ -90,3 +90,9 @@
 
 ## Pending
 - None
+
+### Phase 7 — Ollama AI Assistant Integration
+- Task 1: `ai/ollama_client.py` — Ollama async client with chat/generate/list_models/health_check + singleton (commit `929748f`)
+- 驗證 — 185 passed, 1 skipped (88% coverage)
+- Task 2: `main.py` + `engine.ts` — IPC handlers `ai/chat`, `ai/models`, `ai/health` + frontend API + `AssistantPanel.tsx` functional chat UI + i18n (commit `bcd35fc`)
+- 驗證 — 190 passed, 1 skipped (88% coverage), tsc/build clean
