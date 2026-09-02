@@ -51,8 +51,10 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 ├── engine/         # Python 分析引擎
 │   ├── src/process_intelligence_engine/
 │   │   ├── main.py        # IPC dispatch + dataset registry + JSON 淨化
-│   │   └── data/          # importer / field_detector / quality / distribution
-│   └── tests/             # 55 tests (含 test_e2e_pipeline.py 子進程 E2E)
+│   │   ├── data/          # importer / field_detector / quality / distribution
+│   │   ├── analysis/      # anomaly scenarios / analysis package
+│   │   └── modeling/      # metrics / fitters / registry (DOE + AI + hybrid)
+│   └── tests/             # 93 tests (含 test_e2e_pipeline.py 子進程 E2E)
 ├── ai/             # AI 服務層 (Phase 5)
 ├── projects/       # 使用者專案 (gitignore)
 └── docs/           # 規格文件
@@ -66,7 +68,7 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 - **製程定義**: 輸出欄位、單位、LSL/USL/目標值 (含驗證)、輸入參數
 - **探索分析**: Plotly 直方圖 + 分布配適密度曲線 (AIC/BIC/KS 排序)、趨勢圖 + 規格線
 - **專案保存/載入**: `.piproj.json`
-- **驗證**: 引擎 55 tests (覆蓋率 84%)、Rust↔Python IPC 測試、tauri dev 三進程冒煙測試
+- **驗證**: 引擎 93 tests (覆蓋率 88%)、Rust↔Python IPC 測試、tauri dev 三進程冒煙測試
 
 ### 資料流 (Phase 1)
 
@@ -76,6 +78,26 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
      → 製程定義 (output/規格) → 分布配適 + 趨勢圖
      → 專案保存 (.piproj.json, 重開時重新匯入重建 registry)
 ```
+
+## Phase 2 功能 (已完成 ✅)
+
+- **異常情境偵測**: spec 異常（超規格）+ control 異常（超管制線 mean±3σ + runs rule）+ engineering 異常（使用者自訂）
+- **分析資料包**: 資料指紋 + 完成度檢查（output+input 欄位確認）
+- **ProcessDefine UI**: 管制界限 LCL/UCL 手動覆寫 + 自動 3σ 建議
+- **異常情境 UI**: 偵測觸發 → 場景表格（逐項/全部確認）
+- **分析資料包摘要卡**: row/col/field_roles/spec/異常數 + 完成度
+- **驗證**: 引擎 68 tests (覆蓋率 86%)
+
+## Phase 3a 功能 (已完成 ✅)
+
+- **模型比較指標**: RMSE, MSE, MAE, R², Adjusted R²
+- **DOE 模型配適**: 線性 + 二次（含 intercept、平方項、交互項）
+- **隨機樹回歸**: sklearn RandomForestRegressor
+- **殘差混合模型**: Y = f_DOE(X) + r_RF(X)（DOE 擷取趨勢 + AI 殘差補償）
+- **不可變版本登錄**: 狀態機 draft → pending_validation → validated → approved；單調遞增版本、永不覆寫
+- **IPC handlers**: `modeling/fit`、`modeling/list`、`modeling/transition`
+- **前端 modeling API**: ModelType/ModelStatus/ModelMetrics/ModelFitDTO 型別 + API 函數
+- **驗證**: 引擎 93 tests (覆蓋率 88%)
 
 ## 設計原則
 

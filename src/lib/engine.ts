@@ -221,3 +221,61 @@ export async function buildAnalysisPackage(params: {
 }): Promise<AnalysisPackage> {
   return engineCall<AnalysisPackage>('analysis/package', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 3: Modeling ----------------------------------------------------
+
+export type ModelType =
+  | 'doe_linear'
+  | 'doe_quadratic'
+  | 'random_forest'
+  | 'residual_hybrid'
+
+export type ModelStatus =
+  | 'draft'
+  | 'pending_validation'
+  | 'validated'
+  | 'approved'
+  | 'retired'
+
+export interface ModelMetrics {
+  rmse: number
+  mse: number
+  mae: number
+  r2: number
+  adj_r2: number
+}
+
+export interface ModelFitDTO {
+  model_id: string
+  model_type: ModelType
+  target: string
+  inputs: string[]
+  status: ModelStatus
+  created_at: string
+  version: number
+  metrics: ModelMetrics
+  coefficients: Record<string, number> | null
+  equation: string
+  n_train: number
+  n_test: number
+}
+
+export async function fitModel(params: {
+  dataset_id: string
+  model_type: ModelType
+  target: string
+  inputs: string[]
+}): Promise<ModelFitDTO> {
+  return engineCall<ModelFitDTO>('modeling/fit', params as unknown as Record<string, unknown>)
+}
+
+export async function listModels(): Promise<{ models: ModelFitDTO[] }> {
+  return engineCall<{ models: ModelFitDTO[] }>('modeling/list', {})
+}
+
+export async function transitionModel(
+  model_id: string,
+  status: ModelStatus,
+): Promise<ModelFitDTO> {
+  return engineCall<ModelFitDTO>('modeling/transition', { model_id, status })
+}

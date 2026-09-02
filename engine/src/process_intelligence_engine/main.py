@@ -29,6 +29,13 @@ from process_intelligence_engine.data.distribution import fit_best_distribution
 from process_intelligence_engine.data.field_detector import detect_fields
 from process_intelligence_engine.data.importer import import_file
 from process_intelligence_engine.data.quality import run_quality_checks
+from process_intelligence_engine.modeling.fitters import (
+    fit_doe_linear,
+    fit_doe_quadratic,
+    fit_random_forest,
+    fit_residual_hybrid,
+)
+from process_intelligence_engine.modeling.registry import ModelRegistry
 
 
 def _plain_types(value):
@@ -87,6 +94,7 @@ class DatasetRegistry:
 
 # Registry shared across requests within a single engine process.
 REGISTRY = DatasetRegistry()
+MODEL_REGISTRY = ModelRegistry()
 
 
 def _handle_import(params: dict) -> dict:
@@ -277,6 +285,38 @@ def _handle_analysis_package(params: dict) -> dict:
     )
 
 
+MODEL_FITTERS = {
+    "doe_linear": fit_doe_linear,
+    "doe_quadratic": fit_doe_quadratic,
+    "random_forest": fit_random_forest,
+    "residual_hybrid": fit_residual_hybrid,
+}
+
+
+def _handle_modeling_fit(params: dict) -> dict:
+    df = REGISTRY.get(params["dataset_id"])
+    model_type = params["model_type"]
+    target = params["target"]
+    inputs = list(params.get("inputs", []))
+    fitter = MODEL_FITTERS.get(model_type)
+    if fitter is None:
+        raise ValueError(f"Unknown model_type: {model_type}")
+    fit = fitter(df, target=target, inputs=inputs)
+    MODEL_REGISTRY.register(fit)
+    return fit.to_dto()
+
+
+def _handle_modeling_list(params: dict) -> dict:
+    return {
+        "models": [MODEL_REGISTRY.get(mid).to_dto() for mid in MODEL_REGISTRY.list_ids()]
+    }
+
+
+def _handle_modeling_transition(params: dict) -> dict:
+    fit = MODEL_REGISTRY.transition(params["model_id"], params["status"])
+    return fit.to_dto()
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -317,6 +357,15 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "analysis/package":
         return _handle_analysis_package(params)
+
+    if method == "modeling/fit":
+        return _handle_modeling_fit(params)
+
+    if method == "modeling/list":
+        return _handle_modeling_list(params)
+
+    if method == "modeling/transition":
+        return _handle_modeling_transition(params)
 
     raise ValueError(f"Unknown method: {method}")
 

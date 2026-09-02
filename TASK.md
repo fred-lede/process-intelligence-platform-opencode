@@ -91,3 +91,73 @@
   - `EngineManager::stop` dead_code warning（保留待生命週期管理使用）
   - bundle 超過 500kB warning（plotly 體積，後續可 code-split）
   - AG Grid 已安裝但資料預覽目前用 antd Table（Phase 2 可切換）
+## Phase 3a 第一塊 — Regression 比較指標 (metrics) — ✅ 進行中
+
+- [x] 建立 `modeling` 子套件首個模組 (TDD)
+  - `engine/src/process_intelligence_engine/modeling/__init__.py`
+  - `engine/src/process_intelligence_engine/modeling/metrics.py`
+  - `engine/tests/test_metrics.py`
+  - 指標: RMSE, MSE, MAE, R², Adjusted R² (Wherry), 全 JSON-native float
+  - 測試: 6 passed; 全引擎 suite: 74 passed (覆蓋率 86%)
+  - commit `da6079d` feat(modeling): add regression comparison metrics
+- 修正: R² 在常數響應 (ss_tot=0) 邊界案例，改為 perfect→1.0 / 殘差非零→-1.0（原設計回傳 0.0 無法通過 test_r2_worse_than_mean_is_negative；此為與規格內部矛盾處，多一個 feature 懲罰測試仍通過）
+
+## Phase 3a 第二塊 — Model Fitting (fiters) — ✅ 完成
+
+- [x] 建立 `modeling/fitters.py` (TDD: 先 RED 後 GREEN)
+  - `engine/src/process_intelligence_engine/modeling/fitters.py`
+  - `engine/tests/test_fitters.py`
+  - `ModelFit` dataclass + `to_dto()` (JSON-安全)
+  - `fit_doe_linear` / `fit_doe_quadratic` (`_design_matrix` 含 intercept/平方/交互項)
+  - `fit_random_forest` (sklearn, n_estimators)
+  - `fit_residual_hybrid` (Y = f_DOE(X) + r_RF(X)，單一共享索引 scheme)
+  - 指標共用 `metrics.py` 的 RMSE/MAE/R²/Adj R² (4 個 import 全數使用)
+  - 測試: 6 passed; 全引擎 suite: 80 passed (覆蓋率 87%)
+  - commit `28c8c55` feat(modeling): DOE linear/quadratic, random forest, residual hybrid fits
+- 待續: Phase 3a DOE 設計庫、AI 模型 (xgboost) 封裝、模型比較、驗證
+
+## Phase 3a 第三塊 — Immutable Model Registry (registry) — ✅ 完成
+
+- [x] 建立 `modeling/registry.py` (TDD: 先 RED `ModuleNotFoundError` 後 GREEN)
+  - `engine/src/process_intelligence_engine/modeling/registry.py`
+  - `engine/tests/test_model_registry.py`
+  - `ModelRegistry` in-memory thread-safe registry (`threading.Lock` + `_version_counter`)
+  - 不變版本: `register()` 指派單調遞增 version + uuid model_id + status="draft"
+  - 狀態機 (spec 12.5): draft → pending_validation → validated → approved；任一狀態可 → retired
+  - `InvalidStatusTransition` + `TRANSITIONS` 表；`get_unlocked()` 為刻意不加鎖的 helper（`transition` 已持鎖，`Lock` 非可重入，改用 get() 會 deadlock，不使用 RLock）
+  - 測試: 6 passed; 全引擎 suite: 86 passed (覆蓋率 87%, registry 93%)
+  - commit `68c36ef` feat(modeling): immutable model registry with status machine
+- 待續: Phase 3a DOE 設計庫、AI 模型 (xgboost) 封裝、模型比較、驗證
+
+## Phase 3a 第四塊 — Modeling IPC handlers (main.py 暴露) — ✅ 完成
+
+- [x] main.py 註冊三個新 RPC handlers: `modeling/fit`, `modeling/list`, `modeling/transition`
+  - 新增 `modeling/fitters` / `modeling/registry` imports
+  - module-level `MODEL_REGISTRY = ModelRegistry()` + `MODEL_FITTERS` map (四種 fitter)
+  - `_handle_modeling_fit` / `_handle_modeling_list` / `_handle_modeling_transition`
+  - dispatcher 於 `analysis/package` 之後新增三個分支
+  - DTO 輸出經 `_plain_types` JSON 安全化
+  - `engine/tests/test_main_modeling.py` (5 tests): fit DTO、residual_hybrid、unknown type 拋錯、transition+list、invalid transition 拋錯
+  - TDD: 先 RED (`ValueError: Unknown method: modeling/fit`) 後 GREEN
+  - 測試: 5 passed; 全引擎 suite: 93 passed (覆蓋率 88%)
+  - commit `be9d996` feat(modeling): expose modeling/fit, modeling/list, modeling/transition IPC
+- 待續: Phase 3a DOE 設計庫、AI 模型 (xgboost) 封裝、模型比較、驗證
+
+## Code Quality Fixes
+
+- [x] 移除 `main.py` 中未使用的 `InvalidStatusTransition` import (commit `82ae1bb`)
+  - 5 modeling tests passed; 93/93 full suite passed (no regression)
+
+## Phase 3a 第五塊 — Frontend Modeling API Types — ✅ 完成
+
+- [x] `src/lib/engine.ts` 新增 Phase 3 modeling 類型與 API 函數
+  - `ModelType` (doe_linear/doe_quadratic/random_forest/residual_hybrid)
+  - `ModelStatus` (draft/pending_validation/validated/approved/retired)
+  - `ModelMetrics` (rmse, mse, mae, r2, adj_r2) — mse 匹配引擎端新增欄位
+  - `ModelFitDTO` 完整接口
+  - `fitModel()` / `listModels()` / `transitionModel()` 三個 API 函數
+  - commit `ff735a6` feat(modeling): add frontend model API types
+  - `npx tsc --noEmit` ✅ 無錯誤
+
+## Next
+- 繼續 Phase 3a 依 `docs/superpowers/plans/2026-09-02-phase3-model-center.md` 執行其餘引擎核心模組
