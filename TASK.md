@@ -19,6 +19,10 @@
 
 ## Completed
 
+### Phase 4 — Model Selection
+- Task 2: `model_selection.py` — multi-model comparison with CV and composite scoring (commit `a9ad6ec`)
+- 驗證 — 144 tests pass (89% coverage)
+
 ### Phase 3b-8 — Validation & Residual Analysis
 - Task 1: `validation.py` — cross-validation, residual analysis, experiment recommendations (commit `89b397c`)
 - Task 2: `main.py` + `engine.ts` — IPC handler `modeling/validation/analyze` + frontend `analyzeValidation` API (commit `6f1a4d6`)
