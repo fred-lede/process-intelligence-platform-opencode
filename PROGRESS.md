@@ -309,3 +309,27 @@
 - [ ] SHAP 可解釋性
 - [ ] 外插風險評分
 - [ ] 驗證實驗推薦
+
+## 2026-09-02 — Phase 3b-5 完成（SHAP 可解釋性）
+
+### 完成內容
+
+- [x] `modeling/shap_explainer.py` — SHAP 值計算（LinearExplainer + TreeExplainer）
+- [x] `main.py` — `modeling/shap/explain` IPC handler
+- [x] `engine.ts` — `SHAPResult` 型別 + `computeSHAP()` API
+- [x] `ModelCenter.tsx` — 特徵重要性條狀圖 + SHAP 摘要圖（Plotly）
+- [x] i18n en/zh-TW 新增 6 個字串
+- [x] 驗證：123 tests (89% coverage)、tsc clean、build clean
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| 826986c | feat(shap): SHAP value computation for model interpretability |
+| 5ef27f3 | feat(shap): expose modeling/shap/explain IPC + frontend API |
+| 866699e | feat(model-center): add SHAP interpretability visualization |
+
+### 待辦 (Phase 3b-6)
+
+- [ ] 外插風險評分
+- [ ] 驗證實驗推薦
