@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons'
-import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels } from '../../lib/engine'
+import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing } from '../../lib/engine'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
 export default function Settings() {
@@ -51,17 +51,24 @@ export default function Settings() {
   }
 
   const [loadingModels, setLoadingModels] = useState(false)
-  const loadModels = async () => {
+  const loadModels = async (retryCount = 0) => {
     try {
       setLoadingModels(true)
+      // Wait for engine to be ready
+      try {
+        await enginePing()
+      } catch {
+        if (retryCount < 5) {
+          setTimeout(() => loadModels(retryCount + 1), 500)
+          return
+        }
+      }
       const result = await listAIModels()
-      console.log('[Settings] listAIModels result:', result)
       if (result.success && result.models) {
         setAvailableModels(result.models)
       }
-    } catch (e) {
-      console.error('[Settings] loadModels error:', e)
-    } finally {
+    } catch { /* ignore */ }
+    finally {
       setLoadingModels(false)
     }
   }
