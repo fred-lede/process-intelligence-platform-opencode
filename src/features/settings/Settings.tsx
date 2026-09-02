@@ -38,16 +38,19 @@ export default function Settings() {
     loadSettings()
   }, [])
 
-  const loadSettings = async () => {
+  const loadSettings = async (retryCount = 0) => {
     try {
+      await enginePing()
       const result = await getSettings()
       console.log('[Settings] Loaded config:', result.config)
       if (result.config) {
         setAiConfig(result.config)
         aiForm.setFieldsValue(result.config)
       }
-    } catch (e) {
-      console.error('[Settings] Load error:', e)
+    } catch {
+      if (retryCount < 5) {
+        setTimeout(() => loadSettings(retryCount + 1), 500)
+      }
     }
   }
 
@@ -76,6 +79,13 @@ export default function Settings() {
 
   useEffect(() => {
     loadModels()
+    if (aiConfig.provider === 'ollama') {
+      aiForm.setFieldValue('model', 'gemma4:e2b-mlx')
+      setAiConfig(prev => ({ ...prev, provider: 'ollama', base_url: 'http://localhost:11434', model: 'gemma4:e2b-mlx', api_key: '' }))
+    } else if (aiConfig.provider === 'openai') {
+      aiForm.setFieldValue('model', 'gpt-4o')
+      setAiConfig(prev => ({ ...prev, provider: 'openai', base_url: 'https://api.openai.com', model: 'gpt-4o', api_key: prev.api_key }))
+    }
   }, [aiConfig.provider])
 
   const loadData = async () => {
