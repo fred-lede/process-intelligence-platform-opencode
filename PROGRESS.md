@@ -182,3 +182,32 @@
 - [ ] SHAP 可解釋性
 - [ ] 外插風險評分
 - [ ] Logistic / 計數 / 可靠度模型
+
+## 2026-09-02 — Phase 3b-1 完成（模型中心頁面）
+
+### 完成內容
+
+- [x] `src/stores/modelStore.ts` — Zustand 模型狀態管理（loadModels/fit/transition/selectModel/clearError）
+- [x] `src/features/model-center/ModelCenter.tsx` — 模型中心頁面：
+  - 模型配適表單（ModelType Select + 目標欄位 + 輸入多選 + 配適按鈕）
+  - 模型列表比較表（type/version/status + R²/RMSE/MAE/Adj R² + 狀態切換 Popconfirm）
+  - Guard clause（無資料時顯示提示）
+- [x] `src/App.tsx` — 路由接線（modelCenter tab render branch）
+- [x] `src/i18n/en.json` + `zh-TW.json` — modelCenter section 中英文
+- [x] 驗證：`tsc --noEmit` ✅、`npm run build` ✅
+
+### Commits（phase3b-1-model-center-ui 分支）
+
+| Hash | 說明 |
+|------|------|
+| 6e2485a | feat(model-center): add Zustand model store |
+| 4942008 | fix(model-center): clear error state on loadModels |
+| c2d611d | feat(model-center): add ModelCenter page component |
+| 239a003 | feat(model-center): wire routing + i18n strings |
+
+### 待辦 (Phase 3b-2)
+
+- [ ] 模型比較表（多模型並排指標對比）
+- [ ] 交互作用分析（二因素交互）
+- [ ] DOE 設計庫（6 種設計）
+- [ ] SHAP / 外插風險 / 驗證實驗推薦

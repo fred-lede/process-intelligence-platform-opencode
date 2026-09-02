@@ -159,5 +159,21 @@
   - commit `ff735a6` feat(modeling): add frontend model API types
   - `npx tsc --noEmit` ✅ 無錯誤
 
+## Phase 3b-1 — ModelCenter Page Component — ✅ 完成
+
+- [x] 建立 `src/stores/modelStore.ts` (commit `6e2485a`, fix `4942008`)
+  - Zustand store: models/fitting/transitioning/error/selectedModelId
+  - Actions: loadModels, fit, transition, selectModel, clearError
+- [x] 建立 `src/features/model-center/ModelCenter.tsx` (commit `c2d611d`)
+  - 遵循 ProcessDefine.tsx 模式: `useTranslation()` + `useDataPipelineStore()` + `Space direction="vertical"` + `Card` + guard clause
+  - Model fit form: ModelType Select + target (output fields) + inputs (multi-select) + Fit button
+  - Model list Table: type/version/status + R²/RMSE/MAE/Adj R² + status transition actions (Popconfirm)
+  - STATUS_TRANSITIONS 狀態機按鈕 + STATUS_COLORS 標籤顏色
+- [x] 路由接線 + i18n (commit `239a003`)
+  - `src/App.tsx` import + render branch for `modelCenter`
+  - `src/i18n/en.json` + `zh-TW.json` — modelCenter section (modelType/target/inputs/fitButton/list/column/transition)
+- [x] 驗證: `tsc --noEmit` ✅、`npm run build` ✅
+- [x] files changed: `modelStore.ts` (新建), `ModelCenter.tsx` (新建), `App.tsx` (改), `en.json` (改), `zh-TW.json` (改)
+
 ## Next
-- 繼續 Phase 3a 依 `docs/superpowers/plans/2026-09-02-phase3-model-center.md` 執行其餘引擎核心模組
+- Phase 3b-2: 模型比較表（4 指標並排）、Phase 3b-3: 交互作用分析
