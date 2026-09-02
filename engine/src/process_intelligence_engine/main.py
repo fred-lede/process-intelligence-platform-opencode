@@ -29,6 +29,7 @@ from process_intelligence_engine.data.distribution import fit_best_distribution
 from process_intelligence_engine.data.field_detector import detect_fields
 from process_intelligence_engine.data.importer import import_file
 from process_intelligence_engine.data.quality import run_quality_checks
+from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.fitters import (
     fit_doe_linear,
     fit_doe_quadratic,
@@ -318,6 +319,15 @@ def _handle_modeling_transition(params: dict) -> dict:
     return fit.to_dto()
 
 
+def _handle_interactions_compute(params: dict) -> dict:
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    threshold = params.get("threshold", 0.01)
+    fit = MODEL_REGISTRY._get_unlocked(model_id)
+    df = REGISTRY.get(dataset_id)
+    return compute_interactions(fit, df, threshold)
+
+
 def _handle_doe_generate(params: dict) -> dict:
     return generate_design(
         factors=params["factors"],
@@ -378,6 +388,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/doe/generate":
         return _handle_doe_generate(params)
+
+    if method == "modeling/interactions/compute":
+        return _handle_interactions_compute(params)
 
     raise ValueError(f"Unknown method: {method}")
 

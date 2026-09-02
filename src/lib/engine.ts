@@ -302,3 +302,19 @@ export async function generateDOEDesign(params: {
 }): Promise<DOEDesignResult> {
   return engineCall<DOEDesignResult>('modeling/doe/generate', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 3b: Interaction Analysis --------------------------------------
+
+export interface InteractionResult {
+  factors: string[]
+  matrix: number[][]
+  significant_pairs: { i: string; j: string; strength: number; significant: boolean }[]
+}
+
+export async function computeInteractions(params: {
+  model_id: string
+  dataset_id: string
+  threshold?: number
+}): Promise<InteractionResult> {
+  return engineCall<InteractionResult>('modeling/interactions/compute', params as unknown as Record<string, unknown>)
+}
