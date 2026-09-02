@@ -50,6 +50,12 @@ from process_intelligence_engine.reporting.excel import ExcelReportGenerator
 from process_intelligence_engine.auth.models import UserRole, AuditAction
 from process_intelligence_engine.auth.manager import AuthManager
 from process_intelligence_engine.ai.ollama_client import get_ollama_client
+from process_intelligence_engine.spc import (
+    compute_i_mr,
+    compute_xbar_r,
+    compute_xbar_s,
+    compute_capability,
+)
 from process_intelligence_engine.settings import get_settings_manager
 
 
@@ -585,6 +591,54 @@ def _handle_settings_test(params: dict) -> dict:
     return mgr.test_connection()
 
 
+def _handle_spc_analyze(params: dict) -> dict:
+    """Analyze SPC control chart for a column."""
+    df = REGISTRY.get(params["dataset_id"])
+    column = params["column"]
+    if column not in df.columns:
+        raise KeyError(f"Unknown column: {column}")
+    values = df[column].dropna().tolist()
+    chart_type = params.get("chart_type", "i-mr")
+    subgroup_size = params.get("subgroup_size", 1)
+    lsl = params.get("lsl")
+    usl = params.get("usl")
+
+    if chart_type == "i-mr":
+        result = compute_i_mr(values, lsl=lsl, usl=usl)
+    elif chart_type == "xbar-r":
+        subgroups = [values[i:i + subgroup_size] for i in range(0, len(values), subgroup_size)
+                     if len(values[i:i + subgroup_size]) == subgroup_size]
+        if not subgroups:
+            raise ValueError("Not enough data points for requested subgroup_size")
+        result = compute_xbar_r(subgroups, subgroup_size=subgroup_size, lsl=lsl, usl=usl)
+    elif chart_type == "xbar-s":
+        subgroups = [values[i:i + subgroup_size] for i in range(0, len(values), subgroup_size)
+                     if len(values[i:i + subgroup_size]) == subgroup_size]
+        if not subgroups:
+            raise ValueError("Not enough data points for requested subgroup_size")
+        result = compute_xbar_s(subgroups, subgroup_size=subgroup_size, lsl=lsl, usl=usl)
+    else:
+        raise ValueError(f"Unknown chart_type: {chart_type}")
+
+    result["chart_type"] = chart_type
+    return {"success": True, **result}
+
+
+def _handle_spc_capability(params: dict) -> dict:
+    """Compute process capability for a column."""
+    df = REGISTRY.get(params["dataset_id"])
+    column = params["column"]
+    if column not in df.columns:
+        raise KeyError(f"Unknown column: {column}")
+    values = df[column].dropna().tolist()
+    lsl = params.get("lsl")
+    usl = params.get("usl")
+    subgroup_size = params.get("subgroup_size", 1)
+
+    capability = compute_capability(values, lsl=lsl, usl=usl, subgroup_size=subgroup_size)
+    return {"success": True, "capability": capability}
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -682,6 +736,11 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_settings_update(params)
     if method == "settings/test_connection":
         return _handle_settings_test(params)
+
+    if method == "spc/analyze":
+        return _handle_spc_analyze(params)
+    if method == "spc/capability":
+        return _handle_spc_capability(params)
 
     raise ValueError(f"Unknown method: {method}")
 
