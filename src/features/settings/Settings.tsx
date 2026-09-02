@@ -27,6 +27,7 @@ export default function Settings() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null)
 
+  const [aiForm] = Form.useForm()
   const [loginForm] = Form.useForm()
   const [registerForm] = Form.useForm()
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -42,6 +43,7 @@ export default function Settings() {
       const result = await getSettings()
       if (result.config) {
         setAiConfig(result.config)
+        aiForm.setFieldsValue(result.config)
       }
     } catch {
       // Use defaults
@@ -227,8 +229,8 @@ export default function Settings() {
           }
         >
           <Form
+            form={aiForm}
             layout="vertical"
-            initialValues={aiConfig}
             onValuesChange={(_, all) => setAiConfig(all as AIProviderConfig)}
           >
             <Form.Item name="provider" label={t('settings.providerType')}>
