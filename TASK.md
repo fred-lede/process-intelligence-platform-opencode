@@ -1,89 +1,57 @@
 # TASK.md
 
-### Phase 3b-4 — 交互作用分析
-- Task 1: `interactions.py` — 因子效應分解計算 (commit `451cb64`)
-- Task 2: `main.py` + `engine.ts` — IPC handler + API wrapper (commit `07824d3`)
-- Task 3: `ModelCenter.tsx` — 熱圖 UI + i18n (commit `9632e7e`)
-- Task 4: 驗證 — 117 tests (89% coverage), tsc/build clean
-
-### Phase 3b-5 — SHAP 可解釋性
-- Task 1: `shap_explainer.py` — SHAP 值計算 (commit `826986c`)
-- Task 2: `main.py` + `engine.ts` — IPC handler + API wrapper (commit `5ef27f3`)
-- Task 3: `ModelCenter.tsx` — 特徵重要性圖 + SHAP 摘要圖 (commit `866699e`)
-- Task 4: 驗證 — 123 tests (89% coverage), tsc/build clean
-
-### Phase 3b-7 — 外插風險評分
-- Task 1: `extrapolation.py` — 外插風險評分 (commit `a738613`)
-- Task 2: `main.py` + `engine.ts` — IPC handler + API wrapper (commit `de32eff`)
-- 驗證 — 131 tests pass (89% coverage), tsc/build clean
-
 ## Completed
 
-### Phase 6 — User Management & Audit Logging
-- Task 3: IPC handlers (`auth/login`, `auth/logout`, `auth/register`, `audit/log`, `users/list`, `auth/current`) + frontend API + Settings page + i18n (commit `571341f`)
-- 驗證 — 181 tests pass (89% coverage), tsc/build clean
+### Phase 0 — 基礎建設
+- Tauri 2.0 + React 18 + TypeScript + Python 3.11 專案骨架
+- Rust JSON-RPC IPC 通道 + 前端 API 封裝
+- i18n en/zh-TW 基礎
 
-### Phase 5 — Report Generation Engine
-- Task 1: `reporting/models.py` + `reporting/base.py` + `reporting/html.py` — HTML report generator with project info, field roles, quality summary, model comparison (commit `ba29efb`)
-- Task 2: `reporting/excel.py` — Excel report generator
-- Task 3: `main.py` + `engine.ts` — IPC handler `report/generate` + frontend API + `Report.tsx` component + i18n (commit `cf20cde`)
-- 驗證 — 163 tests pass (89% coverage), tsc/build clean
-### Phase 4 — Validation Experiment Recommendation
-- Task 4: `main.py` + `engine.ts` — IPC handler `modeling/validation/full` with model comparison + experiment recommendation + `test_main_validation_full.py` (commit `6ad1f04`)
-- Task 5: `ModelCenter.tsx` — Full Validation UI card with model comparison table, residual diagnostics, experiment recommendations + i18n (commit `6ad1f04`)
-- 驗證 — 148 tests pass (89% coverage), tsc/build clean
+### Phase 1 — 資料匯入
+- Excel/CSV 匯入（編碼偵測、欄位辨識、品質檢查、分布分析）
+- 資料管道 store (Zustand) + UI 4 步流程
+- 專案保存/載入
 
-### Phase 4 — Model Selection
-- Task 2: `model_selection.py` — multi-model comparison with CV and composite scoring (commit `a9ad6ec`)
-- Task 3: `experiment_recommendation.py` — experiment recommendation engine (commit `572a511`)
-- 驗證 — 147 tests pass (88% coverage)
+### Phase 2 — 異常情境偵測
+- Spec/Control/Engineering 三類異常檢測
+- 分析資料包生成
 
-### Phase 3b-8 — Validation & Residual Analysis
-- Task 1: `validation.py` — cross-validation, residual analysis, experiment recommendations (commit `89b397c`)
-- Task 2: `main.py` + `engine.ts` — IPC handler `modeling/validation/analyze` + frontend `analyzeValidation` API (commit `6f1a4d6`)
-- Task 3: Enhanced residual analysis — Q-Q plot data, residuals vs predicted, Durbin-Watson statistic (commit `02e5125`)
-- 驗證 — 141 tests pass (88% coverage), tsc/build clean
+### Phase 3a — 模型中心引擎核心
+- metrics.py — RMSE/MSE/MAE/R²/Adjusted R²
+- fitters.py — DOE linear/quadratic + random forest + residual hybrid
+- registry.py — immutable model versions + status machine
+- IPC handlers + 前端 API
 
-### Phase 3a — Model Center Engine Core
-- Task 1: `metrics.py` — RMSE/MSE/MAE/R²/Adjusted R² (commit `da6079d`)
-- Task 2: `fitters.py` — DOE linear/quadratic + random forest + residual hybrid (commits `28c8c55`, `419ea2b`, `d677820`)
-- Task 3: `registry.py` — immutable model versions + status machine (commit `68c36ef`, fix `ce94297`)
-- Task 4: `main.py` — IPC handlers modeling/fit, modeling/list, modeling/transition (commits `be9d996`, `82ae1bb`)
-- Task 5: `engine.ts` — frontend modeling types + API (commit `ff735a6`)
-- Task 6: 驗證 + 文件 — 93 tests, 88% coverage, tsc/build/cargo clean
+### Phase 3b — Model Center UI 與分析
+- ModelCenter.tsx — 模型列表 + 比較 + 核取方塊
+- DOE Design Library (6種: 完全因析、分式因析、CCD、Box-Behnken、D-optimal、Taguchi)
+- 交互作用分析 (熱圖)
+- SHAP 可解釋性
+- 外插風險評分
+- 交叉驗證 + 殘差分析 + 實驗建議
 
-### Phase 3b-1 — Model Center UI
-- Task 1: `modelStore.ts` — Zustand store (commit `6e2485a`, fix `4942008`)
-- Task 2: `ModelCenter.tsx` — page component (commit `c2d611d`)
-- Task 3: `App.tsx` — routing (commit `239a003`)
-- Task 4: i18n en/zh-TW (commit `239a003`)
-- Task 5: 驗證 — tsc/build clean
+### Phase 4 — 驗證實驗推薦
+- model_selection.py — multi-model comparison with CV and composite scoring
+- experiment_recommendation.py — 實驗推薦引擎
+- Full Validation UI + model comparison table
 
-### Phase 3b-2 — Model Comparison Enhancement
-- Checkbox row selection + Compare button + comparison Card + best-value highlighting (commit `70e9289`)
+### Phase 5 — 報告產生
+- HTML/Excel 報告產生器
+- `report/generate` IPC handler
 
-### Phase 3b-3 — DOE Design Library
-- Task 1: Full Factorial + Fractional Factorial (commits `26ba9da`, `a04ebd3`)
-- Task 2: CCD + Box-Behnken (commit `eb7c247`)
-- Task 3: D-optimal + Taguchi L4/L8/L9/L16 (commit `31be710`)
-- Task 4: IPC handler `modeling/doe/generate` + frontend `generateDOEDesign` API (commit `bf93182`)
-- Task 5: 驗證 — 111 tests, tsc/build clean
+### Phase 6 — 企業化
+- 使用者角色 (Admin/Engineer/Viewer) + 登入/註冊/登出
+- 稽核紀錄 (audit log)
+- 設定頁面
 
-### Phase 3b-4 — 交互作用分析
-- Task 1: `interactions.py` — two-factor interaction strength (commit `451cb64`)
-- Task 2: IPC handler `modeling/interactions/compute` + frontend `computeInteractions` API (commit `07824d3`)
-- 驗證 — 117 tests pass, tsc clean
-
-### Phase 3b-5 — SHAP 可解釋性
-- Task 1: IPC handler `modeling/shap/explain` + frontend `computeSHAP` API (commit `5ef27f3`)
-- Task 2: `ModelCenter.tsx` — SHAP 分析 Card（計算按鈕 + 特徵重要性圖 + SHAP summary 圖）+ i18n (commit `866699e`)
-- 驗證 — 123 tests pass, tsc/build clean
-
-### Phase 3b-7 — 外插風險評分
-- Task 1: `extrapolation.py` — extrapolation risk scoring (commit `a738613`)
-- Task 2: `main.py` + `engine.ts` — IPC handler + API wrapper (commit `de32eff`)
-- Task 3: `ModelCenter.tsx` — extrapolation risk card (check button + risk score + factor breakdown) + i18n (commit `b6aa26d`)
-- 驗證 — 131 tests pass (89% coverage), tsc/build clean
+### Phase 7 — AI 助手整合
+- Ollama client (`ollama_client.py`) — chat/generate/list_models/health_check
+- AI Provider 設定 (`settings/__init__.py`) — 支援 Ollama/OpenAI/Azure/Custom
+- `ai/chat`, `ai/models`, `ai/health` IPC handlers
+- AssistantPanel — 聊天 UI + 思考動畫 + Enter 支援
+- 模型下拉選單（從 Ollama API 載入，支援搜尋）
+- Settings persistence 修復（form.setFieldsValue + enginePing retry）
+- 每次 chat 請求同步 base_url + model
 
 ## In Progress
 - None
@@ -91,24 +59,7 @@
 ## Pending
 - None
 
-### Phase 7 — Ollama AI Assistant Integration
-- Task 1: `ai/ollama_client.py` — Ollama async client with chat/generate/list_models/health_check + singleton (commit `929748f`)
-- 驗證 — 185 passed, 1 skipped (88% coverage)
-- Task 2: `main.py` + `engine.ts` — IPC handlers `ai/chat`, `ai/models`, `ai/health` + frontend API + `AssistantPanel.tsx` functional chat UI + i18n (commit `bcd35fc`)
-- 驗證 — 190 passed, 1 skipped (88% coverage), tsc/build clean
-
-### Settings AI Provider 修復
-- Task 1: 修復 `test_connection()` 跨 module import 錯誤（`settings/__init__.py` → `..ai.ollama_client`）（commit `514aed2`）
-- Task 2: 新增 provider-aware 連線測試（ollama 用 OllamaClient，openai/azure/custom 用 HTTP GET /models）（commit `514aed2`）
-- 驗證 — 195 passed, 1 skipped (87% coverage), tsc/build clean
-
-### 修復：設定持久化 + AI 模型同步
-- Task 1: 修復 `test_connection()` 跨 module import 錯誤（`settings/__init__.py` → `..ai.ollama_client`）（commit `514aed2`）
-- Task 2: 新增 provider-aware 連線測試（ollama 用 OllamaClient，openai/azure/custom 用 HTTP GET /models）（commit `514aed2`）
-- Task 3: 統一模型配置至設定頁，移除 AssistantPanel 中的模型下拉選單（commit `a05e74d`）
-- Task 4: 模型欄位改為 Select 下拉，支援從 Ollama API 載入可用模型列表，允許搜尋/自訂輸入（commit `21ee4d3`）
-- Task 5: 修復 Form 無法載入已儲存設定的問題 — 改用 `form.setFieldsValue()` 同步 async 載入的設定（commit `1ee4fa1`）
-- Task 6: 修復 AI 聊天仍用舊模型的問題 — 每次 chat 請求時從 settings 同步 `base_url` 和 `model`（commit `8a5ba8c`）
-- Task 7: 修復模型下拉選單無法載入的問題 — 加入 enginePing 就緒檢查 + 自動重試機制（commit `6683e85`）
-- Task 8: AI 助手加入思考動畫（Spin + LoadingOutlined），Enter 鍵支援已內建（commit `7da6b9a`）
-- 驗證 — 195 passed, 1 skipped (87% coverage), tsc/build clean
+---
+**測試狀態**：195 passed, 1 skipped (87% coverage)
+**Code Stats**：~3,727 lines total
+**Commits**：80+ (main branch fully deployed)
