@@ -279,3 +279,26 @@ export async function transitionModel(
 ): Promise<ModelFitDTO> {
   return engineCall<ModelFitDTO>('modeling/transition', { model_id, status })
 }
+
+// --- Phase 3b: DOE Design Library ----------------------------------------
+
+export interface DOEFactor {
+  name: string
+  low: number
+  high: number
+}
+
+export interface DOEDesignResult {
+  design_type: string
+  n_runs: number
+  runs: Record<string, number>[]
+  coded_runs: Record<string, number>[]
+}
+
+export async function generateDOEDesign(params: {
+  factors: DOEFactor[]
+  design_type: string
+  params?: Record<string, unknown>
+}): Promise<DOEDesignResult> {
+  return engineCall<DOEDesignResult>('modeling/doe/generate', params as unknown as Record<string, unknown>)
+}

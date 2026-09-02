@@ -35,6 +35,7 @@ from process_intelligence_engine.modeling.fitters import (
     fit_random_forest,
     fit_residual_hybrid,
 )
+from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
 
 
@@ -317,6 +318,14 @@ def _handle_modeling_transition(params: dict) -> dict:
     return fit.to_dto()
 
 
+def _handle_doe_generate(params: dict) -> dict:
+    return generate_design(
+        factors=params["factors"],
+        design_type=params["design_type"],
+        params=params.get("params"),
+    )
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -366,6 +375,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/transition":
         return _handle_modeling_transition(params)
+
+    if method == "modeling/doe/generate":
+        return _handle_doe_generate(params)
 
     raise ValueError(f"Unknown method: {method}")
 
