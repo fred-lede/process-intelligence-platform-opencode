@@ -57,7 +57,8 @@
 ### Phase 3b-7 — 外插風險評分
 - Task 1: `extrapolation.py` — extrapolation risk scoring (commit `a738613`)
 - Task 2: `main.py` + `engine.ts` — IPC handler + API wrapper (commit `de32eff`)
-- 驗證 — 131 tests pass, tsc/build clean
+- Task 3: `ModelCenter.tsx` — extrapolation risk card (check button + risk score + factor breakdown) + i18n (commit `b6aa26d`)
+- 驗證 — 131 tests pass (89% coverage), tsc/build clean
 
 ## In Progress
 - None
