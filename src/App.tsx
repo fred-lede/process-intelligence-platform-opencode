@@ -19,7 +19,7 @@ export default function App() {
 
   const renderTab = () => {
     if (activeTab === 'project') return <ProjectOverview />
-    if (activeTab === 'dataImport') return <DataImport />
+    if (activeTab === 'dataImport') return <DataImport onFinished={() => setActiveTab('processDefine')} />
     if (activeTab === 'processDefine') return <ProcessDefine />
     if (activeTab === 'exploration') return <Exploration />
     if (activeTab === 'modelCenter') return <ModelCenter />
