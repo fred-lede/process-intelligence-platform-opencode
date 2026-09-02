@@ -50,6 +50,7 @@ from process_intelligence_engine.reporting.excel import ExcelReportGenerator
 from process_intelligence_engine.auth.models import UserRole, AuditAction
 from process_intelligence_engine.auth.manager import AuthManager
 from process_intelligence_engine.ai.ollama_client import get_ollama_client
+from process_intelligence_engine.settings import get_settings_manager
 
 
 def _plain_types(value):
@@ -565,6 +566,26 @@ def _handle_ai_health(params: dict) -> dict:
     return {"healthy": is_healthy}
 
 
+def _handle_settings_get(params: dict) -> dict:
+    """Get current settings."""
+    mgr = get_settings_manager()
+    return {"config": mgr.get_config()}
+
+
+def _handle_settings_update(params: dict) -> dict:
+    """Update settings."""
+    mgr = get_settings_manager()
+    updates = params.get("config", {})
+    mgr.update_config(updates)
+    return {"success": True, "config": mgr.get_config()}
+
+
+def _handle_settings_test(params: dict) -> dict:
+    """Test connection to configured provider."""
+    mgr = get_settings_manager()
+    return mgr.test_connection()
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -655,6 +676,13 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_ai_models(params)
     if method == "ai/health":
         return _handle_ai_health(params)
+
+    if method == "settings/get":
+        return _handle_settings_get(params)
+    if method == "settings/update":
+        return _handle_settings_update(params)
+    if method == "settings/test_connection":
+        return _handle_settings_test(params)
 
     raise ValueError(f"Unknown method: {method}")
 
