@@ -535,7 +535,10 @@ def _handle_current_user(params: dict) -> dict:
 
 def _handle_ai_chat(params: dict) -> dict:
     """Handle AI chat request."""
+    mgr = get_settings_manager()
     client = get_ollama_client()
+    client.base_url = mgr._config.base_url
+    client.model = mgr._config.model
     messages = params.get("messages", [])
 
     try:
