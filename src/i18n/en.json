@@ -303,6 +303,7 @@
     "testConnection": "Test Connection",
     "connectionSuccess": "Connection successful",
     "connectionFailed": "Connection failed",
+    "refreshModels": "Refresh Models",
     "enabled": "Enabled",
     "disabled": "Disabled"
   }
