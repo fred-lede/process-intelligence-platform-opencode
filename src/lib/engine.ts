@@ -525,3 +525,41 @@ export async function listAIModels(): Promise<AIModelsResult> {
 export async function checkAIHealth(): Promise<AIHealthResult> {
   return engineCall<AIHealthResult>('ai/health', {})
 }
+
+// --- Phase 7: AI Provider Settings ------------------------------------------
+
+export type AIProviderType = 'ollama' | 'openai' | 'azure' | 'custom'
+
+export interface AIProviderConfig {
+  provider: AIProviderType
+  base_url: string
+  api_key: string
+  model: string
+  enabled: boolean
+}
+
+export interface SettingsGetResult {
+  config: AIProviderConfig
+}
+
+export interface SettingsUpdateResult {
+  success: boolean
+  config: AIProviderConfig
+}
+
+export interface SettingsTestResult {
+  success: boolean
+  error?: string
+}
+
+export async function getSettings(): Promise<SettingsGetResult> {
+  return engineCall<SettingsGetResult>('settings/get', {})
+}
+
+export async function updateSettings(config: Partial<AIProviderConfig>): Promise<SettingsUpdateResult> {
+  return engineCall<SettingsUpdateResult>('settings/update', { config })
+}
+
+export async function testConnection(): Promise<SettingsTestResult> {
+  return engineCall<SettingsTestResult>('settings/test_connection', {})
+}

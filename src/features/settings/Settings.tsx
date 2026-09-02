@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message } from 'antd'
+import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message, Divider } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { UserOutlined, HistoryOutlined } from '@ant-design/icons'
-import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers } from '../../lib/engine'
-import type { UserRole, AuditEntry, UserRecord } from '../../lib/engine'
+import { UserOutlined, HistoryOutlined, SettingOutlined, CloudOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection } from '../../lib/engine'
+import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
 export default function Settings() {
   const { t } = useTranslation()
@@ -14,6 +14,17 @@ export default function Settings() {
   const [users, setUsers] = useState<UserRecord[]>([])
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([])
   const [loading, setLoading] = useState(false)
+  
+  const [aiConfig, setAiConfig] = useState<AIProviderConfig>({
+    provider: 'ollama',
+    base_url: 'http://localhost:11434',
+    api_key: '',
+    model: 'gemma4:e2b-mlx',
+    enabled: true,
+  })
+  const [savingAI, setSavingAI] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null)
 
   const [loginForm] = Form.useForm()
   const [registerForm] = Form.useForm()
@@ -22,7 +33,19 @@ export default function Settings() {
 
   useEffect(() => {
     loadData()
+    loadSettings()
   }, [])
+
+  const loadSettings = async () => {
+    try {
+      const result = await getSettings()
+      if (result.config) {
+        setAiConfig(result.config)
+      }
+    } catch {
+      // Use defaults
+    }
+  }
 
   const loadData = async () => {
     try {
@@ -79,6 +102,40 @@ export default function Settings() {
     await logout()
     setCurrentUser({ username: null, role: null })
     messageApi.success('Logged out')
+  }
+
+  const handleSaveAIConfig = async () => {
+    setSavingAI(true)
+    try {
+      const result = await updateSettings(aiConfig)
+      if (result.success) {
+        setAiConfig(result.config)
+        messageApi.success(t('settings.aiConfigSaved'))
+      }
+    } catch {
+      messageApi.error(t('settings.aiConfigSaveFailed'))
+    } finally {
+      setSavingAI(false)
+    }
+  }
+
+  const handleTestConnection = async () => {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const result = await testConnection()
+      setTestResult(result)
+      if (result.success) {
+        messageApi.success(t('settings.connectionSuccess'))
+      } else {
+        messageApi.error(result.error || t('settings.connectionFailed'))
+      }
+    } catch (err) {
+      setTestResult({ success: false, error: String(err) })
+      messageApi.error(t('settings.connectionFailed'))
+    } finally {
+      setTesting(false)
+    }
   }
 
   const roleColor = (role: UserRole) => {
@@ -139,6 +196,73 @@ export default function Settings() {
 
         <Card title={<><HistoryOutlined /> {t('settings.auditLog')}</>}>
           <Table size="small" rowKey="id" columns={auditColumns} dataSource={auditLog} pagination={{ pageSize: 20 }} />
+        </Card>
+
+        <Card
+          title={<><CloudOutlined /> {t('settings.aiProvider')}</>}
+          extra={
+            aiConfig.enabled ? (
+              <Tag color="success" icon={<CheckCircleOutlined />}>{t('settings.enabled')}</Tag>
+            ) : (
+              <Tag color="default">{t('settings.disabled')}</Tag>
+            )
+          }
+        >
+          <Form
+            layout="vertical"
+            initialValues={aiConfig}
+            onValuesChange={(changed, all) => setAiConfig(all as AIProviderConfig)}
+          >
+            <Form.Item name="provider" label={t('settings.providerType')}>
+              <Select
+                options={[
+                  { value: 'ollama', label: 'Ollama (Local)' },
+                  { value: 'openai', label: 'OpenAI' },
+                  { value: 'azure', label: 'Azure OpenAI' },
+                  { value: 'custom', label: 'Custom (OpenAI-compatible)' },
+                ]}
+              />
+            </Form.Item>
+
+            <Form.Item name="base_url" label={t('settings.baseUrl')}>
+              <Input
+                placeholder={
+                  aiConfig.provider === 'ollama'
+                    ? 'http://localhost:11434'
+                    : 'https://api.openai.com'
+                }
+              />
+            </Form.Item>
+
+            <Form.Item name="api_key" label={t('settings.apiKey')}>
+              <Input.Password placeholder={aiConfig.provider === 'ollama' ? t('settings.apiKeyOptional') : 'sk-...'} />
+            </Form.Item>
+
+            <Form.Item name="model" label={t('settings.model')}>
+              <Input placeholder="gemma4:e2b-mlx" />
+            </Form.Item>
+
+            <Form.Item>
+              <Space>
+                <Button type="primary" onClick={handleSaveAIConfig} loading={savingAI}>
+                  {t('settings.save')}
+                </Button>
+                <Button onClick={handleTestConnection} loading={testing}>
+                  {t('settings.testConnection')}
+                </Button>
+              </Space>
+            </Form.Item>
+
+            {testResult !== null && (
+              <Alert
+                type={testResult.success ? 'success' : 'error'}
+                message={testResult.success ? t('settings.connectionSuccess') : t('settings.connectionFailed')}
+                description={testResult.error}
+                showIcon
+                style={{ marginTop: 16 }}
+              />
+            )}
+          </Form>
         </Card>
       </Space>
 

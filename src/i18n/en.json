@@ -289,6 +289,20 @@
     "auditLog": "Audit Log",
     "viewer": "Viewer",
     "engineer": "Engineer",
-    "admin": "Admin"
+    "admin": "Admin",
+    "aiProvider": "AI Assistant Settings",
+    "providerType": "AI Provider",
+    "baseUrl": "Server URL",
+    "apiKey": "API Key",
+    "apiKeyOptional": "Ollama does not require an API key",
+    "model": "Model Name",
+    "save": "Save Settings",
+    "saveSuccess": "Settings saved successfully",
+    "saveFailed": "Failed to save settings",
+    "testConnection": "Test Connection",
+    "connectionSuccess": "Connection successful",
+    "connectionFailed": "Connection failed",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
   }
 }

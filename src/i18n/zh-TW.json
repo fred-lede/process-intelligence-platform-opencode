@@ -289,6 +289,20 @@
     "auditLog": "稽核紀錄",
     "viewer": "檢視者",
     "engineer": "工程師",
-    "admin": "管理員"
+    "admin": "管理員",
+    "aiProvider": "AI 助手設定",
+    "providerType": "AI 提供者",
+    "baseUrl": "伺服器位址",
+    "apiKey": "API 金鑰",
+    "apiKeyOptional": "Ollama 不需要 API 金鑰",
+    "model": "模型名稱",
+    "save": "儲存設定",
+    "saveSuccess": "設定已儲存",
+    "saveFailed": "儲存失敗",
+    "testConnection": "測試連線",
+    "connectionSuccess": "連線成功",
+    "connectionFailed": "連線失敗",
+    "enabled": "已啟用",
+    "disabled": "已停用"
   }
 }
