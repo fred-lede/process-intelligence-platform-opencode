@@ -86,3 +86,38 @@ def test_recommend_experiments_detects_interaction():
     # Should recommend exploring the A-B interaction
     interaction_recs = [r for r in result if r["type"] == "interaction"]
     assert len(interaction_recs) > 0
+
+
+def test_analyze_residuals_qq_data():
+    df = _make_df()
+    fit = fit_doe_linear(df, target="Y", inputs=["A", "B", "C"])
+    result = analyze_residuals(fit, df)
+
+    assert "qq_data" in result
+    assert "theoretical_quantiles" in result["qq_data"]
+    assert "sample_quantiles" in result["qq_data"]
+    assert len(result["qq_data"]["theoretical_quantiles"]) == len(df)
+    assert len(result["qq_data"]["sample_quantiles"]) == len(df)
+
+
+def test_analyze_residuals_vs_predicted():
+    df = _make_df()
+    fit = fit_doe_linear(df, target="Y", inputs=["A", "B", "C"])
+    result = analyze_residuals(fit, df)
+
+    assert "residuals_vs_predicted" in result
+    assert "predicted" in result["residuals_vs_predicted"]
+    assert "residuals" in result["residuals_vs_predicted"]
+    assert len(result["residuals_vs_predicted"]["predicted"]) == len(df)
+
+
+def test_analyze_residuals_durbin_watson():
+    df = _make_df()
+    fit = fit_doe_linear(df, target="Y", inputs=["A", "B", "C"])
+    result = analyze_residuals(fit, df)
+
+    assert "durbin_watson" in result
+    assert "statistic" in result["durbin_watson"]
+    assert "interpretation" in result["durbin_watson"]
+    # Durbin-Watson statistic should be between 0 and 4
+    assert 0 <= result["durbin_watson"]["statistic"] <= 4

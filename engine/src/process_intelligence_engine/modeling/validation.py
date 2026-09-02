@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 from typing import Any
 
 from .fitters import ModelFit
@@ -155,6 +156,31 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
     p_value = max(0.0, 1.0 - stat / 10.0)
     is_normal = p_value > 0.05
 
+    # Q-Q plot data
+    sorted_residuals = np.sort(residuals)
+    n = len(sorted_residuals)
+    theoretical_quantiles = stats.norm.ppf((np.arange(1, n + 1) - 0.5) / n)
+
+    # Residuals vs Predicted
+    residuals_vs_predicted = {
+        "predicted": y_pred.tolist(),
+        "residuals": residuals.tolist()
+    }
+
+    # Durbin-Watson statistic
+    if n > 1:
+        dw_stat = float(np.sum(np.diff(residuals) ** 2) / np.sum(residuals ** 2))
+    else:
+        dw_stat = 2.0
+
+    # Interpretation
+    if dw_stat < 1.5:
+        interpretation = "positive_autocorrelation"
+    elif dw_stat > 2.5:
+        interpretation = "negative_autocorrelation"
+    else:
+        interpretation = "no_autocorrelation"
+
     return {
         "residuals": [float(r) for r in residuals],
         "stats": {
@@ -167,6 +193,15 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
             "statistic": float(stat),
             "p_value": float(p_value),
             "is_normal": bool(is_normal),
+        },
+        "qq_data": {
+            "theoretical_quantiles": theoretical_quantiles.tolist(),
+            "sample_quantiles": sorted_residuals.tolist(),
+        },
+        "residuals_vs_predicted": residuals_vs_predicted,
+        "durbin_watson": {
+            "statistic": dw_stat,
+            "interpretation": interpretation,
         }
     }
 
