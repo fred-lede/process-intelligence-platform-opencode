@@ -19,6 +19,11 @@
 
 ## Completed
 
+### Phase 3b-8 — Validation & Residual Analysis
+- Task 1: `validation.py` — cross-validation, residual analysis, experiment recommendations (commit `89b397c`)
+- Task 2: `main.py` + `engine.ts` — IPC handler `modeling/validation/analyze` + frontend `analyzeValidation` API (commit `6f1a4d6`)
+- 驗證 — 138 tests pass (89% coverage), tsc/build clean
+
 ### Phase 3a — Model Center Engine Core
 - Task 1: `metrics.py` — RMSE/MSE/MAE/R²/Adjusted R² (commit `da6079d`)
 - Task 2: `fitters.py` — DOE linear/quadratic + random forest + residual hybrid (commits `28c8c55`, `419ea2b`, `d677820`)

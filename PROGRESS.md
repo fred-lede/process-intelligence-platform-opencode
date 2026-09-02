@@ -352,3 +352,17 @@
 |------|------|
 | de32eff | feat(extrapolation): expose modeling/extrapolation/check IPC + frontend API |
 | a738613 | feat(extrapolation): extrapolation risk scoring for predictions |
+## 2026-09-02 — Phase 3b-8 Validation & Residual Analysis
+
+### 完成內容
+
+- [x] `validation.py` — cross_validate, analyze_residuals, recommend_experiments
+- [x] 5 個測試用例通過
+- [x] 全套件 136 tests pass, 88% coverage
+- Commit: `89b397c`
+- [x] `main.py` — `modeling/validation/analyze` IPC handler
+- [x] `engine.ts` — `ValidationResult` type + `analyzeValidation()` API
+- [x] `test_main_validation.py` — 2 個 IPC handler 測試
+- [x] 驗證：138 tests（全 pass）、覆蓋率 **89%**、tsc clean
+- Commit: `6f1a4d6`
+
