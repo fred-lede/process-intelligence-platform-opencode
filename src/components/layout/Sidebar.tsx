@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Layout, Menu, Select, Typography } from 'antd'
+import { Layout, Menu, Select, Typography, Button, Modal } from 'antd'
 import {
   DashboardOutlined,
   ImportOutlined,
@@ -12,8 +12,10 @@ import {
   SlidersOutlined,
   FileTextOutlined,
   SettingOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons'
 import type { AppTab } from '../../types'
+import { useState } from 'react'
 
 const { Sider } = Layout
 
@@ -39,6 +41,7 @@ const settingsItem = { key: 'settings', icon: <SettingOutlined /> }
 
 export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const { t, i18n } = useTranslation()
+  const [aboutOpen, setAboutOpen] = useState(false)
 
   const menuItems = [
     ...tabItems.map((item) => ({
@@ -84,7 +87,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       <div style={{ padding: 12, borderTop: '1px solid #e5e7eb' }}>
         <Select
           size="small"
-          style={{ width: '100%' }}
+          style={{ width: '100%', marginBottom: 8 }}
           value={i18n.language}
           onChange={handleLanguageChange}
           options={[
@@ -92,7 +95,46 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             { value: 'zh-TW', label: '繁體中文' },
           ]}
         />
+        <Button
+          type="text"
+          size="small"
+          icon={<InfoCircleOutlined />}
+          style={{ width: '100%', textAlign: 'left' }}
+          onClick={() => setAboutOpen(true)}
+        >
+          {t('nav.about')}
+        </Button>
       </div>
+
+      <Modal
+        open={aboutOpen}
+        title={t('about.title')}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setAboutOpen(false)}>
+            {t('about.close')}
+          </Button>,
+        ]}
+        onCancel={() => setAboutOpen(false)}
+      >
+        <Typography.Paragraph>
+          <strong>{t('about.appName')}</strong>
+        </Typography.Paragraph>
+        <Typography.Paragraph>
+          {t('about.description')}
+        </Typography.Paragraph>
+        <Typography.Paragraph>
+          <strong>{t('about.author')}:</strong> Fred Wang
+        </Typography.Paragraph>
+        <Typography.Paragraph>
+          <strong>{t('about.version')}:</strong> 0.1.0
+        </Typography.Paragraph>
+        <Typography.Paragraph>
+          <strong>{t('about.license')}:</strong> MIT License
+        </Typography.Paragraph>
+        <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
+          {t('about.github')}
+        </Typography.Paragraph>
+      </Modal>
     </Sider>
   )
 }
