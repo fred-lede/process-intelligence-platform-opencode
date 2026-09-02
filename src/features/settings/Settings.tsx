@@ -87,8 +87,9 @@ export default function Settings() {
     }
   }, [aiConfig.provider])
 
-  const loadData = async () => {
+  const loadData = async (retryCount = 0) => {
     try {
+      await enginePing()
       const [user, usersList, log] = await Promise.all([
         getCurrentUser(),
         listUsers(),
@@ -98,6 +99,10 @@ export default function Settings() {
       setUsers(usersList.users)
       setAuditLog(log.log)
     } catch (e) {
+      if (retryCount < 5) {
+        setTimeout(() => loadData(retryCount + 1), 500)
+        return
+      }
       console.error('[Settings] loadData error:', e)
       messageApi.error(e instanceof Error ? e.message : 'Failed to load data')
     }
