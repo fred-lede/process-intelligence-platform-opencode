@@ -32,6 +32,7 @@ from process_intelligence_engine.data.quality import run_quality_checks
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
+from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments
 from process_intelligence_engine.modeling.fitters import (
     fit_doe_linear,
     fit_doe_quadratic,
@@ -346,6 +347,25 @@ def _handle_extrapolation_check(params: dict) -> dict:
     return compute_extrapolation_risk(df, prediction_points)
 
 
+def _handle_validation_analyze(params: dict) -> dict:
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    k = params.get("k", 5)
+    fit = MODEL_REGISTRY._get_unlocked(model_id)
+    df = REGISTRY.get(dataset_id)
+
+    cv_result = cross_validate(fit, df, k)
+    residual_result = analyze_residuals(fit, df)
+    interactions = {"significant_pairs": []}
+    recommendations = recommend_experiments(fit, df, interactions)
+
+    return {
+        **cv_result,
+        **residual_result,
+        "recommendations": recommendations,
+    }
+
+
 def _handle_doe_generate(params: dict) -> dict:
     return generate_design(
         factors=params["factors"],
@@ -415,6 +435,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/extrapolation/check":
         return _handle_extrapolation_check(params)
+
+    if method == "modeling/validation/analyze":
+        return _handle_validation_analyze(params)
 
     raise ValueError(f"Unknown method: {method}")
 

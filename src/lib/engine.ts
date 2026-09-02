@@ -350,3 +350,28 @@ export async function checkExtrapolation(params: {
 }): Promise<ExtrapolationResult> {
   return engineCall<ExtrapolationResult>('modeling/extrapolation/check', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 3b-8: Validation Analysis ---------------------------------------
+
+export interface CVResult {
+  fold: number
+  r2: number
+  rmse: number
+}
+
+export interface ValidationResult {
+  cv_results: CVResult[]
+  mean_metrics: { mean_r2: number; mean_rmse: number }
+  residuals: number[]
+  stats: { mean: number; std: number; skewness: number; kurtosis: number }
+  normality_test: { statistic: number; p_value: number; is_normal: boolean }
+  recommendations: { type: string; reason: string; factors?: string[]; method?: string }[]
+}
+
+export async function analyzeValidation(params: {
+  model_id: string
+  dataset_id: string
+  k?: number
+}): Promise<ValidationResult> {
+  return engineCall<ValidationResult>('modeling/validation/analyze', params as unknown as Record<string, unknown>)
+}
