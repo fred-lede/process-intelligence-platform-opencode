@@ -43,6 +43,9 @@ from process_intelligence_engine.modeling.fitters import (
 )
 from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
+from process_intelligence_engine.reporting.models import ReportData
+from process_intelligence_engine.reporting.html import HTMLReportGenerator
+from process_intelligence_engine.reporting.excel import ExcelReportGenerator
 
 
 def _plain_types(value):
@@ -406,6 +409,75 @@ def _handle_validation_full(params: dict) -> dict:
     }
 
 
+def _handle_report_generate(params: dict) -> dict:
+    """Generate a report from project data."""
+    project_name = params.get("project_name", "Untitled Project")
+    operator = params.get("operator", "Unknown")
+    output_format = params.get("format", "html")  # html | pdf | excel
+
+    dataset_id = params.get("dataset_id")
+    if not dataset_id:
+        raise ValueError("dataset_id is required")
+
+    df = REGISTRY.get(dataset_id)
+
+    model_ids = params.get("model_ids", [])
+    model_comparison = []
+    best_model = {}
+    if model_ids:
+        for mid in model_ids:
+            try:
+                fit = MODEL_REGISTRY._get_unlocked(mid)
+                model_comparison.append({
+                    "model_id": fit.model_id,
+                    "model_type": fit.model_type,
+                    "metrics": fit.metrics,
+                    "status": fit.status,
+                })
+                if fit.status in ("validated", "approved"):
+                    best_model = fit.to_dto()
+            except Exception:
+                pass
+
+    fields_list = []
+    if model_ids:
+        for mid in model_ids:
+            try:
+                fit = MODEL_REGISTRY._get_unlocked(mid)
+                for col in df.columns:
+                    role = "metadata"
+                    if col in fit.inputs:
+                        role = "input"
+                    elif col == fit.target:
+                        role = "output"
+                    fields_list.append({"name": col, "role": role})
+                break
+            except Exception:
+                pass
+
+    report_data = ReportData(
+        project_name=project_name,
+        operator=operator,
+        dataset_id=dataset_id,
+        row_count=len(df),
+        column_count=len(df.columns),
+        fields=fields_list,
+        model_comparison=model_comparison,
+        best_model=best_model,
+    )
+
+    if output_format == "html":
+        generator = HTMLReportGenerator(report_data)
+        result = generator.generate()
+        return {"format": "html", "content": result}
+    elif output_format == "excel":
+        generator = ExcelReportGenerator(report_data)
+        result = generator.generate()
+        return {"format": "excel", "content_base64": result.hex()}
+    else:
+        raise ValueError(f"Unsupported format: {output_format}")
+
+
 def _handle_doe_generate(params: dict) -> dict:
     return generate_design(
         factors=params["factors"],
@@ -481,6 +553,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/validation/full":
         return _handle_validation_full(params)
+
+    if method == "report/generate":
+        return _handle_report_generate(params)
 
     raise ValueError(f"Unknown method: {method}")
 

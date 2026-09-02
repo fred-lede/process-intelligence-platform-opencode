@@ -251,5 +251,16 @@
     "residualDiagnostics": "殘差診斷",
     "experimentRecommendations": "實驗建議",
     "fullValidationError": "無法執行完整驗證"
+  },
+  "report": {
+    "title": "報告",
+    "noData": "請先匯入資料才能產生報告。",
+    "info": "產生分析報告",
+    "infoDetail": "將分析結果匯出為 HTML 或 Excel 檔案。",
+    "htmlButton": "產生 HTML",
+    "excelButton": "下載 Excel",
+    "preview": "HTML 預覽",
+    "generateSuccess": "報告產生成功",
+    "generateError": "報告產生失敗"
   }
 }

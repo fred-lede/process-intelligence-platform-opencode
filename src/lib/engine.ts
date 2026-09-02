@@ -419,3 +419,23 @@ export async function runFullValidation(params: {
 }): Promise<FullValidationResult> {
   return engineCall<FullValidationResult>('modeling/validation/full', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 5: Report Generation ----------------------------------------------
+
+export interface ReportParams {
+  project_name: string
+  operator: string
+  dataset_id: string
+  model_ids?: string[]
+  format: 'html' | 'pdf' | 'excel'
+}
+
+export interface ReportResult {
+  format: string
+  content: string  // HTML content as string
+  content_base64?: string  // Binary content as hex string
+}
+
+export async function generateReport(params: ReportParams): Promise<ReportResult> {
+  return engineCall<ReportResult>('report/generate', params as unknown as Record<string, unknown>)
+}

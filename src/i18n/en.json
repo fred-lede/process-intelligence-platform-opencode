@@ -251,5 +251,16 @@
     "residualDiagnostics": "Residual Diagnostics",
     "experimentRecommendations": "Experiment Recommendations",
     "fullValidationError": "Failed to run full validation"
+  },
+  "report": {
+    "title": "Report",
+    "noData": "Import data to generate a report.",
+    "info": "Generate analysis report",
+    "infoDetail": "Export the analysis results as HTML or Excel file.",
+    "htmlButton": "Generate HTML",
+    "excelButton": "Download Excel",
+    "preview": "HTML Preview",
+    "generateSuccess": "Report generated successfully",
+    "generateError": "Failed to generate report"
   }
 }

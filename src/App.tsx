@@ -7,6 +7,7 @@ import DataImport from './features/data-import/DataImport'
 import ProcessDefine from './features/process-define/ProcessDefine'
 import Exploration from './features/exploration/Exploration'
 import ModelCenter from './features/model-center/ModelCenter'
+import Report from './features/report/Report'
 import FeaturePlaceholder from './components/common/FeaturePlaceholder'
 import type { AppTab } from './types'
 
@@ -21,6 +22,7 @@ export default function App() {
     if (activeTab === 'processDefine') return <ProcessDefine />
     if (activeTab === 'exploration') return <Exploration />
     if (activeTab === 'modelCenter') return <ModelCenter />
+    if (activeTab === 'reports') return <Report />
     return <FeaturePlaceholder tabKey={activeTab} />
   }
 
