@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Layout, Input, Button, Space, Avatar, Typography, Tag } from 'antd'
-import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin } from 'antd'
+import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons'
 import { aiChat, checkAIHealth, type AIChatMessage } from '../../lib/engine'
 
 const { Sider } = Layout
@@ -87,6 +87,17 @@ export default function AssistantPanel() {
             </div>
           </div>
         ))}
+        {loading && (
+          <div style={{ marginBottom: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Avatar size="small" icon={<RobotOutlined />} style={{ backgroundColor: '#10b981', marginTop: 4 }} />
+            <div style={{ flex: 1, background: '#f0f9ff', padding: '8px 12px', borderRadius: 8 }}>
+              <Space>
+                <Spin indicator={<LoadingOutlined spin />} size="small" />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('assistant.thinking')}</Typography.Text>
+              </Space>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
