@@ -19,9 +19,15 @@
 
 ## Completed
 
+### Phase 4 — Validation Experiment Recommendation
+- Task 4: `main.py` + `engine.ts` — IPC handler `modeling/validation/full` with model comparison + experiment recommendation + `test_main_validation_full.py` (commit `6ad1f04`)
+- Task 5: `ModelCenter.tsx` — Full Validation UI card with model comparison table, residual diagnostics, experiment recommendations + i18n (commit `6ad1f04`)
+- 驗證 — 148 tests pass (89% coverage), tsc/build clean
+
 ### Phase 4 — Model Selection
 - Task 2: `model_selection.py` — multi-model comparison with CV and composite scoring (commit `a9ad6ec`)
-- 驗證 — 144 tests pass (89% coverage)
+- Task 3: `experiment_recommendation.py` — experiment recommendation engine (commit `572a511`)
+- 驗證 — 147 tests pass (88% coverage)
 
 ### Phase 3b-8 — Validation & Residual Analysis
 - Task 1: `validation.py` — cross-validation, residual analysis, experiment recommendations (commit `89b397c`)
