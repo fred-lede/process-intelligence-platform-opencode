@@ -97,8 +97,9 @@ export default function Settings() {
       setCurrentUser(user)
       setUsers(usersList.users)
       setAuditLog(log.log)
-    } catch {
-      messageApi.error('Failed to load data')
+    } catch (e) {
+      console.error('[Settings] loadData error:', e)
+      messageApi.error(e instanceof Error ? e.message : 'Failed to load data')
     }
   }
 
