@@ -55,11 +55,13 @@ export default function Settings() {
     try {
       setLoadingModels(true)
       const result = await listAIModels()
+      console.log('[Settings] listAIModels result:', result)
       if (result.success && result.models) {
         setAvailableModels(result.models)
       }
-    } catch { /* ignore */ }
-    finally {
+    } catch (e) {
+      console.error('[Settings] loadModels error:', e)
+    } finally {
       setLoadingModels(false)
     }
   }
