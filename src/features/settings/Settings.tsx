@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message, Divider } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { UserOutlined, HistoryOutlined, SettingOutlined, CloudOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection } from '../../lib/engine'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
@@ -211,7 +211,7 @@ export default function Settings() {
           <Form
             layout="vertical"
             initialValues={aiConfig}
-            onValuesChange={(changed, all) => setAiConfig(all as AIProviderConfig)}
+            onValuesChange={(_, all) => setAiConfig(all as AIProviderConfig)}
           >
             <Form.Item name="provider" label={t('settings.providerType')}>
               <Select
