@@ -31,6 +31,7 @@ from process_intelligence_engine.data.importer import import_file
 from process_intelligence_engine.data.quality import run_quality_checks
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
+from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
 from process_intelligence_engine.modeling.fitters import (
     fit_doe_linear,
     fit_doe_quadratic,
@@ -338,6 +339,13 @@ def _handle_shap_explain(params: dict) -> dict:
     return compute_shap(fit, df, nsamples)
 
 
+def _handle_extrapolation_check(params: dict) -> dict:
+    dataset_id = params["dataset_id"]
+    prediction_points = params.get("prediction_points", [])
+    df = REGISTRY.get(dataset_id)
+    return compute_extrapolation_risk(df, prediction_points)
+
+
 def _handle_doe_generate(params: dict) -> dict:
     return generate_design(
         factors=params["factors"],
@@ -404,6 +412,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/shap/explain":
         return _handle_shap_explain(params)
+
+    if method == "modeling/extrapolation/check":
+        return _handle_extrapolation_check(params)
 
     raise ValueError(f"Unknown method: {method}")
 

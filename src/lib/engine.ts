@@ -334,3 +334,19 @@ export async function computeSHAP(params: {
 }): Promise<SHAPResult> {
   return engineCall<SHAPResult>('modeling/shap/explain', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 3b-7: Extrapolation Risk ----------------------------------------
+
+export interface ExtrapolationResult {
+  risk_scores: number[]
+  factor_risks: Record<string, { min: number; max: number; risk: number }>
+  max_risk: number
+  is_extrapolation: boolean
+}
+
+export async function checkExtrapolation(params: {
+  dataset_id: string
+  prediction_points: Record<string, number>[]
+}): Promise<ExtrapolationResult> {
+  return engineCall<ExtrapolationResult>('modeling/extrapolation/check', params as unknown as Record<string, unknown>)
+}
