@@ -44,11 +44,7 @@ export default function AssistantPanel() {
 
     try {
       const result = await aiChat([...messages, userMessage])
-      if (result.success && result.response) {
-        setMessages(prev => [...prev, { role: 'assistant', content: result.response! }])
-      } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${result.error ?? 'Unknown error'}` }])
-      }
+      setMessages(prev => [...prev, { role: 'assistant', content: result.response ?? `Error: ${result.error ?? 'Unknown error'}` }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Failed to connect to AI assistant.' }])
     } finally {
@@ -91,7 +87,7 @@ export default function AssistantPanel() {
           <div style={{ marginBottom: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <Avatar size="small" icon={<RobotOutlined />} style={{ backgroundColor: '#10b981', marginTop: 4 }} />
             <div style={{ flex: 1, background: '#f0f9ff', padding: '8px 12px', borderRadius: 8 }}>
-              <Space>
+              <Space direction="horizontal" size={8}>
                 <Spin indicator={<LoadingOutlined spin />} size="small" />
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('assistant.thinking')}</Typography.Text>
               </Space>
