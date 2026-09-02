@@ -28,6 +28,8 @@ def test_fit_doe_linear_recovers_coefficients():
     c = fit.coefficients
     assert abs(c.get("x1", 0) - 3.0) < 0.5
     assert abs(c.get("x2", 0) + 4.0) < 0.5
+    assert "1" not in c
+    assert abs(c.get("_intercept", 0) - 2.0) < 0.5
     assert fit.equation
     assert fit.direction is None  # regression has no directional encoding
 

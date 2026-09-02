@@ -117,18 +117,22 @@ def _fit_linear_on_matrix(df, target, inputs, degree, test_size, random_state) -
     y_pred = model.predict(X_te)
     design = _design_matrix(df, inputs, degree)
     coefs = dict(zip(design.columns, model.coef_.tolist()))
-    metrics = _compute_all_metrics(y_te, y_pred, len(inputs))
+    n_predictors = len(design.columns) - 1  # exclude intercept "1"
+    metrics = _compute_all_metrics(y_te, y_pred, n_predictors)
     terms = [f"{model.intercept_:.4g}"]
+    coefficients = {}
     for name, c in coefs.items():
         if name == "1":
             continue
         terms.append(f"{c:+.4g}*{name}")
+        coefficients[name] = float(c)
+    coefficients["_intercept"] = float(model.intercept_)
     fit = ModelFit(
         model_type="doe_quadratic" if degree >= 2 else "doe_linear",
         target=target,
         inputs=list(inputs),
         metrics=metrics,
-        coefficients={k: float(v) for k, v in coefs.items()},
+        coefficients=coefficients,
         equation=" ".join(terms),
         n_train=len(X_tr),
         n_test=len(X_te),
@@ -196,7 +200,7 @@ def fit_residual_hybrid(
     # Single index scheme: shuffle row indices once, share across DOE+RF.
     idx = np.arange(n)
     rs = np.random.default_rng(random_state)
-    idx = rs.permutation(idx) if random_state is not None else idx[::-1]
+    idx = rs.permutation(idx)
     test_n = int(n * test_size)
     test_idx = idx[:test_n]
     train_idx = idx[test_n:]
@@ -208,12 +212,19 @@ def fit_residual_hybrid(
     y_pred = doe.predict(D[test_idx]) + rf.predict(X[test_idx])
     y_test = y[test_idx]
     coefs = dict(zip(doe_cols, doe.coef_.tolist()))
+    n_predictors = len(doe_cols) - 1  # exclude intercept "1"
+    coefficients = {}
+    for name, c in coefs.items():
+        if name == "1":
+            continue
+        coefficients[name] = float(c)
+    coefficients["_intercept"] = float(doe.intercept_)
     return ModelFit(
         model_type="residual_hybrid",
         target=target,
         inputs=list(inputs),
-        metrics=_compute_all_metrics(y_test, y_pred, len(inputs)),
-        coefficients={k: float(v) for k, v in coefs.items()},
+        metrics=_compute_all_metrics(y_test, y_pred, n_predictors),
+        coefficients=coefficients,
         equation="Y = f_DOE(X) + r_RF(X)",
         n_train=len(train_idx),
         n_test=len(test_idx),
