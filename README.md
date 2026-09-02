@@ -32,8 +32,15 @@
 ### 安裝與開發
 
 ```bash
-# 安裝依賴
+# 安裝前端依賴
 npm install
+
+# 建立 Python 虛擬環境（仅需第一次）
+cd engine
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+cd ..
 
 # 啟動開發環境
 npm run tauri dev
