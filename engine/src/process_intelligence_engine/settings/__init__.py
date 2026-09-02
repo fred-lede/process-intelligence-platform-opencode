@@ -68,13 +68,24 @@ class SettingsManager:
         """Test connection to the configured provider."""
         import asyncio
         try:
-            from .ollama_client import OllamaClient
-            client = OllamaClient(
-                base_url=self._config.base_url,
-                model=self._config.model
-            )
-            is_healthy = asyncio.run(client.health_check())
-            return {"success": is_healthy}
+            if self._config.provider == 'ollama':
+                from ..ai.ollama_client import OllamaClient
+                client = OllamaClient(
+                    base_url=self._config.base_url,
+                    model=self._config.model
+                )
+                is_healthy = asyncio.run(client.health_check())
+                return {"success": is_healthy}
+            else:
+                import aiohttp
+                url = f"{self._config.base_url.rstrip('/')}/models"
+                headers = {"Authorization": f"Bearer {self._config.api_key}"} if self._config.api_key else {}
+                async def _check() -> bool:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                            return resp.status == 200
+                is_healthy = asyncio.run(_check())
+                return {"success": is_healthy}
         except Exception as e:
             return {"success": False, "error": str(e)}
 
