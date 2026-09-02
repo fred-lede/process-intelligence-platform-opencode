@@ -218,6 +218,13 @@
     "computeInteractions": "計算交互作用",
     "computing": "計算中...",
     "interactionStrength": "交互作用強度",
-    "noInteraction": "請先配適模型。"
+    "noInteraction": "請先配適模型。",
+    "shapTitle": "SHAP 可解釋性",
+    "computeSHAP": "計算 SHAP",
+    "computingSHAP": "計算中...",
+    "shapImportanceTitle": "特徵重要性",
+    "shapImportance": "平均 |SHAP 值|",
+    "shapSummaryTitle": "SHAP 摘要",
+    "shapError": "無法計算 SHAP 值"
   }
 }

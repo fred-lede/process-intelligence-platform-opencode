@@ -218,6 +218,13 @@
     "computeInteractions": "Compute Interactions",
     "computing": "Computing...",
     "interactionStrength": "Interaction Strength",
-    "noInteraction": "No interactions to display. Fit a model first."
+    "noInteraction": "No interactions to display. Fit a model first.",
+    "shapTitle": "SHAP Interpretability",
+    "computeSHAP": "Compute SHAP",
+    "computingSHAP": "Computing...",
+    "shapImportanceTitle": "Feature Importance",
+    "shapImportance": "Mean |SHAP value|",
+    "shapSummaryTitle": "SHAP Summary",
+    "shapError": "Failed to compute SHAP values"
   }
 }

@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
+import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult } from '../../lib/engine'
-import { computeInteractions } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult } from '../../lib/engine'
+import { computeInteractions, computeSHAP } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -46,6 +47,8 @@ export default function ModelCenter() {
   const [compareIds, setCompareIds] = useState<string[]>([])
   const [interactions, setInteractions] = useState<InteractionResult | null>(null)
   const [interactionsLoading, setInteractionsLoading] = useState(false)
+  const [shapResult, setShapResult] = useState<SHAPResult | null>(null)
+  const [shapLoading, setShapLoading] = useState(false)
 
   const datasetId = importResult?.dataset_id
   const inputOptions = fields
@@ -82,6 +85,20 @@ export default function ModelCenter() {
       messageApi.error('Failed to compute interactions')
     } finally {
       setInteractionsLoading(false)
+    }
+  }
+
+  const handleComputeSHAP = async () => {
+    if (!models.length || !datasetId) return
+    const modelId = models[models.length - 1].model_id
+    setShapLoading(true)
+    try {
+      const result = await computeSHAP({ model_id: modelId, dataset_id: datasetId })
+      setShapResult(result)
+    } catch {
+      messageApi.error(t('modelCenter.shapError'))
+    } finally {
+      setShapLoading(false)
     }
   }
 
@@ -287,6 +304,60 @@ export default function ModelCenter() {
                 ]}
                 rowKey="factor"
               />
+            ) : (
+              <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
+            )}
+          </Space>
+        </Card>
+
+        <Card title={t('modelCenter.shapTitle')} size="small">
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Button
+              type="primary"
+              loading={shapLoading}
+              onClick={handleComputeSHAP}
+              disabled={models.length === 0 || !datasetId}
+            >
+              {shapLoading ? t('modelCenter.computingSHAP') : t('modelCenter.computeSHAP')}
+            </Button>
+            {shapResult ? (
+              <Space direction="vertical" style={{ width: '100%' }} size="small">
+                <Plot
+                  data={[{
+                    x: shapResult.feature_importance.map(f => f.importance),
+                    y: shapResult.feature_importance.map(f => f.name),
+                    type: 'bar' as const,
+                    orientation: 'h',
+                    marker: { color: '#2563EB' }
+                  }]}
+                  layout={{
+                    title: { text: t('modelCenter.shapImportanceTitle') },
+                    xaxis: { title: { text: t('modelCenter.shapImportance') } },
+                    margin: { l: 100 }
+                  }}
+                  useResizeHandler
+                  style={{ width: '100%', height: 200 }}
+                />
+                <Plot
+                  data={[{
+                    x: shapResult.shap_values.flat(),
+                    y: shapResult.feature_importance.map((_, i) =>
+                      Array(shapResult.shap_values.length).fill(shapResult.feature_importance[i].name)
+                    ).flat(),
+                    type: 'scatter' as const,
+                    mode: 'markers',
+                    marker: { size: 6, opacity: 0.6 }
+                  }]}
+                  layout={{
+                    title: { text: t('modelCenter.shapSummaryTitle') },
+                    yaxis: { automargin: true },
+                    xaxis: { title: { text: 'SHAP value' } },
+                    margin: { l: 60 }
+                  }}
+                  useResizeHandler
+                  style={{ width: '100%', height: 300 }}
+                />
+              </Space>
             ) : (
               <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
             )}
