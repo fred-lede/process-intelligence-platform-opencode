@@ -85,4 +85,8 @@ npm run tauri dev
 3. **Node 模組已安裝**：執行 `npm install`
 4. **瀏覽器 WebView**：macOS 內建 WebKit，Windows 需安裝 WebView2 Runtime
 
-若啟動時出現 `failed to run cargo metadata` 錯誤，表示 Rust 未正確安裝或 PATH 未設定。
+若啟動時出現以下錯誤，請檢查：
+
+- **`failed to run cargo metadata`**：Rust 未安裝或 PATH 未設定，執行 `source $HOME/.cargo/env`
+- **`engine start failed`**：Python venv 未建立，執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"`
+- **`Failed to load data`**：引擎未就緒，等待 3 秒後自動重試；若持續失敗請檢查 Python 路徑
