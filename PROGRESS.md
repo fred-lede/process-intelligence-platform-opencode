@@ -1,0 +1,135 @@
+# PROGRESS.md
+
+## 2026-09-02 — Phase 0 基礎建設完成
+
+### 完成內容
+
+- [x] 建立 git repo (.gitignore 已設定)
+- [x] 建立 Tauri 2.0 + React 18 + TypeScript 專案骨架
+- [x] 建立 Python 分析引擎 (venv@3.11.14, 位置 `engine/.venv`)
+- [x] 建立 Rust ↔ Python JSON-RPC IPC 通道
+  - `engine::EngineManager` — 子進程管理與呼叫
+  - `commands::engine_ping/health/call` — Tauri IPC
+  - 前端 `lib/engine.ts` — API 封裝
+- [x] 前端基礎 UI：
+  - 左側導航 (11 個 TAB)
+  - 中央工作區
+  - 右側 AI 助手面板 (佔位)
+  - 專案總覽頁面 (含引擎健康狀態顯示)
+- [x] i18n 基礎：en, zh-TW
+- [x] UI 風格：工業控制室 × 統計分析工作台 (antd 主題: #2563EB 主色)
+
+### 驗證結果
+
+- Rust `cargo check` ✅
+- Rust `cargo test engine::tests::pings_live_engine` ✅ (Rust→Python IPC 打通)
+- TypeScript `tsc --noEmit` ✅
+- 前端 `npm run build` ✅
+- `npm run tauri dev` 完整啟動 ✅
+  - Vite (1420) 啟動 ✅
+  - Tauri Rust 核心啟動 ✅
+  - Python 引擎子進程啟動 (PID 確認) ✅
+
+### 技術棧確認 (2026-09-02)
+
+| 決策 | 選擇 |
+|---|---|
+| 桌面框架 | Tauri 2.0 |
+| Python 引擎 | Bundled venv @ 3.11 |
+| Phase 1 本地 AI | 不需要 (延到 Phase 5) |
+| Phase 1 i18n | en + zh-TW |
+| Phase 1 資料粒度 | 單片產品/單一測試樣本 |
+
+### 下一步 (Phase 1)
+
+- Excel/CSV 匯入 (`engine/src/.../data/importer.py`)
+- 欄位自動辨識 (`field_detector.py`)
+- 資料品質檢查 (`quality.py`)
+- Input/Output/規格設定 UI
+- 分布圖表 (直方圖、密度曲線、box plot) + 趨勢圖
+- 專案保存與載入
+
+## 2026-09-02 — Phase 1 資料基礎完成
+
+### 完成內容
+
+- [x] 引擎端 (TDD, 全部含測試)：
+  - `importer.py` — 編碼偵測 (big5/cp950/gb18030/shift_jis)、分隔符偵測、Excel 第一 sheet、50 列預覽、`to_dataframe` 型別正規化 (空字串→NaN、數值強制轉型 90% 閾值)
+  - `field_detector.py` — 欄位角色辨識 (identifier/input/output/quality_label/timestamp/category/metadata/sensitive/excluded) 含 reason
+  - `quality.py` — missing/duplicate/constant/outlier(IQR+離群值四分類)/time_order/unbalanced_okng(閾值0.25)/batch_imbalance
+  - `distribution.py` — 10 種分布配適、AIC/BIC 排序、KS test、**PDF 密度曲線輸出**
+  - `main.py` — **in-memory dataset registry** (資料留在引擎記憶體，符合「原始資料不上雲」原則)、6 個 data/* 方法、`_plain_types` JSON 安全淨化層
+- [x] 前端：
+  - `@tauri-apps/plugin-dialog` + `plugin-fs` (Cargo + npm + capabilities)
+  - `DataImport.tsx` — 4 步流程 (選檔→預覽→辨識→角色確認) + 品質報告
+  - `dataPipelineStore.ts` (Zustand) — import/fields/quality/spec 狀態
+  - `ProcessDefine.tsx` — 輸出欄位 + 單位 + LSL/USL/Target(含驗證) + 輸入參數單位
+  - `Exploration.tsx` — Plotly 直方圖+配適密度曲線 (可切換 top-3)、AIC/BIC/KS 表、趨勢圖+規格線
+  - `lib/project.ts` — `.piproj.json` 專案保存/載入 (重新匯入 source 檔案重建 dataset)
+  - i18n en/zh-TW 新增全部新 UI 字串
+- [x] 端到端測試 (`test_e2e_pipeline.py`)：真實子進程 JSON-RPC 跑完整流程 (含 numpy 型別序列化)
+
+### 驗證結果
+
+- 引擎：**55 tests passed** (單元 52 + E2E 3)，覆蓋率 **84%**
+- Rust：`cargo test engine::tests::pings_live_engine` ✅ (實機 Python 子進程)
+- 前端：`tsc --noEmit` ✅、`npm run build` ✅
+- `npm run tauri dev` 三進程冒煙測試 ✅ (Vite 1420 / Tauri app / Python engine subprocess)
+
+### 待辦 (Phase 2)
+
+- [ ] 異常情境定義 (規格/製程控制/工程情境)
+- [ ] 正常分布與異常情境展示
+- [ ] 使用者確認分析資料包
+- [ ] DOE/AI 混合建模、模型比較、驗證實驗、蒙地卡羅、互動預測、報告
+
+### Known Improvements
+
+- `EngineManager::stop` dead_code warning（待生命週期管理）
+- bundle > 500kB (plotly) — 後續 code-split
+- AG Grid 已裝但預覽用 antd Table — Phase 2 可切換
+
+## 2026-09-02 — Phase 2 引擎端完成（異常情境 + 分析資料包）
+
+### 完成內容
+
+- [x] 2.1 異常偵測模組 `analysis/anomalies.py`（**TDD：RED→GREEN**，test_anomalies.py 10 tests）：
+  - **spec 異常**：輸出欄超 LSL/USL，occurrence_probability 由歷史資料估計 + magnitude_distribution
+  - **control 異常**：超管制線（**自動 mean±3σ**，可按欄 LCL/UCL 手工覆寫）+ **連續上升 runs rule**（runs_length=5，含起始索引/總上升量/平均步幅）
+  - **engineering 異常**：使用者自訂配方 (target ± tolerance)，source=engineering_input, confidence=0.85
+  - 每情境帶 source/confidence/`to_dto()`（JSON 安全純 Python 型別）
+  - 自動 3σ 於樣本數 <10 或 σ=0 時跳過；runs 情境獨立於管制線門檻
+- [x] 2.2 分析資料包 `build_analysis_package`（TDD）：資料指紋 (dataset_id/source_file/row_count/column_count/field_roles/confirmed_field_count) + 完成度（需 ≥1 output + ≥1 input → `complete`/`missing_requirements`）
+- [x] main.py 註冊 `analysis/detect_anomalies` + `analysis/package`（樣本<10 或 無手工限制時行為測試覆蓋）→ test_main_handlers.py +3 tests，總 13 新增
+
+### 驗證結果
+
+- 引擎：**68 tests passed**（原 55 + 新增 13），含全部 Phase 1 回歸
+- 覆蓋率上升（anomalies.py 92%）
+
+### 待辦 (Phase 2 前端)
+
+- [ ] 2.3 ProcessDefine 管制線 LCL/UCL 輸入 + 自動 3σ 建議顯示
+- [ ] 2.4 異常情境 UI（偵測清單 + 逐項確認 + 工程情境新增表單）
+- [ ] 2.5 分析資料包摘要卡（指紋/角色/規格/異常 + 確認）
+- [ ] 2.6 驗證：tsc/build/cargo/tauri dev 冒煙 + 更新文件
+
+## 2026-09-02 — Phase 2 完成（異常情境 + 分析資料包）
+
+### 完成內容
+
+- [x] 2.3 前端 ProcessDefine：管制界限區塊（LCL/UCL 手動覆寫 + 自動 3σ 提示標籤，每欄獨立）
+- [x] 2.4 前端異常情境 UI：觸發偵測 → 場景表格（類型/方向/發生率/信心度/來源/逐項確認）+ 全部確認 Popconfirm
+- [x] 2.5 前端分析資料包摘要卡（row/col/field_roles/spec/異常數 + 完成度檢查，缺 output 或 input 顯示警告）
+- [x] 2.6 驗證全部通過
+
+### 驗證結果
+
+- 引擎：**68 tests passed**，覆蓋率 **86%**
+- Rust：`cargo test engine::tests::pings_live_engine` ✅
+- 前端：`tsc --noEmit` ✅、`npm run build` ✅（plotly 大檔 warning，可後續 code-split）
+
+### 待辦 (Phase 3)
+
+- [ ] DOE 實驗設計（factor/screen/response 範本）
+- [ ] AI 混合建模、模型比較、驗證實驗、蒙地卡羅模擬、互動預測、報告匯出

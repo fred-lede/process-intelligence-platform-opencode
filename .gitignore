@@ -1,0 +1,31 @@
+# Node
+node_modules/
+dist/
+*.log
+.npm/
+
+# Rust / Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Python
+engine/.venv/
+engine/__pycache__/
+engine/**/__pycache__/
+engine/**/*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Project data (user projects)
+projects/*
+!projects/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
