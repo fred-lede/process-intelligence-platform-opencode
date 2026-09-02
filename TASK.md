@@ -66,6 +66,14 @@
 - Sidebar + App.tsx 路由整合
 - 驗證 — 220 passed, 1 skipped (88% coverage), tsc/build clean
 
+### Phase 9 — 蒙地卡羅異常風險模擬
+- `monte_carlo.py` — 抽樣引擎 + 異常整合 + DOE 預測 + NG 機率計算
+- `main.py` — `monte_carlo/run` IPC handler
+- `engine.ts` — SPC/Monte Carlo TypeScript 類型 + `analyzeMonteCarlo()` API
+- `MonteCarlo.tsx` — Plotly 直方圖 + CDF + NG 機率卡片 + 百分位數 + 異常風險排名
+- i18n en/zh-TW 完整支援
+- 驗證 — 239 passed, 1 skipped (88% coverage), tsc/build clean
+
 ### Phase 9 — Monte Carlo 模擬
 - `engine.ts` — TypeScript 類型 + `analyzeMonteCarlo()` API 函數
 - `MonteCarlo.tsx` — 模擬 UI：模型選擇、參數設定、NG 機率、百分位數、直方圖 + CDF、異常排名表格
