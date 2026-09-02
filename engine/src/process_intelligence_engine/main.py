@@ -35,7 +35,7 @@ from process_intelligence_engine.modeling.fitters import (
     fit_random_forest,
     fit_residual_hybrid,
 )
-from process_intelligence_engine.modeling.registry import InvalidStatusTransition, ModelRegistry
+from process_intelligence_engine.modeling.registry import ModelRegistry
 
 
 def _plain_types(value):
