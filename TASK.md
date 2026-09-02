@@ -53,28 +53,13 @@
 - Settings persistence 修復（form.setFieldsValue + enginePing retry）
 - 每次 chat 請求同步 base_url + model
 
-### Phase 8 — SPC 計算引擎
-- `spc.py` — I-MR、X-bar/R、X-bar/S 管制圖
-- Western Electric 七規則檢測
-- 製程能力分析 (Cp/Cpk/Pp/Ppk)
-- 11 個測試全部通過
-
-### Phase 9 — SPC IPC Handler
-- `spc/analyze` — I-MR / X-bar-R / X-bar-S 管制圖分析
-- `spc/capability` — 製程能力分析
-- 7 個測試全部通過
-
-### Phase 10 — SPC 前端 API
-- `engine.ts` 新增 SPC 類型 (SPCCapability, SPCViolation, SPCCtrlLimits, SPCAnalysisResult, SPCCapabilityResult)
-- 新增 `analyzeSPC()` 和 `getSPCCapability()` 函數
-
-### Phase 11 — SPC 前端頁面
-- `src/features/spc/SPC.tsx` — I-MR / X-bar-R / X-bar-S 控制圖 + Plotly
-- Western Electric 七規則違規表格
-- 製程能力分析 (Cp/Cpk/Pp/Ppk) 與色標評級
-- i18n en/zh-TW 完整支援
-- Sidebar 新增 SPC 選單項目
-- App.tsx 路由綁定
+### Phase 8 — SPC 統計製程控制
+- `spc.py` — I-MR / X-bar+R / X-bar+S 控制圖 + Western Electric 7 規則 + Cp/Cpk/Pp/Ppk 能力指數
+- `main.py` — `spc/analyze` + `spc/capability` IPC handlers
+- `engine.ts` — SPC TypeScript 類型 + `analyzeSPC()` + `getSPCCapability()` API
+- `SPC.tsx` — Plotly 控制圖 + 違規表格 + 能力指數卡片 + i18n en/zh-TW
+- Sidebar + App.tsx 路由整合
+- 驗證 — 220 passed, 1 skipped (88% coverage), tsc/build clean
 
 ## In Progress
 - None
