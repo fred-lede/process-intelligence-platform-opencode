@@ -285,7 +285,7 @@ export default function Settings() {
 
             <Form.Item>
               <Space>
-                <Button onClick={loadModels} loading={loadingModels} icon={<ReloadOutlined />}>
+                <Button onClick={() => loadModels()} loading={loadingModels} icon={<ReloadOutlined />}>
                   {t('settings.refreshModels')}
                 </Button>
                 <Button type="primary" onClick={handleSaveAIConfig} loading={savingAI}>
