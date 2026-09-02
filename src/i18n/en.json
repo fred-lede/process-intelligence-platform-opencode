@@ -12,6 +12,7 @@
     "monteCarlo": "Monte Carlo",
     "prediction": "Interactive Prediction",
     "reports": "Reports & Versions",
+    "spc": "SPC Control",
     "settings": "System Settings",
     "about": "About"
   },
@@ -308,5 +309,33 @@
     "refreshModels": "Refresh Models",
     "enabled": "Enabled",
     "disabled": "Disabled"
+  },
+  "spc": {
+    "title": "SPC Control",
+    "dataSource": "Data Source",
+    "existingData": "Existing Data",
+    "manualInput": "Manual Input",
+    "outputColumn": "Output Column",
+    "subgroupSize": "Subgroup Size",
+    "groupColumn": "Group Column",
+    "chartType": "Chart Type",
+    "iMr": "I-MR (Individuals & Moving Range)",
+    "xbarR": "X-bar + R (Average & Range)",
+    "xbarS": "X-bar + S (Average & Std Dev)",
+    "analyze": "Analyze",
+    "processCapability": "Process Capability",
+    "cp": "Cp",
+    "cpk": "Cpk",
+    "pp": "Pp",
+    "ppk": "Ppk",
+    "violations": "WE Rule Violations",
+    "rule": "Rule",
+    "point": "Point",
+    "description": "Description",
+    "noViolations": "No violations detected",
+    "manualPlaceholder": "Enter values (comma-separated, one per line)",
+    "capacityGood": "Good (≥1.33)",
+    "capacityAcceptable": "Acceptable (1.0~1.33)",
+    "capacityPoor": "Poor (<1.0)"
   }
 }

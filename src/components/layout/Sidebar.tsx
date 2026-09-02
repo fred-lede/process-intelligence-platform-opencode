@@ -12,6 +12,7 @@ import {
   FileTextOutlined,
   SettingOutlined,
   InfoCircleOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons'
 import type { AppTab } from '../../types'
 import { useState } from 'react'
@@ -33,6 +34,7 @@ const tabItems = [
   { key: 'monteCarlo', icon: <RobotOutlined /> },
   { key: 'prediction', icon: <SlidersOutlined /> },
   { key: 'reports', icon: <FileTextOutlined /> },
+  { key: 'spc', icon: <LineChartOutlined /> },
 ]
 
 const settingsItem = { key: 'settings', icon: <SettingOutlined /> }

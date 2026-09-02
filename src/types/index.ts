@@ -8,4 +8,5 @@ export type AppTab =
   | 'monteCarlo'
   | 'prediction'
   | 'reports'
+  | 'spc'
   | 'settings'

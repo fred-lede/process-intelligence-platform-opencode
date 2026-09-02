@@ -12,6 +12,7 @@
     "monteCarlo": "蒙地卡羅模擬",
     "prediction": "互動預測",
     "reports": "報告與版本",
+    "spc": "SPC 管制圖",
     "settings": "系統設定",
     "about": "關於"
   },
@@ -308,5 +309,33 @@
     "refreshModels": "重新載入模型",
     "enabled": "已啟用",
     "disabled": "已停用"
+  },
+  "spc": {
+    "title": "SPC 統計製程控制",
+    "dataSource": "資料來源",
+    "existingData": "既有資料",
+    "manualInput": "手動輸入",
+    "outputColumn": "輸出欄位",
+    "subgroupSize": "子群組大小",
+    "groupColumn": "分組欄位",
+    "chartType": "圖表類型",
+    "iMr": "I-MR 圖 (個別值與移動範圍)",
+    "xbarR": "X-bar + R 圖 (平均與範圍)",
+    "xbarS": "X-bar + S 圖 (平均與標準差)",
+    "analyze": "分析",
+    "processCapability": "製程能力",
+    "cp": "Cp",
+    "cpk": "Cpk",
+    "pp": "Pp",
+    "ppk": "Ppk",
+    "violations": "Western Electric 規則違規",
+    "rule": "規則",
+    "point": "點",
+    "description": "描述",
+    "noViolations": "未偵測到違規",
+    "manualPlaceholder": "輸入數值（逗號分隔，每行一組）",
+    "capacityGood": "良好 (≥1.33)",
+    "capacityAcceptable": "可接受 (1.0~1.33)",
+    "capacityPoor": "不足 (<1.0)"
   }
 }
