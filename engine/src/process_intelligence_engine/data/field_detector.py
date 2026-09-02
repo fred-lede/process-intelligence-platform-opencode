@@ -70,6 +70,11 @@ INPUT_NAME_HINTS = [
     r"\b(temp|temperature|pressure|speed|velocity|flow|current|voltage|power|force|torque|angle|position|thickness|溫度|壓力|速度|流量|電流|電壓|力量|扭矩|孔徑)\b",
 ]
 
+OUTPUT_NAME_HINTS = [
+    r"\b(yield|output|result|response|target|measure|quality|defect|failure|scrap|rework|效率|產率|輸出|結果|目標|良率|不良|廢品|返工)\b",
+    r"\b(rate|score|index|level|amount|volume|count|数量|比率|分數|指數|水位|數量)\b",
+]
+
 
 def _normalize(name: str) -> str:
     return re.sub(r"\s+", " ", name.lower().strip().replace("_", " ").replace("-", " "))
@@ -226,7 +231,20 @@ def detect_fields(columns: list[dict]) -> list[DetectedField]:
             )
             continue
 
-        # 6. Numeric columns => input (or candidate output; Phase 1 defaults to input)
+        # 6. Output candidate: numeric column with output-related name
+        if numeric and _match_any(normalized, OUTPUT_NAME_HINTS):
+            results.append(
+                DetectedField(
+                    name=name,
+                    role=FieldRole.OUTPUT,
+                    data_type="continuous",
+                    confidence=0.85,
+                    reason=["column name matches output/response pattern"],
+                )
+            )
+            continue
+
+        # 7. Numeric columns => input (or candidate output; Phase 1 defaults to input)
         if numeric:
             results.append(
                 DetectedField(
