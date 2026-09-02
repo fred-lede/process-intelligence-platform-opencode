@@ -12,6 +12,10 @@
 - Task 3: `ModelCenter.tsx` — 特徵重要性圖 + SHAP 摘要圖 (commit `866699e`)
 - Task 4: 驗證 — 123 tests (89% coverage), tsc/build clean
 
+### Phase 3b-7 — 外插風險評分
+- Task 1: `extrapolation.py` — 外插風險評分 (commit `a738613`)
+- 驗證 — 128 tests pass, tsc/build clean
+
 ## Completed
 
 ### Phase 3a — Model Center Engine Core
@@ -53,4 +57,4 @@
 - None
 
 ## Pending
-- Phase 3b-7: 外插風險評分
+- None
