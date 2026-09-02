@@ -41,7 +41,8 @@ class SettingsManager:
             except Exception as e:
                 pass
         else:
-    
+            pass
+
     def _save(self) -> None:
         """Save settings to file."""
         import json
