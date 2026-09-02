@@ -13,7 +13,8 @@
     "monteCarlo": "Monte Carlo",
     "prediction": "Interactive Prediction",
     "reports": "Reports & Versions",
-    "settings": "System Settings"
+    "settings": "System Settings",
+    "about": "About"
   },
   "common": {
     "confirm": "Confirm",

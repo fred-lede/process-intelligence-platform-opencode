@@ -13,7 +13,8 @@
     "monteCarlo": "蒙地卡羅模擬",
     "prediction": "互動預測",
     "reports": "報告與版本",
-    "settings": "系統設定"
+    "settings": "系統設定",
+    "about": "關於"
   },
   "common": {
     "confirm": "確認",
