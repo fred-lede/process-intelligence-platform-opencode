@@ -27,6 +27,8 @@ def generate_design(
     dispatch = {
         "full_factorial": _full_factorial,
         "fractional_factorial": _fractional_factorial,
+        "ccd": _ccd,
+        "box_behnken": _box_behnken,
     }
     generator = dispatch.get(design_type)
     if generator is None:
@@ -48,34 +50,7 @@ def _full_factorial(factors: list[dict], params: dict) -> dict:
         coded_levels = list(range(levels))
 
     all_coded = list(itertools.product(coded_levels, repeat=n))
-    runs = []
-    coded_runs = []
-    for combo in all_coded:
-        coded_row = {f["name"]: v for f, v in zip(factors, combo)}
-        coded_runs.append(coded_row)
-        actual_row = {}
-        for f, v in zip(factors, combo):
-            low, high = f["low"], f["high"]
-            if levels == 2:
-                actual_row[f["name"]] = low if v == -1 else high
-            elif levels == 3:
-                if v == -1:
-                    actual_row[f["name"]] = low
-                elif v == 0:
-                    actual_row[f["name"]] = (low + high) / 2
-                else:
-                    actual_row[f["name"]] = high
-            else:
-                t = (v - coded_levels[0]) / (coded_levels[-1] - coded_levels[0])
-                actual_row[f["name"]] = low + t * (high - low)
-        runs.append(actual_row)
-
-    return {
-        "design_type": "full_factorial",
-        "n_runs": len(runs),
-        "runs": runs,
-        "coded_runs": coded_runs,
-    }
+    return _build_runs(factors, all_coded, "full_factorial")
 
 
 def _fractional_factorial(factors: list[dict], params: dict) -> dict:
@@ -94,22 +69,56 @@ def _fractional_factorial(factors: list[dict], params: dict) -> dict:
     n_base = n - 1
     base = list(itertools.product([-1, 1], repeat=n_base))
 
-    runs = []
-    coded_runs = []
+    full_combos = []
     for combo in base:
         # Generator: last factor = product of first two (resolution III)
         interaction = combo[0] * combo[1]
-        full_combo = combo + (interaction,)
-        coded_row = {f["name"]: v for f, v in zip(factors, full_combo)}
+        full_combos.append(combo + (interaction,))
+
+    return _build_runs(factors, full_combos, "fractional_factorial")
+
+
+def _build_runs(factors: list[dict], coded_combos: list[tuple], design_type: str) -> dict:
+    """Convert coded combinations to actual runs. Maps coded=-1→low, 0→mid, 1→high."""
+    runs = []
+    coded_runs = []
+    for combo in coded_combos:
+        coded_row = {f["name"]: v for f, v in zip(factors, combo)}
         coded_runs.append(coded_row)
         actual_row = {}
-        for f, v in zip(factors, full_combo):
-            actual_row[f["name"]] = f["low"] if v == -1 else f["high"]
+        for f, v in zip(factors, combo):
+            low, high = f["low"], f["high"]
+            actual_row[f["name"]] = low + (v + 1) / 2 * (high - low)
         runs.append(actual_row)
+    return {"design_type": design_type, "n_runs": len(runs), "runs": runs, "coded_runs": coded_runs}
 
-    return {
-        "design_type": "fractional_factorial",
-        "n_runs": len(runs),
-        "runs": runs,
-        "coded_runs": coded_runs,
-    }
+
+def _ccd(factors: list[dict], params: dict) -> dict:
+    alpha = params.get("alpha", 1.414)
+    center_points = params.get("center_points", 1)
+    n = len(factors)
+    factorial = list(itertools.product([-1, 1], repeat=n))
+    axial = []
+    for i in range(n):
+        lo = [0.0] * n; hi = [0.0] * n
+        lo[i] = -alpha; hi[i] = alpha
+        axial.append(tuple(lo)); axial.append(tuple(hi))
+    center = [tuple([0.0] * n)] * center_points
+    return _build_runs(factors, factorial + axial + center, "ccd")
+
+
+def _box_behnken(factors: list[dict], params: dict) -> dict:
+    center_points = params.get("center_points", 1)
+    n = len(factors)
+    if n < 3:
+        raise ValueError("Box-Behnken requires at least 3 factors")
+    edge_midpoints = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            for vi in (-1, 1):
+                for vj in (-1, 1):
+                    row = [0.0] * n
+                    row[i] = vi; row[j] = vj
+                    edge_midpoints.append(tuple(row))
+    center = [tuple([0.0] * n)] * center_points
+    return _build_runs(factors, edge_midpoints + center, "box_behnken")
