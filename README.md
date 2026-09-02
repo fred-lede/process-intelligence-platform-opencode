@@ -80,14 +80,12 @@ npm run tauri dev
 
 在新電腦上首次部署時，請確保：
 
-1. **Rust 已安裝**：執行 cargo 1.92.0 (344c4567c 2025-10-21) 確認
-2. **Python venv 已建立**：執行 Obtaining file:///Volumes/Ai-2TB/ai/my_opencode/process-intelligence-platform/engine
-  Installing build dependencies: started
-  Installing build dependencies: finished with status 'done'
-  Checking if build backend supports build_editable: started
-  Checking if build backend supports build_editable: finished with status 'done'
-  Getting requirements to build editable: started
-  Getting requirements to build editable: finished with status 'done'
+1. **Rust 已安裝**：執行 `cargo --version` 確認
+2. **Python venv 已建立**：執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"`
+3. **Node 模組已安裝**：執行 `npm install`
+4. **瀏覽器 WebView**：macOS 內建 WebKit，Windows 需安裝 WebView2 Runtime
+
+若啟動時出現 `failed to run cargo metadata` 錯誤，表示 Rust 未正確安裝或 PATH 未設定。
   Preparing editable metadata (pyproject.toml): started
   Preparing editable metadata (pyproject.toml): finished with status 'done'
 Requirement already satisfied: pandas>=2.2.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (3.0.5)
