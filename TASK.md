@@ -1,5 +1,11 @@
 # TASK.md
 
+### Phase 3b-4 — 交互作用分析
+- Task 1: `interactions.py` — 因子效應分解計算 (commit `451cb64`)
+- Task 2: `main.py` + `engine.ts` — IPC handler + API wrapper (commit `07824d3`)
+- Task 3: `ModelCenter.tsx` — 熱圖 UI + i18n (commit `9632e7e`)
+- Task 4: 驗證 — 117 tests (89% coverage), tsc/build clean
+
 ## Completed
 
 ### Phase 3a — Model Center Engine Core
@@ -27,10 +33,14 @@
 - Task 4: IPC handler `modeling/doe/generate` + frontend `generateDOEDesign` API (commit `bf93182`)
 - Task 5: 驗證 — 111 tests, tsc/build clean
 
+### Phase 3b-5 — 交互作用分析
+- Task 1: `interactions.py` — two-factor interaction strength (commit `451cb64`)
+- Task 2: IPC handler `modeling/interactions/compute` + frontend `computeInteractions` API (commit `07824d3`)
+- 驗證 — 117 tests pass, tsc clean
+
 ## In Progress
 - None
 
 ## Pending
-- Phase 3b-4: SHAP 可解釋性
-- Phase 3b-5: 交互作用分析
+- Phase 3b-5: SHAP 可解釋性
 - Phase 3b-6: 外插風險評分

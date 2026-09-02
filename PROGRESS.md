@@ -260,3 +260,28 @@
 - [ ] 交互作用分析
 - [ ] 外插風險評分
 - [ ] 驗證實驗推薦
+
+## 2026-09-02 — Phase 3b-4 完成（交互作用分析）
+
+### 完成內容
+
+- [x] `modeling/interactions.py` — 因子效應分解計算
+- [x] `main.py` — `modeling/interactions/compute` IPC handler
+- [x] `engine.ts` — `InteractionResult` + `computeInteractions()` API
+- [x] `ModelCenter.tsx` — 熱圖 Card（抗色強度正比於交互作用強度）
+- [x] i18n en/zh-TW 新增 5 個字串
+- [x] 驗證：117 tests (89% coverage)、tsc clean、build clean
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| 451cb64 | feat(interactions): two-factor interaction strength computation |
+| 07824d3 | feat(interactions): expose IPC + frontend API |
+| 9632e7e | feat(model-center): add interaction analysis heatmap |
+
+### 待辦 (Phase 3b-5)
+
+- [ ] SHAP 可解釋性
+- [ ] 外插風險評分
+- [ ] 驗證實驗推薦
