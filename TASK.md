@@ -129,5 +129,35 @@
   - commit `68c36ef` feat(modeling): immutable model registry with status machine
 - 待續: Phase 3a DOE 設計庫、AI 模型 (xgboost) 封裝、模型比較、驗證
 
+## Phase 3a 第四塊 — Modeling IPC handlers (main.py 暴露) — ✅ 完成
+
+- [x] main.py 註冊三個新 RPC handlers: `modeling/fit`, `modeling/list`, `modeling/transition`
+  - 新增 `modeling/fitters` / `modeling/registry` imports
+  - module-level `MODEL_REGISTRY = ModelRegistry()` + `MODEL_FITTERS` map (四種 fitter)
+  - `_handle_modeling_fit` / `_handle_modeling_list` / `_handle_modeling_transition`
+  - dispatcher 於 `analysis/package` 之後新增三個分支
+  - DTO 輸出經 `_plain_types` JSON 安全化
+  - `engine/tests/test_main_modeling.py` (5 tests): fit DTO、residual_hybrid、unknown type 拋錯、transition+list、invalid transition 拋錯
+  - TDD: 先 RED (`ValueError: Unknown method: modeling/fit`) 後 GREEN
+  - 測試: 5 passed; 全引擎 suite: 93 passed (覆蓋率 88%)
+  - commit `be9d996` feat(modeling): expose modeling/fit, modeling/list, modeling/transition IPC
+- 待續: Phase 3a DOE 設計庫、AI 模型 (xgboost) 封裝、模型比較、驗證
+
+## Code Quality Fixes
+
+- [x] 移除 `main.py` 中未使用的 `InvalidStatusTransition` import (commit `82ae1bb`)
+  - 5 modeling tests passed; 93/93 full suite passed (no regression)
+
+## Phase 3a 第五塊 — Frontend Modeling API Types — ✅ 完成
+
+- [x] `src/lib/engine.ts` 新增 Phase 3 modeling 類型與 API 函數
+  - `ModelType` (doe_linear/doe_quadratic/random_forest/residual_hybrid)
+  - `ModelStatus` (draft/pending_validation/validated/approved/retired)
+  - `ModelMetrics` (rmse, mse, mae, r2, adj_r2) — mse 匹配引擎端新增欄位
+  - `ModelFitDTO` 完整接口
+  - `fitModel()` / `listModels()` / `transitionModel()` 三個 API 函數
+  - commit `ff735a6` feat(modeling): add frontend model API types
+  - `npx tsc --noEmit` ✅ 無錯誤
+
 ## Next
 - 繼續 Phase 3a 依 `docs/superpowers/plans/2026-09-02-phase3-model-center.md` 執行其餘引擎核心模組
