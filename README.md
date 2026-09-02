@@ -24,10 +24,34 @@
 
 ### 前置需求
 
-- Rust 1.70+
+- Rust 1.77+（[安裝指南](https://www.rust-lang.org/tools/install)）
 - Node.js 18+
 - Python 3.11+
 - 系統 WebView (macOS: WebKit / Windows: WebView2)
+
+### 安裝 Rust（若尚未安裝）
+
+```bash
+# macOS / Linux
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Windows
+# 下載並執行 https://win.rustup.rs/x86_64
+# 或從 Microsoft Store 安裝 Rust
+```
+
+安裝後重啟終端機，或執行：
+
+```bash
+source $HOME/.cargo/env
+```
+
+確認安裝成功：
+
+```bash
+cargo --version
+# 應輸出：cargo 1.xx.x
+```
 
 ### 安裝與開發
 
@@ -44,6 +68,10 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 cd ..
+
+# 確認 Rust 環境
+source $HOME/.cargo/env 2>/dev/null || true
+cargo --version
 
 # 啟動開發環境
 npm run tauri dev
