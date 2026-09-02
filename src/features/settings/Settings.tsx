@@ -42,7 +42,6 @@ export default function Settings() {
     try {
       await enginePing()
       const result = await getSettings()
-      console.log('[Settings] Loaded config:', result.config)
       if (result.config) {
         setAiConfig(result.config)
         aiForm.setFieldsValue(result.config)
@@ -150,13 +149,11 @@ export default function Settings() {
     setSavingAI(true)
     try {
       const result = await updateSettings(aiConfig)
-      console.log('[Settings] Save result:', result)
       if (result.success) {
         setAiConfig(result.config)
         messageApi.success(t('settings.aiConfigSaved'))
       }
     } catch (e) {
-      console.error('[Settings] Save error:', e)
       messageApi.error(t('settings.aiConfigSaveFailed'))
     } finally {
       setSavingAI(false)
