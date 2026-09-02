@@ -6,8 +6,8 @@ import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult } from '../../lib/engine'
-import { computeInteractions, computeSHAP, checkExtrapolation } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult } from '../../lib/engine'
+import { computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -51,6 +51,9 @@ export default function ModelCenter() {
   const [shapLoading, setShapLoading] = useState(false)
   const [extrapResult, setExtrapResult] = useState<ExtrapolationResult | null>(null)
   const [extrapLoading, setExtrapLoading] = useState(false)
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
+  const [validationLoading, setValidationLoading] = useState(false)
+  const [cvFolds, setCvFolds] = useState(5)
 
   const datasetId = importResult?.dataset_id
   const inputOptions = fields
@@ -120,6 +123,20 @@ export default function ModelCenter() {
       messageApi.error(t('modelCenter.extrapError'))
     } finally {
       setExtrapLoading(false)
+    }
+  }
+
+  const handleRunValidation = async () => {
+    if (!models.length || !datasetId) return
+    const modelId = models[models.length - 1].model_id
+    setValidationLoading(true)
+    try {
+      const result = await analyzeValidation({ model_id: modelId, dataset_id: datasetId, k: cvFolds })
+      setValidationResult(result)
+    } catch {
+      messageApi.error(t('modelCenter.validationError'))
+    } finally {
+      setValidationLoading(false)
     }
   }
 
@@ -427,6 +444,78 @@ export default function ModelCenter() {
               </Space>
             ) : (
               <Alert type="info" showIcon message={t('modelCenter.noExtrap')} />
+            )}
+          </Space>
+        </Card>
+
+        <Card title={t('modelCenter.validationTitle')} size="small">
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Space>
+              <span>{t('modelCenter.cvFolds')}:</span>
+              <Select
+                value={cvFolds}
+                onChange={setCvFolds}
+                options={[
+                  { value: 3, label: '3' },
+                  { value: 5, label: '5' },
+                  { value: 10, label: '10' },
+                ]}
+                style={{ width: 80 }}
+              />
+              <Button
+                type="primary"
+                loading={validationLoading}
+                onClick={handleRunValidation}
+                disabled={models.length === 0 || !datasetId}
+              >
+                {validationLoading ? t('modelCenter.runningValidation') : t('modelCenter.runValidation')}
+              </Button>
+            </Space>
+            {validationResult ? (
+              <Space direction="vertical" style={{ width: '100%' }} size="small">
+                <div>
+                  <strong>{t('modelCenter.meanMetrics')}:</strong>
+                  <span style={{ marginLeft: 8 }}>R²: {validationResult.mean_metrics.mean_r2.toFixed(4)}</span>
+                  <span style={{ marginLeft: 8 }}>RMSE: {validationResult.mean_metrics.mean_rmse.toFixed(4)}</span>
+                </div>
+                <Table
+                  size="small"
+                  dataSource={validationResult.cv_results}
+                  pagination={false}
+                  columns={[
+                    { title: 'Fold', dataIndex: 'fold', key: 'fold', width: 60 },
+                    { title: 'R²', dataIndex: 'r2', key: 'r2', render: (v: number) => v?.toFixed(4) },
+                    { title: 'RMSE', dataIndex: 'rmse', key: 'rmse', render: (v: number) => v?.toFixed(4) },
+                  ]}
+                />
+                <div>
+                  <strong>{t('modelCenter.residualStats')}:</strong>
+                  <span style={{ marginLeft: 8 }}>mean={validationResult.stats.mean.toFixed(4)}</span>
+                  <span style={{ marginLeft: 8 }}>std={validationResult.stats.std.toFixed(4)}</span>
+                </div>
+                <div>
+                  <strong>{t('modelCenter.normalityTest')}:</strong>
+                  <Tag color={validationResult.normality_test.is_normal ? 'success' : 'error'}>
+                    {validationResult.normality_test.is_normal
+                      ? t('modelCenter.isNormal')
+                      : t('modelCenter.notNormal')}
+                  </Tag>
+                </div>
+                <div>
+                  <strong>{t('modelCenter.recommendations')}:</strong>
+                  {validationResult.recommendations.map((rec, i) => (
+                    <Alert
+                      key={i}
+                      style={{ marginTop: 4 }}
+                      type={rec.type === 'interaction' ? 'warning' : 'info'}
+                      message={`${rec.type}: ${rec.reason}`}
+                      showIcon
+                    />
+                  ))}
+                </div>
+              </Space>
+            ) : (
+              <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
             )}
           </Space>
         </Card>

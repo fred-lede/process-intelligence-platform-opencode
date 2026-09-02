@@ -232,6 +232,17 @@
     "riskScore": "風險分數",
     "noExtrap": "所有預測點均在訓練數據範圍內。",
     "extrapError": "無法檢查外插風險",
-    "safeRange": "安全範圍"
+    "safeRange": "安全範圍",
+    "validationTitle": "驗證分析",
+    "runValidation": "執行驗證",
+    "runningValidation": "執行中...",
+    "cvFolds": "交叉驗證折數",
+    "meanMetrics": "平均指標",
+    "residualStats": "殘差統計",
+    "normalityTest": "常態性檢定",
+    "isNormal": "殘差符合常態分配",
+    "notNormal": "殘差不符合常態分配",
+    "recommendations": "實驗建議",
+    "validationError": "無法執行驗證"
   }
 }

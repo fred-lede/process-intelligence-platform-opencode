@@ -232,6 +232,17 @@
     "riskScore": "Risk Score",
     "noExtrap": "All predictions are within training data range.",
     "extrapError": "Failed to check extrapolation risk",
-    "safeRange": "Safe Range"
+    "safeRange": "Safe Range",
+    "validationTitle": "Validation Analysis",
+    "runValidation": "Run Validation",
+    "runningValidation": "Running...",
+    "cvFolds": "CV Folds",
+    "meanMetrics": "Mean Metrics",
+    "residualStats": "Residual Statistics",
+    "normalityTest": "Normality Test",
+    "isNormal": "Residuals are normally distributed",
+    "notNormal": "Residuals are NOT normally distributed",
+    "recommendations": "Recommendations",
+    "validationError": "Failed to run validation"
   }
 }
