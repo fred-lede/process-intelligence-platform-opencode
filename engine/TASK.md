@@ -1,15 +1,14 @@
 # Task Management
 
 ## Completed
-- [x] Read fitters.py to understand ModelFit attributes
-- [x] Write failing test at engine/tests/test_shap_explainer.py
-- [x] Confirm test fails with ModuleNotFoundError
-- [x] Implement shap_explainer.py with LinearExplainer and TreeExplainer
-- [x] Fix shap 0.51.0 API compatibility (feature_perturbation rename, expected_value array)
-- [x] Add `model` attribute to ModelFit for random_forest TreeExplainer support
-- [x] All 3 shap tests pass
-- [x] Full suite: 120 passed, no regression
-- [x] Commit
+- [x] Code review of SPC calculation engine (spc.py + test_spc.py)
+- [x] Run spc tests: 11 passed
+- [x] Run full test suite: 206 passed, 1 skipped
+- [x] Fix magic number (mr_ucl = _D4[2] * mr_bar)
+- [x] Simplify Rule 2 sliding window (remove nested loop)
+- [x] Add tests for WE Rules 3-7
+- [x] Fix capability computation to use only complete subgroups
+- [x] All 211 tests pass, committed
 
 ## In Progress
 - None
