@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin } from 'antd'
-import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons'
+import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
 import { aiChat, checkAIHealth, type AIChatMessage } from '../../lib/engine'
 
 const { Sider } = Layout
