@@ -213,6 +213,11 @@
     "transitionSuccess": "Model transitioned to {status}",
     "compareButton": "Compare",
     "compareTitle": "Model Comparison",
-    "compareMetric": "Metric"
+    "compareMetric": "Metric",
+    "interactionsTitle": "Interaction Analysis",
+    "computeInteractions": "Compute Interactions",
+    "computing": "Computing...",
+    "interactionStrength": "Interaction Strength",
+    "noInteraction": "No interactions to display. Fit a model first."
   }
 }

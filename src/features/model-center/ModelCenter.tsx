@@ -5,7 +5,8 @@ import type { ColumnsType } from 'antd/es/table'
 import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
-import type { ModelFitDTO, ModelType, ModelStatus } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult } from '../../lib/engine'
+import { computeInteractions } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -43,6 +44,8 @@ export default function ModelCenter() {
   const [selectedInputs, setSelectedInputs] = useState<string[]>([])
   const [target, setTarget] = useState<string | undefined>(spec?.outputField || undefined)
   const [compareIds, setCompareIds] = useState<string[]>([])
+  const [interactions, setInteractions] = useState<InteractionResult | null>(null)
+  const [interactionsLoading, setInteractionsLoading] = useState(false)
 
   const datasetId = importResult?.dataset_id
   const inputOptions = fields
@@ -65,6 +68,21 @@ export default function ModelCenter() {
   const handleTransition = async (modelId: string, newStatus: ModelStatus) => {
     await transition(modelId, newStatus)
     messageApi.success(t('modelCenter.transitionSuccess', { status: newStatus }))
+  }
+
+  const handleComputeInteractions = async () => {
+    if (!models.length) return
+    const modelId = models[models.length - 1].model_id
+    if (!datasetId) return
+    setInteractionsLoading(true)
+    try {
+      const result = await computeInteractions({ model_id: modelId, dataset_id: datasetId })
+      setInteractions(result)
+    } catch {
+      messageApi.error('Failed to compute interactions')
+    } finally {
+      setInteractionsLoading(false)
+    }
   }
 
   const compareModels = models.filter((m) => compareIds.includes(m.model_id))
@@ -210,6 +228,70 @@ export default function ModelCenter() {
             />
           </Card>
         )}
+
+        <Card title={t('modelCenter.interactionsTitle')} size="small">
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Button
+              type="primary"
+              loading={interactionsLoading}
+              onClick={handleComputeInteractions}
+              disabled={models.length === 0 || !datasetId}
+            >
+              {interactionsLoading ? t('modelCenter.computing') : t('modelCenter.computeInteractions')}
+            </Button>
+            {interactions ? (
+              <Table
+                size="small"
+                pagination={false}
+                dataSource={interactions.factors.map((rowFactor, ri) => ({
+                   ...interactions.factors.reduce((acc, _, ci) => {
+                    acc[`col_${ci}`] = interactions.matrix[ri]?.[ci] ?? 0
+                    return acc
+                  }, {} as Record<string, number>),
+                  factor: rowFactor,
+                }))}
+                columns={[
+                  {
+                    title: '',
+                    dataIndex: 'factor',
+                    key: 'factor',
+                    width: 120,
+                    render: (v: string) => <strong>{v}</strong>,
+                  },
+                  ...interactions.factors.map((_, ci) => ({
+                    title: <strong>{interactions.factors[ci]}</strong>,
+                    key: `col_${ci}`,
+                    width: 80,
+                    render: (record: Record<string, number>) => {
+                      const strength = record[`col_${ci}`] ?? 0
+                      const max = Math.max(...interactions.matrix.flat())
+                      const intensity = max > 0 ? strength / max : 0
+                      return (
+                        <div
+                          style={{
+                            height: 24,
+                            backgroundColor: `rgba(220, 38, 38, ${intensity * 0.8})`,
+                            borderRadius: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: intensity > 0.3 ? '#fff' : '#000',
+                            fontSize: 11,
+                          }}
+                        >
+                          {strength > 0 ? strength.toFixed(2) : ''}
+                        </div>
+                      )
+                    },
+                  })),
+                ]}
+                rowKey="factor"
+              />
+            ) : (
+              <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
+            )}
+          </Space>
+        </Card>
       </Space>
     </>
   )

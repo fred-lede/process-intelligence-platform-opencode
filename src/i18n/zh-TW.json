@@ -213,6 +213,11 @@
     "transitionSuccess": "模型已切換至 {status}",
     "compareButton": "比較",
     "compareTitle": "模型比較",
-    "compareMetric": "指標"
+    "compareMetric": "指標",
+    "interactionsTitle": "交互作用分析",
+    "computeInteractions": "計算交互作用",
+    "computing": "計算中...",
+    "interactionStrength": "交互作用強度",
+    "noInteraction": "請先配適模型。"
   }
 }
