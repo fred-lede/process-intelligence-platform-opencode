@@ -18,6 +18,7 @@ from sklearn.model_selection import train_test_split
 
 from .metrics import (
     mean_absolute_error,
+    mean_squared_error,
     root_mean_squared_error,
     r2_score,
     adjusted_r2,
@@ -70,6 +71,7 @@ class ModelFit:
 
 def _compute_all_metrics(y_true, y_pred, n_features: int) -> dict:
     return {
+        "mse": mean_squared_error(y_true, y_pred),
         "rmse": root_mean_squared_error(y_true, y_pred),
         "mae": mean_absolute_error(y_true, y_pred),
         "r2": r2_score(y_true, y_pred),
