@@ -8,6 +8,10 @@
 
 [fred-lede/process-intelligence-platform-opencode](https://github.com/fred-lede/process-intelligence-platform-opencode)
 
+## License
+
+[MIT License](LICENSE) — Copyright (c) 2026 Fred Wang
+
 ## 技術架構
 
 - **前端**: React 18 + TypeScript + Ant Design 5
