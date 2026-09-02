@@ -563,3 +563,86 @@ export async function updateSettings(config: Partial<AIProviderConfig>): Promise
 export async function testConnection(): Promise<SettingsTestResult> {
   return engineCall<SettingsTestResult>('settings/test_connection', {})
 }
+
+// --- Phase 8: SPC Control Charts --------------------------------------------
+
+export interface SPCCapability {
+  cp: number | null
+  cpk: number | null
+  pp: number | null
+  ppk: number | null
+  sigma_within: number | null
+  sigma_overall: number | null
+  mean: number
+  n_subgroups: number
+  total_observations: number
+}
+
+export interface SPCViolation {
+  rule: number
+  point_idx: number
+  description: string
+}
+
+export interface SPCCtrlLimits {
+  chart_type: string
+  i_center?: number
+  i_ucl?: number
+  i_lcl?: number
+  mr_center?: number
+  mr_ucl?: number
+  mr_lcl?: number
+  sigma_estimate?: number
+  x_center?: number
+  x_ucl?: number
+  x_lcl?: number
+  r_center?: number
+  r_ucl?: number
+  r_lcl?: number
+  s_center?: number
+  s_ucl?: number
+  s_lcl?: number
+  sigma_within?: number
+  subgroup_size?: number
+  n_subgroups?: number
+}
+
+export interface SPCAnalysisResult {
+  success: boolean
+  chart_type: string
+  x_values?: number[]
+  mr_values?: number[]
+  xbar_values?: number[]
+  r_values?: number[]
+  s_values?: number[]
+  subgroups?: number[][]
+  control_limits: SPCCtrlLimits
+  violations: SPCViolation[]
+  capability: SPCCapability | null
+}
+
+export interface SPCCapabilityResult {
+  success: boolean
+  capability: SPCCapability
+}
+
+export async function analyzeSPC(params: {
+  dataset_id: string
+  column: string
+  chart_type?: 'i-mr' | 'xbar-r' | 'xbar-s'
+  subgroup_size?: number
+  lsl?: number
+  usl?: number
+}): Promise<SPCAnalysisResult> {
+  return engineCall<SPCAnalysisResult>('spc/analyze', params)
+}
+
+export async function getSPCCapability(params: {
+  dataset_id: string
+  column: string
+  lsl?: number
+  usl?: number
+  subgroup_size?: number
+}): Promise<SPCCapabilityResult> {
+  return engineCall<SPCCapabilityResult>('spc/capability', params)
+}
