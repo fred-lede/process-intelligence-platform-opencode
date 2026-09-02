@@ -603,17 +603,21 @@ def _handle_spc_analyze(params: dict) -> dict:
     lsl = params.get("lsl")
     usl = params.get("usl")
 
+    def _chunk_subgroups(vals: list, size: int) -> list[list]:
+        return [
+            vals[i:i + size] for i in range(0, len(vals), size)
+            if len(vals[i:i + size]) == size
+        ]
+
     if chart_type == "i-mr":
         result = compute_i_mr(values, lsl=lsl, usl=usl)
     elif chart_type == "xbar-r":
-        subgroups = [values[i:i + subgroup_size] for i in range(0, len(values), subgroup_size)
-                     if len(values[i:i + subgroup_size]) == subgroup_size]
+        subgroups = _chunk_subgroups(values, subgroup_size)
         if not subgroups:
             raise ValueError("Not enough data points for requested subgroup_size")
         result = compute_xbar_r(subgroups, subgroup_size=subgroup_size, lsl=lsl, usl=usl)
     elif chart_type == "xbar-s":
-        subgroups = [values[i:i + subgroup_size] for i in range(0, len(values), subgroup_size)
-                     if len(values[i:i + subgroup_size]) == subgroup_size]
+        subgroups = _chunk_subgroups(values, subgroup_size)
         if not subgroups:
             raise ValueError("Not enough data points for requested subgroup_size")
         result = compute_xbar_s(subgroups, subgroup_size=subgroup_size, lsl=lsl, usl=usl)

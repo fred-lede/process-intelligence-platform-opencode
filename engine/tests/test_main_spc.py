@@ -1,4 +1,5 @@
 """Tests for SPC IPC handlers."""
+import json
 import pytest
 from process_intelligence_engine.main import handle_request
 
@@ -30,6 +31,7 @@ def test_spc_analyze_i_mr(tmp_path):
     assert "violations" in result
     assert "capability" in result
     assert result["capability"]["total_observations"] == 100
+    json.dumps(result)
 
 
 def test_spc_analyze_xbar_r(tmp_path):
@@ -67,6 +69,26 @@ def test_spc_analyze_unknown_column_raises(tmp_path):
         })
 
 
+def test_spc_analyze_unknown_dataset_raises():
+    with pytest.raises(KeyError):
+        handle_request("spc/analyze", {
+            "dataset_id": "nonexistent",
+            "column": "output",
+            "chart_type": "i-mr",
+        })
+
+
+def test_spc_analyze_xbar_r_insufficient_data(tmp_path):
+    did = _import_csv_for_spc(tmp_path)
+    with pytest.raises(ValueError):
+        handle_request("spc/analyze", {
+            "dataset_id": did,
+            "column": "output",
+            "chart_type": "xbar-r",
+            "subgroup_size": 999,
+        })
+
+
 def test_spc_analyze_unknown_chart_type_raises(tmp_path):
     did = _import_csv_for_spc(tmp_path)
     with pytest.raises(ValueError):
@@ -89,6 +111,7 @@ def test_spc_capability_only(tmp_path):
     assert result["capability"]["total_observations"] == 100
     assert result["capability"]["cp"] is not None
     assert result["capability"]["cpk"] is not None
+    json.dumps(result)
 
 
 def test_spc_capability_no_limits(tmp_path):
