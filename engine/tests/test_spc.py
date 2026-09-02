@@ -139,3 +139,38 @@ def test_xbar_r_invalid_subgroup_size():
     data = [[10.0, 10.2, 9.8]]
     with pytest.raises(ValueError):
         compute_xbar_r(data, subgroup_size=1)
+
+
+def test_we_rule_3_detection():
+    values = [0] * 10 + [3.5] * 5
+    violations = detect_we_violations(values, center=0, sigma=1.0)
+    rule3 = [v for v in violations if v["rule"] == "4_of_5_beyond_1sigma"]
+    assert len(rule3) > 0
+
+
+def test_we_rule_4_detection():
+    values = [0] * 10 + [1.5] * 10
+    violations = detect_we_violations(values, center=0, sigma=1.0)
+    rule4 = [v for v in violations if v["rule"] == "8_consecutive_same_side"]
+    assert len(rule4) > 0
+
+
+def test_we_rule_5_detection():
+    values = [i * 0.5 for i in range(20)]
+    violations = detect_we_violations(values, center=5, sigma=1.0)
+    rule5 = [v for v in violations if v["rule"] == "6_consecutive_trend"]
+    assert len(rule5) > 0
+
+
+def test_we_rule_6_detection():
+    values = [0.5 * ((-1) ** i) for i in range(20)]
+    violations = detect_we_violations(values, center=0, sigma=1.0)
+    rule6 = [v for v in violations if v["rule"] == "15_consecutive_within_1sigma"]
+    assert len(rule6) > 0
+
+
+def test_we_rule_7_detection():
+    values = [1.5 if i % 2 == 0 else -1.5 for i in range(20)]
+    violations = detect_we_violations(values, center=0, sigma=1.0)
+    rule7 = [v for v in violations if v["rule"] == "14_consecutive_alternating"]
+    assert len(rule7) > 0

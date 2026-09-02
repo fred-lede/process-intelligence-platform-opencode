@@ -128,7 +128,7 @@ def compute_i_mr(
         "lcl": round(lcl_x, 6),
         "cl": round(x_bar, 6),
     }
-    mr_ucl = 3.267 * mr_bar  # D4 for n=2
+    mr_ucl = _D4[2] * mr_bar
     mr_limits = {
         "ucl": round(mr_ucl, 6),
         "lcl": 0.0,
@@ -157,7 +157,7 @@ def compute_i_mr(
 # ── X-bar / R Chart ──────────────────────────────────────────────────────────
 
 def compute_xbar_r(
-    data: list[list[float]],
+    values: list[list[float]],
     subgroup_size: int = 5,
     lsl: float | None = None,
     usl: float | None = None,
@@ -171,7 +171,7 @@ def compute_xbar_r(
     subgroups = []
     xbars = []
     rs = []
-    for sg in data:
+    for sg in values:
         arr = np.asarray(sg, dtype=float)
         if arr.size != subgroup_size:
             continue
@@ -199,7 +199,7 @@ def compute_xbar_r(
     violations = detect_we_violations(np.array(xbars), x_double_bar, sigma_est)
 
     cap = compute_capability(
-        np.concatenate([np.asarray(s, dtype=float) for s in data]).tolist(),
+        np.concatenate([np.asarray(s, dtype=float) for s in subgroups]).tolist(),
         lsl=lsl, usl=usl, subgroup_size=subgroup_size,
     )
 
@@ -228,7 +228,7 @@ def compute_xbar_r(
 # ── X-bar / S Chart ──────────────────────────────────────────────────────────
 
 def compute_xbar_s(
-    data: list[list[float]],
+    values: list[list[float]],
     subgroup_size: int = 6,
     lsl: float | None = None,
     usl: float | None = None,
@@ -248,7 +248,7 @@ def compute_xbar_s(
     subgroups = []
     xbars = []
     ss = []
-    for sg in data:
+    for sg in values:
         arr = np.asarray(sg, dtype=float)
         if arr.size != subgroup_size:
             continue
@@ -271,7 +271,7 @@ def compute_xbar_s(
     violations = detect_we_violations(np.array(xbars), x_double_bar, sigma_est)
 
     cap = compute_capability(
-        np.concatenate([np.asarray(s, dtype=float) for s in data]).tolist(),
+        np.concatenate([np.asarray(s, dtype=float) for s in subgroups]).tolist(),
         lsl=lsl, usl=usl, subgroup_size=subgroup_size,
     )
 
@@ -339,26 +339,23 @@ def detect_we_violations(
 
     # Rule 2: 2 of 3 points beyond 2σ (same side)
     for i in range(2, n):
-        for start in range(i - 2, max(i - 3, -1), -1):
-            if start < 0:
-                continue
-            window = z[start:i + 1]
-            above = int((window > 2).sum())
-            below = int((window < -2).sum())
-            if above >= 2:
-                violations.append({
-                    "rule": "2_of_3_beyond_2sigma",
-                    "point_idx": int(i),
-                    "description": f"2 of 3 points beyond +2σ around index {i}",
-                })
-                break
-            if below >= 2:
-                violations.append({
-                    "rule": "2_of_3_beyond_2sigma",
-                    "point_idx": int(i),
-                    "description": f"2 of 3 points beyond -2σ around index {i}",
-                })
-                break
+        window = z[i-2:i+1]
+        above = int((window > 2).sum())
+        below = int((window < -2).sum())
+        if above >= 2:
+            violations.append({
+                "rule": "2_of_3_beyond_2sigma",
+                "point_idx": int(i),
+                "description": f"Points {i-2}~{i}: 2/3 above +2σ",
+            })
+            break
+        if below >= 2:
+            violations.append({
+                "rule": "2_of_3_beyond_2sigma",
+                "point_idx": int(i),
+                "description": f"Points {i-2}~{i}: 2/3 below -2σ",
+            })
+            break
 
     # Rule 3: 4 of 5 points beyond 1σ (same side)
     for i in range(4, n):
