@@ -81,9 +81,21 @@
 - Sidebar + App.tsx 路由整合
 - 驗證 — 239 passed, 1 skipped (88% coverage), tsc/build clean
 
+## Completed
+- Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo
+- 14 tests covering normal/gamma/lognormal/histogram sampling, linear/quadratic prediction, anomaly injection, full simulation with/without bounds
+- 234 passed, 1 skipped (88% coverage)
+- Monte Carlo IPC handler (`monte_carlo/run`) — main.py import + handler + dispatch
+- 5 IPC handler tests (basic, unknown model, with anomalies, no bounds, unknown dataset)
+
 ### Phase 10 — Interactive Prediction (What-if)
 - `engine.ts` — `PredictionResult`, `ModelInfo`, `InputRange` TypeScript 類型 + `predictOutput()` + `getModelInfo()` API 函數
 - TypeScript compile clean, build clean
+- `Prediction.tsx` — 互動預測 UI：模型選擇下拉、Live 滑桿 + 數值輸入、自動預測、規格判定（In Spec / Below LSL / Above USL）、距離邊界顯示、還原預設值
+- `importer.py` — `ColumnStats` 新增 `mean/std/min/max` 統計欄位
+- i18n en/zh-TW 完整支援
+- Sidebar + App.tsx 路由整合
+- 驗證 — 250 passed, 1 skipped (88% coverage), tsc/build clean
 
 ## In Progress
 - None
@@ -92,6 +104,6 @@
 - None
 
 ---
-**測試狀態**：239 passed, 1 skipped (88% coverage)
-**Code Stats**：~4,100 lines total
-**Commits**：88 (main branch fully deployed)
+**測試狀態**：250 passed, 1 skipped (88% coverage)
+**Code Stats**：~4,300 lines total
+**Commits**：89 (main branch fully deployed)
