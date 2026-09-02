@@ -1,6 +1,12 @@
 # Process Intelligence Platform
 
+**作者**: Fred Wang
+
 可解釋、可追溯、可切換模型的製程分析平台。支援 macOS / Windows 桌面應用，結合傳統 DOE 與 AI 輔助分析。
+
+## GitHub
+
+[fred-lede/process-intelligence-platform-opencode](https://github.com/fred-lede/process-intelligence-platform-opencode)
 
 ## 技術架構
 

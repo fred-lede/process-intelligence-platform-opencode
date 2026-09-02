@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "author": "Fred Wang",
+  "description": "AI-powered process intelligence platform for DOE and manufacturing analysis",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
