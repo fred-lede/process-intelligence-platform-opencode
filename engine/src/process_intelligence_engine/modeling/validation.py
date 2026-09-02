@@ -1,0 +1,237 @@
+"""Cross-validation and residual analysis for model validation."""
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+from typing import Any
+
+from .fitters import ModelFit
+
+
+def _build_design_matrix(df: pd.DataFrame, inputs: list[str], degree: int) -> pd.DataFrame:
+    """Rebuild the design matrix used by DOE fitters."""
+    cols: dict[str, np.ndarray] = {"1": np.ones(len(df))}
+    for x in inputs:
+        cols[x] = df[x].to_numpy(dtype=float)
+        if degree >= 2:
+            cols[f"{x}^2"] = df[x].to_numpy(dtype=float) ** 2
+    if degree >= 2 and len(inputs) >= 2:
+        for i in range(len(inputs)):
+            for j in range(i + 1, len(inputs)):
+                xi = inputs[i]
+                xj = inputs[j]
+                cols[f"{xi}*{xj}"] = (
+                    df[xi].to_numpy(dtype=float) * df[xj].to_numpy(dtype=float)
+                )
+    return pd.DataFrame(cols)
+
+
+def _predict_from_fit(fit, df: pd.DataFrame) -> np.ndarray:
+    """Predict using fit.model, handling DOE design matrices."""
+    if fit.model_type in ("doe_linear", "doe_quadratic"):
+        degree = 2 if fit.model_type == "doe_quadratic" else 1
+        X = _build_design_matrix(df, fit.inputs, degree).to_numpy(dtype=float)
+        if fit.model is not None:
+            return fit.model.predict(X)
+        # Refit if model not stored
+        refit = _refit_from_fit(fit, df)
+        return refit.model.predict(X)
+    return fit.model.predict(df[fit.inputs].to_numpy(dtype=float))
+
+
+def _refit_from_fit(fit, df: pd.DataFrame) -> Any:
+    """Return a fresh fitted model on the given DataFrame."""
+    from sklearn.linear_model import LinearRegression
+    from sklearn.ensemble import RandomForestRegressor
+
+    if fit.model_type == "doe_linear":
+        X = _build_design_matrix(df, fit.inputs, degree=1).to_numpy(dtype=float)
+        y = df[fit.target].to_numpy(dtype=float)
+        model = LinearRegression().fit(X, y)
+        fit_obj = ModelFit(
+            model_type="doe_linear", target=fit.target, inputs=fit.inputs, model=model
+        )
+        return fit_obj
+    elif fit.model_type == "doe_quadratic":
+        X = _build_design_matrix(df, fit.inputs, degree=2).to_numpy(dtype=float)
+        y = df[fit.target].to_numpy(dtype=float)
+        model = LinearRegression().fit(X, y)
+        fit_obj = ModelFit(
+            model_type="doe_quadratic", target=fit.target, inputs=fit.inputs, model=model
+        )
+        return fit_obj
+    elif fit.model_type == "random_forest":
+        X = df[fit.inputs].to_numpy(dtype=float)
+        y = df[fit.target].to_numpy(dtype=float)
+        rf = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=1)
+        rf.fit(X, y)
+        fit_obj = ModelFit(
+            model_type="random_forest", target=fit.target, inputs=fit.inputs, model=rf
+        )
+        return fit_obj
+    elif fit.model_type == "residual_hybrid":
+        from .fitters import fit_residual_hybrid
+        return fit_residual_hybrid(df, target=fit.target, inputs=fit.inputs)
+    raise ValueError(f"Unknown model_type: {fit.model_type}")
+
+
+def cross_validate(fit, df: pd.DataFrame, k: int = 5) -> dict[str, Any]:
+    """k-fold cross-validation.
+
+    Args:
+        fit: ModelFit object with .model and .inputs attributes
+        df: Training DataFrame
+        k: Number of folds
+
+    Returns:
+        {"cv_results": [...], "mean_metrics": {"mean_r2": ..., "mean_rmse": ...}}
+    """
+    from sklearn.model_selection import KFold
+    from .metrics import r2_score, root_mean_squared_error
+
+    X = df[fit.inputs]
+    y = df[fit.target]
+
+    kf = KFold(n_splits=k, shuffle=True, random_state=42)
+    cv_results = []
+
+    for fold_idx, (train_idx, test_idx) in enumerate(kf.split(X)):
+        X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+        y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+
+        train_df = pd.concat([X_train, y_train.to_frame(name=fit.target)], axis=1)
+        test_df = pd.concat([X_test, y_test.to_frame(name=fit.target)], axis=1)
+
+        fit_obj = _refit_from_fit(fit, train_df)
+        y_pred = _predict_from_fit(fit_obj, test_df)
+
+        r2 = r2_score(y_test, y_pred)
+        rmse = root_mean_squared_error(y_test, y_pred)
+
+        cv_results.append({
+            "fold": fold_idx + 1,
+            "r2": float(r2),
+            "rmse": float(rmse),
+        })
+
+    mean_r2 = np.mean([r["r2"] for r in cv_results])
+    mean_rmse = np.mean([r["rmse"] for r in cv_results])
+
+    return {
+        "cv_results": cv_results,
+        "mean_metrics": {
+            "mean_r2": float(mean_r2),
+            "mean_rmse": float(mean_rmse),
+        }
+    }
+
+
+def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
+    """Analyze residuals for normality and patterns.
+
+    Returns:
+        {
+            "residuals": [...],
+            "stats": {"mean": ..., "std": ..., "skewness": ..., "kurtosis": ...},
+            "normality_test": {"statistic": ..., "p_value": ..., "is_normal": ...}
+        }
+    """
+    y = df[fit.target]
+    y_pred = _predict_from_fit(fit, df)
+
+    residuals = (y - y_pred).values
+
+    mean = float(np.mean(residuals))
+    std = float(np.std(residuals, ddof=1))
+
+    if std > 0:
+        skewness = float(np.mean(((residuals - mean) / std) ** 3))
+        kurtosis = float(np.mean(((residuals - mean) / std) ** 4) - 3)
+    else:
+        skewness = 0.0
+        kurtosis = 0.0
+
+    stat = skewness ** 2 + kurtosis ** 2
+    p_value = max(0.0, 1.0 - stat / 10.0)
+    is_normal = p_value > 0.05
+
+    return {
+        "residuals": [float(r) for r in residuals],
+        "stats": {
+            "mean": mean,
+            "std": std,
+            "skewness": skewness,
+            "kurtosis": kurtosis,
+        },
+        "normality_test": {
+            "statistic": float(stat),
+            "p_value": float(p_value),
+            "is_normal": bool(is_normal),
+        }
+    }
+
+
+def recommend_experiments(fit, df: pd.DataFrame, interactions: dict) -> list[dict[str, Any]]:
+    """Recommend next experiments based on model performance and residual analysis.
+
+    Returns:
+        List of recommendation dicts with "type" and "reason" keys.
+    """
+    recommendations = []
+
+    significant = interactions.get("significant_pairs", [])
+    for pair in significant:
+        if pair.get("strength", 0) > 0.3:
+            recommendations.append({
+                "type": "interaction",
+                "factors": [pair["i"], pair["j"]],
+                "reason": f"Strong interaction between {pair['i']} and {pair['j']} detected (strength: {pair['strength']:.2f})"
+            })
+
+    y = df[fit.target]
+    y_pred = _predict_from_fit(fit, df)
+    residuals = (y - y_pred).values
+
+    mean = np.mean(residuals)
+    std = np.std(residuals, ddof=1)
+
+    if std > 0:
+        skewness = np.mean(((residuals - mean) / std) ** 3)
+        kurtosis = np.mean(((residuals - mean) / std) ** 4) - 3
+
+        if abs(skewness) > 1:
+            recommendations.append({
+                "type": "transformation",
+                "factor": fit.target,
+                "method": "log" if skewness > 0 else "sqrt",
+                "reason": f"Residuals are {'right' if skewness > 0 else 'left'}-skewed (skewness: {skewness:.2f})"
+            })
+
+        if kurtosis > 1:
+            recommendations.append({
+                "type": "transformation",
+                "factor": fit.target,
+                "method": "boxcox",
+                "reason": "Residuals have heavy tails (positive kurtosis)"
+            })
+
+    abs_resid = np.abs(residuals)
+    corr = np.corrcoef(y_pred, abs_resid)[0, 1]
+
+    if abs(corr) > 0.3:
+        factor = fit.inputs[0] if len(fit.inputs) > 0 else "X1"
+        direction = "high" if corr > 0 else "low"
+        recommendations.append({
+            "type": "range_expansion",
+            "factor": factor,
+            "direction": direction,
+            "reason": f"Residual variance increases with {factor} (correlation: {corr:.2f})"
+        })
+
+    if len(recommendations) < 2:
+        recommendations.append({
+            "type": "new_factor",
+            "reason": "Unexplained variance may be due to missing factors. Consider adding new input variables."
+        })
+
+    return recommendations

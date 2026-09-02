@@ -180,5 +180,69 @@
     "params": "Fitted params",
     "noFit": "Select a column and run the fit.",
     "noTrend": "Select a column and draw the trend."
+  },
+  "modelCenter": {
+    "title": "Model Center",
+    "noData": "Import a dataset before fitting models.",
+    "fitTitle": "Fit Model",
+    "modelType": {
+      "label": "Model Type",
+      "doeLinear": "DOE Linear",
+      "doeQuadratic": "DOE Quadratic",
+      "randomForest": "Random Forest",
+      "residualHybrid": "Residual Hybrid"
+    },
+    "target": {
+      "label": "Target (Output)",
+      "placeholder": "Select output column"
+    },
+    "inputs": {
+      "label": "Inputs",
+      "placeholder": "Select input columns"
+    },
+    "fitButton": "Fit Model",
+    "fitSuccess": "Model fitted successfully",
+    "listTitle": "Fitted Models",
+    "column": {
+      "type": "Type",
+      "version": "Ver",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "confirmTransition": "Confirm transition to {status}?",
+    "transitionSuccess": "Model transitioned to {status}",
+    "compareButton": "Compare",
+    "compareTitle": "Model Comparison",
+    "compareMetric": "Metric",
+    "interactionsTitle": "Interaction Analysis",
+    "computeInteractions": "Compute Interactions",
+    "computing": "Computing...",
+    "interactionStrength": "Interaction Strength",
+    "noInteraction": "No interactions to display. Fit a model first.",
+    "shapTitle": "SHAP Interpretability",
+    "computeSHAP": "Compute SHAP",
+    "computingSHAP": "Computing...",
+    "shapImportanceTitle": "Feature Importance",
+    "shapImportance": "Mean |SHAP value|",
+    "shapSummaryTitle": "SHAP Summary",
+    "shapError": "Failed to compute SHAP values",
+    "extrapTitle": "Extrapolation Risk",
+    "checkExtrapolation": "Check Extrapolation",
+    "checking": "Checking...",
+    "riskScore": "Risk Score",
+    "noExtrap": "All predictions are within training data range.",
+    "extrapError": "Failed to check extrapolation risk",
+    "safeRange": "Safe Range",
+    "validationTitle": "Validation Analysis",
+    "runValidation": "Run Validation",
+    "runningValidation": "Running...",
+    "cvFolds": "CV Folds",
+    "meanMetrics": "Mean Metrics",
+    "residualStats": "Residual Statistics",
+    "normalityTest": "Normality Test",
+    "isNormal": "Residuals are normally distributed",
+    "notNormal": "Residuals are NOT normally distributed",
+    "recommendations": "Recommendations",
+    "validationError": "Failed to run validation"
   }
 }

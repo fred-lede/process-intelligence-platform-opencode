@@ -180,5 +180,69 @@
     "params": "配適參數",
     "noFit": "請選擇欄位並執行配適。",
     "noTrend": "請選擇欄位並繪製趨勢。"
+  },
+  "modelCenter": {
+    "title": "模型中心",
+    "noData": "請先匯入資料集再進行模型配適。",
+    "fitTitle": "模型配適",
+    "modelType": {
+      "label": "模型類型",
+      "doeLinear": "DOE 線性",
+      "doeQuadratic": "DOE 二次",
+      "randomForest": "隨機樹",
+      "residualHybrid": "殘差混合"
+    },
+    "target": {
+      "label": "目標欄位（輸出）",
+      "placeholder": "選擇輸出欄位"
+    },
+    "inputs": {
+      "label": "輸入欄位",
+      "placeholder": "選擇輸入欄位"
+    },
+    "fitButton": "開始配適",
+    "fitSuccess": "模型配適完成",
+    "listTitle": "已配適模型",
+    "column": {
+      "type": "類型",
+      "version": "版本",
+      "status": "狀態",
+      "actions": "操作"
+    },
+    "confirmTransition": "確認切換至 {status}？",
+    "transitionSuccess": "模型已切換至 {status}",
+    "compareButton": "比較",
+    "compareTitle": "模型比較",
+    "compareMetric": "指標",
+    "interactionsTitle": "交互作用分析",
+    "computeInteractions": "計算交互作用",
+    "computing": "計算中...",
+    "interactionStrength": "交互作用強度",
+    "noInteraction": "請先配適模型。",
+    "shapTitle": "SHAP 可解釋性",
+    "computeSHAP": "計算 SHAP",
+    "computingSHAP": "計算中...",
+    "shapImportanceTitle": "特徵重要性",
+    "shapImportance": "平均 |SHAP 值|",
+    "shapSummaryTitle": "SHAP 摘要",
+    "shapError": "無法計算 SHAP 值",
+    "extrapTitle": "外插風險評分",
+    "checkExtrapolation": "檢查外插風險",
+    "checking": "檢查中...",
+    "riskScore": "風險分數",
+    "noExtrap": "所有預測點均在訓練數據範圍內。",
+    "extrapError": "無法檢查外插風險",
+    "safeRange": "安全範圍",
+    "validationTitle": "驗證分析",
+    "runValidation": "執行驗證",
+    "runningValidation": "執行中...",
+    "cvFolds": "交叉驗證折數",
+    "meanMetrics": "平均指標",
+    "residualStats": "殘差統計",
+    "normalityTest": "常態性檢定",
+    "isNormal": "殘差符合常態分配",
+    "notNormal": "殘差不符合常態分配",
+    "recommendations": "實驗建議",
+    "validationError": "無法執行驗證"
   }
 }

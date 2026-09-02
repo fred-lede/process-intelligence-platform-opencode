@@ -7,6 +7,8 @@ the residual r = Y - f_DOE(X).
 
 from __future__ import annotations
 
+from typing import Any
+
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -51,6 +53,7 @@ class ModelFit:
     created_at: str = ""
     version: int = 1
     direction: str | None = None
+    model: Any = None
 
     def to_dto(self) -> dict:
         return {
@@ -179,6 +182,7 @@ def fit_random_forest(
         n_train=len(X_tr),
         n_test=len(X_te),
         created_at=_now(),
+        model=rf,
     )
 
 

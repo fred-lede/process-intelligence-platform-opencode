@@ -279,3 +279,99 @@ export async function transitionModel(
 ): Promise<ModelFitDTO> {
   return engineCall<ModelFitDTO>('modeling/transition', { model_id, status })
 }
+
+// --- Phase 3b: DOE Design Library ----------------------------------------
+
+export interface DOEFactor {
+  name: string
+  low: number
+  high: number
+}
+
+export interface DOEDesignResult {
+  design_type: string
+  n_runs: number
+  runs: Record<string, number>[]
+  coded_runs: Record<string, number>[]
+}
+
+export async function generateDOEDesign(params: {
+  factors: DOEFactor[]
+  design_type: string
+  params?: Record<string, unknown>
+}): Promise<DOEDesignResult> {
+  return engineCall<DOEDesignResult>('modeling/doe/generate', params as unknown as Record<string, unknown>)
+}
+
+// --- Phase 3b: Interaction Analysis --------------------------------------
+
+export interface InteractionResult {
+  factors: string[]
+  matrix: number[][]
+  significant_pairs: { i: string; j: string; strength: number; significant: boolean }[]
+}
+
+export async function computeInteractions(params: {
+  model_id: string
+  dataset_id: string
+  threshold?: number
+}): Promise<InteractionResult> {
+  return engineCall<InteractionResult>('modeling/interactions/compute', params as unknown as Record<string, unknown>)
+}
+
+// --- Phase 3b: SHAP Analysis -----------------------------------------------
+
+export interface SHAPResult {
+  expected_value: number
+  feature_importance: { name: string; importance: number }[]
+  shap_values: number[][]
+}
+
+export async function computeSHAP(params: {
+  model_id: string
+  dataset_id: string
+  nsamples?: number
+}): Promise<SHAPResult> {
+  return engineCall<SHAPResult>('modeling/shap/explain', params as unknown as Record<string, unknown>)
+}
+
+// --- Phase 3b-7: Extrapolation Risk ----------------------------------------
+
+export interface ExtrapolationResult {
+  risk_scores: number[]
+  factor_risks: Record<string, { min: number; max: number; risk: number }>
+  max_risk: number
+  is_extrapolation: boolean
+}
+
+export async function checkExtrapolation(params: {
+  dataset_id: string
+  prediction_points: Record<string, number>[]
+}): Promise<ExtrapolationResult> {
+  return engineCall<ExtrapolationResult>('modeling/extrapolation/check', params as unknown as Record<string, unknown>)
+}
+
+// --- Phase 3b-8: Validation Analysis ---------------------------------------
+
+export interface CVResult {
+  fold: number
+  r2: number
+  rmse: number
+}
+
+export interface ValidationResult {
+  cv_results: CVResult[]
+  mean_metrics: { mean_r2: number; mean_rmse: number }
+  residuals: number[]
+  stats: { mean: number; std: number; skewness: number; kurtosis: number }
+  normality_test: { statistic: number; p_value: number; is_normal: boolean }
+  recommendations: { type: string; reason: string; factors?: string[]; method?: string }[]
+}
+
+export async function analyzeValidation(params: {
+  model_id: string
+  dataset_id: string
+  k?: number
+}): Promise<ValidationResult> {
+  return engineCall<ValidationResult>('modeling/validation/analyze', params as unknown as Record<string, unknown>)
+}

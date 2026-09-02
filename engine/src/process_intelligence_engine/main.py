@@ -29,12 +29,17 @@ from process_intelligence_engine.data.distribution import fit_best_distribution
 from process_intelligence_engine.data.field_detector import detect_fields
 from process_intelligence_engine.data.importer import import_file
 from process_intelligence_engine.data.quality import run_quality_checks
+from process_intelligence_engine.modeling.interactions import compute_interactions
+from process_intelligence_engine.modeling.shap_explainer import compute_shap
+from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
+from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments
 from process_intelligence_engine.modeling.fitters import (
     fit_doe_linear,
     fit_doe_quadratic,
     fit_random_forest,
     fit_residual_hybrid,
 )
+from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
 
 
@@ -317,6 +322,58 @@ def _handle_modeling_transition(params: dict) -> dict:
     return fit.to_dto()
 
 
+def _handle_interactions_compute(params: dict) -> dict:
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    threshold = params.get("threshold", 0.01)
+    fit = MODEL_REGISTRY._get_unlocked(model_id)
+    df = REGISTRY.get(dataset_id)
+    return compute_interactions(fit, df, threshold)
+
+
+def _handle_shap_explain(params: dict) -> dict:
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    nsamples = params.get("nsamples", 100)
+    fit = MODEL_REGISTRY._get_unlocked(model_id)
+    df = REGISTRY.get(dataset_id)
+    return compute_shap(fit, df, nsamples)
+
+
+def _handle_extrapolation_check(params: dict) -> dict:
+    dataset_id = params["dataset_id"]
+    prediction_points = params.get("prediction_points", [])
+    df = REGISTRY.get(dataset_id)
+    return compute_extrapolation_risk(df, prediction_points)
+
+
+def _handle_validation_analyze(params: dict) -> dict:
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    k = params.get("k", 5)
+    fit = MODEL_REGISTRY._get_unlocked(model_id)
+    df = REGISTRY.get(dataset_id)
+
+    cv_result = cross_validate(fit, df, k)
+    residual_result = analyze_residuals(fit, df)
+    interactions = {"significant_pairs": []}
+    recommendations = recommend_experiments(fit, df, interactions)
+
+    return {
+        **cv_result,
+        **residual_result,
+        "recommendations": recommendations,
+    }
+
+
+def _handle_doe_generate(params: dict) -> dict:
+    return generate_design(
+        factors=params["factors"],
+        design_type=params["design_type"],
+        params=params.get("params"),
+    )
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -366,6 +423,21 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/transition":
         return _handle_modeling_transition(params)
+
+    if method == "modeling/doe/generate":
+        return _handle_doe_generate(params)
+
+    if method == "modeling/interactions/compute":
+        return _handle_interactions_compute(params)
+
+    if method == "modeling/shap/explain":
+        return _handle_shap_explain(params)
+
+    if method == "modeling/extrapolation/check":
+        return _handle_extrapolation_check(params)
+
+    if method == "modeling/validation/analyze":
+        return _handle_validation_analyze(params)
 
     raise ValueError(f"Unknown method: {method}")
 

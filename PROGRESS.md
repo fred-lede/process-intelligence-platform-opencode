@@ -182,3 +182,187 @@
 - [ ] SHAP 可解釋性
 - [ ] 外插風險評分
 - [ ] Logistic / 計數 / 可靠度模型
+
+## 2026-09-02 — Phase 3b-1 完成（模型中心頁面）
+
+### 完成內容
+
+- [x] `src/stores/modelStore.ts` — Zustand 模型狀態管理（loadModels/fit/transition/selectModel/clearError）
+- [x] `src/features/model-center/ModelCenter.tsx` — 模型中心頁面：
+  - 模型配適表單（ModelType Select + 目標欄位 + 輸入多選 + 配適按鈕）
+  - 模型列表比較表（type/version/status + R²/RMSE/MAE/Adj R² + 狀態切換 Popconfirm）
+  - Guard clause（無資料時顯示提示）
+- [x] `src/App.tsx` — 路由接線（modelCenter tab render branch）
+- [x] `src/i18n/en.json` + `zh-TW.json` — modelCenter section 中英文
+- [x] 驗證：`tsc --noEmit` ✅、`npm run build` ✅
+
+### Commits（phase3b-1-model-center-ui 分支）
+
+| Hash | 說明 |
+|------|------|
+| 6e2485a | feat(model-center): add Zustand model store |
+| 4942008 | fix(model-center): clear error state on loadModels |
+| c2d611d | feat(model-center): add ModelCenter page component |
+| 239a003 | feat(model-center): wire routing + i18n strings |
+
+### 待辦 (Phase 3b-2)
+
+- [ ] 模型比較表（多模型並排指標對比）
+- [ ] 交互作用分析（二因素交互）
+- [ ] DOE 設計庫（6 種設計）
+- [ ] SHAP / 外插風險 / 驗證實驗推薦
+
+## 2026-09-02 — Phase 3b-2 完成（模型比較增強）
+
+### 完成內容
+
+- [x] ModelCenter.tsx 加入 checkbox row selection + Compare 按鈕
+- [x] 比較 Card：並排顯示 R²/RMSE/MAE/Adj R²，最佳值綠色高亮 + ★
+- [x] i18n：compareButton / compareTitle / compareMetric en+zh-TW
+- [x] 驗證：tsc clean ✅、build clean ✅
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| 70e9289 | feat(model-center): add model comparison with checkbox selection and best-value highlighting |
+
+## 2026-09-02 — Phase 3b-6 完成（SHAP 可解釋性）
+
+### 完成內容
+
+- [x] `modeling/shap.py` + `main.py` — IPC handler `modeling/shap/explain` (commit `5ef27f3`)
+- [x] `engine.ts` — `SHAPResult` type + `computeSHAP()` API
+- [x] `ModelCenter.tsx` — SHAP 分析 Card：
+  - 「計算 SHAP」按鈕（含 loading 狀態）
+  - 特徵重要性水平長條圖（Plotly bar chart）
+  - SHAP Summary 蜂群散點圖（Plotly scatter）
+- [x] i18n en/zh-TW 新增 7 個字串（shapTitle, computeSHAP, computingSHAP, shapImportanceTitle, shapImportance, shapSummaryTitle, shapError）
+- [x] 驗證：`tsc --noEmit` ✅、`npm run build` ✅
+
+### Commits（phase3b-1-model-center-ui 分支）
+
+| Hash | 說明 |
+|------|------|
+| 866699e | feat(model-center): add SHAP interpretability visualization |
+| 5ef27f3 | feat(shap): expose modeling/shap/explain IPC + frontend API |
+
+### 待辦 (Phase 3b-7)
+
+- [ ] 外插風險評分
+
+## 2026-09-02 — Phase 3b-3 完成（DOE 設計庫）
+
+### 完成內容
+
+- [x] `modeling/doe.py` — 6 種 DOE 設計產生器：
+  - Full Factorial（2/3/N levels）
+  - Fractional Factorial（Resolution III half-fraction）
+  - CCD（Central Composite Design：factorial + axial + center points）
+  - Box-Behnken（edge midpoints + center points，≥3 factors）
+  - D-optimal（coordinate exchange algorithm，maximize |X'X|）
+  - Taguchi（L4/L8/L9/L16 orthogonal arrays）
+- [x] `_build_runs` shared helper — coded→actual mapping（-1→low, 0→mid, 1→high）
+- [x] `main.py` IPC handler `modeling/doe/generate`
+- [x] `engine.ts` — `DOEFactor` / `DOEDesignResult` types + `generateDOEDesign()` API
+- [x] 測試：14 DOE tests + 4 IPC tests，全引擎 111 tests (88% coverage)
+- [x] 驗證：tsc clean ✅、build clean ✅
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| 26ba9da | feat(doe): full factorial + fractional factorial design generators |
+| a04ebd3 | fix(doe): levels>=2 guard, document factor ordering, remove dead import |
+| eb7c247 | feat(doe): CCD + Box-Behnken design generators |
+| 31be710 | feat(doe): D-optimal + Taguchi design generators |
+| bf93182 | feat(doe): expose modeling/doe/generate IPC + frontend API wrapper |
+
+### 待辦 (Phase 3b-4)
+
+- [ ] SHAP 可解釋性
+- [ ] 交互作用分析
+- [ ] 外插風險評分
+- [ ] 驗證實驗推薦
+
+## 2026-09-02 — Phase 3b-4 完成（交互作用分析）
+
+### 完成內容
+
+- [x] `modeling/interactions.py` — 因子效應分解計算
+- [x] `main.py` — `modeling/interactions/compute` IPC handler
+- [x] `engine.ts` — `InteractionResult` + `computeInteractions()` API
+- [x] `ModelCenter.tsx` — 熱圖 Card（抗色強度正比於交互作用強度）
+- [x] i18n en/zh-TW 新增 5 個字串
+- [x] 驗證：117 tests (89% coverage)、tsc clean、build clean
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| 451cb64 | feat(interactions): two-factor interaction strength computation |
+| 07824d3 | feat(interactions): expose IPC + frontend API |
+| 9632e7e | feat(model-center): add interaction analysis heatmap |
+
+### 待辦 (Phase 3b-5)
+
+- [ ] SHAP 可解釋性
+- [ ] 外插風險評分
+- [ ] 驗證實驗推薦
+
+## 2026-09-02 — Phase 3b-5 完成（SHAP 可解釋性）
+
+### 完成內容
+
+- [x] `modeling/shap_explainer.py` — SHAP 值計算（LinearExplainer + TreeExplainer）
+- [x] `main.py` — `modeling/shap/explain` IPC handler
+- [x] `engine.ts` — `SHAPResult` 型別 + `computeSHAP()` API
+- [x] `ModelCenter.tsx` — 特徵重要性條狀圖 + SHAP 摘要圖（Plotly）
+- [x] i18n en/zh-TW 新增 6 個字串
+- [x] 驗證：123 tests (89% coverage)、tsc clean、build clean
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| 826986c | feat(shap): SHAP value computation for model interpretability |
+| 5ef27f3 | feat(shap): expose modeling/shap/explain IPC + frontend API |
+| 866699e | feat(model-center): add SHAP interpretability visualization |
+
+### 待辦 (Phase 3b-6)
+
+- [ ] 外插風險評分
+- [ ] 驗證實驗推薦
+
+## 2026-09-02 — Phase 3b-7 完成（外插風險評分）
+
+### 完成內容
+
+- [x] `modeling/extrapolation.py` — `compute_extrapolation_risk()`：對每個預測點計算各因子風險（超出訓練範圍的歸一化距離），總風險取 max
+- [x] `test_extrapolation.py` — 5 個測試：無外插、上方外插、下方外插、多點、邊界點
+- [x] 驗證：128 tests（全 pass）、覆蓋率 **89%**
+- [x] `main.py` — `modeling/extrapolation/check` IPC handler
+- [x] `engine.ts` — `ExtrapolationResult` 型別 + `checkExtrapolation()` API
+- [x] `test_main_extrapolation.py` — 3 個 IPC handler 測試
+- [x] 驗證：131 tests（全 pass）、覆蓋率 **89%**、tsc clean
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| de32eff | feat(extrapolation): expose modeling/extrapolation/check IPC + frontend API |
+| a738613 | feat(extrapolation): extrapolation risk scoring for predictions |
+## 2026-09-02 — Phase 3b-8 Validation & Residual Analysis
+
+### 完成內容
+
+- [x] `validation.py` — cross_validate, analyze_residuals, recommend_experiments
+- [x] 5 個測試用例通過
+- [x] 全套件 136 tests pass, 88% coverage
+- Commit: `89b397c`
+- [x] `main.py` — `modeling/validation/analyze` IPC handler
+- [x] `engine.ts` — `ValidationResult` type + `analyzeValidation()` API
+- [x] `test_main_validation.py` — 2 個 IPC handler 測試
+- [x] 驗證：138 tests（全 pass）、覆蓋率 **89%**、tsc clean
+- Commit: `6f1a4d6`
+
