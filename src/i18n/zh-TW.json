@@ -296,6 +296,7 @@
     "apiKey": "API 金鑰",
     "apiKeyOptional": "Ollama 不需要 API 金鑰",
     "model": "模型名稱",
+    "chatModelHint": "聊天模型請在右側 AI 助手面板選擇",
     "save": "儲存設定",
     "saveSuccess": "設定已儲存",
     "saveFailed": "儲存失敗",

@@ -296,6 +296,7 @@
     "apiKey": "API Key",
     "apiKeyOptional": "Ollama does not require an API key",
     "model": "Model Name",
+    "chatModelHint": "Chat model is selected in the AI Assistant panel on the right",
     "save": "Save Settings",
     "saveSuccess": "Settings saved successfully",
     "saveFailed": "Failed to save settings",

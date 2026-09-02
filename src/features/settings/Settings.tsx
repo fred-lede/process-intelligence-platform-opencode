@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message } from 'antd'
+import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, Typography, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection } from '../../lib/engine'
@@ -238,8 +238,11 @@ export default function Settings() {
               <Input.Password placeholder={aiConfig.provider === 'ollama' ? t('settings.apiKeyOptional') : 'sk-...'} />
             </Form.Item>
 
-            <Form.Item name="model" label={t('settings.model')}>
-              <Input placeholder="gemma4:e2b-mlx" />
+            <Form.Item label={t('settings.model')}>
+              <Space>
+                <Input value={aiConfig.model} disabled style={{ width: 200 }} />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('settings.chatModelHint')}</Typography.Text>
+              </Space>
             </Form.Item>
 
             <Form.Item>
