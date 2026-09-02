@@ -38,8 +38,12 @@ class SettingsManager:
                 with open(path, 'r') as f:
                     data = json.load(f)
                     self._config = AIProviderConfig(**data)
-            except Exception:
+                    print(f'[Settings] Loaded from {path}: {self._config.__dict__}')
+            except Exception as e:
+                print(f'[Settings] Load error: {e}')
                 pass
+        else:
+            print(f'[Settings] File not found: {path}')
     
     def _save(self) -> None:
         """Save settings to file."""
@@ -49,6 +53,7 @@ class SettingsManager:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'w') as f:
             json.dump(self._config.__dict__, f, indent=2)
+        print(f'[Settings] Saved to {path}: {self._config.__dict__}')
     
     def get_config(self) -> dict:
         """Get current settings (sensitive data masked)."""
