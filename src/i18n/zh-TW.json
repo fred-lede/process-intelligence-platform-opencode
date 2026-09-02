@@ -243,6 +243,13 @@
     "isNormal": "殘差符合常態分配",
     "notNormal": "殘差不符合常態分配",
     "recommendations": "實驗建議",
-    "validationError": "無法執行驗證"
+    "validationError": "無法執行驗證",
+    "fullValidationTitle": "完整驗證",
+    "runFullValidation": "執行完整驗證",
+    "runningFullValidation": "執行中...",
+    "bestModel": "最佳模型",
+    "residualDiagnostics": "殘差診斷",
+    "experimentRecommendations": "實驗建議",
+    "fullValidationError": "無法執行完整驗證"
   }
 }

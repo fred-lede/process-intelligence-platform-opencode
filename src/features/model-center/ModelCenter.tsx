@@ -6,8 +6,8 @@ import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult } from '../../lib/engine'
-import { computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult } from '../../lib/engine'
+import { computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -54,6 +54,8 @@ export default function ModelCenter() {
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
   const [validationLoading, setValidationLoading] = useState(false)
   const [cvFolds, setCvFolds] = useState(5)
+  const [fullValidation, setFullValidation] = useState<FullValidationResult | null>(null)
+  const [fullValidationLoading, setFullValidationLoading] = useState(false)
 
   const datasetId = importResult?.dataset_id
   const inputOptions = fields
@@ -137,6 +139,20 @@ export default function ModelCenter() {
       messageApi.error(t('modelCenter.validationError'))
     } finally {
       setValidationLoading(false)
+    }
+  }
+
+  const handleRunFullValidation = async () => {
+    if (!datasetId || !models.length) return
+    const modelIds = models.map(m => m.model_id)
+    setFullValidationLoading(true)
+    try {
+      const result = await runFullValidation({ dataset_id: datasetId, model_ids: modelIds })
+      setFullValidation(result)
+    } catch {
+      messageApi.error(t('modelCenter.fullValidationError'))
+    } finally {
+      setFullValidationLoading(false)
     }
   }
 
@@ -512,6 +528,80 @@ export default function ModelCenter() {
                       showIcon
                     />
                   ))}
+                </div>
+              </Space>
+            ) : (
+              <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
+            )}
+          </Space>
+        </Card>
+
+        <Card title={t('modelCenter.fullValidationTitle')} size="small">
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Button
+              type="primary"
+              loading={fullValidationLoading}
+              onClick={handleRunFullValidation}
+              disabled={models.length === 0 || !datasetId}
+            >
+              {fullValidationLoading ? t('modelCenter.runningFullValidation') : t('modelCenter.runFullValidation')}
+            </Button>
+            {fullValidation ? (
+              <Space direction="vertical" style={{ width: '100%' }} size="small">
+                <div>
+                  <strong>{t('modelCenter.bestModel')}:</strong>
+                  <Tag color="gold">{fullValidation.models.find(m => m.model_id === fullValidation.best_model_id)?.model_type}</Tag>
+                  <span style={{ marginLeft: 8, color: '#16a34a', fontWeight: 700 }}>
+                    Score: {fullValidation.models.find(m => m.model_id === fullValidation.best_model_id)?.score.toFixed(4)}
+                  </span>
+                </div>
+                <Table
+                  size="small"
+                  pagination={false}
+                  dataSource={fullValidation.models.map((m, idx) => ({ ...m, key: idx }))}
+                  columns={[
+                    { title: t('modelCenter.column.type'), dataIndex: 'model_type', key: 'model_type', width: 150 },
+                    { title: 'R²', dataIndex: ['cv_metrics', 'mean_r2'], key: 'r2', render: (v: number) => v?.toFixed(4) },
+                    { title: 'RMSE', dataIndex: ['cv_metrics', 'mean_rmse'], key: 'rmse', render: (v: number) => v?.toFixed(4) },
+                    {
+                      title: t('modelCenter.normalityTest'),
+                      dataIndex: 'residual_normal',
+                      key: 'residual_normal',
+                      render: (v: boolean) => (
+                        <Tag color={v ? 'success' : 'error'}>{v ? t('modelCenter.isNormal') : t('modelCenter.notNormal')}</Tag>
+                      ),
+                    },
+                    { title: 'Score', dataIndex: 'score', key: 'score', render: (v: number) => v?.toFixed(4) },
+                  ]}
+                />
+                <div>
+                  <strong>{t('modelCenter.residualDiagnostics')}:</strong>
+                  <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
+                    DW: {fullValidation.residual_analysis.durbin_watson.statistic.toFixed(3)}
+                    {' '}({fullValidation.residual_analysis.durbin_watson.interpretation})
+                  </div>
+                </div>
+                <div>
+                  <strong>{t('modelCenter.experimentRecommendations')}:</strong>
+                  {fullValidation.experiment_recommendations.recommendations.map((rec, i) => (
+                    <Alert
+                      key={i}
+                      style={{ marginTop: 4 }}
+                      type={rec.priority === 'high' ? 'warning' : rec.priority === 'medium' ? 'warning' : 'info'}
+                      message={
+                        <span>
+                          <Tag color={rec.priority === 'high' ? 'red' : rec.priority === 'medium' ? 'orange' : 'default'}>
+                            {rec.priority}
+                          </Tag>
+                          {rec.type}: {rec.reason}
+                        </span>
+                      }
+                      showIcon
+                    />
+                  ))}
+                  <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
+                    {fullValidation.experiment_recommendations.summary}
+                  </div>
                 </div>
               </Space>
             ) : (

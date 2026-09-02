@@ -375,3 +375,47 @@ export async function analyzeValidation(params: {
 }): Promise<ValidationResult> {
   return engineCall<ValidationResult>('modeling/validation/analyze', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 4: Full Validation -----------------------------------------------
+
+export interface ExperimentRecommendation {
+  type: string
+  priority: 'high' | 'medium' | 'low'
+  factors: string[]
+  settings: Record<string, number>[]
+  reason: string
+}
+
+export interface FullValidationResult {
+  models: Array<{
+    model_id: string
+    model_type: string
+    cv_metrics: { mean_r2: number; mean_rmse: number }
+    residual_normal: boolean
+    score: number
+  }>
+  best_model_id: string
+  ranking: string[]
+  residual_analysis: {
+    qq_data: { theoretical_quantiles: number[]; sample_quantiles: number[] }
+    residuals_vs_predicted: { predicted: number[]; residuals: number[] }
+    durbin_watson: { statistic: number; interpretation: string }
+  }
+  interaction_analysis: {
+    factors: string[]
+    matrix: number[][]
+    significant_pairs: Array<{ i: string; j: string; strength: number }>
+  }
+  experiment_recommendations: {
+    recommendations: ExperimentRecommendation[]
+    summary: string
+  }
+}
+
+export async function runFullValidation(params: {
+  dataset_id: string
+  model_ids?: string[]
+  k?: number
+}): Promise<FullValidationResult> {
+  return engineCall<FullValidationResult>('modeling/validation/full', params as unknown as Record<string, unknown>)
+}

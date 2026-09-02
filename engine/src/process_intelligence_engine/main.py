@@ -33,6 +33,8 @@ from process_intelligence_engine.modeling.interactions import compute_interactio
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
 from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments
+from process_intelligence_engine.modeling.model_selection import compare_models
+from process_intelligence_engine.modeling.experiment_recommendation import recommend_experiments as recommend_experiments_full
 from process_intelligence_engine.modeling.fitters import (
     fit_doe_linear,
     fit_doe_quadratic,
@@ -366,6 +368,44 @@ def _handle_validation_analyze(params: dict) -> dict:
     }
 
 
+def _handle_validation_full(params: dict) -> dict:
+    """Full validation: model comparison + experiment recommendation."""
+    dataset_id = params["dataset_id"]
+    model_ids = params.get("model_ids", [])
+    k = params.get("k", 5)
+
+    if not model_ids:
+        model_ids = [mid for mid in MODEL_REGISTRY.list_ids()
+                     if MODEL_REGISTRY._get_unlocked(mid).status in ("validated", "approved")]
+
+    if len(model_ids) < 1:
+        raise ValueError("No models to validate")
+
+    df = REGISTRY.get(dataset_id)
+
+    fits = [MODEL_REGISTRY._get_unlocked(mid) for mid in model_ids]
+
+    comparison = compare_models(fits, df, k)
+
+    best_fit = next(f for f in fits if f.model_id == comparison["best_model_id"])
+    residual_analysis = analyze_residuals(best_fit, df)
+
+    interactions = compute_interactions(best_fit, df)
+
+    validation_result = {
+        "residuals": residual_analysis["residuals"],
+        "stats": residual_analysis["stats"],
+    }
+    exp_recommendation = recommend_experiments_full(best_fit, df, interactions, validation_result)
+
+    return {
+        **comparison,
+        "residual_analysis": residual_analysis,
+        "interaction_analysis": interactions,
+        "experiment_recommendations": exp_recommendation,
+    }
+
+
 def _handle_doe_generate(params: dict) -> dict:
     return generate_design(
         factors=params["factors"],
@@ -438,6 +478,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/validation/analyze":
         return _handle_validation_analyze(params)
+
+    if method == "modeling/validation/full":
+        return _handle_validation_full(params)
 
     raise ValueError(f"Unknown method: {method}")
 
