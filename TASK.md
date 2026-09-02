@@ -38,9 +38,13 @@
 - Task 2: IPC handler `modeling/interactions/compute` + frontend `computeInteractions` API (commit `07824d3`)
 - 驗證 — 117 tests pass, tsc clean
 
+### Phase 3b-6 — SHAP 可解釋性
+- Task 1: IPC handler `modeling/shap/explain` + frontend `computeSHAP` API (commit `5ef27f3`)
+- Task 2: `ModelCenter.tsx` — SHAP 分析 Card（計算按鈕 + 特徵重要性圖 + SHAP summary 圖）+ i18n (commit `866699e`)
+- 驗證 — 123 tests pass, tsc/build clean
+
 ## In Progress
 - None
 
 ## Pending
-- Phase 3b-5: SHAP 可解釋性
-- Phase 3b-6: 外插風險評分
+- Phase 3b-7: 外插風險評分

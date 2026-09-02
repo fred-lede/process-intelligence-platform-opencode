@@ -227,6 +227,30 @@
 |------|------|
 | 70e9289 | feat(model-center): add model comparison with checkbox selection and best-value highlighting |
 
+## 2026-09-02 — Phase 3b-6 完成（SHAP 可解釋性）
+
+### 完成內容
+
+- [x] `modeling/shap.py` + `main.py` — IPC handler `modeling/shap/explain` (commit `5ef27f3`)
+- [x] `engine.ts` — `SHAPResult` type + `computeSHAP()` API
+- [x] `ModelCenter.tsx` — SHAP 分析 Card：
+  - 「計算 SHAP」按鈕（含 loading 狀態）
+  - 特徵重要性水平長條圖（Plotly bar chart）
+  - SHAP Summary 蜂群散點圖（Plotly scatter）
+- [x] i18n en/zh-TW 新增 7 個字串（shapTitle, computeSHAP, computingSHAP, shapImportanceTitle, shapImportance, shapSummaryTitle, shapError）
+- [x] 驗證：`tsc --noEmit` ✅、`npm run build` ✅
+
+### Commits（phase3b-1-model-center-ui 分支）
+
+| Hash | 說明 |
+|------|------|
+| 866699e | feat(model-center): add SHAP interpretability visualization |
+| 5ef27f3 | feat(shap): expose modeling/shap/explain IPC + frontend API |
+
+### 待辦 (Phase 3b-7)
+
+- [ ] 外插風險評分
+
 ## 2026-09-02 — Phase 3b-3 完成（DOE 設計庫）
 
 ### 完成內容
