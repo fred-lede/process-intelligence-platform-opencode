@@ -341,3 +341,14 @@
 - [x] `modeling/extrapolation.py` — `compute_extrapolation_risk()`：對每個預測點計算各因子風險（超出訓練範圍的歸一化距離），總風險取 max
 - [x] `test_extrapolation.py` — 5 個測試：無外插、上方外插、下方外插、多點、邊界點
 - [x] 驗證：128 tests（全 pass）、覆蓋率 **89%**
+- [x] `main.py` — `modeling/extrapolation/check` IPC handler
+- [x] `engine.ts` — `ExtrapolationResult` 型別 + `checkExtrapolation()` API
+- [x] `test_main_extrapolation.py` — 3 個 IPC handler 測試
+- [x] 驗證：131 tests（全 pass）、覆蓋率 **89%**、tsc clean
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| de32eff | feat(extrapolation): expose modeling/extrapolation/check IPC + frontend API |
+| a738613 | feat(extrapolation): extrapolation risk scoring for predictions |
