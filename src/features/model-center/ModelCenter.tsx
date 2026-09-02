@@ -6,8 +6,8 @@ import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult } from '../../lib/engine'
-import { computeInteractions, computeSHAP } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult } from '../../lib/engine'
+import { computeInteractions, computeSHAP, checkExtrapolation } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -49,6 +49,8 @@ export default function ModelCenter() {
   const [interactionsLoading, setInteractionsLoading] = useState(false)
   const [shapResult, setShapResult] = useState<SHAPResult | null>(null)
   const [shapLoading, setShapLoading] = useState(false)
+  const [extrapResult, setExtrapResult] = useState<ExtrapolationResult | null>(null)
+  const [extrapLoading, setExtrapLoading] = useState(false)
 
   const datasetId = importResult?.dataset_id
   const inputOptions = fields
@@ -99,6 +101,25 @@ export default function ModelCenter() {
       messageApi.error(t('modelCenter.shapError'))
     } finally {
       setShapLoading(false)
+    }
+  }
+
+  const handleCheckExtrapolation = async () => {
+    if (!datasetId || !models.length) return
+    const latestModel = models[models.length - 1]
+    const predictionPoints = [
+      { ...latestModel.inputs.reduce((acc, inp) => ({ ...acc, [inp]: 5.0 }), {} as Record<string, number>) },
+      { ...latestModel.inputs.reduce((acc, inp) => ({ ...acc, [inp]: 15.0 }), {} as Record<string, number>) },
+      { ...latestModel.inputs.reduce((acc, inp) => ({ ...acc, [inp]: -5.0 }), {} as Record<string, number>) },
+    ]
+    setExtrapLoading(true)
+    try {
+      const result = await checkExtrapolation({ dataset_id: datasetId, prediction_points: predictionPoints })
+      setExtrapResult(result)
+    } catch {
+      messageApi.error(t('modelCenter.extrapError'))
+    } finally {
+      setExtrapLoading(false)
     }
   }
 
@@ -360,6 +381,52 @@ export default function ModelCenter() {
               </Space>
             ) : (
               <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
+            )}
+          </Space>
+        </Card>
+
+        <Card title={t('modelCenter.extrapTitle')} size="small">
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Button
+              type="primary"
+              loading={extrapLoading}
+              onClick={handleCheckExtrapolation}
+              disabled={models.length === 0 || !datasetId}
+            >
+              {extrapLoading ? t('modelCenter.checking') : t('modelCenter.checkExtrapolation')}
+            </Button>
+            {extrapResult ? (
+              <Space direction="vertical" style={{ width: '100%' }} size="small">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontWeight: 500 }}>{t('modelCenter.riskScore')}:</span>
+                  <span style={{
+                    fontSize: 24,
+                    fontWeight: 700,
+                    color: extrapResult.max_risk === 0 ? '#16a34a' : extrapResult.max_risk < 0.5 ? '#ca8a04' : '#dc2626',
+                  }}>
+                    {extrapResult.max_risk.toFixed(2)}
+                  </span>
+                  <Tag color={extrapResult.max_risk === 0 ? 'success' : extrapResult.max_risk < 0.5 ? 'warning' : 'error'}>
+                    {extrapResult.is_extrapolation ? 'Extrapolation Detected' : 'All within range'}
+                  </Tag>
+                </div>
+                <div>
+                  <strong>{t('modelCenter.safeRange')}:</strong>
+                  {Object.entries(extrapResult.factor_risks).map(([name, data]) => (
+                    <div key={name} style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span>{name}:</span>
+                      <span style={{
+                        color: data.risk === 0 ? '#16a34a' : data.risk < 0.5 ? '#ca8a04' : '#dc2626',
+                      }}>
+                        Risk: {data.risk.toFixed(2)}
+                      </span>
+                      <span style={{ color: '#6b7280', fontSize: 12 }}>(range: {data.min.toFixed(1)}–{data.max.toFixed(1)})</span>
+                    </div>
+                  ))}
+                </div>
+              </Space>
+            ) : (
+              <Alert type="info" showIcon message={t('modelCenter.noExtrap')} />
             )}
           </Space>
         </Card>

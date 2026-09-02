@@ -225,6 +225,13 @@
     "shapImportanceTitle": "特徵重要性",
     "shapImportance": "平均 |SHAP 值|",
     "shapSummaryTitle": "SHAP 摘要",
-    "shapError": "無法計算 SHAP 值"
+    "shapError": "無法計算 SHAP 值",
+    "extrapTitle": "外插風險評分",
+    "checkExtrapolation": "檢查外插風險",
+    "checking": "檢查中...",
+    "riskScore": "風險分數",
+    "noExtrap": "所有預測點均在訓練數據範圍內。",
+    "extrapError": "無法檢查外插風險",
+    "safeRange": "安全範圍"
   }
 }

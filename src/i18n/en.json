@@ -225,6 +225,13 @@
     "shapImportanceTitle": "Feature Importance",
     "shapImportance": "Mean |SHAP value|",
     "shapSummaryTitle": "SHAP Summary",
-    "shapError": "Failed to compute SHAP values"
+    "shapError": "Failed to compute SHAP values",
+    "extrapTitle": "Extrapolation Risk",
+    "checkExtrapolation": "Check Extrapolation",
+    "checking": "Checking...",
+    "riskScore": "Risk Score",
+    "noExtrap": "All predictions are within training data range.",
+    "extrapError": "Failed to check extrapolation risk",
+    "safeRange": "Safe Range"
   }
 }
