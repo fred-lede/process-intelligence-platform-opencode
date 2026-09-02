@@ -333,3 +333,11 @@
 
 - [ ] 外插風險評分
 - [ ] 驗證實驗推薦
+
+## 2026-09-02 — Phase 3b-7 完成（外插風險評分）
+
+### 完成內容
+
+- [x] `modeling/extrapolation.py` — `compute_extrapolation_risk()`：對每個預測點計算各因子風險（超出訓練範圍的歸一化距離），總風險取 max
+- [x] `test_extrapolation.py` — 5 個測試：無外插、上方外插、下方外插、多點、邊界點
+- [x] 驗證：128 tests（全 pass）、覆蓋率 **89%**
