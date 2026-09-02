@@ -210,6 +210,9 @@
       "actions": "Actions"
     },
     "confirmTransition": "Confirm transition to {status}?",
-    "transitionSuccess": "Model transitioned to {status}"
+    "transitionSuccess": "Model transitioned to {status}",
+    "compareButton": "Compare",
+    "compareTitle": "Model Comparison",
+    "compareMetric": "Metric"
   }
 }

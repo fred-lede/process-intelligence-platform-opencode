@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { ExperimentOutlined } from '@ant-design/icons'
+import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import type { ModelFitDTO, ModelType, ModelStatus } from '../../lib/engine'
@@ -42,6 +42,7 @@ export default function ModelCenter() {
   const [modelType, setModelType] = useState<ModelType>('doe_linear')
   const [selectedInputs, setSelectedInputs] = useState<string[]>([])
   const [target, setTarget] = useState<string | undefined>(spec?.outputField || undefined)
+  const [compareIds, setCompareIds] = useState<string[]>([])
 
   const datasetId = importResult?.dataset_id
   const inputOptions = fields
@@ -64,6 +65,15 @@ export default function ModelCenter() {
   const handleTransition = async (modelId: string, newStatus: ModelStatus) => {
     await transition(modelId, newStatus)
     messageApi.success(t('modelCenter.transitionSuccess', { status: newStatus }))
+  }
+
+  const compareModels = models.filter((m) => compareIds.includes(m.model_id))
+
+  const bestMetric = (key: 'r2' | 'rmse' | 'mae' | 'adj_r2') => {
+    if (compareModels.length === 0) return null
+    const higher = key === 'r2' || key === 'adj_r2'
+    const vals = compareModels.map((m) => m.metrics[key])
+    return higher ? Math.max(...vals) : Math.min(...vals)
   }
 
   if (!datasetId) {
@@ -146,17 +156,60 @@ export default function ModelCenter() {
           </Space>
         </Card>
 
-        <Card title={t('modelCenter.listTitle')} size="small">
+        <Card title={t('modelCenter.listTitle')} size="small"
+          extra={compareIds.length >= 2 && (
+            <Button size="small" icon={<SwapOutlined />} onClick={() => {}}>
+              {t('modelCenter.compareButton')} ({compareIds.length})
+            </Button>
+          )}
+        >
           <Table
             size="small"
             rowKey="model_id"
             columns={columns}
             dataSource={models}
             pagination={false}
+            rowSelection={{
+              selectedRowKeys: compareIds,
+              onChange: (keys) => setCompareIds(keys as string[]),
+            }}
             rowClassName={(r) => (r.model_id === selectedModelId ? 'ant-table-row-selected' : '')}
             onRow={(record) => ({ onClick: () => selectModel(record.model_id) })}
           />
         </Card>
+
+        {compareModels.length >= 2 && (
+          <Card title={t('modelCenter.compareTitle')} size="small">
+            <Table
+              size="small"
+              pagination={false}
+              dataSource={[
+                { metric: 'R²', key: 'r2', higher: true },
+                { metric: 'RMSE', key: 'rmse', higher: false },
+                { metric: 'MAE', key: 'mae', higher: false },
+                { metric: 'Adj R²', key: 'adj_r2', higher: true },
+              ]}
+              columns={[
+                { title: t('modelCenter.compareMetric'), dataIndex: 'metric', key: 'metric', width: 120 },
+                ...compareModels.map((m) => ({
+                  title: `${m.model_type} v${m.version}`,
+                  key: m.model_id,
+                  width: 140,
+                  render: (_: unknown, row: { key: string; higher: boolean }) => {
+                    const val = m.metrics[row.key as keyof typeof m.metrics]
+                    const best = bestMetric(row.key as 'r2' | 'rmse' | 'mae' | 'adj_r2')
+                    const isBest = val === best
+                    return (
+                      <span style={{ fontWeight: isBest ? 700 : 400, color: isBest ? '#16a34a' : undefined }}>
+                        {val?.toFixed(4)}{isBest ? ' ★' : ''}
+                      </span>
+                    )
+                  },
+                })),
+              ]}
+            />
+          </Card>
+        )}
       </Space>
     </>
   )
