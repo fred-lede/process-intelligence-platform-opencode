@@ -187,7 +187,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
       ),
     },
     {
-      title: t('dataImport.role'),
+      title: t('dataImport.roleLabel'),
       dataIndex: 'role',
       key: 'role',
       width: 220,
