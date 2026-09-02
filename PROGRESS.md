@@ -211,3 +211,52 @@
 - [ ] 交互作用分析（二因素交互）
 - [ ] DOE 設計庫（6 種設計）
 - [ ] SHAP / 外插風險 / 驗證實驗推薦
+
+## 2026-09-02 — Phase 3b-2 完成（模型比較增強）
+
+### 完成內容
+
+- [x] ModelCenter.tsx 加入 checkbox row selection + Compare 按鈕
+- [x] 比較 Card：並排顯示 R²/RMSE/MAE/Adj R²，最佳值綠色高亮 + ★
+- [x] i18n：compareButton / compareTitle / compareMetric en+zh-TW
+- [x] 驗證：tsc clean ✅、build clean ✅
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| 70e9289 | feat(model-center): add model comparison with checkbox selection and best-value highlighting |
+
+## 2026-09-02 — Phase 3b-3 完成（DOE 設計庫）
+
+### 完成內容
+
+- [x] `modeling/doe.py` — 6 種 DOE 設計產生器：
+  - Full Factorial（2/3/N levels）
+  - Fractional Factorial（Resolution III half-fraction）
+  - CCD（Central Composite Design：factorial + axial + center points）
+  - Box-Behnken（edge midpoints + center points，≥3 factors）
+  - D-optimal（coordinate exchange algorithm，maximize |X'X|）
+  - Taguchi（L4/L8/L9/L16 orthogonal arrays）
+- [x] `_build_runs` shared helper — coded→actual mapping（-1→low, 0→mid, 1→high）
+- [x] `main.py` IPC handler `modeling/doe/generate`
+- [x] `engine.ts` — `DOEFactor` / `DOEDesignResult` types + `generateDOEDesign()` API
+- [x] 測試：14 DOE tests + 4 IPC tests，全引擎 111 tests (88% coverage)
+- [x] 驗證：tsc clean ✅、build clean ✅
+
+### Commits
+
+| Hash | 說明 |
+|------|------|
+| 26ba9da | feat(doe): full factorial + fractional factorial design generators |
+| a04ebd3 | fix(doe): levels>=2 guard, document factor ordering, remove dead import |
+| eb7c247 | feat(doe): CCD + Box-Behnken design generators |
+| 31be710 | feat(doe): D-optimal + Taguchi design generators |
+| bf93182 | feat(doe): expose modeling/doe/generate IPC + frontend API wrapper |
+
+### 待辦 (Phase 3b-4)
+
+- [ ] SHAP 可解釋性
+- [ ] 交互作用分析
+- [ ] 外插風險評分
+- [ ] 驗證實驗推薦

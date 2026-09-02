@@ -1,19 +1,36 @@
 # TASK.md
 
 ## Completed
-- Task 2 (DOE Design Library): Added CCD + Box-Behnken design generators to
-  `engine/src/process_intelligence_engine/modeling/doe.py`, plus shared
-  `_build_runs` helper (refactored full/fractional factorial to use it).
-  Tests: 10 passed in test_doe.py; full suite 103 passed.
-  Commit: eb7c247
-- Task 4 (DOE IPC + Frontend Wrapper): Added `modeling/doe/generate` IPC handler
-  in `main.py` with `_handle_doe_generate` dispatcher. Added `generateDOEDesign`
-  frontend API wrapper with `DOEFactor`/`DOEDesignResult` types in `engine.ts`.
-  Tests: 4 passed in test_main_doe.py; full suite 111 passed. tsc clean.
-  Commit: pending
+
+### Phase 3a — Model Center Engine Core
+- Task 1: `metrics.py` — RMSE/MSE/MAE/R²/Adjusted R² (commit `da6079d`)
+- Task 2: `fitters.py` — DOE linear/quadratic + random forest + residual hybrid (commits `28c8c55`, `419ea2b`, `d677820`)
+- Task 3: `registry.py` — immutable model versions + status machine (commit `68c36ef`, fix `ce94297`)
+- Task 4: `main.py` — IPC handlers modeling/fit, modeling/list, modeling/transition (commits `be9d996`, `82ae1bb`)
+- Task 5: `engine.ts` — frontend modeling types + API (commit `ff735a6`)
+- Task 6: 驗證 + 文件 — 93 tests, 88% coverage, tsc/build/cargo clean
+
+### Phase 3b-1 — Model Center UI
+- Task 1: `modelStore.ts` — Zustand store (commit `6e2485a`, fix `4942008`)
+- Task 2: `ModelCenter.tsx` — page component (commit `c2d611d`)
+- Task 3: `App.tsx` — routing (commit `239a003`)
+- Task 4: i18n en/zh-TW (commit `239a003`)
+- Task 5: 驗證 — tsc/build clean
+
+### Phase 3b-2 — Model Comparison Enhancement
+- Checkbox row selection + Compare button + comparison Card + best-value highlighting (commit `70e9289`)
+
+### Phase 3b-3 — DOE Design Library
+- Task 1: Full Factorial + Fractional Factorial (commits `26ba9da`, `a04ebd3`)
+- Task 2: CCD + Box-Behnken (commit `eb7c247`)
+- Task 3: D-optimal + Taguchi L4/L8/L9/L16 (commit `31be710`)
+- Task 4: IPC handler `modeling/doe/generate` + frontend `generateDOEDesign` API (commit `bf93182`)
+- Task 5: 驗證 — 111 tests, tsc/build clean
 
 ## In Progress
 - None
 
 ## Pending
-- Next DOE tasks (TDD) as specified in plan.
+- Phase 3b-4: SHAP 可解釋性
+- Phase 3b-5: 交互作用分析
+- Phase 3b-6: 外插風險評分
