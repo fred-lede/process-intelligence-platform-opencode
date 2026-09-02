@@ -99,3 +99,55 @@ def test_box_behnken_4_factors():
     factors = [{"name": f"f{i}", "low": 0.0, "high": 1.0} for i in range(4)]
     result = generate_design(factors, "box_behnken", {"center_points": 3})
     assert result["n_runs"] == 27
+
+
+def test_d_optimal():
+    factors = [
+        {"name": "A", "low": -1.0, "high": 1.0},
+        {"name": "B", "low": -1.0, "high": 1.0},
+        {"name": "C", "low": -1.0, "high": 1.0},
+    ]
+    result = generate_design(factors, "d_optimal", {"n_runs": 6, "candidates": 20})
+    assert result["design_type"] == "d_optimal"
+    assert result["n_runs"] == 6
+    assert len(result["runs"]) == 6
+    assert len(result["coded_runs"]) == 6
+    for run in result["runs"]:
+        for name, val in run.items():
+            assert -1.5 <= val <= 1.5
+
+
+def test_d_optimal_2_factors():
+    factors = [
+        {"name": "X", "low": 0.0, "high": 10.0},
+        {"name": "Y", "low": 0.0, "high": 100.0},
+    ]
+    result = generate_design(factors, "d_optimal", {"n_runs": 4, "candidates": 10})
+    assert result["n_runs"] == 4
+    x_vals = [r["X"] for r in result["runs"]]
+    assert len(set(x_vals)) > 1
+
+
+def test_taguchi_L4():
+    factors = [
+        {"name": "A", "low": 0.0, "high": 1.0},
+        {"name": "B", "low": 0.0, "high": 1.0},
+        {"name": "C", "low": 0.0, "high": 1.0},
+    ]
+    result = generate_design(factors, "taguchi", {"array": "L4"})
+    assert result["design_type"] == "taguchi"
+    assert result["n_runs"] == 4
+    assert len(result["runs"]) == 4
+    ab_pairs = [(r["A"], r["B"]) for r in result["coded_runs"]]
+    assert (-1, -1) in ab_pairs
+    assert (-1, 1) in ab_pairs
+    assert (1, -1) in ab_pairs
+    assert (1, 1) in ab_pairs
+
+
+def test_taguchi_L9():
+    factors = [
+        {"name": f"f{i}", "low": 0.0, "high": 1.0} for i in range(4)
+    ]
+    result = generate_design(factors, "taguchi", {"array": "L9"})
+    assert result["n_runs"] == 9

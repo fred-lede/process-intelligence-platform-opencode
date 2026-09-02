@@ -1,4 +1,5 @@
-"""DOE design generators (Full Factorial, Fractional Factorial)."""
+"""DOE design generators (Full Factorial, Fractional Factorial, CCD, Box-Behnken,
+D-optimal, Taguchi)."""
 from __future__ import annotations
 
 import itertools
@@ -29,6 +30,8 @@ def generate_design(
         "fractional_factorial": _fractional_factorial,
         "ccd": _ccd,
         "box_behnken": _box_behnken,
+        "d_optimal": _d_optimal,
+        "taguchi": _taguchi,
     }
     generator = dispatch.get(design_type)
     if generator is None:
@@ -122,3 +125,102 @@ def _box_behnken(factors: list[dict], params: dict) -> dict:
                     edge_midpoints.append(tuple(row))
     center = [tuple([0.0] * n)] * center_points
     return _build_runs(factors, edge_midpoints + center, "box_behnken")
+
+
+def _d_optimal(factors: list[dict], params: dict) -> dict:
+    """D-optimal design: coordinate exchange algorithm to maximize |X'X|."""
+    import numpy as np
+    n_runs = params.get("n_runs", 8)
+    n_candidates = params.get("candidates", 50)
+    n_factors = len(factors)
+
+    if n_runs < n_factors + 1:
+        raise ValueError(f"n_runs ({n_runs}) must be >= n_factors + 1 ({n_factors + 1})")
+
+    # Generate candidate points (full factorial 2-level + center)
+    candidates_coded = list(itertools.product([-1, 1], repeat=n_factors))
+    candidates_coded.append(tuple([0.0] * n_factors))
+    # Add more random candidates if requested
+    rng = np.random.default_rng(42)
+    while len(candidates_coded) < n_candidates:
+        row = tuple(rng.choice([-1, 0, 1], size=n_factors).tolist())
+        candidates_coded.append(row)
+
+    candidates = np.array(candidates_coded[:n_candidates])
+
+    # Start with first n_runs candidates
+    selected_idx = list(range(min(n_runs, len(candidates))))
+    X = candidates[selected_idx]
+
+    # Coordinate exchange: try swapping each row with each candidate
+    for _ in range(20):  # iterations
+        improved = False
+        for i in range(n_runs):
+            det_current = np.linalg.det(X.T @ X) if X.shape[0] == X.shape[1] else 1.0
+            for j in range(len(candidates)):
+                if j in selected_idx:
+                    continue
+                X_trial = X.copy()
+                X_trial[i] = candidates[j]
+                try:
+                    det_trial = np.linalg.det(X_trial.T @ X_trial)
+                except np.linalg.LinAlgError:
+                    continue
+                if det_trial > det_current:
+                    selected_idx[i] = j
+                    X = X_trial
+                    det_current = det_trial
+                    improved = True
+        if not improved:
+            break
+
+    coded_combos = [tuple(candidates[i]) for i in selected_idx]
+    return _build_runs(factors, coded_combos, "d_optimal")
+
+
+# Pre-defined Taguchi orthogonal arrays
+_TAGUCHI_ARRAYS = {
+    "L4": {  # 2-level, up to 3 factors, 4 runs
+        "levels": 2, "factors": 3, "runs": [
+            (-1, -1, -1), (-1, 1, 1), (1, -1, 1), (1, 1, -1),
+        ]
+    },
+    "L8": {  # 2-level, up to 7 factors, 8 runs
+        "levels": 2, "factors": 7, "runs": [
+            (-1,-1,-1,-1,-1,-1,-1), (-1,-1,-1, 1, 1, 1, 1),
+            (-1, 1, 1,-1,-1, 1, 1), (-1, 1, 1, 1, 1,-1,-1),
+            ( 1,-1, 1,-1, 1,-1, 1), ( 1,-1, 1, 1,-1, 1,-1),
+            ( 1, 1,-1,-1, 1, 1,-1), ( 1, 1,-1, 1,-1,-1, 1),
+        ]
+    },
+    "L9": {  # 3-level, up to 4 factors, 9 runs
+        "levels": 3, "factors": 4, "runs": [
+            (-1,-1,-1,-1), (-1, 0, 0, 0), (-1, 1, 1, 1),
+            ( 0,-1, 0, 1), ( 0, 0, 1,-1), ( 0, 1,-1, 0),
+            ( 1,-1, 1, 0), ( 1, 0,-1, 1), ( 1, 1, 0,-1),
+        ]
+    },
+    "L16": {  # 2-level, up to 15 factors, 16 runs
+        "levels": 2, "factors": 15, "runs": [
+            tuple(-1 if (j == 0) or ((j > 0) and ((i >> (j-1)) & 1) == 0) else 1
+                  for j in range(16))
+            for i in range(16)
+        ]
+    },
+}
+
+
+def _taguchi(factors: list[dict], params: dict) -> dict:
+    """Taguchi orthogonal array design."""
+    array_name = params.get("array", "L4")
+    array = _TAGUCHI_ARRAYS.get(array_name)
+    if array is None:
+        raise ValueError(f"Unknown Taguchi array: {array_name}. Available: {list(_TAGUCHI_ARRAYS.keys())}")
+
+    n = len(factors)
+    if n > array["factors"]:
+        raise ValueError(f"{array_name} supports at most {array['factors']} factors, got {n}")
+
+    # Truncate columns to match number of factors
+    coded_combos = [row[:n] for row in array["runs"]]
+    return _build_runs(factors, coded_combos, "taguchi")
