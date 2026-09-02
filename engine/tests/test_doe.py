@@ -1,5 +1,4 @@
 """Tests for DOE design generators."""
-import numpy as np
 import pytest
 
 from process_intelligence_engine.modeling.doe import generate_design

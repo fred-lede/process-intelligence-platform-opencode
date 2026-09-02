@@ -36,6 +36,8 @@ def generate_design(
 
 def _full_factorial(factors: list[dict], params: dict) -> dict:
     levels = params.get("levels", 2)
+    if levels < 2:
+        raise ValueError("levels must be >= 2")
     n = len(factors)
 
     if levels == 2:
@@ -77,6 +79,9 @@ def _full_factorial(factors: list[dict], params: dict) -> dict:
 
 
 def _fractional_factorial(factors: list[dict], params: dict) -> dict:
+    """Half-fraction design (Resolution III). Factor order matters: the last
+    factor is generated as the interaction of the first two (I = ABC).
+    Pass factors in deliberate order to control aliasing structure."""
     levels = params.get("levels", 2)
     n = len(factors)
 
