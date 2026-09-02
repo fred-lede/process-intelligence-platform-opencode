@@ -180,5 +180,36 @@
     "params": "Fitted params",
     "noFit": "Select a column and run the fit.",
     "noTrend": "Select a column and draw the trend."
+  },
+  "modelCenter": {
+    "title": "Model Center",
+    "noData": "Import a dataset before fitting models.",
+    "fitTitle": "Fit Model",
+    "modelType": {
+      "label": "Model Type",
+      "doeLinear": "DOE Linear",
+      "doeQuadratic": "DOE Quadratic",
+      "randomForest": "Random Forest",
+      "residualHybrid": "Residual Hybrid"
+    },
+    "target": {
+      "label": "Target (Output)",
+      "placeholder": "Select output column"
+    },
+    "inputs": {
+      "label": "Inputs",
+      "placeholder": "Select input columns"
+    },
+    "fitButton": "Fit Model",
+    "fitSuccess": "Model fitted successfully",
+    "listTitle": "Fitted Models",
+    "column": {
+      "type": "Type",
+      "version": "Ver",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "confirmTransition": "Confirm transition to {status}?",
+    "transitionSuccess": "Model transitioned to {status}"
   }
 }

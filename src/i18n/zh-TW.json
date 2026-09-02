@@ -180,5 +180,36 @@
     "params": "配適參數",
     "noFit": "請選擇欄位並執行配適。",
     "noTrend": "請選擇欄位並繪製趨勢。"
+  },
+  "modelCenter": {
+    "title": "模型中心",
+    "noData": "請先匯入資料集再進行模型配適。",
+    "fitTitle": "模型配適",
+    "modelType": {
+      "label": "模型類型",
+      "doeLinear": "DOE 線性",
+      "doeQuadratic": "DOE 二次",
+      "randomForest": "隨機樹",
+      "residualHybrid": "殘差混合"
+    },
+    "target": {
+      "label": "目標欄位（輸出）",
+      "placeholder": "選擇輸出欄位"
+    },
+    "inputs": {
+      "label": "輸入欄位",
+      "placeholder": "選擇輸入欄位"
+    },
+    "fitButton": "開始配適",
+    "fitSuccess": "模型配適完成",
+    "listTitle": "已配適模型",
+    "column": {
+      "type": "類型",
+      "version": "版本",
+      "status": "狀態",
+      "actions": "操作"
+    },
+    "confirmTransition": "確認切換至 {status}？",
+    "transitionSuccess": "模型已切換至 {status}"
   }
 }
