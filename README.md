@@ -38,6 +38,9 @@ npm install
 # 建立 Python 虛擬環境（仅需第一次）
 cd engine
 python3 -m venv .venv
+# On Windows:
+# .venv\Scripts\activate
+# On macOS/Linux:
 source .venv/bin/activate
 pip install -e ".[dev]"
 cd ..
