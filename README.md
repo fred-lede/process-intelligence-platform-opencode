@@ -75,6 +75,87 @@ cargo --version
 
 # 啟動開發環境
 npm run tauri dev
+
+### 首次部署注意事項
+
+在新電腦上首次部署時，請確保：
+
+1. **Rust 已安裝**：執行 cargo 1.92.0 (344c4567c 2025-10-21) 確認
+2. **Python venv 已建立**：執行 Obtaining file:///Volumes/Ai-2TB/ai/my_opencode/process-intelligence-platform/engine
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Checking if build backend supports build_editable: started
+  Checking if build backend supports build_editable: finished with status 'done'
+  Getting requirements to build editable: started
+  Getting requirements to build editable: finished with status 'done'
+  Preparing editable metadata (pyproject.toml): started
+  Preparing editable metadata (pyproject.toml): finished with status 'done'
+Requirement already satisfied: pandas>=2.2.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (3.0.5)
+Requirement already satisfied: polars>=1.0.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (1.44.1)
+Requirement already satisfied: numpy>=1.26.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (2.4.6)
+Requirement already satisfied: openpyxl>=3.1.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (3.1.5)
+Requirement already satisfied: scipy>=1.12.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (1.17.1)
+Requirement already satisfied: statsmodels>=0.14.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (0.15.0)
+Requirement already satisfied: scikit-learn>=1.4.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (1.9.0)
+Requirement already satisfied: xgboost>=2.0.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (3.2.0)
+Requirement already satisfied: shap>=0.45.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (0.51.0)
+Requirement already satisfied: pyDOE2>=1.3.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (1.3.0)
+Requirement already satisfied: gplearn>=0.4.2 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (0.4.3)
+Requirement already satisfied: jinja2>=3.1.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (3.1.6)
+Requirement already satisfied: pytest>=8.0.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (9.1.1)
+Requirement already satisfied: pytest-cov>=5.0.0 in ./.venv/lib/python3.11/site-packages (from process-intelligence-engine==0.1.0) (7.1.0)
+Requirement already satisfied: joblib>=1.3.0 in ./.venv/lib/python3.11/site-packages (from gplearn>=0.4.2->process-intelligence-engine==0.1.0) (1.6.0)
+Requirement already satisfied: MarkupSafe>=2.0 in ./.venv/lib/python3.11/site-packages (from jinja2>=3.1.0->process-intelligence-engine==0.1.0) (3.0.3)
+Requirement already satisfied: et-xmlfile in ./.venv/lib/python3.11/site-packages (from openpyxl>=3.1.0->process-intelligence-engine==0.1.0) (2.0.0)
+Requirement already satisfied: python-dateutil>=2.8.2 in ./.venv/lib/python3.11/site-packages (from pandas>=2.2.0->process-intelligence-engine==0.1.0) (2.9.0.post0)
+Requirement already satisfied: polars-runtime-32==1.44.1 in ./.venv/lib/python3.11/site-packages (from polars>=1.0.0->process-intelligence-engine==0.1.0) (1.44.1)
+Requirement already satisfied: iniconfig>=1.0.1 in ./.venv/lib/python3.11/site-packages (from pytest>=8.0.0->process-intelligence-engine==0.1.0) (2.3.0)
+Requirement already satisfied: packaging>=22 in ./.venv/lib/python3.11/site-packages (from pytest>=8.0.0->process-intelligence-engine==0.1.0) (26.3)
+Requirement already satisfied: pluggy<2,>=1.5 in ./.venv/lib/python3.11/site-packages (from pytest>=8.0.0->process-intelligence-engine==0.1.0) (1.6.0)
+Requirement already satisfied: pygments>=2.7.2 in ./.venv/lib/python3.11/site-packages (from pytest>=8.0.0->process-intelligence-engine==0.1.0) (2.21.0)
+Requirement already satisfied: coverage>=7.10.6 in ./.venv/lib/python3.11/site-packages (from coverage[toml]>=7.10.6->pytest-cov>=5.0.0->process-intelligence-engine==0.1.0) (7.16.0)
+Requirement already satisfied: narwhals>=2.0.1 in ./.venv/lib/python3.11/site-packages (from scikit-learn>=1.4.0->process-intelligence-engine==0.1.0) (2.25.0)
+Requirement already satisfied: threadpoolctl>=3.5.0 in ./.venv/lib/python3.11/site-packages (from scikit-learn>=1.4.0->process-intelligence-engine==0.1.0) (3.6.0)
+Requirement already satisfied: tqdm>=4.27.0 in ./.venv/lib/python3.11/site-packages (from shap>=0.45.0->process-intelligence-engine==0.1.0) (4.70.0)
+Requirement already satisfied: slicer==0.0.8 in ./.venv/lib/python3.11/site-packages (from shap>=0.45.0->process-intelligence-engine==0.1.0) (0.0.8)
+Requirement already satisfied: numba in ./.venv/lib/python3.11/site-packages (from shap>=0.45.0->process-intelligence-engine==0.1.0) (0.67.0)
+Requirement already satisfied: llvmlite in ./.venv/lib/python3.11/site-packages (from shap>=0.45.0->process-intelligence-engine==0.1.0) (0.49.0)
+Requirement already satisfied: cloudpickle in ./.venv/lib/python3.11/site-packages (from shap>=0.45.0->process-intelligence-engine==0.1.0) (3.1.2)
+Requirement already satisfied: typing-extensions in ./.venv/lib/python3.11/site-packages (from shap>=0.45.0->process-intelligence-engine==0.1.0) (4.16.0)
+Requirement already satisfied: patsy>=0.5.6 in ./.venv/lib/python3.11/site-packages (from statsmodels>=0.14.0->process-intelligence-engine==0.1.0) (1.0.3)
+Requirement already satisfied: formulaic>=1.1.0 in ./.venv/lib/python3.11/site-packages (from statsmodels>=0.14.0->process-intelligence-engine==0.1.0) (1.2.2)
+Requirement already satisfied: interface-meta>=1.2.0 in ./.venv/lib/python3.11/site-packages (from formulaic>=1.1.0->statsmodels>=0.14.0->process-intelligence-engine==0.1.0) (2.0.1)
+Requirement already satisfied: wrapt>=1.0 in ./.venv/lib/python3.11/site-packages (from formulaic>=1.1.0->statsmodels>=0.14.0->process-intelligence-engine==0.1.0) (2.4.0)
+Requirement already satisfied: six>=1.5 in ./.venv/lib/python3.11/site-packages (from python-dateutil>=2.8.2->pandas>=2.2.0->process-intelligence-engine==0.1.0) (1.17.0)
+Checking if build backend supports build_editable: started
+Checking if build backend supports build_editable: finished with status 'done'
+Building wheels for collected packages: process-intelligence-engine
+  Building editable for process-intelligence-engine (pyproject.toml): started
+  Building editable for process-intelligence-engine (pyproject.toml): finished with status 'done'
+  Created wheel for process-intelligence-engine: filename=process_intelligence_engine-0.1.0-0.editable-py3-none-any.whl size=1662 sha256=c0aa443b12ebb87adbb91b65aa98cc2410d277564e5512174444b7b95a391b2b
+  Stored in directory: /private/var/folders/qn/_75rdpgx5gg4b8r2l587l67h0000gp/T/pip-ephem-wheel-cache-pkcch2gv/wheels/5b/6d/63/9fc8304c3d03e3e22039bb45b99a1e4a54d97635e4956faa3c
+Successfully built process-intelligence-engine
+Installing collected packages: process-intelligence-engine
+  Attempting uninstall: process-intelligence-engine
+    Found existing installation: process-intelligence-engine 0.1.0
+    Uninstalling process-intelligence-engine-0.1.0:
+      Successfully uninstalled process-intelligence-engine-0.1.0
+Successfully installed process-intelligence-engine-0.1.0
+3. **Node 模組已安裝**：執行 
+up to date, audited 385 packages in 630ms
+
+25 packages are looking for funding
+  run `npm fund` for details
+
+2 vulnerabilities (1 moderate, 1 high)
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+4. **瀏覽器 WebView**：macOS 內建 WebKit，Windows 需安裝 WebView2 Runtime
+
+若啟動時出現  錯誤，表示 Rust 未正確安裝或 PATH 未設定。
 ```
 
 ### 測試
