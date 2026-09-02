@@ -318,3 +318,19 @@ export async function computeInteractions(params: {
 }): Promise<InteractionResult> {
   return engineCall<InteractionResult>('modeling/interactions/compute', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 3b: SHAP Analysis -----------------------------------------------
+
+export interface SHAPResult {
+  expected_value: number
+  feature_importance: { name: string; importance: number }[]
+  shap_values: number[][]
+}
+
+export async function computeSHAP(params: {
+  model_id: string
+  dataset_id: string
+  nsamples?: number
+}): Promise<SHAPResult> {
+  return engineCall<SHAPResult>('modeling/shap/explain', params as unknown as Record<string, unknown>)
+}

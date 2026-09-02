@@ -30,6 +30,7 @@ from process_intelligence_engine.data.field_detector import detect_fields
 from process_intelligence_engine.data.importer import import_file
 from process_intelligence_engine.data.quality import run_quality_checks
 from process_intelligence_engine.modeling.interactions import compute_interactions
+from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.fitters import (
     fit_doe_linear,
     fit_doe_quadratic,
@@ -328,6 +329,15 @@ def _handle_interactions_compute(params: dict) -> dict:
     return compute_interactions(fit, df, threshold)
 
 
+def _handle_shap_explain(params: dict) -> dict:
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    nsamples = params.get("nsamples", 100)
+    fit = MODEL_REGISTRY._get_unlocked(model_id)
+    df = REGISTRY.get(dataset_id)
+    return compute_shap(fit, df, nsamples)
+
+
 def _handle_doe_generate(params: dict) -> dict:
     return generate_design(
         factors=params["factors"],
@@ -391,6 +401,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/interactions/compute":
         return _handle_interactions_compute(params)
+
+    if method == "modeling/shap/explain":
+        return _handle_shap_explain(params)
 
     raise ValueError(f"Unknown method: {method}")
 
