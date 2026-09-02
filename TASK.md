@@ -105,7 +105,7 @@
 
 ---
 **測試狀態**：250 passed, 1 skipped (88% coverage)
-**Debug Logs**：已移除所有 debug print console.log
+**Debug Logs**：已移除所有 debug print，僅保留生產環境錯誤追蹤
 **Code Stats**：~4,300 lines total
 **Commits**：95 (main branch fully deployed)
 **部署文件**：README.md 已包含完整安裝、首次部署與除錯說明
