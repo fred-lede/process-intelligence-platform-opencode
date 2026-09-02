@@ -68,6 +68,10 @@
 
 ### Phase 9 — Monte Carlo 模擬
 - `engine.ts` — TypeScript 類型 + `analyzeMonteCarlo()` API 函數
+- `MonteCarlo.tsx` — 模擬 UI：模型選擇、參數設定、NG 機率、百分位數、直方圖 + CDF、異常排名表格
+- i18n en/zh-TW（nav + monteCarlo section）
+- Sidebar + App.tsx 路由整合
+- 驗證 — 239 passed, 1 skipped (88% coverage), tsc/build clean
 
 ## In Progress
 - None
