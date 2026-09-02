@@ -1,9 +1,8 @@
 """Immutable model version registry + status machine (spec 12.5).
 
-State flow: draft → pending_validation → validated → approved; any state
-may go to retired. Immutable versions: register() assigns a monotonic
-version; a model's DTO is snapshotted on read so later reassignment never
-mutates a previously read version.
+State flow: draft -> pending_validation -> validated -> approved; any state
+may go to retired. Immutability: register() assigns a strictly monotonic,
+never-reused version number so no model version is ever overwritten.
 """
 
 from __future__ import annotations
@@ -60,7 +59,7 @@ class ModelRegistry:
         with self._lock:
             if new_status not in VALID_STATUS:
                 raise ValueError(f"Unknown status: {new_status}")
-            fit = self.get_unlocked(model_id)
+            fit = self._get_unlocked(model_id)
             if new_status not in TRANSITIONS.get(fit.status, set()):
                 raise InvalidStatusTransition(
                     f"Cannot transition {fit.status} -> {new_status}"
@@ -68,7 +67,7 @@ class ModelRegistry:
             fit.status = new_status
             return fit
 
-    def get_unlocked(self, model_id: str) -> ModelFit:
+    def _get_unlocked(self, model_id: str) -> ModelFit:
         if model_id not in self._models:
             raise KeyError(f"Unknown model_id: {model_id}")
         return self._models[model_id]

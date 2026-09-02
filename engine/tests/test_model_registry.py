@@ -65,3 +65,21 @@ def test_full_chain_to_approved():
     for s in ("pending_validation", "validated", "approved"):
         reg.transition(fit.model_id, s)
     assert fit.status == "approved"
+
+
+def test_transition_unknown_status_raises():
+    reg = ModelRegistry()
+    fit = fit_doe_linear(_fit_df(), target="y", inputs=["x"])
+    reg.register(fit)
+    with pytest.raises(ValueError, match="Unknown status"):
+        reg.transition(fit.model_id, "bogus")
+
+
+def test_retire_from_approved():
+    reg = ModelRegistry()
+    fit = fit_doe_linear(_fit_df(), target="y", inputs=["x"])
+    reg.register(fit)
+    for s in ("pending_validation", "validated", "approved"):
+        reg.transition(fit.model_id, s)
+    reg.transition(fit.model_id, "retired")
+    assert fit.status == "retired"
