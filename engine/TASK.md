@@ -16,6 +16,10 @@
 - [x] TDD: 7 tests written first, confirmed failures, implemented, all pass
 - [x] Full test suite: 246 passed, 1 skipped — no regressions
 - [x] Committed
+- [x] Task 2: Prediction IPC handlers (prediction/predict, prediction/model_info)
+- [x] TDD: 4 tests written first, confirmed failures, implemented, all pass
+- [x] Full test suite: 250 passed, 1 skipped — no regressions
+- [x] Committed
 
 ## In Progress
 - None
