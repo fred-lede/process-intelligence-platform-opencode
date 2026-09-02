@@ -57,6 +57,7 @@ from process_intelligence_engine.spc import (
     compute_capability,
 )
 from process_intelligence_engine.monte_carlo import run_monte_carlo
+from process_intelligence_engine.prediction import predict_single, get_input_ranges
 from process_intelligence_engine.settings import get_settings_manager
 
 
@@ -677,6 +678,39 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     return {"success": True, "result": result}
 
 
+def _handle_prediction_predict(params: dict) -> dict:
+    """Predict output for given input values."""
+    model_id = params["model_id"]
+    fit = MODEL_REGISTRY.get(model_id)
+
+    input_values = params.get("input_values", {})
+    predicted = predict_single(fit.model_type, fit.coefficients or {}, input_values)
+
+    return {
+        "success": True,
+        "predicted": float(predicted),
+        "equation": fit.equation,
+        "inputs": list(fit.inputs),
+        "model_type": fit.model_type,
+    }
+
+
+def _handle_prediction_model_info(params: dict) -> dict:
+    """Get model info for prediction UI."""
+    model_id = params["model_id"]
+    fit = MODEL_REGISTRY.get(model_id)
+
+    return {
+        "success": True,
+        "model_type": fit.model_type,
+        "inputs": list(fit.inputs),
+        "coefficients": fit.coefficients or {},
+        "equation": fit.equation,
+        "n_train": fit.n_train,
+        "target": fit.target,
+    }
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -782,6 +816,11 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "monte_carlo/run":
         return _handle_monte_carlo_run(params)
+
+    if method == "prediction/predict":
+        return _handle_prediction_predict(params)
+    if method == "prediction/model_info":
+        return _handle_prediction_model_info(params)
 
     raise ValueError(f"Unknown method: {method}")
 
