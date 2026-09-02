@@ -100,5 +100,6 @@
 ### Settings AI Provider 修復
 - Task 1: 修復 `test_connection()` 跨 module import 錯誤（`settings/__init__.py` → `..ai.ollama_client`）（commit `514aed2`）
 - Task 2: 新增 provider-aware 連線測試（ollama 用 OllamaClient，openai/azure/custom 用 HTTP GET /models）（commit `514aed2`）
-- Task 3: 設定頁模型欄位改為 disabled 顯示 + 提示文字「聊天模型請在右側 AI 助手面板選擇」（commit `bdce2a1`）
+- Task 3: 統一模型配置至設定頁，移除 AssistantPanel 中的模型下拉選單（commit `a05e74d`）
+- Task 4: 模型欄位改為 Select 下拉，支援從 Ollama API 載入可用模型列表，允許搜尋/自訂輸入（commit `bdce2a1`）
 - 驗證 — 195 passed, 1 skipped (87% coverage), tsc/build clean

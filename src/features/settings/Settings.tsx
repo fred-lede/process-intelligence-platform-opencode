@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined } from '@ant-design/icons'
-import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection } from '../../lib/engine'
+import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels } from '../../lib/engine'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
 export default function Settings() {
@@ -23,6 +23,7 @@ export default function Settings() {
     enabled: true,
   })
   const [savingAI, setSavingAI] = useState(false)
+  const [availableModels, setAvailableModels] = useState<string[]>([])
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null)
 
@@ -46,6 +47,23 @@ export default function Settings() {
       // Use defaults
     }
   }
+
+  const loadModels = async () => {
+    try {
+      const result = await listAIModels()
+      if (result.success && result.models) {
+        setAvailableModels(result.models)
+      }
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => {
+    if (aiConfig.provider === 'ollama') {
+      loadModels()
+    } else {
+      setAvailableModels([])
+    }
+  }, [aiConfig.provider])
 
   const loadData = async () => {
     try {
@@ -239,7 +257,18 @@ export default function Settings() {
             </Form.Item>
 
             <Form.Item name="model" label={t('settings.model')}>
-              <Input placeholder="gemma4:e2b-mlx" />
+              <Select
+                showSearch
+                allowClear
+                placeholder="Select or type model..."
+                filterOption={false}
+                options={availableModels.map(m => ({ value: m, label: m }))}
+                onSearch={(val) => {
+                  if (val && !availableModels.includes(val)) {
+                    setAvailableModels(prev => [...prev, val])
+                  }
+                }}
+              />
             </Form.Item>
 
             <Form.Item>
