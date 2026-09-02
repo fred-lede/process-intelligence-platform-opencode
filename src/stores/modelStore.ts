@@ -29,9 +29,10 @@ export const useModelStore = create<ModelStore>((set) => ({
   selectedModelId: null,
 
   loadModels: async () => {
+    set({ error: null })
     try {
       const result = await listModels()
-      set({ models: result.models })
+      set({ models: result.models, error: null })
     } catch (err) {
       set({ error: String(err) })
     }
