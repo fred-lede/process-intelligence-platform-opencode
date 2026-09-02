@@ -377,3 +377,16 @@
 - [x] 驗證：155 tests（全 pass）、覆蓋率 **89%**
 - Commit: `ba29efb`
 
+## 2026-09-03 — Phase 6 — User Management & Audit Logging
+
+### 完成內容
+
+- [x] `main.py` — 6 個 auth/audit IPC handlers：`auth/login`、`auth/logout`、`auth/register`、`audit/log`、`users/list`、`auth/current`
+- [x] `src/lib/engine.ts` — `UserRole`、`AuthResult`、`UserRecord`、`AuditEntry` 型別 + 6 個前端 API
+- [x] `src/features/settings/Settings.tsx` — 使用者管理頁面（登入/登出/註冊 modal、使用者列表、稽核紀錄）
+- [x] `src/App.tsx` — `settings` tab 路由
+- [x] `engine/tests/test_main_auth.py` — 7 個 IPC handler 測試
+- [x] i18n en/zh-TW — settings section 全部字串
+- [x] 驗證：181 tests pass (89% coverage)、tsc clean、build clean
+- Commit: `571341f`
+

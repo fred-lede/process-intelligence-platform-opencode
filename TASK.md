@@ -19,6 +19,10 @@
 
 ## Completed
 
+### Phase 6 — User Management & Audit Logging
+- Task 3: IPC handlers (`auth/login`, `auth/logout`, `auth/register`, `audit/log`, `users/list`, `auth/current`) + frontend API + Settings page + i18n (commit `571341f`)
+- 驗證 — 181 tests pass (89% coverage), tsc/build clean
+
 ### Phase 5 — Report Generation Engine
 - Task 1: `reporting/models.py` + `reporting/base.py` + `reporting/html.py` — HTML report generator with project info, field roles, quality summary, model comparison (commit `ba29efb`)
 - Task 2: `reporting/excel.py` — Excel report generator
