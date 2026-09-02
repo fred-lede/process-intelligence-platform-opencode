@@ -390,3 +390,17 @@
 - [x] 驗證：181 tests pass (89% coverage)、tsc clean、build clean
 - Commit: `571341f`
 
+## 2026-09-03 — Phase 8-9 Monte Carlo IPC Handler
+
+### 完成內容
+
+- [x] `engine/src/process_intelligence_engine/main.py` — import `run_monte_carlo`, add `_handle_monte_carlo_run`, dispatch `monte_carlo/run`
+- [x] `engine/tests/test_main_monte_carlo.py` — 5 IPC handler tests (basic, unknown model, with anomalies, no bounds, unknown dataset)
+- [x] 驗證：239 tests pass, 1 skipped (88% coverage)、無回歸
+- Commit: `af522e2`
+
+### Commits
+| Hash | 說明 |
+|------|------|
+| af522e2 | feat(monte_carlo): add monte_carlo/run IPC handler |
+

@@ -11,6 +11,7 @@ import Report from './features/report/Report'
 import FeaturePlaceholder from './components/common/FeaturePlaceholder'
 import Settings from './features/settings/Settings'
 import SPC from './features/spc/SPC'
+import MonteCarlo from './features/monte-carlo/MonteCarlo'
 import type { AppTab } from './types'
 
 const { Content } = Layout
@@ -26,6 +27,7 @@ export default function App() {
     if (activeTab === 'modelCenter') return <ModelCenter />
     if (activeTab === 'reports') return <Report />
     if (activeTab === 'spc') return <SPC />
+    if (activeTab === 'monteCarlo') return <MonteCarlo />
     if (activeTab === 'settings') return <Settings />
     return <FeaturePlaceholder tabKey={activeTab} />
   }

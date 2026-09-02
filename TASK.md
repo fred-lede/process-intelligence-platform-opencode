@@ -1,6 +1,11 @@
 # TASK.md
 
 ## Completed
+- Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo
+- 14 tests covering normal/gamma/lognormal/histogram sampling, linear/quadratic prediction, anomaly injection, full simulation with/without bounds
+- 234 passed, 1 skipped (88% coverage)
+- Monte Carlo IPC handler (`monte_carlo/run`) — main.py import + handler + dispatch
+- 5 IPC handler tests (basic, unknown model, with anomalies, no bounds, unknown dataset)
 
 ### Phase 0 — 基礎建設
 - Tauri 2.0 + React 18 + TypeScript + Python 3.11 專案骨架
@@ -61,6 +66,9 @@
 - Sidebar + App.tsx 路由整合
 - 驗證 — 220 passed, 1 skipped (88% coverage), tsc/build clean
 
+### Phase 9 — Monte Carlo 模擬
+- `engine.ts` — TypeScript 類型 + `analyzeMonteCarlo()` API 函數
+
 ## In Progress
 - None
 
@@ -68,6 +76,6 @@
 - None
 
 ---
-**測試狀態**：220 passed, 1 skipped (88% coverage)
-**Code Stats**：~3,993 lines total
-**Commits**：83 (main branch fully deployed)
+**測試狀態**：239 passed, 1 skipped (88% coverage)
+**Code Stats**：~4,100 lines total
+**Commits**：87 (main branch fully deployed)
