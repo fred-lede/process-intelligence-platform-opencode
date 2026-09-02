@@ -12,6 +12,10 @@
 - [x] Add SPC IPC handlers (spc/analyze, spc/capability) in main.py
 - [x] Add test_main_spc.py with 7 tests covering all chart types and error cases
 - [x] All 218 tests pass (1 skipped)
+- [x] Task 1: Backend prediction engine (predict_single + get_input_ranges)
+- [x] TDD: 7 tests written first, confirmed failures, implemented, all pass
+- [x] Full test suite: 246 passed, 1 skipped — no regressions
+- [x] Committed
 
 ## In Progress
 - None
