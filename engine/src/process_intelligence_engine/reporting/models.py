@@ -29,7 +29,7 @@ class ReportData:
     best_model: dict[str, Any] = field(default_factory=dict)
     
     # Interactions
-    interactions: dict[str, Any] = field(default_factory=list)
+    interactions: dict[str, Any] = field(default_factory=dict)
     
     # Recommendations
     recommendations: list[dict] = field(default_factory=list)

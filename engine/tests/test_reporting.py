@@ -4,6 +4,8 @@ from datetime import datetime
 
 from process_intelligence_engine.reporting.models import ReportData
 from process_intelligence_engine.reporting.html import HTMLReportGenerator
+from process_intelligence_engine.reporting.excel import ExcelReportGenerator
+from process_intelligence_engine.reporting.pdf import PDFReportGenerator
 
 
 def test_html_report_generates_valid_html():
@@ -99,3 +101,47 @@ def test_badge_classes():
     
     assert "badge-warning" in html
     assert "badge-success" in html
+
+
+def test_pdf_report_generates_bytes():
+    try:
+        __import__("weasyprint")
+    except OSError:
+        pytest.skip("weasyprint system libraries (GTK/pango/glib) not available")
+    data = ReportData(
+        project_name="Test Project",
+        operator="Fred Wang",
+    )
+    generator = PDFReportGenerator(data)
+    pdf_bytes = generator.generate()
+    assert isinstance(pdf_bytes, bytes)
+    assert len(pdf_bytes) > 0
+    assert pdf_bytes[:4] == b'%PDF'
+
+
+def test_excel_report_generates_bytes():
+    data = ReportData(
+        project_name="Test Project",
+        operator="Fred Wang",
+        fields=[
+            {"name": "temperature", "role": "input", "confidence": 0.85},
+            {"name": "yield", "role": "output", "confidence": 0.90},
+        ]
+    )
+    generator = ExcelReportGenerator(data)
+    excel_bytes = generator.generate()
+    assert isinstance(excel_bytes, bytes)
+    assert len(excel_bytes) > 0
+
+
+def test_excel_report_has_multiple_sheets():
+    data = ReportData(
+        project_name="Test Project",
+        fields=[{"name": "A", "role": "input"}],
+        model_comparison=[{"model_id": "m1", "model_type": "doe_linear"}],
+        interactions={"factors": ["A", "B"], "matrix": [[0, 0.5], [0.5, 0]]},
+        recommendations=[{"type": "interaction", "priority": "high", "factors": ["A", "B"], "reason": "Test"}],
+    )
+    generator = ExcelReportGenerator(data)
+    excel_bytes = generator.generate()
+    assert len(excel_bytes) > 0
