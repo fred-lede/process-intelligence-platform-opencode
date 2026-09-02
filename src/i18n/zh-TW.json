@@ -336,6 +336,8 @@
     "manualPlaceholder": "輸入數值（逗號分隔，每行一組）",
     "capacityGood": "良好 (≥1.33)",
     "capacityAcceptable": "可接受 (1.0~1.33)",
-    "capacityPoor": "不足 (<1.0)"
+    "capacityPoor": "不足 (<1.0)",
+    "selectColumnHint": "選擇輸出欄位並按分析按鈕。",
+    "noDataHint": "請先匯入資料。"
   }
 }

@@ -336,6 +336,8 @@
     "manualPlaceholder": "Enter values (comma-separated, one per line)",
     "capacityGood": "Good (≥1.33)",
     "capacityAcceptable": "Acceptable (1.0~1.33)",
-    "capacityPoor": "Poor (<1.0)"
+    "capacityPoor": "Poor (<1.0)",
+    "selectColumnHint": "Select an output column and click Analyze.",
+    "noDataHint": "Please import data first."
   }
 }
