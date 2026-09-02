@@ -150,10 +150,10 @@ export default function Settings() {
       const result = await updateSettings(aiConfig)
       if (result.success) {
         setAiConfig(result.config)
-        messageApi.success(t('settings.aiConfigSaved'))
+        messageApi.success(t('settings.saveSuccess'))
       }
     } catch (e) {
-      messageApi.error(t('settings.aiConfigSaveFailed'))
+      messageApi.error(t('settings.saveFailed'))
     } finally {
       setSavingAI(false)
     }
