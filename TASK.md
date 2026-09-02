@@ -96,3 +96,9 @@
 - 驗證 — 185 passed, 1 skipped (88% coverage)
 - Task 2: `main.py` + `engine.ts` — IPC handlers `ai/chat`, `ai/models`, `ai/health` + frontend API + `AssistantPanel.tsx` functional chat UI + i18n (commit `bcd35fc`)
 - 驗證 — 190 passed, 1 skipped (88% coverage), tsc/build clean
+
+### Settings AI Provider 修復
+- Task 1: 修復 `test_connection()` 跨 module import 錯誤（`settings/__init__.py` → `..ai.ollama_client`）（commit `514aed2`）
+- Task 2: 新增 provider-aware 連線測試（ollama 用 OllamaClient，openai/azure/custom 用 HTTP GET /models）（commit `514aed2`）
+- Task 3: 設定頁模型欄位改為 disabled 顯示 + 提示文字「聊天模型請在右側 AI 助手面板選擇」（commit `bdce2a1`）
+- 驗證 — 195 passed, 1 skipped (87% coverage), tsc/build clean

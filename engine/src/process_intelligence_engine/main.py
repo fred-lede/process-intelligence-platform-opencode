@@ -537,10 +537,6 @@ def _handle_ai_chat(params: dict) -> dict:
     """Handle AI chat request."""
     client = get_ollama_client()
     messages = params.get("messages", [])
-    model = params.get("model", "gemma4:e2b-mlx")
-
-    if model != client.model:
-        client.model = model
 
     try:
         response = asyncio.run(client.chat(messages))

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Layout, Input, Button, Space, Avatar, Typography, Select, Tag } from 'antd'
+import { Layout, Input, Button, Space, Avatar, Typography, Tag } from 'antd'
 import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
-import { aiChat, listAIModels, checkAIHealth, type AIChatMessage } from '../../lib/engine'
+import { aiChat, checkAIHealth, type AIChatMessage } from '../../lib/engine'
 
 const { Sider } = Layout
 
@@ -13,31 +13,17 @@ export default function AssistantPanel() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [models, setModels] = useState<string[]>([])
-  const [selectedModel, setSelectedModel] = useState<string>('gemma4:e2b-mlx')
   const [health, setHealth] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    loadModels()
+
     checkHealth()
   }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
-
-  const loadModels = async () => {
-    try {
-      const result = await listAIModels()
-      if (result.success && result.models) {
-        setModels(result.models)
-        if (result.models.length > 0) {
-          setSelectedModel(result.models[0])
-        }
-      }
-    } catch { /* ignore */ }
-  }
 
   const checkHealth = async () => {
     try {
@@ -57,7 +43,7 @@ export default function AssistantPanel() {
     setLoading(true)
 
     try {
-      const result = await aiChat([...messages, userMessage], selectedModel)
+      const result = await aiChat([...messages, userMessage])
       if (result.success && result.response) {
         setMessages(prev => [...prev, { role: 'assistant', content: result.response! }])
       } else {
@@ -85,14 +71,7 @@ export default function AssistantPanel() {
             <Tag color="error" icon={<CloseCircleOutlined />} style={{ fontSize: 12 }}>Offline</Tag>
           ) : null}
         </Space>
-        <Select
-          size="small"
-          style={{ width: '100%', marginTop: 8 }}
-          value={selectedModel}
-          onChange={setSelectedModel}
-          options={models.map(m => ({ value: m, label: m }))}
-          placeholder="Select model..."
-        />
+
       </div>
 
       <div style={{ flex: 1, padding: 16, overflow: 'auto' }}>
