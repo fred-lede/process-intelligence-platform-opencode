@@ -155,15 +155,18 @@ export default function Settings() {
   }
 
   const handleSaveAIConfig = async () => {
+    console.log('[Settings] Saving aiConfig:', aiConfig)
     setSavingAI(true)
     try {
       const result = await updateSettings(aiConfig)
+      console.log('[Settings] Save result:', result)
       if (result.success) {
         setAiConfig(result.config)
         useAIStore.getState().refreshHealth()
         messageApi.success(t('settings.saveSuccess'))
       }
     } catch (e) {
+      console.error('[Settings] Save error:', e)
       messageApi.error(t('settings.saveFailed'))
     } finally {
       setSavingAI(false)
