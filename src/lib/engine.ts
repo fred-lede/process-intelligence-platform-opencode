@@ -1138,6 +1138,8 @@ export interface ProcessNode {
   process_node_id: string
   display_name: string
   node_type: string
+  x?: number
+  y?: number
   sequence_or_edges: Array<{ from: string; to: string; condition?: string }>
   input_data_sources: string[]
   output_data_sources: string[]
