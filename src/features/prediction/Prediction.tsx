@@ -14,12 +14,12 @@ function DraggableSlider({ min, max, value, onChange, style }: {
   style?: CSSProperties
 }) {
   const trackRef = useRef<HTMLDivElement>(null)
-  const rectRef = useRef<{ left: number; width: number } | null>(null)
-  const [dragging, setDragging] = useState(false)
 
   const updateFrom = useCallback((clientX: number) => {
-    const rect = rectRef.current
-    if (!rect || !(rect.width > 0)) return
+    const el = trackRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    if (!(rect.width > 0)) return
     let ratio = (clientX - rect.left) / rect.width
     ratio = Math.min(1, Math.max(0, ratio))
     const raw = min + ratio * (max - min)
@@ -27,32 +27,15 @@ function DraggableSlider({ min, max, value, onChange, style }: {
     onChange(Number(clamped.toFixed(4)))
   }, [min, max, onChange])
 
-  useEffect(() => {
-    if (!dragging) return
-    const handleMove = (e: MouseEvent) => {
-      e.preventDefault()
-      updateFrom(e.clientX)
-    }
-    const handleUp = () => {
-      rectRef.current = null
-      setDragging(false)
-    }
-    window.addEventListener('mousemove', handleMove)
-    window.addEventListener('mouseup', handleUp)
-    return () => {
-      window.removeEventListener('mousemove', handleMove)
-      window.removeEventListener('mouseup', handleUp)
-    }
-  }, [dragging, updateFrom])
-
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.preventDefault()
-    const el = e.currentTarget.getBoundingClientRect()
-    if (el.width > 0) {
-      rectRef.current = { left: el.left, width: el.width }
-      updateFrom(e.clientX)
-    }
-    setDragging(true)
+    e.currentTarget.setPointerCapture(e.pointerId)
+    updateFrom(e.clientX)
+  }
+
+  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.buttons === 0 && e.pressure === 0) return
+    updateFrom(e.clientX)
   }
 
   const pct = max === min ? 0 : Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100))
@@ -61,6 +44,9 @@ function DraggableSlider({ min, max, value, onChange, style }: {
     <div
       ref={trackRef}
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerCancel={() => {}}
+      onPointerUp={() => {}}
       style={{
         position: 'relative',
         height: 24,
