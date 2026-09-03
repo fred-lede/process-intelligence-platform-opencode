@@ -66,8 +66,7 @@ python3 -m venv .venv
 # .venv\Scripts\activate
 # On macOS/Linux:
 source .venv/bin/activate
-pip install -e ".[dev]"
-pip install -r requirements.txt
+pip install -e ".[dev]" && pip install -r requirements.txt
 cd ..
 
 # 確認 Rust 環境
@@ -90,8 +89,7 @@ npm run tauri dev
 若啟動時出現以下錯誤，請檢查：
 
 - **`failed to run cargo metadata`**：Rust 未安裝或 PATH 未設定，執行 `source $HOME/.cargo/env`
-- **`engine start failed`**：Python venv 未建立，執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-pip install -r requirements.txt`
+- **`engine start failed`**：Python venv 未建立，執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && pip install -r requirements.txt`
 - **`Failed to load data`**：引擎未就緒，等待 3 秒後自動重試；若持續失敗請檢查 Python 路徑
 
 
