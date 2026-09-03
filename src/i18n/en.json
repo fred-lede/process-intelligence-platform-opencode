@@ -371,7 +371,8 @@
       "fail": "Fail",
       "inconclusive": "Inconclusive",
       "unknown": "Unknown"
-    }
+    },
+    "resultLabel": "Result",
   },
   "report": {
     "title": "Report",

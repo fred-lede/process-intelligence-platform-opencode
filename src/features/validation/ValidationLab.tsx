@@ -494,7 +494,7 @@ export default function ValidationLab() {
             <Col span={8}>
               <Form.Item
                 name="result"
-                label={t('validationLab.result')}
+                label={t('validationLab.resultLabel')}
                 rules={[{ required: true, message: t('validationLab.required') }]}
                 initialValue="unknown"
               >
