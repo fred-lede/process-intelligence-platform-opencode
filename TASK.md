@@ -128,3 +128,11 @@
 - Sidebar 語言選單新增「Español (México)」選項
 - 符合規格 19 多語言要求
 - tsc/build clean
+
+### Phase 11g — 雲端去識別化上傳 (spec 11A, 24)
+- **deidentify.py** — `DeidentificationEngine`：敏感欄位 SHA-256 雜湊遮蔽、數值高斯噪音、上傳雜湊計算
+- **IPC handlers** — `cloud/preview`（預覽遮罩結果）+ `cloud/upload`（確認上傳並記錄）+ `cloud/records`（上傳紀錄查詢）
+- **Settings UI** — 雲端上傳區塊：noise σ 調整、預覽表格（傳輸/遮罩/排除欄位）、確認 Modal（強制確認機制）
+- **審核紀錄** — operator、provider、model_version、mask_rules、upload_hash、purpose
+- i18n en/zh-TW：cloud.*（20 keys）
+- 驗證 — 250 passed, 1 skipped (74% coverage), tsc/build clean
