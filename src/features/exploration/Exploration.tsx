@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Select, Space, Button, Alert, Spin, Empty, Tabs, Typography, Table } from 'antd'
+import { Card, Select, Space, Button, Alert, Spin, Empty, Tabs, Typography, Table, InputNumber, Form, Row, Col, Statistic, Tag } from 'antd'
 import Plot from 'react-plotly.js'
-import { LineChartOutlined, BarChartOutlined } from '@ant-design/icons'
+import { LineChartOutlined, BarChartOutlined, AreaChartOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import {
   fitDistribution,
   getColumnSeries,
+  getTimeSeriesFeatures,
+  analyzeGRR,
   type DistributionFitResult,
   type ColumnSeries,
+  type TimeSeriesFeatures,
+  type GrrResult,
 } from '../../lib/engine'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 
@@ -40,6 +44,16 @@ export default function Exploration() {
   const [fits, setFits] = useState<DistributionFitResult[] | null>(null)
   const [series, setSeries] = useState<ColumnSeries | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [tsFeatures, setTsFeatures] = useState<TimeSeriesFeatures | null>(null)
+  const [tsLoading, setTsLoading] = useState(false)
+  const [tsColumn, setTsColumn] = useState<string | undefined>(spec?.outputField)
+  const [timeColumn, setTimeColumn] = useState<string | undefined>()
+  const [windowSizes, setWindowSizes] = useState<number[]>([3, 5, 10])
+  const [grrResult, setGrrResult] = useState<GrrResult | null>(null)
+  const [grrLoading, setGrrLoading] = useState(false)
+  const [grrMeasurementCol, setGrrMeasurementCol] = useState<string | undefined>()
+  const [grrPartCol, setGrrPartCol] = useState<string | undefined>()
+  const [grrOperatorCol, setGrrOperatorCol] = useState<string | undefined>()
 
   const numericColumns = useMemo(() => {
     if (!importResult) return []
@@ -287,12 +301,281 @@ export default function Exploration() {
     </Space>
   )
 
+  // --- Time Series Features Tab ---
+  const timeSeriesTab = (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Form layout="inline" style={{ marginBottom: 8 }}>
+        <Form.Item label={t('exploration.timeColumn')}>
+          <Select
+            style={{ width: 180 }}
+            value={timeColumn}
+            onChange={setTimeColumn}
+            options={numericColumns.length > 0
+              ? []
+              : (importResult?.columns || []).map((c) => ({ value: c, label: c }))}
+            placeholder={t('exploration.selectTimeCol')}
+          />
+        </Form.Item>
+        <Form.Item label={t('exploration.valueColumn')}>
+          <Select
+            style={{ width: 180 }}
+            value={tsColumn}
+            onChange={setTsColumn}
+            options={numericColumns.map((name) => ({ value: name, label: name }))}
+            placeholder={t('exploration.selectColumn')}
+          />
+        </Form.Item>
+        <Form.Item label={t('exploration.windowSizes')}>
+          <InputNumber
+            value={windowSizes[0]}
+            onChange={(v) => v !== null && setWindowSizes([v, 5, 10])}
+            min={2}
+            max={20}
+            style={{ width: 60 }}
+          />
+          <span style={{ margin: '0 4px' }}>,</span>
+          <InputNumber
+            value={windowSizes[1]}
+            onChange={(v) => v !== null && setWindowSizes([windowSizes[0], v, 10])}
+            min={2}
+            max={20}
+            style={{ width: 60 }}
+          />
+          <span style={{ margin: '0 4px' }}>,</span>
+          <InputNumber
+            value={windowSizes[2]}
+            onChange={(v) => v !== null && setWindowSizes([windowSizes[0], windowSizes[1], v])}
+            min={2}
+            max={20}
+            style={{ width: 60 }}
+          />
+        </Form.Item>
+        <Form.Item>
+          <Button
+            type="primary"
+            icon={<AreaChartOutlined />}
+            loading={tsLoading}
+            disabled={!timeColumn || !tsColumn || !importResult}
+            onClick={async () => {
+              if (!importResult || !timeColumn || !tsColumn) return
+              setTsLoading(true)
+              try {
+                const result = await getTimeSeriesFeatures({
+                  dataset_id: importResult.dataset_id,
+                  time_column: timeColumn,
+                  value_columns: [tsColumn],
+                  window_sizes: windowSizes,
+                })
+                setTsFeatures(result)
+              } catch (err) {
+                setError(err instanceof Error ? err.message : String(err))
+              } finally {
+                setTsLoading(false)
+              }
+            }}
+          >
+            {t('exploration.computeFeatures')}
+          </Button>
+        </Form.Item>
+      </Form>
+
+      {error && <Alert type="error" showIcon message={error} />}
+
+      {tsFeatures ? (
+        <>
+          <Space style={{ marginBottom: 8 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t('exploration.totalFeatures')}: <strong>{tsFeatures.n_features}</strong>
+            </Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t('exploration.featureColumns')}: {tsFeatures.feature_columns.join(', ')}
+            </Typography.Text>
+          </Space>
+          <Plot
+            data={(() => {
+              const traces: any[] = []
+              if (tsFeatures.preview.length > 0) {
+                const baseCol = tsColumn!
+                const baseValues = tsFeatures.preview.map((r: Record<string, unknown>) => r[baseCol] as number)
+                traces.push({
+                  x: baseValues.map((_, i) => i),
+                  y: baseValues,
+                  type: 'scatter' as const,
+                  mode: 'lines+markers' as const,
+                  name: baseCol,
+                  line: { width: 1.5 },
+                  marker: { size: 3 },
+                })
+                for (const feat of tsFeatures.feature_columns) {
+                  if (feat === baseCol) continue
+                  const vals = tsFeatures.preview.map((r: Record<string, unknown>) => r[feat] as number | null)
+                  const nonNull = vals.filter((v): v is number => v !== null && v !== undefined)
+                  if (nonNull.length === 0) continue
+                  traces.push({
+                    x: nonNull.map((_, i) => i),
+                    y: nonNull,
+                    type: 'scatter' as const,
+                    mode: 'lines' as const,
+                    name: feat,
+                    line: { width: 1, dash: 'dot' },
+                    opacity: 0.7,
+                  })
+                }
+              }
+              return traces
+            })()}
+            layout={{
+              title: { text: `${tsColumn} + Features` },
+              xaxis: { title: { text: 'Row index' } },
+              yaxis: { title: { text: tsColumn ?? '' } },
+              height: 350,
+              margin: { l: 60, r: 20, t: 60, b: 40 },
+              legend: { orientation: 'h', y: -0.25 },
+            }}
+            useResizeHandler
+            style={{ width: '100%' }}
+            config={{ responsive: true }}
+          />
+          <Table
+            size="small"
+            dataSource={tsFeatures.preview}
+            columns={tsFeatures.feature_columns.slice(0, 6).map((c) => ({
+              title: c,
+              dataIndex: c,
+              key: c,
+              render: (v: number) => v?.toFixed(4),
+            }))}
+            pagination={{ pageSize: 10 }}
+            rowKey={(r) => String(r[timeColumn ?? ''])}
+          />
+        </>
+      ) : (
+        !tsLoading && <Empty description={t('exploration.noTsData')} />
+      )}
+    </Space>
+  )
+
+  // --- GRR Tab ---
+  const grrTab = (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Alert type="info" showIcon message={t('grr.noData')} style={{ marginBottom: 8 }} />
+      <Form layout="inline">
+        <Form.Item label={t('grr.measurementColumn')}>
+          <Select
+            style={{ width: 180 }}
+            value={grrMeasurementCol}
+            onChange={setGrrMeasurementCol}
+            options={numericColumns.map((n) => ({ value: n, label: n }))}
+            placeholder={t('exploration.selectColumn')}
+          />
+        </Form.Item>
+        <Form.Item label={t('grr.partColumn')}>
+          <Select
+            style={{ width: 180 }}
+            value={grrPartCol}
+            onChange={setGrrPartCol}
+            options={(importResult?.columns || []).map((c) => ({ value: c, label: c }))}
+            placeholder={t('exploration.selectColumn')}
+          />
+        </Form.Item>
+        <Form.Item label={t('grr.operatorColumn')}>
+          <Select
+            style={{ width: 180 }}
+            value={grrOperatorCol}
+            onChange={setGrrOperatorCol}
+            options={(importResult?.columns || []).map((c) => ({ value: c, label: c }))}
+            placeholder={t('exploration.selectColumn')}
+          />
+        </Form.Item>
+        <Form.Item>
+          <Button
+            type="primary"
+            icon={<BarChartOutlined />}
+            loading={grrLoading}
+            disabled={!grrMeasurementCol || !grrPartCol || !grrOperatorCol || !importResult}
+            onClick={async () => {
+              if (!importResult || !grrMeasurementCol || !grrPartCol || !grrOperatorCol) return
+              setGrrLoading(true)
+              try {
+                const result = await analyzeGRR({
+                  dataset_id: importResult.dataset_id,
+                  measurement_column: grrMeasurementCol,
+                  part_column: grrPartCol,
+                  operator_column: grrOperatorCol,
+                })
+                setGrrResult(result)
+              } catch (err) {
+                setError(err instanceof Error ? err.message : String(err))
+              } finally {
+                setGrrLoading(false)
+              }
+            }}
+          >
+            {t('grr.analyze')}
+          </Button>
+        </Form.Item>
+      </Form>
+
+      {error && <Alert type="error" showIcon message={error} />}
+
+      {grrResult ? (
+        <Space direction="vertical" style={{ width: '100%' }} size={8}>
+          <Row gutter={[16, 16]}>
+            <Col span={6}>
+              <Statistic
+                title={t('grr.verdict')}
+                value={t(`grr.${grrResult.verdict}`)}
+                valueStyle={{ color: grrResult.verdict === 'acceptable' ? '#16a34a' : grrResult.verdict === 'marginal' ? '#ca8a04' : '#dc2626' }}
+                suffix={<Tag color={grrResult.verdict === 'acceptable' ? 'success' : grrResult.verdict === 'marginal' ? 'warning' : 'error'}>{grrResult.pct_grr.toFixed(1)}%</Tag>}
+              />
+            </Col>
+            <Col span={6}>
+              <Statistic title={t('grr.pctGRR')} value={grrResult.pct_grr.toFixed(2)} suffix="%" />
+            </Col>
+            <Col span={6}>
+              <Statistic title={t('grr.pctPart')} value={grrResult.pct_part.toFixed(2)} suffix="%" />
+            </Col>
+            <Col span={6}>
+              <Statistic
+                title={t('grr.GRR')}
+                value={grrResult.grr_std.toFixed(6)}
+                suffix={`EV:${grrResult.repeatability_std.toFixed(4)} AV:${grrResult.reproducibility_std.toFixed(4)}`}
+              />
+            </Col>
+          </Row>
+          <Row gutter={[16, 16]}>
+            <Col span={8}>
+              <Statistic title={t('grr.nParts')} value={grrResult.n_parts} />
+            </Col>
+            <Col span={8}>
+              <Statistic title={t('grr.nOperators')} value={grrResult.n_operators} />
+            </Col>
+            <Col span={8}>
+              <Statistic title={t('grr.nReps')} value={grrResult.n_reps} />
+            </Col>
+          </Row>
+          {grrResult.warnings.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              message={t('grr.warnings')}
+              description={grrResult.warnings.map((w, i) => <div key={i} style={{ fontSize: 12 }}>{w}</div>)}
+            />
+          )}
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{grrResult.verdict_reason}</Typography.Text>
+        </Space>
+      ) : null}
+    </Space>
+  )
+
   return (
     <Card title={t('exploration.title')}>
       <Tabs
         items={[
           { key: 'distribution', label: t('exploration.distributionTab'), children: distributionTab },
           { key: 'trend', label: t('exploration.trendTab'), children: trendTab },
+          { key: 'timeseries', label: t('exploration.timeSeriesTab'), children: timeSeriesTab },
+          { key: 'grr', label: t('grr.title'), children: grrTab },
         ]}
       />
     </Card>

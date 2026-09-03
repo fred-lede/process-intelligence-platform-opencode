@@ -30,6 +30,7 @@ from process_intelligence_engine.data.distribution import fit_best_distribution
 from process_intelligence_engine.data.field_detector import detect_fields
 from process_intelligence_engine.data.importer import import_file
 from process_intelligence_engine.data.quality import run_quality_checks
+from process_intelligence_engine.data.grr import analyze_grr
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
@@ -1093,6 +1094,9 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "copula/joint":
         return _handle_copula_joint(params)
 
+    if method == "data/grr":
+        return _handle_grr(params)
+
     raise ValueError(f"Unknown method: {method}")
 
 
@@ -1276,6 +1280,29 @@ def _handle_approval_records(params: dict) -> dict:
             resource_id=params.get("resource_id"),
         )
     }
+
+
+def _handle_grr(params: dict) -> dict:
+    """Run Gage R&R analysis on measurement data."""
+    dataset_id = params.get("dataset_id")
+    measurement_column = params["measurement_column"]
+    part_column = params["part_column"]
+    operator_column = params["operator_column"]
+
+    if dataset_id:
+        df = REGISTRY.get(dataset_id)
+    else:
+        columns = params["columns"]
+        rows = params["rows"]
+        data = {col: [] for col in columns}
+        for row in rows:
+            row = list(row) + [None] * (len(columns) - len(row))
+            for col, value in zip(columns, row):
+                data[col].append(value)
+        df = pd.DataFrame(data)
+
+    result = analyze_grr(df, measurement_column, part_column, operator_column)
+    return _plain_types(result.to_dict())
 
 
 def _read_request() -> dict | None:

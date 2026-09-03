@@ -1005,3 +1005,38 @@ export interface CopulaParams {
 export async function computeCopula(params: CopulaParams): Promise<CopulaResult> {
   return engineCall<CopulaResult>('copula/joint', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 11e: Gage R&R (Measurement System Analysis) ----------------------
+
+export interface GrrResult {
+  method: string
+  n_parts: number
+  n_operators: number
+  n_reps: number
+  repeatability_std: number
+  reproducibility_std: number
+  grr_std: number
+  part_variation_std: number
+  total_variation_std: number
+  pct_grr: number
+  pct_part: number
+  verdict: 'acceptable' | 'marginal' | 'unacceptable'
+  verdict_reason: string
+  operator_means: Record<string, number[]>
+  part_means: Record<string, number[]>
+  operator_part_means: Record<string, Record<string, number>>
+  warnings: string[]
+}
+
+export interface GrrParams {
+  dataset_id?: string
+  columns?: string[]
+  rows?: (string | null)[][]
+  measurement_column: string
+  part_column: string
+  operator_column: string
+}
+
+export async function analyzeGRR(params: GrrParams): Promise<GrrResult> {
+  return engineCall<GrrResult>('data/grr', params as unknown as Record<string, unknown>)
+}
