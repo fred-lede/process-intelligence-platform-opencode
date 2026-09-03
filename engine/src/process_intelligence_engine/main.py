@@ -41,6 +41,7 @@ from process_intelligence_engine.modeling.fitters import (
     fit_doe_quadratic,
     fit_random_forest,
     fit_residual_hybrid,
+    fit_logistic_regression,
 )
 from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
@@ -59,6 +60,11 @@ from process_intelligence_engine.spc import (
 from process_intelligence_engine.monte_carlo import run_monte_carlo
 from process_intelligence_engine.prediction import predict_single, get_input_ranges
 from process_intelligence_engine.settings import get_settings_manager
+from process_intelligence_engine.features.time_series import (
+    compute_time_features,
+    compute_consecutive_exceedance,
+)
+from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 
 
 def _plain_types(value):
@@ -467,6 +473,7 @@ MODEL_FITTERS = {
     "doe_quadratic": fit_doe_quadratic,
     "random_forest": fit_random_forest,
     "residual_hybrid": fit_residual_hybrid,
+    "logistic_regression": fit_logistic_regression,
 }
 
 
@@ -1032,6 +1039,17 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "experiment/get":
         return _handle_experiment_get(params)
 
+    if method == "approval/submit":
+        return _handle_approval_submit(params)
+    if method == "approval/approve":
+        return _handle_approval_approve(params)
+    if method == "approval/reject":
+        return _handle_approval_reject(params)
+    if method == "approval/status":
+        return _handle_approval_status(params)
+    if method == "approval/records":
+        return _handle_approval_records(params)
+
     if method == "spc/analyze":
         return _handle_spc_analyze(params)
     if method == "spc/capability":
@@ -1044,8 +1062,201 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_prediction_predict(params)
     if method == "prediction/model_info":
         return _handle_prediction_model_info(params)
+    if method == "prediction/scenario/save":
+        return _handle_prediction_scenario_save(params)
+    if method == "prediction/scenario/list":
+        return _handle_prediction_scenario_list(params)
+    if method == "prediction/scenario/delete":
+        return _handle_prediction_scenario_delete(params)
+
+    if method == "features/time_series":
+        return _handle_time_series(params)
+    if method == "features/consecutive_exceedance":
+        return _handle_consecutive_exceedance(params)
 
     raise ValueError(f"Unknown method: {method}")
+
+
+# ---------------------------------------------------------------------------
+# Prediction scenarios (what-if save/load)
+# ---------------------------------------------------------------------------
+
+class ScenarioRecord:
+    """A saved what-if prediction scenario."""
+
+    def __init__(
+        self,
+        scenario_id: str,
+        name: str,
+        model_id: str,
+        input_values: dict[str, float],
+        predicted_output: float,
+        operator: str,
+        notes: str,
+        timestamp: str,
+    ) -> None:
+        self.scenario_id = scenario_id
+        self.name = name
+        self.model_id = model_id
+        self.input_values = input_values
+        self.predicted_output = predicted_output
+        self.operator = operator
+        self.notes = notes
+        self.timestamp = timestamp
+
+
+SCENARIO_REGISTRY: dict[str, ScenarioRecord] = {}
+
+
+def _handle_prediction_scenario_save(params: dict) -> dict:
+    """Save a what-if prediction scenario."""
+    import datetime as _dt
+
+    scenario_id = str(uuid.uuid4())
+    record = ScenarioRecord(
+        scenario_id=scenario_id,
+        name=params.get("name", "Untitled"),
+        model_id=params["model_id"],
+        input_values={k: float(v) for k, v in params.get("input_values", {}).items()},
+        predicted_output=float(params.get("predicted_output", 0)),
+        operator=params.get("operator", "anonymous"),
+        notes=params.get("notes", ""),
+        timestamp=_dt.datetime.utcnow().isoformat() + "Z",
+    )
+    SCENARIO_REGISTRY[scenario_id] = record
+    return {"scenario_id": scenario_id, "name": record.name}
+
+
+def _handle_prediction_scenario_list(params: dict) -> dict:
+    """List saved scenarios, optionally filtered by model_id."""
+    model_id = params.get("model_id")
+    records = [
+        {
+            "scenario_id": s.scenario_id,
+            "name": s.name,
+            "model_id": s.model_id,
+            "input_values": s.input_values,
+            "predicted_output": s.predicted_output,
+            "operator": s.operator,
+            "notes": s.notes,
+            "timestamp": s.timestamp,
+        }
+        for s in SCENARIO_REGISTRY.values()
+        if model_id is None or s.model_id == model_id
+    ]
+    return {"scenarios": records}
+
+
+def _handle_prediction_scenario_delete(params: dict) -> dict:
+    """Delete a saved scenario."""
+    scenario_id = params["scenario_id"]
+    if scenario_id in SCENARIO_REGISTRY:
+        del SCENARIO_REGISTRY[scenario_id]
+        return {"deleted": True}
+    return {"deleted": False}
+
+
+# ---------------------------------------------------------------------------
+# Time series features
+# ---------------------------------------------------------------------------
+
+
+def _handle_time_series(params: dict) -> dict:
+    """Compute time-series features for a dataset column."""
+    dataset_id = params.get("dataset_id")
+    time_column = params["time_column"]
+    value_columns = params["value_columns"]
+    window_sizes = params.get("window_sizes", [3, 5, 10])
+
+    if dataset_id:
+        df = REGISTRY.get(dataset_id)
+    else:
+        columns = params["columns"]
+        rows = params["rows"]
+        data = {col: [] for col in columns}
+        for row in rows:
+            row = list(row) + [None] * (len(columns) - len(row))
+            for col, value in zip(columns, row):
+                data[col].append(value)
+        df = pd.DataFrame(data)
+
+    result = compute_time_features(df, time_column, value_columns, window_sizes)
+    return _plain_types(result)
+
+
+def _handle_consecutive_exceedance(params: dict) -> dict:
+    """Compute consecutive exceedance counts for a dataset column."""
+    dataset_id = params.get("dataset_id")
+    value_column = params["value_column"]
+    threshold = float(params["threshold"])
+    direction = params.get("direction", "above")
+
+    if dataset_id:
+        df = REGISTRY.get(dataset_id)
+    else:
+        columns = params["columns"]
+        rows = params["rows"]
+        data = {col: [] for col in columns}
+        for row in rows:
+            row = list(row) + [None] * (len(columns) - len(row))
+            for col, value in zip(columns, row):
+                data[col].append(value)
+        df = pd.DataFrame(data)
+
+    result = compute_consecutive_exceedance(df, value_column, threshold, direction)
+    return _plain_types(result)
+
+
+# ---------------------------------------------------------------------------
+# Approval workflow handlers
+# ---------------------------------------------------------------------------
+
+
+def _handle_approval_submit(params: dict) -> dict:
+    return APPROVAL_WORKFLOW.submit_for_review(
+        resource_type=params["resource_type"],
+        resource_id=params["resource_id"],
+        reviewer=params["reviewer"],
+        reviewer_role=params["reviewer_role"],
+        comments=params.get("comments", ""),
+    )
+
+
+def _handle_approval_approve(params: dict) -> dict:
+    return APPROVAL_WORKFLOW.approve(
+        resource_type=params["resource_type"],
+        resource_id=params["resource_id"],
+        reviewer=params["reviewer"],
+        reviewer_role=params["reviewer_role"],
+        comments=params.get("comments", ""),
+    )
+
+
+def _handle_approval_reject(params: dict) -> dict:
+    return APPROVAL_WORKFLOW.reject(
+        resource_type=params["resource_type"],
+        resource_id=params["resource_id"],
+        reviewer=params["reviewer"],
+        reviewer_role=params["reviewer_role"],
+        comments=params.get("comments", ""),
+    )
+
+
+def _handle_approval_status(params: dict) -> dict:
+    return {
+        "status": APPROVAL_WORKFLOW.get_status(
+            params["resource_type"], params["resource_id"]
+        )
+    }
+
+
+def _handle_approval_records(params: dict) -> dict:
+    return {
+        "records": APPROVAL_WORKFLOW.list_records(
+            resource_type=params.get("resource_type"),
+            resource_id=params.get("resource_id"),
+        )
+    }
 
 
 def _read_request() -> dict | None:

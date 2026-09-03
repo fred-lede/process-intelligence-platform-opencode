@@ -805,3 +805,151 @@ export async function listExperiments(params: { model_id?: string } = {}): Promi
 export async function getExperiment(experiment_id: string): Promise<ExperimentRecord> {
   return engineCall<ExperimentRecord>('experiment/get', { experiment_id })
 }
+
+// --- Phase 11b: What-if Scenario Save/Load ----------------------------------
+
+export interface PredictionScenario {
+  scenario_id: string
+  name: string
+  model_id: string
+  input_values: Record<string, number>
+  predicted_output: number
+  operator: string
+  notes: string
+  timestamp: string
+}
+
+export interface SaveScenarioParams {
+  name: string
+  model_id: string
+  input_values: Record<string, number>
+  predicted_output: number
+  operator: string
+  notes?: string
+}
+
+export async function saveScenario(params: SaveScenarioParams): Promise<{ scenario_id: string; name: string }> {
+  return engineCall<{ scenario_id: string; name: string }>('prediction/scenario/save', params as unknown as Record<string, unknown>)
+}
+
+export async function listScenarios(params: { model_id?: string } = {}): Promise<{ scenarios: PredictionScenario[] }> {
+  return engineCall<{ scenarios: PredictionScenario[] }>('prediction/scenario/list', params as unknown as Record<string, unknown>)
+}
+
+export async function deleteScenario(scenario_id: string): Promise<{ deleted: boolean }> {
+  return engineCall<{ deleted: boolean }>('prediction/scenario/delete', { scenario_id })
+}
+
+// --- Phase 11b: Time Series Features --------------------------------------
+
+export interface TimeSeriesFeatures {
+  feature_columns: string[]
+  n_rows: number
+  n_features: number
+  preview: Record<string, unknown>[]
+}
+
+export interface ConsecutiveExceedance {
+  column: string
+  direction: string
+  threshold: number
+  n_exceedance_runs: number
+  max_consecutive: number
+  mean_run_length: number
+  run_lengths: number[]
+}
+
+export interface TimeSeriesParams {
+  dataset_id?: string
+  columns?: string[]
+  rows?: (string | null)[][]
+  time_column: string
+  value_columns: string[]
+  window_sizes?: number[]
+}
+
+export interface ConsecutiveExceedanceParams {
+  dataset_id?: string
+  columns?: string[]
+  rows?: (string | null)[][]
+  value_column: string
+  threshold: number
+  direction?: 'above' | 'below'
+}
+
+export async function getTimeSeriesFeatures(params: TimeSeriesParams): Promise<TimeSeriesFeatures> {
+  return engineCall<TimeSeriesFeatures>('features/time_series', params as unknown as Record<string, unknown>)
+}
+
+export async function getConsecutiveExceedance(params: ConsecutiveExceedanceParams): Promise<ConsecutiveExceedance> {
+  return engineCall<ConsecutiveExceedance>('features/consecutive_exceedance', params as unknown as Record<string, unknown>)
+}
+
+// --- Phase 11b: Approval Workflow ------------------------------------------
+
+export type ApprovalAction = 'submit_for_review' | 'approve' | 'reject'
+export type ApprovalResourceType = 'model' | 'report'
+
+export interface ApprovalRecord {
+  record_id: string
+  resource_type: ApprovalResourceType
+  resource_id: string
+  action: ApprovalAction
+  reviewer: string
+  reviewer_role: string
+  comments: string
+  timestamp: string
+}
+
+export interface ApprovalStatus {
+  status: 'draft' | 'pending_review' | 'approved' | 'rejected' | 'retired'
+}
+
+export interface SubmitForReviewParams {
+  resource_type: ApprovalResourceType
+  resource_id: string
+  reviewer: string
+  reviewer_role: string
+  comments?: string
+}
+
+export interface ApproveParams {
+  resource_type: ApprovalResourceType
+  resource_id: string
+  reviewer: string
+  reviewer_role: string
+  comments?: string
+}
+
+export interface RejectParams {
+  resource_type: ApprovalResourceType
+  resource_id: string
+  reviewer: string
+  reviewer_role: string
+  comments?: string
+}
+
+export interface ListApprovalRecordsParams {
+  resource_type?: ApprovalResourceType
+  resource_id?: string
+}
+
+export async function submitForReview(params: SubmitForReviewParams): Promise<{ record_id: string; new_status: string }> {
+  return engineCall<{ record_id: string; new_status: string }>('approval/submit', params as unknown as Record<string, unknown>)
+}
+
+export async function approveResource(params: ApproveParams): Promise<{ record_id: string; new_status: string }> {
+  return engineCall<{ record_id: string; new_status: string }>('approval/approve', params as unknown as Record<string, unknown>)
+}
+
+export async function rejectResource(params: RejectParams): Promise<{ record_id: string; new_status: string }> {
+  return engineCall<{ record_id: string; new_status: string }>('approval/reject', params as unknown as Record<string, unknown>)
+}
+
+export async function getApprovalStatus(params: { resource_type: ApprovalResourceType; resource_id: string }): Promise<ApprovalStatus> {
+  return engineCall<ApprovalStatus>('approval/status', params as unknown as Record<string, unknown>)
+}
+
+export async function listApprovalRecords(params: ListApprovalRecordsParams = {}): Promise<{ records: ApprovalRecord[] }> {
+  return engineCall<{ records: ApprovalRecord[] }>('approval/records', params as unknown as Record<string, unknown>)
+}

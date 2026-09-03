@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Select, Space, Button, Alert, Typography, Tag, Slider, InputNumber, Row, Col, Statistic } from 'antd'
+import { Card, Select, Space, Button, Alert, Typography, Tag, Slider, InputNumber, Row, Col, Statistic, Modal, Input, message } from 'antd'
+import { SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
-import { predictOutput, getModelInfo, listModels, type ModelInfo } from '../../lib/engine'
+import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, type ModelInfo, type PredictionScenario } from '../../lib/engine'
 
 export default function Prediction() {
   const { t } = useTranslation()
@@ -14,6 +15,23 @@ export default function Prediction() {
   const [inputValues, setInputValues] = useState<Record<string, number>>({})
   const [predicted, setPredicted] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
+  const [scenarios, setScenarios] = useState<PredictionScenario[]>([])
+  const [saveModalOpen, setSaveModalOpen] = useState(false)
+  const [scenarioName, setScenarioName] = useState('')
+  const [scenarioNotes, setScenarioNotes] = useState('')
+  const [messageApi, contextHolder] = message.useMessage()
+
+  useEffect(() => {
+    listModels().then(r => {
+      if (r.models) {
+        setModels(r.models.map(m => ({ model_id: m.model_id, model_type: m.model_type, equation: m.equation })))
+      }
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (selectedModel) loadScenarios(selectedModel)
+  }, [selectedModel])
 
   useEffect(() => {
     listModels().then(r => {
@@ -68,6 +86,36 @@ export default function Prediction() {
     setInputValues(defaults)
   }
 
+  const loadScenarios = async (modelId: string) => {
+    try {
+      const r = await listScenarios({ model_id: modelId })
+      setScenarios(r.scenarios)
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleSaveScenario = async () => {
+    if (!selectedModel || predicted === null) return
+    try {
+      await saveScenario({
+        name: scenarioName || `Scenario ${scenarios.length + 1}`,
+        model_id: selectedModel,
+        input_values: inputValues,
+        predicted_output: predicted,
+        operator: 'current_user',
+        notes: scenarioNotes,
+      })
+      messageApi.success(t('prediction.saveSuccess'))
+      setSaveModalOpen(false)
+      setScenarioName('')
+      setScenarioNotes('')
+      if (selectedModel) loadScenarios(selectedModel)
+    } catch {
+      messageApi.error(t('prediction.saveError'))
+    }
+  }
+
   const getNgStatus = () => {
     if (predicted === null) return null
     const { lsl, usl } = spec ?? {}
@@ -90,6 +138,7 @@ export default function Prediction() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {contextHolder}
       <Card title={t('prediction.title')}>
         <Space wrap style={{ marginBottom: 12 }}>
           <Select
@@ -165,6 +214,25 @@ export default function Prediction() {
                     {ngStatus.text}
                   </Tag>
                 )}
+                <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+                  <Button
+                    size="small"
+                    icon={<HistoryOutlined />}
+                    onClick={() => loadScenarios(selectedModel!)}
+                    disabled={!selectedModel}
+                  >
+                    {t('prediction.viewScenarios')}
+                  </Button>
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<SaveOutlined />}
+                    onClick={() => setSaveModalOpen(true)}
+                    disabled={predicted === null}
+                  >
+                    {t('prediction.saveScenario')}
+                  </Button>
+                </Space>
                 {spec?.lsl !== null && spec?.lsl !== undefined && (
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     LSL: {spec.lsl.toFixed(2)}
@@ -192,6 +260,34 @@ export default function Prediction() {
       {!importResult && (
         <Alert type="warning" message={t('prediction.noData')} showIcon />
       )}
+
+      <Modal
+        title={t('prediction.saveScenario')}
+        open={saveModalOpen}
+        onCancel={() => setSaveModalOpen(false)}
+        onOk={handleSaveScenario}
+        okText={t('prediction.saveScenario')}
+        cancelText={t('common.cancel')}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size={8}>
+          <Input
+            placeholder={t('prediction.scenarioNamePlaceholder')}
+            value={scenarioName}
+            onChange={e => setScenarioName(e.target.value)}
+          />
+          <Input.TextArea
+            rows={3}
+            placeholder={t('prediction.scenarioNotesPlaceholder')}
+            value={scenarioNotes}
+            onChange={e => setScenarioNotes(e.target.value)}
+          />
+          {predicted !== null && (
+            <Typography.Text>
+              {t('prediction.predictedValue')}: <strong>{predicted.toFixed(4)}</strong>
+            </Typography.Text>
+          )}
+        </Space>
+      </Modal>
     </div>
   )
 }

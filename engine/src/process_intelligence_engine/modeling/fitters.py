@@ -15,8 +15,9 @@ from datetime import datetime, timezone
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score, recall_score, roc_auc_score
 
 from .metrics import (
     mean_absolute_error,
@@ -31,6 +32,7 @@ MODEL_TYPES = {
     "doe_quadratic": "doe_quadratic",
     "random_forest": "random_forest",
     "residual_hybrid": "residual_hybrid",
+    "logistic_regression": "logistic_regression",
 }
 
 STATUS = ("draft", "pending_validation", "validated", "approved", "retired")
@@ -233,4 +235,61 @@ def fit_residual_hybrid(
         n_train=len(train_idx),
         n_test=len(test_idx),
         created_at=_now(),
+    )
+
+
+def fit_logistic_regression(
+    df: pd.DataFrame,
+    target: str,
+    inputs: list[str],
+    test_size: float = 0.3,
+    random_state: int | None = None,
+) -> ModelFit:
+    """Fit a logistic regression model for binary classification (NG prediction)."""
+    if not inputs:
+        raise ValueError("at least one input is required")
+    y = df[target].astype(float)
+    # Support both binary (0/1) and label-encoded (OK/NG) targets
+    unique_vals = y.unique()
+    if set(unique_vals).issubset({0.0, 1.0}):
+        pass  # already binary
+    elif len(unique_vals) == 2:
+        # Encode: first unique value -> 0, second -> 1
+        label_map = {v: i for i, v in enumerate(unique_vals)}
+        y = y.map(label_map).astype(float)
+    X = df[inputs].to_numpy(dtype=float)
+    X_tr, X_te, y_tr, y_te = _train_test(X, y, test_size, random_state)
+    lr = LogisticRegression(random_state=random_state, max_iter=1000)
+    lr.fit(X_tr, y_tr)
+    y_pred_proba = lr.predict_proba(X_te)[:, 1]
+    y_pred_class = lr.predict(X_te)
+    acc = accuracy_score(y_te, y_pred_class)
+    try:
+        auc = float(roc_auc_score(y_te, y_pred_proba))
+    except ValueError:
+        auc = 0.5
+    # Compute recall (sensitivity): TP / (TP + FN)
+    recall = recall_score(y_te, y_pred_class, zero_division=0)
+    # Negative class count = NG (class 1)
+    n_ng = int(y_tr.sum())
+    n_ok = len(y_tr) - n_ng
+    return ModelFit(
+        model_type="logistic_regression",
+        target=target,
+        inputs=list(inputs),
+        metrics={
+            "accuracy": float(acc),
+            "recall": float(recall),
+            "auc": auc,
+            "n_ng": n_ng,
+            "n_ok": n_ok,
+        },
+        coefficients={inputs[i]: float(lr.coef_[0, i]) for i in range(len(inputs))},
+        equation=f"logit(P(NG)) = {lr.intercept_[0]:.4g} + " + " + ".join(
+            f"{lr.coef_[0, i]:+.4g}*{inputs[i]}" for i in range(len(inputs))
+        ),
+        n_train=len(X_tr),
+        n_test=len(X_te),
+        created_at=_now(),
+        model=lr,
     )
