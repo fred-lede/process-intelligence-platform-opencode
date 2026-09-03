@@ -83,8 +83,7 @@ npm run tauri dev
 在新電腦上首次部署時，請確保：
 
 1. **Rust 已安裝**：執行 `cargo --version` 確認
-2. **Python venv 已建立**：執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-pip install -r requirements.txt`
+2. **Python venv 已建立**：執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && pip install -r requirements.txt`
 3. **Node 模組已安裝**：執行 `npm install`
 4. **瀏覽器 WebView**：macOS 內建 WebKit，Windows 需安裝 WebView2 Runtime
 
