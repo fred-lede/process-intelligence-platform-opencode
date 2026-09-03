@@ -84,6 +84,9 @@ export default function Settings() {
     } else if (aiConfig.provider === 'openai') {
       aiForm.setFieldValue('model', 'gpt-4o')
       setAiConfig(prev => ({ ...prev, provider: 'openai', base_url: 'https://api.openai.com', model: 'gpt-4o', api_key: prev.api_key }))
+    } else if (aiConfig.provider === 'custom') {
+      aiForm.setFieldValue('model', '')
+      setAiConfig(prev => ({ ...prev, provider: 'custom', base_url: 'http://localhost:8000/v1', model: '', api_key: prev.api_key }))
     }
   }, [aiConfig.provider])
 

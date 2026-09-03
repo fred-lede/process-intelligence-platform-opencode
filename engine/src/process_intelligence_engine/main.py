@@ -557,11 +557,32 @@ def _handle_ai_chat(params: dict) -> dict:
 
 
 def _handle_ai_models(params: dict) -> dict:
-    """List available Ollama models."""
-    client = get_ollama_client()
+    """List available models from configured provider."""
+    mgr = get_settings_manager()
+    provider = mgr._config.provider
+    base_url = mgr._config.base_url
+    api_key = mgr._config.api_key
+
     try:
-        models = asyncio.run(client.list_models())
-        return {"success": True, "models": [m["name"] for m in models]}
+        if provider == 'ollama':
+            client = get_ollama_client()
+            models = asyncio.run(client.list_models())
+            return {"success": True, "models": [m["name"] for m in models]}
+        else:
+            import aiohttp
+            url = f"{base_url.rstrip('/')}/models"
+            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+            async def _fetch():
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        if resp.status != 200:
+                            body = await resp.text()
+                            raise Exception(f"HTTP {resp.status}: {body}")
+                        data = await resp.json()
+                        items = data.get("data", [])
+                        return [m["id"] if "id" in m else m.get("model", m.get("id", "")) for m in items]
+            models = asyncio.run(_fetch())
+            return {"success": True, "models": models}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
