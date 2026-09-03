@@ -494,9 +494,7 @@ export default function ProcessFlow() {
             <div ref={containerRef} style={{ width: '100%', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <svg
                 ref={svgRef}
-                width={viewportSize.w}
-                height={viewportSize.h}
-                style={{ background: '#FAFAFA', display: 'block', touchAction: 'none' }}
+                style={{ width: '100%', height: '100%', background: '#FAFAFA', display: 'block', touchAction: 'none' }}
                 onPointerDown={handleBackgroundPointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
