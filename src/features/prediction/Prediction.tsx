@@ -1,9 +1,76 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Typography, Tag, InputNumber, Statistic, Modal, Input, message, Row, Col } from 'antd'
 import { PlusOutlined, MinusOutlined, SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, type ModelInfo, type PredictionScenario } from '../../lib/engine'
+
+function DraggableSlider({ min, max, value, onChange, style }: {
+  min: number
+  max: number
+  value: number
+  onChange: (v: number) => void
+  style?: CSSProperties
+}) {
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  const clampAndEmit = useCallback((clientX: number) => {
+    const el = trackRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const ratio = (clientX - rect.left) / (rect.width || 1)
+    const raw = min + ratio * (max - min)
+    const clamped = Math.min(max, Math.max(min, raw))
+    onChange(clamped)
+  }, [min, max, onChange])
+
+  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    clampAndEmit(e.clientX)
+  }
+
+  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.buttons === 0) return
+    clampAndEmit(e.clientX)
+  }
+
+  const pct = max === min ? 0 : Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100))
+
+  return (
+    <div
+      ref={trackRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      style={{
+        position: 'relative',
+        height: 24,
+        touchAction: 'none',
+        cursor: 'pointer',
+        userSelect: 'none',
+        ...style,
+      }}
+    >
+      <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 6, transform: 'translateY(-50%)', borderRadius: 3, background: '#dbe2ed' }} />
+      <div style={{ position: 'absolute', top: '50%', left: 0, height: 6, transform: 'translateY(-50%)', borderRadius: 3, background: '#2563eb', width: `${pct}%` }} />
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: `${pct}%`,
+          transform: 'translate(-50%, -50%)',
+          width: 16,
+          height: 16,
+          borderRadius: '50%',
+          background: '#2563eb',
+          border: '2px solid #fff',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+        }}
+      />
+    </div>
+  )
+}
 
 export default function Prediction() {
   const { t } = useTranslation()
@@ -186,15 +253,11 @@ export default function Prediction() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <Button size="small" icon={<MinusOutlined />} onClick={() => handleInputChange(inp, Number(val) - Number(step))} style={{ width: 28, padding: 0, flexShrink: 0 }} />
-                        <input
-                          className="app-range"
-                          type="range"
+                        <DraggableSlider
                           min={min}
                           max={max}
-                          step={step}
                           value={val}
-                          onChange={e => handleInputChange(inp, Number(e.target.value))}
-                          onInput={e => handleInputChange(inp, Number((e.target as HTMLInputElement).value))}
+                          onChange={v => handleInputChange(inp, v)}
                           style={{ flex: 1, minWidth: 0 }}
                         />
                         <Button size="small" icon={<PlusOutlined />} onClick={() => handleInputChange(inp, Number(val) + Number(step))} style={{ width: 28, padding: 0, flexShrink: 0 }} />
