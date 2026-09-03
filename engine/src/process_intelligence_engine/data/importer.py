@@ -106,6 +106,10 @@ class ImportResult:
                 "numeric": cs.numeric,
                 "non_null_count": cs.non_null_count,
                 "unique_count": cs.unique_count,
+                "mean": cs.mean,
+                "std": cs.std,
+                "min": cs.min,
+                "max": cs.max,
             }
             for name, cs in self.stats.column_stats.items()
         }
