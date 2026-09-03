@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Card, Button, Space, Alert, Tag, Input, Select,
@@ -43,7 +43,7 @@ const NODE_HEIGHT = 52
 const H_GAP = 200
 const V_GAP = 80
 
-function computeLayout(nodes: FlowNode[], edges: FlowEdge[]) {
+export function computeLayout(nodes: FlowNode[], edges: FlowEdge[]) {
   const nodeMap = new Map(nodes.map(n => [n.process_node_id, n]))
   const adj = new Map<string, string[]>()
   const inDeg = new Map<string, number>()
@@ -115,9 +115,44 @@ export default function ProcessFlow() {
   const [form] = Form.useForm()
 
   const selectedNode = graph.nodes.find(n => n.process_node_id === selectedNodeId) || null
-  const { layout, maxX, maxY } = computeLayout(graph.nodes, graph.edges)
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [viewportSize, setViewportSize] = useState({ w: 900, h: 500 })
+  const didInitialFit = useRef(false)
+  const panDrag = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
 
   useEffect(() => { void loadData() }, [])
+
+  const worldBounds = useMemo(() => {
+    const pts = graph.nodes.map(n => ({
+      x: n.x ?? 0, y: n.y ?? 0, w: NODE_WIDTH, h: NODE_HEIGHT,
+    }))
+    if (pts.length === 0) return { minX: 0, minY: 0, maxX: 600, maxY: 300 }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    for (const p of pts) {
+      minX = Math.min(minX, p.x); minY = Math.min(minY, p.y)
+      maxX = Math.max(maxX, p.x + p.w); maxY = Math.max(maxY, p.y + p.h)
+    }
+    return { minX, minY, maxX, maxY }
+  }, [graph.nodes])
+
+  const fitView = () => {
+    const pad = 40
+    const { minX, minY, maxX, maxY } = worldBounds
+    const bw = maxX - minX || 1, bh = maxY - minY || 1
+    const z = Math.min(
+      (viewportSize.w - 2 * pad) / bw,
+      (viewportSize.h - 2 * pad) / bh,
+      1.5,
+    )
+    setZoom(Math.max(0.5, z))
+    setPan({
+      x: (viewportSize.w - bw * z) / 2 - minX * z,
+      y: (viewportSize.h - bh * z) / 2 - minY * z,
+    })
+  }
 
   const loadData = async () => {
     setLoading(true)
@@ -156,6 +191,54 @@ export default function ProcessFlow() {
     } catch {
       messageApi.error(t('processFlow.deleteError'))
     }
+  }
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const measure = () => setViewportSize({ w: el.clientWidth, h: el.clientHeight })
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!didInitialFit.current && graph.nodes.length > 0) {
+      didInitialFit.current = true
+      fitView()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph.nodes.length])
+
+  const handleBackgroundPointerDown = (e: React.PointerEvent) => {
+    const t = e.target as Element
+    if (t.closest('[data-node]') || t.closest('[data-port]')) return
+    panDrag.current = { sx: e.clientX, sy: e.clientY, px: pan.x, py: pan.y }
+    ;(e.currentTarget as SVGSVGElement).setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (panDrag.current) {
+      const dx = e.clientX - panDrag.current.sx
+      const dy = e.clientY - panDrag.current.sy
+      setPan({ x: panDrag.current.px + dx, y: panDrag.current.py + dy })
+    }
+  }
+
+  const handlePointerUp = () => { panDrag.current = null }
+
+  const handleWheel = (e: React.WheelEvent) => {
+    const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect()
+    const sx = e.clientX - rect.left
+    const sy = e.clientY - rect.top
+    const factor = e.deltaY < 0 ? 1.1 : 0.9
+    const newZoom = Math.min(2, Math.max(0.5, zoom * factor))
+    setPan({
+      x: sx - (sx - pan.x) * (newZoom / zoom),
+      y: sy - (sy - pan.y) * (newZoom / zoom),
+    })
+    setZoom(newZoom)
   }
 
   const handleConnect = async (fromId: string, toId: string, condition?: string) => {
@@ -198,8 +281,11 @@ export default function ProcessFlow() {
   }
 
   const nodeCenters = new Map<string, { x: number; y: number }>()
-  for (const [id, pos] of layout) {
-    nodeCenters.set(id, { x: pos.x + NODE_WIDTH / 2, y: pos.y + NODE_HEIGHT / 2 })
+  for (const node of graph.nodes) {
+    nodeCenters.set(node.process_node_id, {
+      x: (node.x ?? 0) + NODE_WIDTH / 2,
+      y: (node.y ?? 0) + NODE_HEIGHT / 2,
+    })
   }
 
   return (
@@ -236,7 +322,7 @@ export default function ProcessFlow() {
           size="small"
           title={t('processFlow.diagram')}
           style={{ flex: 1, minHeight: 400 }}
-          bodyStyle={{ padding: 0, overflow: 'auto' }}
+          bodyStyle={{ padding: 0, overflow: 'hidden' }}
         >
           {graph.nodes.length === 0 ? (
             <Alert
@@ -247,16 +333,23 @@ export default function ProcessFlow() {
               style={{ margin: 24 }}
             />
           ) : (
-            <svg
-              width={Math.max(maxX + NODE_WIDTH + 80, 600)}
-              height={Math.max(maxY * 2 + NODE_HEIGHT + 80, 300)}
-              style={{ background: '#FAFAFA', display: 'block' }}
-            >
-              <defs>
-                <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                  <path d="M0,0 L8,3 L0,6 Z" fill="#8c8c8c" />
-                </marker>
-              </defs>
+            <div ref={containerRef} style={{ width: '100%', height: 500, overflow: 'hidden' }}>
+              <svg
+                ref={svgRef}
+                width={viewportSize.w}
+                height={viewportSize.h}
+                style={{ background: '#FAFAFA', display: 'block', touchAction: 'none' }}
+                onPointerDown={handleBackgroundPointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onWheel={handleWheel}
+              >
+                <defs>
+                  <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#8c8c8c" />
+                  </marker>
+                </defs>
+                <g transform={`translate(${pan.x},${pan.y}) scale(${zoom})`}>
               {/* Edges */}
               {graph.edges.map((e, i) => {
                 const from = nodeCenters.get(e.from)
@@ -288,13 +381,13 @@ export default function ProcessFlow() {
               })}
               {/* Nodes */}
               {graph.nodes.map(node => {
-                const pos = layout.get(node.process_node_id)
-                if (!pos) return null
+                const pos = { x: node.x ?? 0, y: node.y ?? 0 }
                 const isSelected = selectedNodeId === node.process_node_id
                 const color = NODE_COLORS[node.node_type] || NODE_COLORS.default
                 return (
                   <g
                     key={node.process_node_id}
+                    data-node={node.process_node_id}
                     onClick={() => setSelectedNodeId(node.process_node_id)}
                     style={{ cursor: 'pointer' }}
                   >
@@ -336,12 +429,14 @@ export default function ProcessFlow() {
                       {node.node_type}
                     </text>
                     {/* Connect ports */}
-                    <circle cx={pos.x + NODE_WIDTH} cy={pos.y + NODE_HEIGHT / 2} r={5}
+                    <circle data-node-id={node.process_node_id} data-port="out"
+                      cx={pos.x + NODE_WIDTH} cy={pos.y + NODE_HEIGHT / 2} r={5}
                       fill={portColor} stroke="#fff" strokeWidth={1.5}
                       onClick={(e: React.MouseEvent) => { e.stopPropagation() }}
                       style={{ cursor: 'crosshair' }}
                     />
-                    <circle cx={pos.x} cy={pos.y + NODE_HEIGHT / 2} r={5}
+                    <circle data-node-id={node.process_node_id} data-port="in"
+                      cx={pos.x} cy={pos.y + NODE_HEIGHT / 2} r={5}
                       fill={portColor} stroke="#fff" strokeWidth={1.5}
                       onClick={(e: React.MouseEvent) => { e.stopPropagation() }}
                       style={{ cursor: 'crosshair' }}
@@ -349,7 +444,9 @@ export default function ProcessFlow() {
                   </g>
                 )
               })}
-            </svg>
+                </g>
+              </svg>
+            </div>
           )}
         </Card>
 
