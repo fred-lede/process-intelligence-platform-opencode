@@ -127,6 +127,26 @@ export default function ProcessFlow() {
   const didInitialFit = useRef(false)
   const panDrag = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
   const [dragging, setDragging] = useState<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const [connectDraft, setConnectDraft] = useState<{ fromId: string; sx: number; sy: number } | null>(null)
+  const [connectCursor, setConnectCursor] = useState<{ x: number; y: number } | null>(null)
+  const [hoverTarget, setHoverTarget] = useState<{ id: string; port: 'in' | 'out' } | null>(null)
+
+  const clientToWorld = (clientX: number, clientY: number) => {
+    const rect = svgRef.current?.getBoundingClientRect()
+    if (!rect) return { x: 0, y: 0 }
+    const sx = clientX - rect.left
+    const sy = clientY - rect.top
+    return { x: (sx - pan.x) / zoom, y: (sy - pan.y) / zoom }
+  }
+
+  const startConnect = (e: React.PointerEvent, fromId: string) => {
+    e.stopPropagation()
+    const w = clientToWorld(e.clientX, e.clientY)
+    setConnectDraft({ fromId, sx: w.x, sy: w.y })
+    setConnectCursor({ x: w.x, y: w.y })
+    setHoverTarget(null)
+    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
+  }
 
   const startNodeDrag = (e: React.PointerEvent, node: FlowNode) => {
     e.stopPropagation()
@@ -258,6 +278,18 @@ export default function ProcessFlow() {
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
+    if (connectDraft) {
+      const w = clientToWorld(e.clientX, e.clientY)
+      setConnectCursor({ x: w.x, y: w.y })
+      const el = document.elementFromPoint(e.clientX, e.clientY) as Element | null
+      const portEl = el?.closest?.('[data-port]') as HTMLElement | null
+      if (portEl && portEl.dataset.nodeId && portEl.dataset.nodeId !== connectDraft.fromId) {
+        setHoverTarget({ id: portEl.dataset.nodeId, port: (portEl.dataset.port as 'in' | 'out') || 'in' })
+      } else {
+        setHoverTarget(null)
+      }
+      return
+    }
     if (dragging) {
       const dx = (e.clientX - dragging.startX) / zoom
       const dy = (e.clientY - dragging.startY) / zoom
@@ -278,7 +310,14 @@ export default function ProcessFlow() {
     }
   }
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (_e: React.PointerEvent) => {
+    if (connectDraft) {
+      if (hoverTarget && hoverTarget.id !== connectDraft.fromId) {
+        void handleConnect(connectDraft.fromId, hoverTarget.id)
+      }
+      setConnectDraft(null); setConnectCursor(null); setHoverTarget(null)
+      return
+    }
     if (dragging) {
       void persistNodePosition()
       setDragging(null)
@@ -475,6 +514,17 @@ export default function ProcessFlow() {
                   </g>
                 )
               })}
+              {connectDraft && connectCursor && (() => {
+                const from = nodeCenters.get(connectDraft.fromId)
+                if (!from) return null
+                return (
+                  <path
+                    d={svga(from.x + NODE_WIDTH / 2, from.y, connectCursor.x, connectCursor.y)}
+                    fill="none" stroke="#1677ff" strokeWidth={2} strokeDasharray="4 2"
+                    markerEnd="url(#arrow)" opacity={0.7}
+                  />
+                )
+              })()}
               {/* Nodes */}
               {graph.nodes.map(node => {
                 const pos = { x: node.x ?? 0, y: node.y ?? 0 }
@@ -529,13 +579,15 @@ export default function ProcessFlow() {
                     <circle data-node-id={node.process_node_id} data-port="out"
                       cx={pos.x + NODE_WIDTH} cy={pos.y + NODE_HEIGHT / 2} r={5}
                       fill={portColor} stroke="#fff" strokeWidth={1.5}
-                      onClick={(e: React.MouseEvent) => { e.stopPropagation() }}
+                      onPointerDown={(e) => startConnect(e, node.process_node_id)}
+                      onPointerUp={(e) => e.stopPropagation()}
                       style={{ cursor: 'crosshair' }}
                     />
                     <circle data-node-id={node.process_node_id} data-port="in"
                       cx={pos.x} cy={pos.y + NODE_HEIGHT / 2} r={5}
                       fill={portColor} stroke="#fff" strokeWidth={1.5}
-                      onClick={(e: React.MouseEvent) => { e.stopPropagation() }}
+                      onPointerDown={(e) => startConnect(e, node.process_node_id)}
+                      onPointerUp={(e) => e.stopPropagation()}
                       style={{ cursor: 'crosshair' }}
                     />
                   </g>
