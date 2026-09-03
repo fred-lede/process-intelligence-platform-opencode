@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Typography, Tag, Slider, InputNumber, Statistic, Modal, Input, message } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, type ModelInfo, type PredictionScenario } from '../../lib/engine'
@@ -160,16 +161,16 @@ export default function Prediction() {
 
       {modelInfo && (
         <div style={{ display: 'flex', gap: 16, width: '100%' }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <Card title={t('prediction.equation')} size="small">
-              <div style={{ fontFamily: 'monospace', fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4 }}>{modelInfo.equation}</div>
+              <pre style={{ fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, margin: '0 0 12px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{modelInfo.equation}</pre>
               {modelInfo.inputs.map(inp => {
                 const stats = importResult?.stats.column_stats[inp]
                 const min = stats?.min ?? (inputValues[inp] ?? 0) - 3 * (stats?.std ?? 5)
                 const max = stats?.max ?? (inputValues[inp] ?? 0) + 3 * (stats?.std ?? 5)
                 const val = inputValues[inp] ?? 0
                 return (
-                  <div key={inp} style={{ marginBottom: 16, display: 'block' }}>
+                  <div key={inp} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <span style={{ fontWeight: 600, fontSize: 13 }}>{inp}</span>
                       <InputNumber
@@ -181,13 +182,16 @@ export default function Prediction() {
                         max={max}
                       />
                     </div>
-                    <Slider
-                      min={Number(min)}
-                      max={Number(max)}
-                      value={Number(val)}
-                      onChange={v => handleInputChange(inp, Number(v))}
-                      step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
-                    />
+                    <div style={{ width: '100%', display: 'block' }}>
+                      <Slider
+                        min={Number(min)}
+                        max={Number(max)}
+                        value={Number(val)}
+                        onChange={v => handleInputChange(inp, Number(v))}
+                        step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
+                        tooltip={{ placement: 'top', open: false }}
+                      />
+                    </div>
                     <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
                       <span style={{ fontSize: 11, color: '#999' }}>Min: {Number(min).toFixed(2)}</span>
                       <span style={{ fontSize: 11, color: '#999' }}>Mean: {(stats?.mean ?? 0).toFixed(2)}</span>
