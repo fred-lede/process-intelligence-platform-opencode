@@ -300,7 +300,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
             size="small"
             pagination={{ pageSize: 10, showSizeChanger: false }}
             scroll={{ x: 'max-content' }}
-            rowKey={(_, idx) => String(idx)}
+            rowKey="__key"
             dataSource={importResult.raw_preview.slice(1).map((row, i) => {
               const record: Record<string, unknown> = { __key: `row-${i}` }
               importResult.columns.forEach((col, colIdx) => {
@@ -360,7 +360,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
             ) : (
               <Table
                 size="small"
-                rowKey={(record, idx) => `${record.check}-${idx}`}
+                rowKey={(record) => `${record.check}-${record.column}`}
                 columns={qualityColumns}
                 dataSource={quality.issues}
                 pagination={false}
