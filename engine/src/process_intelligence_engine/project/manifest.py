@@ -520,10 +520,6 @@ class ProjectEngine:
     def validate_flow_graph(self) -> dict[str, Any]:
         self._ensure_project()
         manifest = self._load()
-
-        Returns warnings and errors.
-        """
-        manifest = self._load()
         nodes = manifest.process_nodes
         warnings: list[str] = []
         errors: list[str] = []
