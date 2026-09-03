@@ -114,3 +114,10 @@
 - **Correlation matrix 驗證** — 正定矩陣檢查 + 失敗時自動 fallback 到獨立假設
 - i18n en/zh-TW：copula.*
 - 驗證 — 250 passed, 1 skipped (78% coverage), tsc/build clean
+
+### Phase 11e — 中期任務（第三批）
+- **GRR 量測系統分析** — `data/grr.py`（AIEM 方法，EV/AV/GRR/PV/TV/%GRR + verdict）+ IPC handler `data/grr`
+- **時間序列 UI** — Exploration 新增 Time Series tab（lag/rolling/drift 圖表 + 特徵表格）
+- **GRR UI** — Exploration 新增 GRR tab（選擇測量/零件/操作者欄位，分析結果 + 警告）
+- i18n en/zh-TW：exploration.timeSeriesTab/GRR keys, grr.*
+- 驗證 — 250 passed, 1 skipped (76% coverage), tsc/build clean
