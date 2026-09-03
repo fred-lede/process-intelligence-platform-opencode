@@ -1314,3 +1314,34 @@ export async function registerDataset(params: {
 export async function updateDataset(dataset_id: string, updates: Record<string, unknown>): Promise<DatasetRegistration | null> {
   return engineCall<DatasetRegistration | null>('project/dataset/update', { dataset_id, updates } as unknown as Record<string, unknown>)
 }
+
+// --- Phase 11i: Process Flow Diagram (spec 11A) ----------------------------
+
+export interface FlowEdge {
+  from: string
+  to: string
+  condition?: string
+}
+
+export interface FlowNode extends ProcessNode {}
+
+export interface FlowGraph {
+  nodes: FlowNode[]
+  edges: FlowEdge[]
+}
+
+export interface FlowValidation {
+  warnings: string[]
+  errors: string[]
+  valid: boolean
+  node_count: number
+  edge_count: number
+}
+
+export async function getFlowGraph(): Promise<FlowGraph> {
+  return engineCall<FlowGraph>('project/flow-graph', {})
+}
+
+export async function validateFlowGraph(): Promise<FlowValidation> {
+  return engineCall<FlowValidation>('project/flow-validate', {})
+}

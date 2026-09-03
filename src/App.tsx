@@ -14,6 +14,7 @@ import SPC from './features/spc/SPC'
 import MonteCarlo from './features/monte-carlo/MonteCarlo'
 import Prediction from './features/prediction/Prediction'
 import ValidationLab from './features/validation/ValidationLab'
+import ProcessFlow from './features/process-flow/ProcessFlow'
 import type { AppTab } from './types'
 
 const { Content } = Layout
@@ -32,6 +33,7 @@ export default function App() {
     if (activeTab === 'monteCarlo') return <MonteCarlo />
     if (activeTab === 'prediction') return <Prediction />
     if (activeTab === 'validation') return <ValidationLab />
+    if (activeTab === 'processFlow') return <ProcessFlow />
     if (activeTab === 'settings') return <Settings />
     return <FeaturePlaceholder tabKey={activeTab} />
   }

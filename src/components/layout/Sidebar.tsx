@@ -30,6 +30,7 @@ const tabItems = [
   { key: 'processDefine', icon: <ApartmentOutlined /> },
   { key: 'exploration', icon: <BarChartOutlined /> },
   { key: 'modelCenter', icon: <ExperimentOutlined /> },
+  { key: 'processFlow', icon: <ApartmentOutlined /> },
   { key: 'validation', icon: <ThunderboltOutlined /> },
   { key: 'monteCarlo', icon: <RobotOutlined /> },
   { key: 'prediction', icon: <SlidersOutlined /> },

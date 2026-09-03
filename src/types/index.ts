@@ -9,4 +9,5 @@ export type AppTab =
   | 'prediction'
   | 'reports'
   | 'spc'
+  | 'processFlow'
   | 'settings'

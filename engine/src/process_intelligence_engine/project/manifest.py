@@ -474,3 +474,103 @@ class ProjectEngine:
     def get_directories(self) -> dict[str, str]:
         self._ensure_dirs()
         return {name: str(self._root / path) for name, path in _DIR_TEMPLATES.items()}
+
+    # -- process flow graph validation --------------------------------------
+
+    def get_flow_graph(self) -> dict[str, Any]:
+        """Return the process flow graph as nodes + edges."""
+        manifest = self._load()
+        nodes = [n.to_dict() for n in manifest.process_nodes]
+        # Extract edges from all nodes
+        edges: list[dict[str, Any]] = []
+        node_ids = {n["process_node_id"] for n in nodes}
+        for n in nodes:
+            for edge in n.get("sequence_or_edges", []):
+                target = edge.get("to", "")
+                if target in node_ids:
+                    edges.append({
+                        "from": n["process_node_id"],
+                        "to": target,
+                        "condition": edge.get("condition", ""),
+                    })
+        return {"nodes": nodes, "edges": edges}
+
+    def validate_flow_graph(self) -> dict[str, Any]:
+        """Validate the process flow graph for issues.
+
+        Returns warnings and errors.
+        """
+        manifest = self._load()
+        nodes = manifest.process_nodes
+        warnings: list[str] = []
+        errors: list[str] = []
+
+        if len(nodes) == 0:
+            warnings.append("No process nodes defined.")
+            return {"warnings": warnings, "errors": errors, "valid": len(errors) == 0}
+
+        node_ids = {n.process_node_id for n in nodes}
+        node_types: dict[str, str] = {n.process_node_id: n.node_type for n in nodes}
+        has_cycle = False
+
+        # Check for orphan nodes (no incoming or outgoing edges)
+        connected: set[str] = set()
+        for n in nodes:
+            for edge in n.sequence_or_edges:
+                connected.add(n.process_node_id)
+                connected.add(edge.get("to", ""))
+        for n in nodes:
+            if n.process_node_id not in connected:
+                warnings.append(
+                    f"Node '{n.display_name}' is disconnected (no edges)."
+                )
+
+        # Check for duplicate node types (same node_type used multiple times)
+        type_counts: dict[str, int] = {}
+        for n in nodes:
+            type_counts[n.node_type] = type_counts.get(n.node_type, 0) + 1
+        for n in nodes:
+            if type_counts[n.node_type] > 1:
+                warnings.append(
+                    f"Node type '{n.node_type}' is used by multiple nodes."
+                )
+
+        # Check for cycles (DFS)
+        adjacency: dict[str, list[str]] = {n.process_node_id: [] for n in nodes}
+        for n in nodes:
+            for edge in n.sequence_or_edges:
+                target = edge.get("to", "")
+                if target in node_ids:
+                    adjacency[n.process_node_id].append(target)
+
+        visited: set[str] = set()
+        rec_stack: set[str] = set()
+
+        def _dfs(node_id: str) -> bool:
+            visited.add(node_id)
+            rec_stack.add(node_id)
+            for neighbour in adjacency.get(node_id, []):
+                if neighbour not in visited:
+                    if _dfs(neighbour):
+                        return True
+                elif neighbour in rec_stack:
+                    return True
+            rec_stack.discard(node_id)
+            return False
+
+        for n in nodes:
+            if n.process_node_id not in visited:
+                if _dfs(n.process_node_id):
+                    has_cycle = True
+                    break
+
+        if has_cycle:
+            errors.append("Cycle detected in process flow graph. Please remove circular edges.")
+
+        return {
+            "warnings": warnings,
+            "errors": errors,
+            "valid": len(errors) == 0,
+            "node_count": len(nodes),
+            "edge_count": sum(len(v) for v in adjacency.values()),
+        }

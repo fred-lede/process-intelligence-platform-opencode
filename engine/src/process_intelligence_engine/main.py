@@ -1150,6 +1150,10 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_project_dataset_register(params)
     if method == "project/dataset/update":
         return _handle_project_dataset_update(params)
+    if method == "project/flow-graph":
+        return _handle_project_flow_graph(params)
+    if method == "project/flow-validate":
+        return _handle_project_flow_validate(params)
 
     raise ValueError(f"Unknown method: {method}")
 
@@ -1523,6 +1527,14 @@ def _handle_project_dataset_register(params: dict) -> dict:
 def _handle_project_dataset_update(params: dict) -> dict:
     result = PROJECT_ENGINE.update_dataset(params["dataset_id"], params.get("updates", {}))
     return result or {"error": "dataset not found"}
+
+
+def _handle_project_flow_graph(params: dict) -> dict:
+    return PROJECT_ENGINE.get_flow_graph()
+
+
+def _handle_project_flow_validate(params: dict) -> dict:
+    return PROJECT_ENGINE.validate_flow_graph()
 
 
 def _read_request() -> dict | None:
