@@ -4,6 +4,7 @@ import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptio
 import type { ColumnsType } from 'antd/es/table'
 import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons'
 import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing } from '../../lib/engine'
+import { useAIStore } from '../../stores/aiStore'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
 export default function Settings() {
@@ -159,6 +160,7 @@ export default function Settings() {
       const result = await updateSettings(aiConfig)
       if (result.success) {
         setAiConfig(result.config)
+        useAIStore.getState().refreshHealth()
         messageApi.success(t('settings.saveSuccess'))
       }
     } catch (e) {
