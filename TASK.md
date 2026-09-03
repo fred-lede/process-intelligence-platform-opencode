@@ -59,7 +59,7 @@
 - 每次 chat 請求同步 base_url + model
 
 ### Phase 8 — SPC 統計製程控制
-- `spc.py` — I-MR / X-bar+R / X-bar+S 控制圖 + Western Electric 7 規則 + Cp/Cpk/Pp/Ppk 能力指數
+- `spc.py` — I-MR / X-bar+R / X-bar-S 控制圖 + Western Electric 7 規則 + Cp/Cpk/Pp/Ppk 能力指數
 - `main.py` — `spc/analyze` + `spc/capability` IPC handlers
 - `engine.ts` — SPC TypeScript 類型 + `analyzeSPC()` + `getSPCCapability()` API
 - `SPC.tsx` — Plotly 控制圖 + 違規表格 + 能力指數卡片 + i18n en/zh-TW
@@ -74,20 +74,6 @@
 - i18n en/zh-TW 完整支援
 - 驗證 — 239 passed, 1 skipped (88% coverage), tsc/build clean
 
-### Phase 9 — Monte Carlo 模擬
-- `engine.ts` — TypeScript 類型 + `analyzeMonteCarlo()` API 函數
-- `MonteCarlo.tsx` — 模擬 UI：模型選擇、參數設定、NG 機率、百分位數、直方圖 + CDF、異常排名表格
-- i18n en/zh-TW（nav + monteCarlo section）
-- Sidebar + App.tsx 路由整合
-- 驗證 — 239 passed, 1 skipped (88% coverage), tsc/build clean
-
-## Completed
-- Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo
-- 14 tests covering normal/gamma/lognormal/histogram sampling, linear/quadratic prediction, anomaly injection, full simulation with/without bounds
-- 234 passed, 1 skipped (88% coverage)
-- Monte Carlo IPC handler (`monte_carlo/run`) — main.py import + handler + dispatch
-- 5 IPC handler tests (basic, unknown model, with anomalies, no bounds, unknown dataset)
-
 ### Phase 10 — Interactive Prediction (What-if)
 - `engine.ts` — `PredictionResult`, `ModelInfo`, `InputRange` TypeScript 類型 + `predictOutput()` + `getModelInfo()` API 函數
 - TypeScript compile clean, build clean
@@ -97,15 +83,10 @@
 - Sidebar + App.tsx 路由整合
 - 驗證 — 250 passed, 1 skipped (88% coverage), tsc/build clean
 
-## In Progress
-- None
-
-## Pending
-- None
-
----
-**測試狀態**：250 passed, 1 skipped (88% coverage)
-**Debug Logs**：已移除所有 debug print，僅保留生產環境錯誤追蹤
-**Code Stats**：~4,300 lines total
-**Commits**：95 (main branch fully deployed)
-**部署文件**：README.md 已包含完整安裝、首次部署與除錯說明
+### Phase 11 — 驗證實驗 (Validation Lab)
+- `main.py` — ExperimentRecord + ExperimentRegistry + IPC handlers (record/list/get)
+- `engine.ts` — ExperimentRecord type + recordExperiment/listExperiments/getExperiment APIs
+- `ValidationLab.tsx` — 完整驗證 + 實驗建議 + 記錄實驗表單 + 實驗紀錄表格
+- i18n en/zh-TW 完整支援
+- App.tsx 路由整合
+- 驗證 — 250 passed, 1 skipped (86% coverage), tsc/build clean
