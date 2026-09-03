@@ -588,10 +588,28 @@ def _handle_ai_models(params: dict) -> dict:
 
 
 def _handle_ai_health(params: dict) -> dict:
-    """Check Ollama health."""
-    client = get_ollama_client()
-    is_healthy = asyncio.run(client.health_check())
-    return {"healthy": is_healthy}
+    """Check AI provider health."""
+    mgr = get_settings_manager()
+    provider = mgr._config.provider
+    base_url = mgr._config.base_url
+    api_key = mgr._config.api_key
+
+    try:
+        if provider == 'ollama':
+            client = get_ollama_client()
+            is_healthy = asyncio.run(client.health_check())
+            return {"healthy": is_healthy}
+        else:
+            import aiohttp
+            url = f"{base_url.rstrip('/')}/models"
+            headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+            async def _check():
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        return resp.status == 200
+            return {"healthy": asyncio.run(_check())}
+    except Exception as e:
+        return {"healthy": False, "error": str(e)}
 
 
 def _handle_settings_get(params: dict) -> dict:
