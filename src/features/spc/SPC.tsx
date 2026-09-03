@@ -304,7 +304,7 @@ export default function SPC() {
         />
       )}
       {!importResult && (
-        <Alert type="warning"           message={t('spc.noDataHint')} description="SPC 需要已有專案資料。" showIcon />
+        <Alert type="warning" message={t('spc.noDataHint')} description={t('spc.noDataHint')} showIcon />
       )}
     </div>
   )
