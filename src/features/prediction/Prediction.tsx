@@ -161,17 +161,17 @@ export default function Prediction() {
       {modelInfo && (
         <div style={{ display: 'flex', gap: 16, width: '100%' }}>
           <div style={{ flex: 1 }}>
-            <Card title={t('prediction.equation')} size="small" bodyStyle={{ padding: '12px 16px' }}>
-              <Typography.Text code style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>{modelInfo.equation}</Typography.Text>
+            <Card title={t('prediction.equation')} size="small">
+              <div style={{ fontFamily: 'monospace', fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4 }}>{modelInfo.equation}</div>
               {modelInfo.inputs.map(inp => {
                 const stats = importResult?.stats.column_stats[inp]
                 const min = stats?.min ?? (inputValues[inp] ?? 0) - 3 * (stats?.std ?? 5)
                 const max = stats?.max ?? (inputValues[inp] ?? 0) + 3 * (stats?.std ?? 5)
                 const val = inputValues[inp] ?? 0
                 return (
-                  <div key={inp} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <Typography.Text strong style={{ fontSize: 13 }}>{inp}</Typography.Text>
+                  <div key={inp} style={{ marginBottom: 16, display: 'block' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{inp}</span>
                       <InputNumber
                         value={val}
                         onChange={v => handleInputChange(inp, v)}
@@ -181,19 +181,20 @@ export default function Prediction() {
                         max={max}
                       />
                     </div>
-                    <div style={{ width: '100%' }}>
-                      <Slider
-                        min={Number(min)}
-                        max={Number(max)}
-                        value={Number(val)}
-                        onChange={v => handleInputChange(inp, Number(v))}
-                        step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
-                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>Min: {Number(min).toFixed(2)}</Typography.Text>
-                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>Mean: {(stats?.mean ?? 0).toFixed(2)}</Typography.Text>
-                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>Max: {Number(max).toFixed(2)}</Typography.Text>
+                    <Slider
+                      min={Number(min)}
+                      max={Number(max)}
+                      value={Number(val)}
+                      onChange={v => handleInputChange(inp, Number(v))}
+                      step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
+                      trackStyle={[{ background: '#1677ff' }]}
+                      handleStyle={[{ borderColor: '#1677ff', background: '#1677ff' }]}
+                      railStyle={{ background: '#e8e8e8' }}
+                    />
+                    <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
+                      <span style={{ fontSize: 11, color: '#999' }}>Min: {Number(min).toFixed(2)}</span>
+                      <span style={{ fontSize: 11, color: '#999' }}>Mean: {(stats?.mean ?? 0).toFixed(2)}</span>
+                      <span style={{ fontSize: 11, color: '#999' }}>Max: {Number(max).toFixed(2)}</span>
                     </div>
                   </div>
                 )
