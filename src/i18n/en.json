@@ -682,6 +682,22 @@
     "deleteError": "Failed to delete node",
     "connectError": "Failed to connect nodes",
     "disconnectError": "Failed to disconnect nodes",
-    "add": "Add"
+    "add": "Add",
+    "autoLayout": "Auto Layout",
+    "autoLayoutDone": "Layout applied",
+    "autoLayoutError": "Failed to apply layout",
+    "saveError": "Failed to save changes",
+    "dataMapping": "Data Mapping",
+    "inputDataSources": "Input Data Sources",
+    "outputDataSources": "Output Data Sources",
+    "selectDataSources": "Select data sources",
+    "controlParameters": "Control Parameters",
+    "qualityOutputs": "Quality Outputs",
+    "machineMapping": "Machine Mapping",
+    "typeOrSelect": "Type or select",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomFit": "Fit to view"
   }
 }

@@ -682,6 +682,22 @@
     "deleteError": "刪除節點失敗",
     "connectError": "連接節點失敗",
     "disconnectError": "斷開連接失敗",
-    "add": "新增"
+    "add": "新增",
+    "autoLayout": "自動排程",
+    "autoLayoutDone": "已套用排版",
+    "autoLayoutError": "排版失敗",
+    "saveError": "儲存失敗",
+    "dataMapping": "資料映射",
+    "inputDataSources": "輸入資料來源",
+    "outputDataSources": "輸出資料來源",
+    "selectDataSources": "選擇資料來源",
+    "controlParameters": "控制參數",
+    "qualityOutputs": "品質輸出",
+    "machineMapping": "機台對應",
+    "typeOrSelect": "輸入或選擇",
+    "zoomIn": "放大",
+    "zoomOut": "縮小",
+    "zoomReset": "重設縮放",
+    "zoomFit": "適合視窗"
   }
 }
