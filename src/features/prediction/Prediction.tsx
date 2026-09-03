@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Typography, Tag, Slider, InputNumber, Statistic, Modal, Input, message } from 'antd'
-import type { ColumnsType } from 'antd/es/table'
 import { SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, type ModelInfo, type PredictionScenario } from '../../lib/engine'
@@ -183,14 +182,14 @@ export default function Prediction() {
                       />
                     </div>
                     <div style={{ width: '100%', display: 'block' }}>
-                      <Slider
-                        min={Number(min)}
-                        max={Number(max)}
-                        value={Number(val)}
-                        onChange={v => handleInputChange(inp, Number(v))}
-                        step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
-                        tooltip={{ placement: 'top', open: false }}
-                      />
+                    <Slider
+                      min={Number(min)}
+                      max={Number(max)}
+                      value={Number(val)}
+                      onChange={v => handleInputChange(inp, Number(v))}
+                      step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
+                      tooltip={{ placement: 'top', open: false }}
+                    />
                     </div>
                     <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
                       <span style={{ fontSize: 11, color: '#999' }}>Min: {Number(min).toFixed(2)}</span>
