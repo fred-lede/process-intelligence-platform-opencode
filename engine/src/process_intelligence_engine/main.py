@@ -1454,6 +1454,7 @@ def _handle_project_scan(params: dict) -> dict:
 
 
 def _handle_project_process_groups(params: dict) -> dict:
+    PROJECT_ENGINE._ensure_project()
     manifest = PROJECT_ENGINE._load()
     return {"process_groups": [g.to_dict() for g in manifest.process_groups]}
 
@@ -1484,6 +1485,7 @@ def _handle_project_process_group_templates(params: dict) -> dict:
 
 
 def _handle_project_process_nodes(params: dict) -> dict:
+    PROJECT_ENGINE._ensure_project()
     manifest = PROJECT_ENGINE._load()
     return {"process_nodes": [n.to_dict() for n in manifest.process_nodes]}
 
@@ -1508,6 +1510,7 @@ def _handle_project_process_node_delete(params: dict) -> dict:
 
 
 def _handle_project_datasets(params: dict) -> dict:
+    PROJECT_ENGINE._ensure_project()
     return {"datasets": PROJECT_ENGINE.list_datasets()}
 
 

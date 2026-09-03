@@ -201,6 +201,18 @@ class ProjectEngine:
         for dirname in _DIR_TEMPLATES.values():
             (self._root / dirname).mkdir(parents=True, exist_ok=True)
 
+    def _ensure_project(self) -> None:
+        """Auto-create a default project if none exists."""
+        import tempfile
+        if not self._root or not self._manifest:
+            tmp = Path(tempfile.gettempdir()) / "process_intelligence_platform"
+            tmp.mkdir(parents=True, exist_ok=True)
+            self._root = tmp
+            self._manifest_path = self._root / "project_manifest.json"
+            self._manifest = None
+            self._load()
+            self._ensure_dirs()
+
     def _load(self) -> ProjectManifest:
         if self._manifest is not None:
             return self._manifest
@@ -260,6 +272,7 @@ class ProjectEngine:
         }
 
     def get_manifest(self) -> dict:
+        self._ensure_project()
         manifest = self._load()
         return {
             "project_id": manifest.project_id,
@@ -277,6 +290,7 @@ class ProjectEngine:
         }
 
     def update_settings(self, updates: dict[str, Any]) -> dict:
+        self._ensure_project()
         manifest = self._load()
         manifest.settings.update(updates)
         self._save()
@@ -338,6 +352,7 @@ class ProjectEngine:
                              output_templates: list[str] | None = None,
                              quality_label_templates: list[str] | None = None,
                              unit_profile: dict[str, str] | None = None) -> dict:
+        self._ensure_project()
         manifest = self._load()
         pg = ProcessGroup(
             process_group_id=str(uuid.uuid4()),
@@ -356,6 +371,7 @@ class ProjectEngine:
         return pg.to_dict()
 
     def update_process_group(self, group_id: str, updates: dict[str, Any]) -> dict:
+        self._ensure_project()
         manifest = self._load()
         for g in manifest.process_groups:
             if g.process_group_id == group_id:
@@ -367,6 +383,7 @@ class ProjectEngine:
         raise ValueError(f"Process group not found: {group_id}")
 
     def delete_process_group(self, group_id: str) -> bool:
+        self._ensure_project()
         manifest = self._load()
         before = len(manifest.process_groups)
         manifest.process_groups = [
@@ -383,6 +400,7 @@ class ProjectEngine:
                             sequence_or_edges: list[dict] | None = None,
                             input_data_sources: list[str] | None = None,
                             rework_policy: str = "default") -> dict:
+        self._ensure_project()
         manifest = self._load()
         node = ProcessNode(
             process_node_id=str(uuid.uuid4()),
@@ -399,6 +417,7 @@ class ProjectEngine:
         return node.to_dict()
 
     def update_process_node(self, node_id: str, updates: dict[str, Any]) -> dict:
+        self._ensure_project()
         manifest = self._load()
         for n in manifest.process_nodes:
             if n.process_node_id == node_id:
@@ -410,6 +429,7 @@ class ProjectEngine:
         raise ValueError(f"Process node not found: {node_id}")
 
     def delete_process_node(self, node_id: str) -> bool:
+        self._ensure_project()
         manifest = self._load()
         before = len(manifest.process_nodes)
         manifest.process_nodes = [
