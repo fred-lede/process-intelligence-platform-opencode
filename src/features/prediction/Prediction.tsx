@@ -181,16 +181,14 @@ export default function Prediction() {
                         max={max}
                       />
                     </div>
-                    <div style={{ width: '100%', display: 'block' }}>
                     <Slider
                       min={Number(min)}
                       max={Number(max)}
                       value={Number(val)}
                       onChange={v => handleInputChange(inp, Number(v))}
                       step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
-                      tooltip={{ placement: 'top', open: false }}
+                      tipName={() => null}
                     />
-                    </div>
                     <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
                       <span style={{ fontSize: 11, color: '#999' }}>Min: {Number(min).toFixed(2)}</span>
                       <span style={{ fontSize: 11, color: '#999' }}>Mean: {(stats?.mean ?? 0).toFixed(2)}</span>
