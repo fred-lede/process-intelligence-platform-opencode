@@ -41,6 +41,7 @@ startY = -(count - 1) * V_GAP / 2   # layer 內第 0 個節點的 y
 | C. 畫布平移 / 縮放 + 迷你地圖 | pan / zoom / minimap |
 | D. Port 拖曳連線 | 從 port 圓點拖到目標 port 建立連線 |
 | E. 一鍵自動佈局 | 拓扑分層重排，覆蓋手動位置 |
+| F. 節點 ↔ 資料映射 | 屬性面板編輯節點資料來源/參數/品質/機台（規格 §11A） |
 
 **非目標（YAGNI）：** 不引入 React Flow 套件（維持自建 SVG、零新依賴）；不做節點群組折疊／多選框選；不做 undo/redo 歷史。
 
@@ -113,6 +114,26 @@ y: float = 0.0
 - 工具列新按鈕「自動排程」：呼叫既有 `computeLayout(nodes, edges)` 產生新世界座標（需將以 0 為中心的分層輸出整體平移至正座標），逐節點 `updateProcessNode({x,y})` 保存，然後 `fitView()`。
 - 建立手動拖曳後不再自動重排（僅按下按鈕時觸發）。
 
+### 4.7 節點 ↔ 資料映射（F，規格 §11A）
+
+**動機**：規格 §11A（line 411-425、863）明文要求每個製程節點保存並可配置「資料來源、控制參數、品質輸出、機台」的映射，且「製程節點與資料來源、機台及欄位的映射由使用者設定」。目前引擎 `ProcessNode` 已含這些欄位，但 ProcessFlow 屬性面板完全未提供介面。
+
+**UI**：於右側屬性面板，當節點被選中時，在既有「連線」區塊下方新增 4 個可編輯區（每區儲存即 `updateProcessNode`）：
+
+| 區塊 | 欄位 | 輸入型態 |
+|------|------|----------|
+| 輸入資料來源 | `input_data_sources` | 多選，options 取自 `getDatasets()`（dataset_id / source_file） |
+| 輸出資料來源 | `output_data_sources` | 多選，同上 |
+| 控制參數 | `in_control_parameters` | 標籤式（Select mode="tags"）自由輸入 |
+| 品質輸出 | `out_quality_outputs` | 標籤式（Select mode="tags"） |
+| 機台對應 | `machine_mapping` | 標籤式（Select mode="tags"） |
+
+- 變更時：`updateProcessNode(nodeId, { 欄位 })` → `loadData()` 重載。
+- **作用**：讓節點成為「製程 + 資料」的完整映射，供**跨節點分析**（規格 line 427：以 barcode/序號/批次/工單等關聯鍵串接各站資料）。
+- **與連線的區別**：流程圖的邊（`sequence_or_edges`）表達製程流（前後站/分支/重工）；`input/output_data_sources` 表達該站實際讀寫的資料集。兩者維度不同，互不取代。
+
+**引擎**：欄位均已存在於 `ProcessNode`；`update_process_node` 已支援任意 `hasattr` 欄位 → 後端免改。前端 `ProcessNode` 型別已含這些欄位。
+
 ---
 
 ## 5. 互動優先級/衝突處理
@@ -133,7 +154,9 @@ y: float = 0.0
 
 ```
 autoLayout, zoomIn, zoomOut, zoomReset, zoomFit, minimap,
-dragHint, dragToConnect
+dragHint, dragToConnect,
+inputDataSources, outputDataSources, controlParameters,
+qualityOutputs, machineMapping
 ```
 
 ---
@@ -143,6 +166,7 @@ dragHint, dragToConnect
 **引擎（pytest）**：
 - `ProcessNode` 含 x/y 欄位、`from_dict` 對舊資料無 x/y 仍可載入（default 0.0）。
 - `create/update_process_node` 可寫入/更新 x/y。
+- `update_process_node` 可寫入 `input_data_sources` / `output_data_sources` / `in_control_parameters` / `out_quality_outputs` / `machine_mapping`。
 
 **前端（手動驗證 + tsc/build）**：
 - 新增第二個節點不擠出畫布（bug 復現測試）。
@@ -150,6 +174,7 @@ dragHint, dragToConnect
 - pan/zoom/minimap 操作正常。
 - port 拖曳可建立邊、放下空白取消。
 - 自動佈局重排並覆蓋手動位置。
+- 屬性面板可編輯並保存節點的資料映射（輸入/輸出資料來源、控制參數、品質輸出、機台），重載保持。
 - `npx tsc --noEmit` + `npm run build` 乾淨。
 - 引擎 `pytest` 全綠。
 
@@ -160,3 +185,4 @@ dragHint, dragToConnect
 - 既有「連線至下拉選單」「刪除節點」「屬性面板」全部保留。
 - 新增節點不再自動重排 → 需手動按「自動排程」或自行拖曳；這是預期行為（手動優先）。
 - 引擎 `ProcessNode.to_dict()` 會多出 x/y，其餘 API 不變。
+- 屬性面板新增資料映射區，不影響既有字段。
