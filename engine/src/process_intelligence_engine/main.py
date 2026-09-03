@@ -544,14 +544,38 @@ def _handle_current_user(params: dict) -> dict:
 def _handle_ai_chat(params: dict) -> dict:
     """Handle AI chat request."""
     mgr = get_settings_manager()
-    client = get_ollama_client()
-    client.base_url = mgr._config.base_url
-    client.model = mgr._config.model
+    provider = mgr._config.provider
+    base_url = mgr._config.base_url
+    model = mgr._config.model
+    api_key = mgr._config.api_key
     messages = params.get("messages", [])
 
     try:
-        response = asyncio.run(client.chat(messages))
-        return {"success": True, "response": response}
+        if provider == "ollama":
+            client = get_ollama_client()
+            client.base_url = base_url
+            client.model = model
+            response = asyncio.run(client.chat(messages))
+            return {"success": True, "response": response}
+        else:
+            import aiohttp
+            url = f"{base_url.rstrip('/')}/chat/completions"
+            payload = {"model": model, "messages": messages}
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"} if api_key else {"Content-Type": "application/json"}
+            async def _chat():
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=60)) as resp:
+                        body = await resp.text()
+                        if resp.status != 200:
+                            raise Exception(f"HTTP {resp.status}: {body[:300]}")
+                        data = await resp.json()
+                        choices = data.get("choices", [])
+                        if not choices:
+                            return ""
+                        msg = choices[0].get("message", {})
+                        return msg.get("content", "")
+            response = asyncio.run(_chat())
+            return {"success": True, "response": response}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
