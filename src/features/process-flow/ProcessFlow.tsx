@@ -438,11 +438,11 @@ export default function ProcessFlow() {
   }
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }} size={16}>
+    <div style={{ width: '100%', height: 'calc(100vh - 48px)', display: 'flex', flexDirection: 'column' }}>
       {contextHolder}
 
       {/* Toolbar */}
-      <Card size="small" style={{ marginBottom: 0 }}>
+      <Card size="small" style={{ flexShrink: 0 }}>
         <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddModalOpen(true)}>
             {t('processFlow.addNode')}
@@ -474,13 +474,13 @@ export default function ProcessFlow() {
       </Card>
 
       {/* Diagram + Panel */}
-      <Space style={{ width: '100%' }} size={16}>
+      <div style={{ flex: 1, display: 'flex', gap: 16, minHeight: 0, marginTop: 16 }}>
         {/* SVG Diagram */}
         <Card
           size="small"
           title={t('processFlow.diagram')}
-          style={{ flex: 1, minHeight: 400 }}
-          bodyStyle={{ padding: 0, overflow: 'hidden' }}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}
+          bodyStyle={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}
         >
           {graph.nodes.length === 0 ? (
             <Alert
@@ -491,7 +491,7 @@ export default function ProcessFlow() {
               style={{ margin: 24 }}
             />
           ) : (
-            <div ref={containerRef} style={{ width: '100%', height: 500, overflow: 'hidden' }}>
+            <div ref={containerRef} style={{ width: '100%', flex: 1, minHeight: 0, overflow: 'hidden' }}>
               <svg
                 ref={svgRef}
                 width={viewportSize.w}
@@ -655,7 +655,8 @@ export default function ProcessFlow() {
         <Card
           size="small"
           title={t('processFlow.properties')}
-          style={{ width: 280, flexShrink: 0 }}
+          style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', height: '100%' }}
+          bodyStyle={{ flex: 1, overflow: 'auto' }}
         >
           {selectedNode ? (
             <Space direction="vertical" style={{ width: '100%' }} size={8}>
@@ -771,7 +772,7 @@ export default function ProcessFlow() {
             />
           )}
         </Card>
-      </Space>
+      </div>
 
       {/* Add Node Modal */}
       <Modal
@@ -799,6 +800,6 @@ export default function ProcessFlow() {
           </Form.Item>
         </Form>
       </Modal>
-    </Space>
+    </div>
   )
 }
