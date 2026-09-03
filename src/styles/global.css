@@ -34,3 +34,42 @@ body {
 .status-warning { color: var(--color-warning); }
 .status-risk { color: var(--color-risk); }
 .status-ai { color: var(--color-ai); }
+
+/* 原生 range 滑桿：確保在 WebKit/WKWebView 可拖曳 */
+input[type="range"].app-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 24px;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"].app-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #dbe2ed;
+}
+input[type="range"].app-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+input[type="range"].app-range::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: #dbe2ed;
+}
+input[type="range"].app-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2563eb;
+  border: 2px solid #fff;
+}
+
