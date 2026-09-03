@@ -37,6 +37,8 @@ export default function MonteCarlo() {
         n_simulations: nSimulations,
         seed,
         enable_anomalies: enableAnomalies,
+        lsl: spec?.lsl ?? undefined,
+        usl: spec?.usl ?? undefined,
       })
       setResult(res.result)
     } catch (e) {
