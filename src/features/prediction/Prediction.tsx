@@ -159,8 +159,8 @@ export default function Prediction() {
       </Card>
 
       {modelInfo && (
-        <Row gutter={16}>
-          <Col span={16}>
+        <div style={{ display: 'flex', gap: 16, width: '100%' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <Card title={t('prediction.equation')} size="small">
               <Typography.Text code style={{ fontSize: 14 }}>{modelInfo.equation}</Typography.Text>
               <div style={{ marginTop: 12 }}>
@@ -170,8 +170,8 @@ export default function Prediction() {
                   const max = stats?.max ?? (inputValues[inp] ?? 0) + 3 * (stats?.std ?? 5)
                   const val = inputValues[inp] ?? 0
                   return (
-                    <div key={inp} style={{ marginBottom: 12, width: '100%' }}>
-                      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <div key={inp} style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <Typography.Text strong>{inp}</Typography.Text>
                         <InputNumber
                           value={val}
@@ -181,27 +181,28 @@ export default function Prediction() {
                           min={min}
                           max={max}
                         />
-                      </Space>
-                      <Slider
-                        min={min}
-                        max={max}
-                        value={val}
-                        onChange={v => handleInputChange(inp, v)}
-                        step={(max - min) / 100}
-                        style={{ width: '100%' }}
-                      />
-                      <Space>
+                      </div>
+                      <div style={{ width: '100%' }}>
+                        <Slider
+                          min={min}
+                          max={max}
+                          value={val}
+                          onChange={v => handleInputChange(inp, v)}
+                          step={(max - min) / 100}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: 12 }}>
                         <Typography.Text type="secondary" style={{ fontSize: 11 }}>Min: {min.toFixed(2)}</Typography.Text>
                         <Typography.Text type="secondary" style={{ fontSize: 11 }}>Mean: {stats?.mean?.toFixed(2) ?? 'N/A'}</Typography.Text>
                         <Typography.Text type="secondary" style={{ fontSize: 11 }}>Max: {max.toFixed(2)}</Typography.Text>
-                      </Space>
+                      </div>
                     </div>
                   )
                 })}
               </div>
             </Card>
-          </Col>
-          <Col span={8}>
+          </div>
+          <div style={{ width: 240, flexShrink: 0 }}>
             <Card title={t('prediction.predictedOutput')} size="small" style={{ height: '100%' }}>
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Statistic
@@ -251,8 +252,8 @@ export default function Prediction() {
                 )}
               </Space>
             </Card>
-          </Col>
-        </Row>
+          </div>
+        </div>
       )}
 
       {!modelInfo && importResult && (
