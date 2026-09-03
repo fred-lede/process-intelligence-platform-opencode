@@ -7,7 +7,7 @@ import { analyzeMonteCarlo, listModels, type MonteCarloResult } from '../../lib/
 
 export default function MonteCarlo() {
   const { t } = useTranslation()
-  const { importResult } = useDataPipelineStore()
+  const { importResult, spec } = useDataPipelineStore()
 
   const [models, setModels] = useState<Array<{ model_id: string; model_type: string; equation: string }>>([])
   const [selectedModel, setSelectedModel] = useState<string | undefined>()
@@ -166,7 +166,33 @@ export default function MonteCarlo() {
           <Card title={t('monteCarlo.outputDistribution')} size="small">
             <div style={{ display: 'flex', gap: 16, width: '100%' }}>
               <Plot
-                data={[histogramTrace].filter(Boolean)}
+                data={[
+                  histogramTrace,
+                  ...(spec?.lsl != null ? [{
+                    x: [spec.lsl, spec.lsl],
+                    y: [0, Math.max(...((histogramTrace as any)?.y ?? [0])) * 1.1],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: `LSL ${spec.lsl}`,
+                    line: { color: '#ff4d4f', width: 1.5, dash: 'dash' },
+                  }] : []),
+                  ...(spec?.usl != null ? [{
+                    x: [spec.usl, spec.usl],
+                    y: [0, Math.max(...((histogramTrace as any)?.y ?? [0])) * 1.1],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: `USL ${spec.usl}`,
+                    line: { color: '#ff4d4f', width: 1.5, dash: 'dash' },
+                  }] : []),
+                  ...(spec?.target != null ? [{
+                    x: [spec.target, spec.target],
+                    y: [0, Math.max(...((histogramTrace as any)?.y ?? [0])) * 1.1],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: `Target ${spec.target}`,
+                    line: { color: '#52c41a', width: 1.5, dash: 'dot' },
+                  }] : []),
+                ].filter(Boolean)}
                 layout={{
                   margin: { t: 30, b: 40, l: 50, r: 30 },
                   height: 280,
@@ -177,7 +203,33 @@ export default function MonteCarlo() {
                 style={{ flex: 1 }}
               />
               <Plot
-                data={[cdfTrace].filter(Boolean)}
+                data={[
+                  cdfTrace,
+                  ...(spec?.lsl != null ? [{
+                    x: [spec.lsl, spec.lsl],
+                    y: [0, 1],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'LSL',
+                    line: { color: '#ff4d4f', width: 1.5, dash: 'dash' },
+                  }] : []),
+                  ...(spec?.usl != null ? [{
+                    x: [spec.usl, spec.usl],
+                    y: [0, 1],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'USL',
+                    line: { color: '#ff4d4f', width: 1.5, dash: 'dash' },
+                  }] : []),
+                  ...(spec?.target != null ? [{
+                    x: [spec.target, spec.target],
+                    y: [0, 1],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Target',
+                    line: { color: '#52c41a', width: 1.5, dash: 'dot' },
+                  }] : []),
+                ].filter(Boolean)}
                 layout={{
                   margin: { t: 30, b: 40, l: 50, r: 30 },
                   height: 280,
