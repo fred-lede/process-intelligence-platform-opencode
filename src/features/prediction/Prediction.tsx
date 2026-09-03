@@ -253,7 +253,7 @@ export default function Prediction() {
                 }
                 const step = (max - min) / 100
                 return (
-                    <div style={{ marginBottom: 16 }}>
+                    <div key={inp} style={{ marginBottom: 16 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <span style={{ fontWeight: 600, fontSize: 13 }}>{inp}
                           <span style={{ fontWeight: 400, fontSize: 11, color: '#999', marginLeft: 8 }}>
