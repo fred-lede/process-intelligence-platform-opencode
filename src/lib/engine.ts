@@ -454,6 +454,13 @@ export interface ReportParams {
   dataset_id: string
   model_ids?: string[]
   format: 'html' | 'pdf' | 'excel'
+  spec?: Record<string, unknown> | null
+  lsl?: number | null
+  usl?: number | null
+  runs_length?: number
+  n_simulations?: number
+  seed?: number
+  enable_anomalies?: boolean
 }
 
 export interface ReportResult {

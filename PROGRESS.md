@@ -500,3 +500,13 @@
 - [x] **其他**：移除重複 listModels useEffect；DataImport 移除 deprecated index-based rowKey
 - **實機驗證：滑桿拖曳正常、數值合理 ✅**
 
+
+## 2026-09-04 — 完整 14 項規格報告輸出（§17.2）
+
+- [x] **ReportData 擴充**：新增 `time_range / spec / distribution_fits / anomalies / monte_carlo / credibility / process_window / row_count / column_count` 等欄位
+- [x] **handler 組裝**：`_handle_report_generate` 防禦式組裝 14 項（quality / distribution / anomalies / interactions / credibility / recommendations / monte_carlo / propose process window），新增 `_spec_serializable`、`_proposed_process_window` 輔助
+- [x] **best_model 回退**：無 validated/approved 模型時退而取第一個模型，避免報告缺最佳模型區塊
+- [x] **HTMLReportGenerator 重寫**：渲染全部 14 項內容（資料來源/欄位規格/資料品質/正常與異常分布/模型比較/方程式/交互作用/蒙地卡羅/可信度/建議製程窗口），含 severity badge、防 HTML 注入跳脫、percentile 表、異常貢獻排名
+- [x] **前端**：`ReportParams` 新增 `spec/lsl/usl/runs_length/n_simulations/seed/enable_anomalies`；`Report.tsx` 傳入 spec 與蒙地卡羅參數
+- [x] 保留既有報告單元測試（truncation、percentage、badge）並補齊格式
+- **驗證**：引擎測試 250 passed；smoke 端到端渲染 11 個 section 全出；tsc + vite build 通過

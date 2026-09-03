@@ -9,7 +9,7 @@ import { generateReport } from '../../lib/engine'
 export default function Report() {
   const { t } = useTranslation()
   const [messageApi, contextHolder] = message.useMessage()
-  const { importResult } = useDataPipelineStore()
+  const { importResult, spec } = useDataPipelineStore()
   const { models } = useModelStore()
 
   const [generating, setGenerating] = useState(false)
@@ -32,6 +32,13 @@ export default function Report() {
         dataset_id: datasetId,
         model_ids: modelIds.length > 0 ? modelIds : undefined,
         format,
+        spec: (spec as unknown as Record<string, unknown>) ?? undefined,
+        lsl: spec?.lsl,
+        usl: spec?.usl,
+        runs_length: 5,
+        n_simulations: 10000,
+        seed: 42,
+        enable_anomalies: true,
       })
 
       if (format === 'html' && result.content) {

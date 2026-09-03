@@ -15,14 +15,20 @@ class ReportData:
     # Dataset info
     dataset_id: str = ""
     source_file: str = ""
+    time_range: dict[str, str] = field(default_factory=dict)
     row_count: int = 0
     column_count: int = 0
     
     # Field roles
     fields: list[dict] = field(default_factory=list)
+    spec: dict[str, Any] = field(default_factory=dict)
     
     # Quality report
     quality_summary: dict[str, Any] = field(default_factory=dict)
+    
+    # Normal & abnormal distributions
+    distribution_fits: dict[str, list[dict]] = field(default_factory=dict)
+    anomalies: list[dict] = field(default_factory=list)
     
     # Model comparison
     model_comparison: list[dict] = field(default_factory=list)
@@ -31,8 +37,15 @@ class ReportData:
     # Interactions
     interactions: dict[str, Any] = field(default_factory=dict)
     
-    # Recommendations
+    # Monte Carlo
+    monte_carlo: dict[str, Any] = field(default_factory=dict)
+    
+    # Validation / credibility
+    credibility: dict[str, Any] = field(default_factory=dict)
+    
+    # Recommendations + proposed process window
     recommendations: list[dict] = field(default_factory=list)
+    process_window: dict[str, Any] = field(default_factory=dict)
     
     # Metadata
     version: str = "1.0.0"

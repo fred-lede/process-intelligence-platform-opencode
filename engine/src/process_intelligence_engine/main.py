@@ -605,7 +605,12 @@ def _handle_validation_full(params: dict) -> dict:
 
 
 def _handle_report_generate(params: dict) -> dict:
-    """Generate a report from project data."""
+    """Generate a report from project data.
+
+    Covers the full 14-section report specification (spec 17.2). Each
+    analysis section is assembled defensively so a missing/invalid piece
+    degrades that section only, never the whole report.
+    """
     project_name = params.get("project_name", "Untitled Project")
     operator = params.get("operator", "Unknown")
     output_format = params.get("format", "html")  # html | pdf | excel
@@ -615,6 +620,12 @@ def _handle_report_generate(params: dict) -> dict:
         raise ValueError("dataset_id is required")
 
     df = REGISTRY.get(dataset_id)
+    meta = REGISTRY.meta(dataset_id)
+
+    spec = params.get("spec") or {}
+    lsl = params.get("lsl")
+    usl = params.get("usl")
+    runs_length = int(params.get("runs_length", 5))
 
     model_ids = params.get("model_ids", [])
     model_comparison = []
@@ -633,6 +644,8 @@ def _handle_report_generate(params: dict) -> dict:
                     best_model = fit.to_dto()
             except Exception:
                 pass
+        if not best_model and model_comparison:
+            best_model = MODEL_REGISTRY._get_unlocked(model_ids[0]).to_dto()
 
     fields_list = []
     if model_ids:
@@ -650,15 +663,129 @@ def _handle_report_generate(params: dict) -> dict:
             except Exception:
                 pass
 
+    # ---- Section assembly (defensive: each independent) -------------------
+    quality_summary = {}
+    try:
+        q = run_quality_checks(df)
+        quality_summary = {
+            "row_count": q.row_count,
+            "column_count": q.column_count,
+            "issue_count": len(q.issues),
+            "issues_by_severity": {
+                k: int(v) for k, v in q.issues_by_severity().items()
+            },
+            "issues": [
+                {
+                    "check": i.check.value,
+                    "column": i.column,
+                    "severity": i.severity.value,
+                    "message": i.message,
+                    "detail": i.detail,
+                }
+                for i in q.issues
+            ],
+        }
+    except Exception:
+        pass
+
+    time_range = {}
+    try:
+        num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+    except Exception:
+        num_cols = []
+
+    distribution_fits = {}
+    try:
+        for col in num_cols:
+            vals = df[col].dropna().tolist()
+            if len(vals) < 5:
+                continue
+            fits = fit_best_distribution(vals, top_n=1)
+            if fits:
+                f = fits[0]
+                distribution_fits[col] = [{
+                    "name": f.name,
+                    "params": f.params,
+                    "aic": f.aic,
+                    "ks_p_value": f.ks_p_value,
+                    "skewness": f.skewness,
+                    "kurtosis": f.kurtosis,
+                }]
+    except Exception:
+        pass
+
+    anomalies = []
+    try:
+        scenarios = detect_anomaly_scenarios(df, spec=spec, runs_length=runs_length)
+        anomalies = [s.to_dto() for s in scenarios]
+    except Exception:
+        pass
+
+    interactions = {}
+    credibility = {}
+    recommendations = []
+    process_window = {}
+    monte_carlo_result = {}
+    if best_model:
+        try:
+            interactions = compute_interactions(MODEL_REGISTRY._get_unlocked(best_model["model_id"]), df)
+        except Exception:
+            pass
+        try:
+            credibility = compute_credibility(MODEL_REGISTRY._get_unlocked(best_model["model_id"]), df)
+        except Exception:
+            pass
+        try:
+            rec = recommend_experiments_full(MODEL_REGISTRY._get_unlocked(best_model["model_id"]), df, interactions, {})
+            recommendations = rec.get("recommendations", []) if isinstance(rec, dict) else []
+        except Exception:
+            pass
+        try:
+            window = _proposed_process_window(df, best_model)
+            if window:
+                process_window = window
+        except Exception:
+            pass
+        try:
+            mc = run_monte_carlo(
+                df=df,
+                model_type=best_model["model_type"],
+                coefficients=best_model.get("coefficients") or {},
+                input_columns=best_model.get("inputs") or [],
+                output_column=best_model.get("target", ""),
+                n_simulations=int(params.get("n_simulations", 10000)),
+                seed=int(params.get("seed", 42)),
+                enable_anomalies=bool(params.get("enable_anomalies", False)),
+                anomalies=anomalies,
+                lsl=lsl,
+                usl=usl,
+            )
+            monte_carlo_result = {
+                k: v for k, v in mc.items() if k != "output_values"
+            }
+        except Exception:
+            pass
+
     report_data = ReportData(
         project_name=project_name,
         operator=operator,
         dataset_id=dataset_id,
+        source_file=meta.get("file_path", ""),
         row_count=len(df),
         column_count=len(df.columns),
+        time_range=time_range,
         fields=fields_list,
+        spec=_spec_serializable(spec, lsl, usl),
+        quality_summary=quality_summary,
+        distribution_fits=distribution_fits,
+        anomalies=anomalies,
         model_comparison=model_comparison,
         best_model=best_model,
+        interactions=interactions,
+        monte_carlo=monte_carlo_result,
+        credibility=credibility,
+        recommendations=recommendations,
+        process_window=process_window,
     )
 
     if output_format == "html":
@@ -675,6 +802,49 @@ def _handle_report_generate(params: dict) -> dict:
         return {"format": "excel", "content_base64": result.hex()}
     else:
         raise ValueError(f"Unsupported format: {output_format}")
+
+
+def _spec_serializable(spec: dict, lsl, usl) -> dict:
+    """Normalize spec into a JSON-serializable form, merging explicit LSL/USL."""
+    out: dict = {}
+    for k, v in spec.items():
+        if k == "limits" and isinstance(v, dict):
+            out["limits"] = {
+                subk: (float(subv) if isinstance(subv, (int, float)) else subv)
+                for subk, subv in v.items()
+            }
+        else:
+            out[str(k)] = v
+    if lsl is not None or usl is not None:
+        limits = dict(out.get("limits") or {})
+        if lsl is not None:
+            limits["lsl"] = float(lsl)
+        if usl is not None:
+            limits["usl"] = float(usl)
+        out["limits"] = limits
+    return out
+
+
+def _proposed_process_window(df: pd.DataFrame, best_model: dict) -> dict:
+    """Derive a suggested process window from data stats around the model inputs."""
+    limits = {}
+    for col in best_model.get("inputs") or []:
+        if col not in df.columns:
+            continue
+        series = df[col].dropna()
+        if len(series) == 0 or not pd.api.types.is_numeric_dtype(series):
+            continue
+        mean = float(series.mean())
+        std = float(series.std()) if len(series) > 1 else 0.0
+        if std and std > 0:
+            limits[col] = {
+                "min": round(mean - 3 * std, 4),
+                "max": round(mean + 3 * std, 4),
+                "center": round(mean, 4),
+            }
+    if not limits:
+        return {}
+    return {"column_limits": limits, "basis": "mean +/- 3 sigma"}
 
 
 def _handle_doe_generate(params: dict) -> dict:
