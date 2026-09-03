@@ -170,7 +170,7 @@ export default function Prediction() {
                   const max = stats?.max ?? (inputValues[inp] ?? 0) + 3 * (stats?.std ?? 5)
                   const val = inputValues[inp] ?? 0
                   return (
-                    <div key={inp} style={{ marginBottom: 12 }}>
+                    <div key={inp} style={{ marginBottom: 12, width: '100%' }}>
                       <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                         <Typography.Text strong>{inp}</Typography.Text>
                         <InputNumber
