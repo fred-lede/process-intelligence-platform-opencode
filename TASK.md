@@ -145,6 +145,15 @@
 - **i18n** en/zh-TW：project.*（53 keys）
 - 驗證 — 250 passed, 1 skipped (71% coverage), tsc/build clean
 
+### Phase 11i — 製程流程圖 (spec 11A)
+- **ProcessFlow.tsx** — SVG 流程圖：拓撲排序佈局 + 節點繪製 + 箭頭邊 + 選中高亮
+- **節點管理**：新增 Modal（名稱/類型/重工政策）+ 刪除（含確認）
+- **連接管理**：多選連接目標節點 + 斷開連接
+- **圖形驗證**：環狀檢測 + 孤立節點警告（`validate_flow_graph` IPC）
+- **Sidebar** 新增「製程流程」導航項目
+- **i18n** en/zh-TW：processFlow.*（31 keys）
+- 驗證 — 250 passed, 1 skipped (70% coverage), tsc/build clean
+
 ---
 **專案總體**：
 - **代码行數**：~13,649 行（src + engine/src）
