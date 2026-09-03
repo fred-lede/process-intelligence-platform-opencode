@@ -121,3 +121,10 @@
 - **GRR UI** — Exploration 新增 GRR tab（選擇測量/零件/操作者欄位，分析結果 + 警告）
 - i18n en/zh-TW：exploration.timeSeriesTab/GRR keys, grr.*
 - 驗證 — 250 passed, 1 skipped (76% coverage), tsc/build clean
+
+### Phase 11f — 多語言 es-MX
+- **Español (México) 翻譯** — `es-MX.json`（541 keys，22 sections）
+- `i18n/index.ts` 註冊 es-MX
+- Sidebar 語言選單新增「Español (México)」選項
+- 符合規格 19 多語言要求
+- tsc/build clean
