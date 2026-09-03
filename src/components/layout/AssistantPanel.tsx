@@ -16,11 +16,16 @@ export default function AssistantPanel() {
   const [loading, setLoading] = useState(false)
   const [health, setHealth] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const refreshKey = useAIStore((s) => s.refreshKey)
 
   useEffect(() => {
-
+    loadModels()
     checkHealth()
   }, [])
+
+  useEffect(() => {
+    if (refreshKey > 0) checkHealth()
+  }, [refreshKey])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
