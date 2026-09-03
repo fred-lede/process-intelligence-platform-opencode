@@ -187,9 +187,6 @@ export default function Prediction() {
                       value={Number(val)}
                       onChange={v => handleInputChange(inp, Number(v))}
                       step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
-                      trackStyle={[{ background: '#1677ff' }]}
-                      handleStyle={[{ borderColor: '#1677ff', background: '#1677ff' }]}
-                      railStyle={{ background: '#e8e8e8' }}
                     />
                     <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
                       <span style={{ fontSize: 11, color: '#999' }}>Min: {Number(min).toFixed(2)}</span>
