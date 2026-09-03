@@ -46,13 +46,20 @@ export default function AssistantPanel() {
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setLoading(true)
+    // Let React flush the loading state and the browser paint before awaiting
+    // (otherwise React 18 auto-batching can skip the loading frame on fast calls).
+    await new Promise(r => setTimeout(r, 0))
 
+    const started = Date.now()
     try {
       const result = await aiChat([...messages, userMessage])
       setMessages(prev => [...prev, { role: 'assistant', content: result.response ?? `Error: ${result.error ?? 'Unknown error'}` }])
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'Failed to connect to AI assistant.' }])
     } finally {
+      // Keep the spinner visible for a minimum time so fast replies don't hide it instantly.
+      const remaining = Math.max(0, 400 - (Date.now() - started))
+      await new Promise(r => setTimeout(r, remaining))
       setLoading(false)
     }
   }
