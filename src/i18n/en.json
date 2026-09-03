@@ -589,5 +589,30 @@
       "PV": "PV",
       "TV": "TV"
     }
+  },
+  "cloud": {
+    "title": "Cloud Upload",
+    "preview": "Preview Upload",
+    "confirm": "Confirm Upload",
+    "confirmTitle": "Confirm Cloud Upload",
+    "rows": "Rows",
+    "totalCols": "Total Columns",
+    "transmitted": "To Transmit",
+    "masked": "Masked",
+    "excluded": "Excluded",
+    "hash": "Upload Hash",
+    "none": "None",
+    "purpose": "Upload Purpose",
+    "modelVersion": "Model Version",
+    "noise": "Noise σ",
+    "time": "Time",
+    "operator": "Operator",
+    "provider": "Provider",
+    "uploadSuccess": "Upload recorded successfully",
+    "uploadError": "Failed to record upload",
+    "warn": "Data will be de-identified before upload",
+    "desc": "Before uploading to cloud AI, data is masked and anonymized. You must confirm before any data leaves your system.",
+    "confirmWarn": "Confirm de-identified upload",
+    "confirmDesc": "The following data will be sent to the cloud AI provider after de-identification:"
   }
 }

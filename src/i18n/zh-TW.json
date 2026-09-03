@@ -589,5 +589,30 @@
       "PV": "PV",
       "TV": "TV"
     }
+  },
+  "cloud": {
+    "title": "雲端上傳",
+    "preview": "預覽上傳",
+    "confirm": "確認上傳",
+    "confirmTitle": "確認雲端上傳",
+    "rows": "筆數",
+    "totalCols": "總欄位數",
+    "transmitted": "將傳輸欄位",
+    "masked": "已遮罩欄位",
+    "excluded": "已排除欄位",
+    "hash": "上傳雜湊",
+    "none": "無",
+    "purpose": "上傳目的",
+    "modelVersion": "模型版本",
+    "noise": "噪音 σ",
+    "time": "時間",
+    "operator": "操作者",
+    "provider": "提供者",
+    "uploadSuccess": "上傳紀錄已成功儲存",
+    "uploadError": "無法記錄上傳",
+    "warn": "資料將去識別化後上傳",
+    "desc": "上傳至雲端 AI 前，資料會被遮罩與匿名化。任何資料離開系統前都必須獲得您的確認。",
+    "confirmWarn": "確認去識別化上傳",
+    "confirmDesc": "以下資料將去識別化後傳送至雲端 AI 提供者："
   }
 }

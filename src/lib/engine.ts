@@ -1040,3 +1040,74 @@ export interface GrrParams {
 export async function analyzeGRR(params: GrrParams): Promise<GrrResult> {
   return engineCall<GrrResult>('data/grr', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 11g: Cloud Upload De-identification (spec 11A, 24) ----------------
+
+export interface UploadPreview {
+  dataset_id: string
+  row_count: number
+  total_columns: number
+  transmitted_columns: string[]
+  masked_columns: string[]
+  excluded_columns: string[]
+  mask_strategies: Record<string, string>
+  noise_config: Record<string, { std: number; method: string }>
+  upload_hash: string
+  timestamp: string
+}
+
+export interface CloudPreviewParams {
+  dataset_id: string
+  sensitive_columns?: string[]
+  excluded_columns?: string[]
+  noise_std?: number
+  seed?: number
+}
+
+export interface CloudUploadResult {
+  record_id: string
+  upload_hash: string
+  row_count: number
+  columns_uploaded: string[]
+  masked_columns: string[]
+  excluded_columns: string[]
+}
+
+export interface CloudUploadParams {
+  dataset_id: string
+  sensitive_columns?: string[]
+  excluded_columns?: string[]
+  noise_std?: number
+  seed?: number
+  operator: string
+  provider: string
+  model_version: string
+  purpose: string
+}
+
+export interface UploadRecord {
+  record_id: string
+  operator: string
+  provider: string
+  model_version: string
+  dataset_id: string
+  row_count: number
+  columns_uploaded: string[]
+  mask_rules: Record<string, string>
+  noise_rules: Record<string, { std: number; method: string }>
+  upload_hash: string
+  purpose: string
+  timestamp: string
+}
+
+export async function previewCloudUpload(params: CloudPreviewParams): Promise<UploadPreview> {
+  return engineCall<UploadPreview>('cloud/preview', params as unknown as Record<string, unknown>)
+}
+
+export async function confirmCloudUpload(params: CloudUploadParams): Promise<CloudUploadResult> {
+  return engineCall<CloudUploadResult>('cloud/upload', params as unknown as Record<string, unknown>)
+}
+
+export async function listCloudUploadRecords(params: { dataset_id?: string; operator?: string } = {}): Promise<{ records: UploadRecord[] }> {
+  return engineCall<{ records: UploadRecord[] }>('cloud/records', params as unknown as Record<string, unknown>)
+}

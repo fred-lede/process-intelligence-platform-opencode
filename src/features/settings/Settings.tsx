@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message } from 'antd'
+import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message, InputNumber, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons'
-import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing } from '../../lib/engine'
+import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing, previewCloudUpload, confirmCloudUpload, listCloudUploadRecords, type UploadPreview, type UploadRecord } from '../../lib/engine'
 import { useAIStore } from '../../stores/aiStore'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
@@ -33,6 +33,17 @@ export default function Settings() {
   const [registerForm] = Form.useForm()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
+
+  // Cloud upload state
+  const [cloudPreview, setCloudPreview] = useState<UploadPreview | null>(null)
+  const [cloudLoading, setCloudLoading] = useState(false)
+  const [cloudConfirmOpen, setCloudConfirmOpen] = useState(false)
+  const [cloudConfirming, setCloudConfirming] = useState(false)
+  const [cloudHistory, setCloudHistory] = useState<UploadRecord[]>([])
+  const [cloudNoiseStd, setCloudNoiseStd] = useState(0)
+  const [cloudPurpose, setCloudPurpose] = useState('')
+  const [cloudProvider, setCloudProvider] = useState('custom')
+  const [cloudModelVersion, setCloudModelVersion] = useState('unknown')
 
   useEffect(() => {
     loadData()
@@ -360,6 +371,184 @@ export default function Settings() {
           </Form.Item>
           <Button type="primary" htmlType="submit" loading={loading} block>{t('settings.register')}</Button>
         </Form>
+      </Modal>
+
+      {/* Cloud Upload Section */}
+      <Card
+        size="small"
+        title={
+          <Space>
+            <CloudOutlined />
+            {t('cloud.title')}
+          </Space>
+        }
+      >
+        <Alert
+          type="info"
+          showIcon
+          message={t('cloud.warn')}
+          description={t('cloud.desc')}
+          style={{ marginBottom: 12 }}
+        />
+        <Space direction="vertical" style={{ width: '100%' }} size="small">
+          <Space wrap>
+            <Input
+              placeholder={t('cloud.purpose')}
+              value={cloudPurpose}
+              onChange={e => setCloudPurpose(e.target.value)}
+              style={{ width: 200 }}
+            />
+            <Select
+              value={cloudProvider}
+              onChange={setCloudProvider}
+              options={[
+                { value: 'ollama', label: 'Ollama (local)' },
+                { value: 'openai', label: 'OpenAI' },
+                { value: 'azure', label: 'Azure' },
+                { value: 'custom', label: 'Custom' },
+              ]}
+              style={{ width: 140 }}
+            />
+            <Input
+              placeholder={t('cloud.modelVersion')}
+              value={cloudModelVersion}
+              onChange={e => setCloudModelVersion(e.target.value)}
+              style={{ width: 140 }}
+            />
+            <span style={{ color: '#6b7280', fontSize: 12 }}>{t('cloud.noise')}</span>
+            <InputNumber
+              value={cloudNoiseStd}
+              onChange={v => setCloudNoiseStd(v ?? 0)}
+              min={0}
+              max={1}
+              step={0.1}
+              style={{ width: 80 }}
+            />
+            <Button
+              type="primary"
+              icon={<CloudOutlined />}
+              loading={cloudLoading}
+              onClick={async () => {
+                setCloudLoading(true)
+                try {
+                  const result = await previewCloudUpload({ dataset_id: 'demo_dataset', noise_std: cloudNoiseStd })
+                  setCloudPreview(result)
+                } catch {
+                  // engine may not be available in test
+                } finally {
+                  setCloudLoading(false)
+                }
+              }}
+            >
+              {t('cloud.preview')}
+            </Button>
+            <Button
+              danger
+              disabled={!cloudPreview}
+              onClick={() => setCloudConfirmOpen(true)}
+            >
+              {t('cloud.confirm')}
+            </Button>
+          </Space>
+
+          {cloudPreview && (
+            <Descriptions size="small" column={2} bordered style={{ marginTop: 8 }}>
+              <Descriptions.Item label={t('cloud.rows')}>{cloudPreview.row_count}</Descriptions.Item>
+              <Descriptions.Item label={t('cloud.totalCols')}>{cloudPreview.total_columns}</Descriptions.Item>
+              <Descriptions.Item label={t('cloud.transmitted')}>
+                <Space wrap>
+                  {cloudPreview.transmitted_columns.map(c => (
+                    <Tag key={c} color="green">{c}</Tag>
+                  ))}
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label={t('cloud.masked')}>
+                <Space wrap>
+                  {cloudPreview.masked_columns.map(c => (
+                    <Tag key={c} color="orange">{c}</Tag>
+                  ))}
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label={t('cloud.excluded')} span={2}>
+                {cloudPreview.excluded_columns.length > 0
+                  ? cloudPreview.excluded_columns.map(c => <Tag key={c} color="default">{c}</Tag>)
+                  : t('cloud.none')
+                }
+              </Descriptions.Item>
+              <Descriptions.Item label={t('cloud.hash')} span={2}>
+                <Typography.Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>
+                  {cloudPreview.upload_hash}
+                </Typography.Text>
+              </Descriptions.Item>
+            </Descriptions>
+          )}
+
+          {cloudHistory.length > 0 && (
+            <Table
+              size="small"
+              dataSource={cloudHistory}
+              rowKey="record_id"
+              pagination={{ pageSize: 5 }}
+              columns={[
+                { title: t('cloud.time'), dataIndex: 'timestamp', width: 160, render: (v: string) => new Date(v).toLocaleString() },
+                { title: t('cloud.operator'), dataIndex: 'operator', width: 100 },
+                { title: t('cloud.provider'), dataIndex: 'provider', width: 100 },
+                { title: t('cloud.rows'), dataIndex: 'row_count', width: 80 },
+                { title: t('cloud.purpose'), dataIndex: 'purpose', ellipsis: true },
+              ]}
+            />
+          )}
+        </Space>
+      </Card>
+
+      {/* Cloud Upload Confirmation Modal */}
+      <Modal
+        title={t('cloud.confirmTitle')}
+        open={cloudConfirmOpen}
+        confirmLoading={cloudConfirming}
+        onOk={async () => {
+          if (!cloudPreview) return
+          setCloudConfirming(true)
+          try {
+            await confirmCloudUpload({
+              dataset_id: 'demo_dataset',
+              noise_std: cloudNoiseStd,
+              operator: currentUser.username || 'anonymous',
+              provider: cloudProvider,
+              model_version: cloudModelVersion,
+              purpose: cloudPurpose,
+            })
+            messageApi.success(t('cloud.uploadSuccess'))
+            setCloudConfirmOpen(false)
+            setCloudPreview(null)
+            const records = await listCloudUploadRecords()
+            setCloudHistory(records.records)
+          } catch {
+            messageApi.error(t('cloud.uploadError'))
+          } finally {
+            setCloudConfirming(false)
+          }
+        }}
+        onCancel={() => setCloudConfirmOpen(false)}
+      >
+        <Alert
+          type="warning"
+          showIcon
+          message={t('cloud.confirmWarn')}
+          description={
+            <div>
+              <p>{t('cloud.confirmDesc')}</p>
+              {cloudPreview && (
+                <Space direction="vertical" style={{ width: '100%', marginTop: 8 }}>
+                  <div><strong>{t('cloud.transmitted')}:</strong> {cloudPreview.transmitted_columns.join(', ')}</div>
+                  <div><strong>{t('cloud.masked')}:</strong> {cloudPreview.masked_columns.join(', ') || t('cloud.none')}</div>
+                  <div><strong>{t('cloud.rows')}:</strong> {cloudPreview.row_count}</div>
+                  <div><strong>{t('cloud.hash')}:</strong> <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{cloudPreview.upload_hash}</span></div>
+                </Space>
+              )}
+            </div>
+          }
+        />
       </Modal>
     </>
   )

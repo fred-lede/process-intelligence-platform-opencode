@@ -31,6 +31,12 @@ from process_intelligence_engine.data.field_detector import detect_fields
 from process_intelligence_engine.data.importer import import_file
 from process_intelligence_engine.data.quality import run_quality_checks
 from process_intelligence_engine.data.grr import analyze_grr
+from process_intelligence_engine.data.deidentify import (
+    generate_upload_preview,
+    apply_deidentification,
+    record_upload,
+    list_upload_records,
+)
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
@@ -1097,6 +1103,13 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "data/grr":
         return _handle_grr(params)
 
+    if method == "cloud/preview":
+        return _handle_cloud_preview(params)
+    if method == "cloud/upload":
+        return _handle_cloud_upload(params)
+    if method == "cloud/records":
+        return _handle_cloud_records(params)
+
     raise ValueError(f"Unknown method: {method}")
 
 
@@ -1303,6 +1316,57 @@ def _handle_grr(params: dict) -> dict:
 
     result = analyze_grr(df, measurement_column, part_column, operator_column)
     return _plain_types(result.to_dict())
+
+
+def _handle_cloud_preview(params: dict) -> dict:
+    """Generate a de-identification preview for cloud upload."""
+    dataset_id = params["dataset_id"]
+    df = REGISTRY.get(dataset_id)
+    sensitive_columns = params.get("sensitive_columns", [])
+    excluded_columns = params.get("excluded_columns", [])
+    noise_std = float(params.get("noise_std", 0.0))
+    seed = int(params.get("seed", 42))
+
+    preview = generate_upload_preview(
+        df, dataset_id, sensitive_columns, excluded_columns, noise_std, seed
+    )
+    return _plain_types(preview.to_dict())
+
+
+def _handle_cloud_upload(params: dict) -> dict:
+    """Confirm and record a cloud upload with de-identification."""
+    dataset_id = params["dataset_id"]
+    df = REGISTRY.get(dataset_id)
+    sensitive_columns = params.get("sensitive_columns", [])
+    excluded_columns = params.get("excluded_columns", [])
+    noise_std = float(params.get("noise_std", 0.0))
+    seed = int(params.get("seed", 42))
+    operator = params.get("operator", "anonymous")
+    provider = params.get("provider", "custom")
+    model_version = params.get("model_version", "unknown")
+    purpose = params.get("purpose", "")
+
+    preview = generate_upload_preview(
+        df, dataset_id, sensitive_columns, excluded_columns, noise_std, seed
+    )
+    record = record_upload(operator, provider, model_version, preview, purpose)
+
+    return _plain_types({
+        "record_id": record.record_id,
+        "upload_hash": record.upload_hash,
+        "row_count": record.row_count,
+        "columns_uploaded": record.columns_uploaded,
+        "masked_columns": preview.masked_columns,
+        "excluded_columns": preview.excluded_columns,
+    })
+
+
+def _handle_cloud_records(params: dict) -> dict:
+    """List cloud upload records."""
+    dataset_id = params.get("dataset_id")
+    operator = params.get("operator")
+    records = list_upload_records(dataset_id, operator)
+    return {"records": records}
 
 
 def _read_request() -> dict | None:
