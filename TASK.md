@@ -83,6 +83,14 @@
 - Sidebar + App.tsx 路由整合
 - 驗證 — 250 passed, 1 skipped (88% coverage), tsc/build clean
 
+### Phase 10f — Interactive Prediction 滑桿修復 (bug fix)
+- *根因*：`importer.py` 的 `to_dto()` 只輸出 `numeric/non_null_count/unique_count`，未輸出 `mean/std/min/max` → 前端拿不到真實統計，滑桿範圍計算失效（離群資料下變成天文數字，bar/藍點卡住不動）
+- *修復*：`to_dto()` 補上 `mean/std/min/max` 欄位（dataclass 與計算原已存在，僅漏輸出）
+- *Prediction.tsx*：滑桿範圍改用 `mean ± 3σ`（而非資料原始 min/max，避免離群污染）+ spread cap 防護；棄用原生 `<input type=range>` / antd Slider（WKWebView 拖曳支援差），改為自訂 pointer-capture `DraggableSlider`（無 useEffect window-listener 競態）
+- *其他*：移除重複 listModels useEffect；DataImport Table 移除 deprecated index-based rowKey
+- 引擎測試 250 passed; tsc/build clean
+- **實機驗證：滑桿拖曳正常、數值合理 ✅**
+
 ### Phase 11 — 驗證實驗 (Validation Lab)
 - `main.py` — ExperimentRecord + ExperimentRegistry + IPC handlers (record/list/get)
 - `engine.ts` — ExperimentRecord type + recordExperiment/listExperiments/getExperiment APIs
@@ -157,7 +165,7 @@
 ---
 **專案總體**：
 - **代碼行數**：~15,100 行
-- **Commits**：202
+- **Commits**：220+
 - **測試**：250 passed, 1 skipped（70% coverage）
 - **Phase 0–11i**：全部完成 ✅
 - **多語言**：en / zh-TW / es-MX（3 種）✅

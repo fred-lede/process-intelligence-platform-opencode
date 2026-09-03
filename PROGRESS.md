@@ -491,3 +491,12 @@
 - [x] i18n：processFlow.*（31 keys）
 - 符合規格 11A 製程節點可配置要求
 
+## 2026-09-03 — Interactive Prediction 滑桿修復
+
+- [x] **根因**：`importer.py` `to_dto()` 未輸出 `mean/std/min/max` → 前端拿不到真實統計，離群資料下滑桿範圍變天文數字、bar/藍點卡住
+- [x] **引擎**：`to_dto()` 補上 `mean/std/min/max` 欄位
+- [x] **Prediction.tsx**：滑桿範圍改 `mean ± 3σ`（含離群 cap 防護）
+- [x] **自訂 DraggableSlider**：棄用原生 range / antd Slider（WKWebView 拖曳支援差），改 pointer-capture 拖曳，無 useEffect 競態
+- [x] **其他**：移除重複 listModels useEffect；DataImport 移除 deprecated index-based rowKey
+- **實機驗證：滑桿拖曳正常、數值合理 ✅**
+
