@@ -299,12 +299,12 @@ export default function SPC() {
         <Alert
           type="info"
           message={t('spc.analyze')}
-          description="t('spc.selectColumnHint')"
+          description={t('spc.selectColumnHint')}
           showIcon
         />
       )}
       {!importResult && (
-        <Alert type="warning" message="t('spc.noDataHint')" description="SPC 需要已有專案資料。" showIcon />
+        <Alert type="warning"           message={t('spc.noDataHint')} description="SPC 需要已有專案資料。" showIcon />
       )}
     </div>
   )
