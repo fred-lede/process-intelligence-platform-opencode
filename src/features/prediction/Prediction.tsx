@@ -188,6 +188,7 @@ export default function Prediction() {
                         value={val}
                         onChange={v => handleInputChange(inp, v)}
                         step={(max - min) / 100}
+                        style={{ width: '100%' }}
                       />
                       <Space>
                         <Typography.Text type="secondary" style={{ fontSize: 11 }}>Min: {min.toFixed(2)}</Typography.Text>
