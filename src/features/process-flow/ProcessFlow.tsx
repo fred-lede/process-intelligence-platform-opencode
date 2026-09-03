@@ -122,6 +122,35 @@ export default function ProcessFlow() {
   const [viewportSize, setViewportSize] = useState({ w: 900, h: 500 })
   const didInitialFit = useRef(false)
   const panDrag = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
+  const [dragging, setDragging] = useState<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null)
+
+  const startNodeDrag = (e: React.PointerEvent, node: FlowNode) => {
+    e.stopPropagation()
+    setDragging({
+      id: node.process_node_id,
+      startX: e.clientX, startY: e.clientY,
+      origX: node.x ?? 0, origY: node.y ?? 0,
+    })
+    ;(e.target as Element).closest('g')?.setPointerCapture?.(e.pointerId)
+  }
+
+  const persistNodePosition = async () => {
+    if (!dragging) return
+    const node = graph.nodes.find(n => n.process_node_id === dragging.id)
+    if (!node) return
+    const original = { x: dragging.origX, y: dragging.origY }
+    try {
+      await updateProcessNode(node.process_node_id, { x: node.x, y: node.y })
+    } catch {
+      setGraph(prev => ({
+        ...prev,
+        nodes: prev.nodes.map(n =>
+          n.process_node_id === node.process_node_id ? { ...n, ...original } : n,
+        ),
+      }))
+      messageApi.error('Failed to save position')
+    }
+  }
 
   useEffect(() => { void loadData() }, [])
 
@@ -219,6 +248,19 @@ export default function ProcessFlow() {
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
+    if (dragging) {
+      const dx = (e.clientX - dragging.startX) / zoom
+      const dy = (e.clientY - dragging.startY) / zoom
+      setGraph(prev => ({
+        ...prev,
+        nodes: prev.nodes.map(n =>
+          n.process_node_id === dragging.id
+            ? { ...n, x: Math.round(dragging.origX + dx), y: Math.round(dragging.origY + dy) }
+            : n,
+        ),
+      }))
+      return
+    }
     if (panDrag.current) {
       const dx = e.clientX - panDrag.current.sx
       const dy = e.clientY - panDrag.current.sy
@@ -226,7 +268,15 @@ export default function ProcessFlow() {
     }
   }
 
-  const handlePointerUp = () => { panDrag.current = null }
+  const handlePointerUp = () => {
+    if (dragging) {
+      void persistNodePosition()
+      setDragging(null)
+      panDrag.current = null
+      return
+    }
+    panDrag.current = null
+  }
 
   const handleWheel = (e: React.WheelEvent) => {
     const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect()
@@ -388,8 +438,9 @@ export default function ProcessFlow() {
                   <g
                     key={node.process_node_id}
                     data-node={node.process_node_id}
-                    onClick={() => setSelectedNodeId(node.process_node_id)}
-                    style={{ cursor: 'pointer' }}
+                    onClick={() => { if (!dragging) setSelectedNodeId(node.process_node_id) }}
+                    onPointerDown={(e) => startNodeDrag(e, node)}
+                    style={{ cursor: 'grab' }}
                   >
                     {/* Selection ring */}
                     {isSelected && (
