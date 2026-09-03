@@ -81,13 +81,13 @@ export default function Settings() {
     loadModels()
     if (aiConfig.provider === 'ollama') {
       aiForm.setFieldValue('model', 'gemma4:e2b-mlx')
-      setAiConfig(prev => ({ ...prev, provider: 'ollama', base_url: prev.base_url === 'http://localhost:8000/v1' ? 'http://localhost:11434' : prev.base_url, model: 'gemma4:e2b-mlx', api_key: '' }))
+      setAiConfig(prev => ({ ...prev, provider: 'ollama', model: 'gemma4:e2b-mlx', api_key: '' }))
     } else if (aiConfig.provider === 'openai') {
       aiForm.setFieldValue('model', 'gpt-4o')
-      setAiConfig(prev => ({ ...prev, provider: 'openai', base_url: prev.base_url === 'http://localhost:8000/v1' ? 'https://api.openai.com' : prev.base_url, model: 'gpt-4o', api_key: prev.api_key }))
+      setAiConfig(prev => ({ ...prev, provider: 'openai', model: 'gpt-4o' }))
     } else if (aiConfig.provider === 'custom') {
       aiForm.setFieldValue('model', '')
-      setAiConfig(prev => ({ ...prev, provider: 'custom', base_url: prev.base_url === 'http://localhost:11434' || prev.base_url === 'https://api.openai.com' ? prev.base_url : 'http://localhost:8000/v1', model: '', api_key: prev.api_key }))
+      setAiConfig(prev => ({ ...prev, provider: 'custom', model: '' }))
     }
   }, [aiConfig.provider])
 
