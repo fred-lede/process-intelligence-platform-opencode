@@ -121,6 +121,159 @@ MODEL_REGISTRY = ModelRegistry()
 AUTH_MANAGER = AuthManager()
 
 
+class ExperimentRecord:
+    """Immutable record of a single validation experiment run."""
+
+    def __init__(
+        self,
+        experiment_id: str,
+        model_id: str,
+        planned_inputs: dict[str, float],
+        actual_inputs: dict[str, float],
+        predicted_output: float,
+        actual_output: float,
+        result: str,
+        operator: str,
+        notes: str,
+        timestamp: str,
+    ) -> None:
+        self.experiment_id = experiment_id
+        self.model_id = model_id
+        self.planned_inputs = planned_inputs
+        self.actual_inputs = actual_inputs
+        self.predicted_output = predicted_output
+        self.actual_output = actual_output
+        self.prediction_error = actual_output - predicted_output
+        self.result = result
+        self.operator = operator
+        self.notes = notes
+        self.timestamp = timestamp
+
+
+class ExperimentRegistry:
+    """In-memory registry of validation experiment records."""
+
+    def __init__(self) -> None:
+        self._experiments: dict[str, ExperimentRecord] = {}
+        self._lock = threading.Lock()
+
+    def record(self, record: ExperimentRecord) -> str:
+        with self._lock:
+            self._experiments[record.experiment_id] = record
+        return record.experiment_id
+
+    def get(self, experiment_id: str) -> ExperimentRecord:
+        with self._lock:
+            if experiment_id not in self._experiments:
+                raise KeyError(f"Unknown experiment_id: {experiment_id}")
+            return self._experiments[experiment_id]
+
+    def list_by_model(self, model_id: str) -> list[dict]:
+        with self._lock:
+            return [
+                {
+                    "experiment_id": e.experiment_id,
+                    "model_id": e.model_id,
+                    "planned_inputs": e.planned_inputs,
+                    "actual_inputs": e.actual_inputs,
+                    "predicted_output": e.predicted_output,
+                    "actual_output": e.actual_output,
+                    "prediction_error": e.prediction_error,
+                    "result": e.result,
+                    "operator": e.operator,
+                    "notes": e.notes,
+                    "timestamp": e.timestamp,
+                }
+                for e in self._experiments.values()
+                if e.model_id == model_id
+            ]
+
+    def list_all(self) -> list[dict]:
+        with self._lock:
+            return [
+                {
+                    "experiment_id": e.experiment_id,
+                    "model_id": e.model_id,
+                    "planned_inputs": e.planned_inputs,
+                    "actual_inputs": e.actual_inputs,
+                    "predicted_output": e.predicted_output,
+                    "actual_output": e.actual_output,
+                    "prediction_error": e.prediction_error,
+                    "result": e.result,
+                    "operator": e.operator,
+                    "notes": e.notes,
+                    "timestamp": e.timestamp,
+                }
+                for e in self._experiments.values()
+            ]
+
+
+EXPERIMENT_REGISTRY = ExperimentRegistry()
+
+
+def _handle_experiment_record(params: dict) -> dict:
+    """Record a validation experiment result."""
+    import datetime
+
+    experiment_id = str(uuid.uuid4())
+    model_id = params["model_id"]
+    planned_inputs = params.get("planned_inputs", {})
+    actual_inputs = params.get("actual_inputs", {})
+    predicted_output = float(params.get("predicted_output", 0))
+    actual_output = float(params.get("actual_output", 0))
+    result = params.get("result", "unknown")
+    operator = params.get("operator", "anonymous")
+    notes = params.get("notes", "")
+
+    record = ExperimentRecord(
+        experiment_id=experiment_id,
+        model_id=model_id,
+        planned_inputs=planned_inputs,
+        actual_inputs=actual_inputs,
+        predicted_output=predicted_output,
+        actual_output=actual_output,
+        result=result,
+        operator=operator,
+        notes=notes,
+        timestamp=datetime.datetime.utcnow().isoformat() + "Z",
+    )
+    EXPERIMENT_REGISTRY.record(record)
+    return {
+        "experiment_id": experiment_id,
+        "prediction_error": record.prediction_error,
+        "result": result,
+    }
+
+
+def _handle_experiment_list(params: dict) -> dict:
+    """List experiment records, optionally filtered by model_id."""
+    model_id = params.get("model_id")
+    if model_id:
+        experiments = EXPERIMENT_REGISTRY.list_by_model(model_id)
+    else:
+        experiments = EXPERIMENT_REGISTRY.list_all()
+    return {"experiments": experiments}
+
+
+def _handle_experiment_get(params: dict) -> dict:
+    """Get a single experiment record by ID."""
+    experiment_id = params["experiment_id"]
+    record = EXPERIMENT_REGISTRY.get(experiment_id)
+    return {
+        "experiment_id": record.experiment_id,
+        "model_id": record.model_id,
+        "planned_inputs": record.planned_inputs,
+        "actual_inputs": record.actual_inputs,
+        "predicted_output": record.predicted_output,
+        "actual_output": record.actual_output,
+        "prediction_error": record.prediction_error,
+        "result": record.result,
+        "operator": record.operator,
+        "notes": record.notes,
+        "timestamp": record.timestamp,
+    }
+
+
 def _handle_import(params: dict) -> dict:
     """Import an Excel/CSV file, register it, and return a serializable result."""
     file_path = params["file_path"]
@@ -871,6 +1024,13 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_settings_update(params)
     if method == "settings/test_connection":
         return _handle_settings_test(params)
+
+    if method == "experiment/record":
+        return _handle_experiment_record(params)
+    if method == "experiment/list":
+        return _handle_experiment_list(params)
+    if method == "experiment/get":
+        return _handle_experiment_get(params)
 
     if method == "spc/analyze":
         return _handle_spc_analyze(params)

@@ -766,3 +766,42 @@ export async function getModelInfo(params: {
 }): Promise<ModelInfo> {
   return engineCall<ModelInfo>('prediction/model_info', params)
 }
+
+// --- Phase 11: Validation Lab -----------------------------------------------
+
+export interface ExperimentRecord {
+  experiment_id: string
+  model_id: string
+  planned_inputs: Record<string, number>
+  actual_inputs: Record<string, number>
+  predicted_output: number
+  actual_output: number
+  prediction_error: number
+  result: 'pass' | 'fail' | 'inconclusive' | 'unknown'
+  operator: string
+  notes: string
+  timestamp: string
+}
+
+export interface RecordExperimentParams {
+  model_id: string
+  planned_inputs: Record<string, number>
+  actual_inputs: Record<string, number>
+  predicted_output: number
+  actual_output: number
+  result: 'pass' | 'fail' | 'inconclusive' | 'unknown'
+  operator: string
+  notes?: string
+}
+
+export async function recordExperiment(params: RecordExperimentParams): Promise<{ experiment_id: string; prediction_error: number; result: string }> {
+  return engineCall<{ experiment_id: string; prediction_error: number; result: string }>('experiment/record', params as unknown as Record<string, unknown>)
+}
+
+export async function listExperiments(params: { model_id?: string } = {}): Promise<{ experiments: ExperimentRecord[] }> {
+  return engineCall<{ experiments: ExperimentRecord[] }>('experiment/list', params as unknown as Record<string, unknown>)
+}
+
+export async function getExperiment(experiment_id: string): Promise<ExperimentRecord> {
+  return engineCall<ExperimentRecord>('experiment/get', { experiment_id })
+}
