@@ -31,7 +31,7 @@ pillow==12.3.0
 pluggy==1.6.0
 polars==1.44.1
 polars-runtime-32==1.44.1
--e git+https://github.com/fred-lede/process-intelligence-platform-opencode.git@706717d3650d324c9a5a026b8fb92a20cfded0ac#egg=process_intelligence_engine&subdirectory=engine
+-e git+https://github.com/fred-lede/process-intelligence-platform-opencode.git@770907359357eb6a23e82a11d7db342799be29e5#egg=process_intelligence_engine&subdirectory=engine
 propcache==0.5.2
 pycparser==3.0
 pyDOE2==1.3.0
