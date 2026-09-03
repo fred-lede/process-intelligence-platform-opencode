@@ -107,3 +107,10 @@
 - i18n en/zh-TW：credibility.*
 - 測試修正：`test_report_generate_unsupported_format` 改為 json
 - 驗證 — 250 passed, 1 skipped (80% coverage), tsc/build clean
+
+### Phase 11d — 中期任務（第二批）
+- **Copula 聯合機率** — `copula.py`（高斯 Copula + 獨立 + 直接指定三種模式）+ IPC handler `copula/joint`
+- **Monte Carlo 整合** — `apply_anomalies` 支援 Copula 相關性輸入，`run_monte_carlo` 回傳 `copula` 結果
+- **Correlation matrix 驗證** — 正定矩陣檢查 + 失敗時自動 fallback 到獨立假設
+- i18n en/zh-TW：copula.*
+- 驗證 — 250 passed, 1 skipped (78% coverage), tsc/build clean
