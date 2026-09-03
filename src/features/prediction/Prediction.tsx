@@ -56,22 +56,27 @@ function DraggableSlider({ min, max, value, onChange, style }: {
         ...style,
       }}
     >
-      <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 6, transform: 'translateY(-50%)', borderRadius: 3, background: '#dbe2ed' }} />
-      <div style={{ position: 'absolute', top: '50%', left: 0, height: 6, transform: 'translateY(-50%)', borderRadius: 3, background: '#2563eb', width: `${pct}%` }} />
+      <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 10, transform: 'translateY(-50%)', borderRadius: 5, overflow: 'hidden', background: '#e5e9f0' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: `${pct}%`, background: '#2563eb' }} />
+      </div>
       <div
         style={{
           position: 'absolute',
           top: '50%',
           left: `${pct}%`,
           transform: 'translate(-50%, -50%)',
-          width: 16,
-          height: 16,
+          width: 18,
+          height: 18,
           borderRadius: '50%',
           background: '#2563eb',
           border: '2px solid #fff',
           boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
         }}
-      />
+      >
+        <span style={{ position: 'absolute', left: '50%', top: 22, transform: 'translateX(-50%)', fontSize: 10, color: '#fff', background: 'rgba(0,0,0,0.6)', borderRadius: 3, padding: '0 4px', whiteSpace: 'nowrap' }}>
+          {value.toFixed(2)}
+        </span>
+      </div>
     </div>
   )
 }
