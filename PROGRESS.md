@@ -519,3 +519,18 @@
 - [x] **交互作用熱圖（§8）**：`interactions.matrix` + `factors` 視覺化
 - [x] handler 組裝 `distribution_fits` 補入 fit 的 `histogram`/`pdf`
 - 驗證 — 250 passed；smoke 渲染 6 個 SVG（3 分布 + 1 異常 + 1 蒙地卡羅 + 1 熱圖），LSL/USL 標記齊全
+
+## 2026-09-04 — 製程流程圖轉為完整圖形化編輯器（spec 11A，10 tasks）
+
+- [x] **Task 1+2（引擎，TDD）**：`ProcessNode` 新增 `x/y` 欄位（`create_process_node` 透傳）；新增 `engine/tests/test_manifest_nodes.py`（5 測試，含五種資料映射欄位）
+- [x] **Task 3**：前端 `ProcessNode` 型別加 `x?: number / y?: number`
+- [x] **Task 4（bug 修復，核心）**：節點改為**世界座標** `node.x/y` + 視口 transform `<g translate(pan) scale(zoom)>`；新增 pan（拖背景）/zoom（滾輪 0.5–2）/`fitView()` 初次補償負座標 → 修復「第二個節點被擠出畫布」bug；節點/port 加 `data-node`/`data-node-id`/`data-port`
+- [x] **Task 5**：節點拖曳（screen delta / zoom）+ `updateProcessNode` 持久化 + 失敗 rollback
+- [x] **Task 6**：縮放控制列（+/-/重設/FitView）+ 自動佈局按鈕（`computeLayout`）+ minimap 疊層（含 viewport 指示框）
+- [x] **Task 7**：port 拖曳連線（elementFromPoint hover 偵測 + 虛線草稿 + 提交/取消）
+- [x] **Task 8（規格 §11A 節點資料映射）**：屬性面板新增 Data Mapping 區——input/output_data_sources（多重選擇自註冊資料集）+ in_control_parameters / out_quality_outputs / machine_mapping（tags）＋ saveMapping 持久化
+- [x] **Task 9（i18n 三語）**：en / zh-TW / es-MX 新增 16 keys；**同時發現並補齊 es-MX 原本完全缺少的整個 processFlow 區塊**（既有 31 + 新 16 全翻譯）
+- [x] **Task 10（最終驗證）**：引擎 **255 passed, 1 skipped**；`npx tsc --noEmit` clean + `npm run build` 成功
+- **10 tasks 全部 commit 至 main**：`5706bef → fcaa2b5 → f465f0e → 531a59a → 9a8b5a3 → a00ba5b → 6eadc55 → c8240c5 → 2335b58`，每個 task 由 spec reviewer 逐行驗證後才 commit
+- **註記**：上表先前 TASK/PROGRESS 計數「250 passed」為引擎舊值，本次實測為 255 passed
+

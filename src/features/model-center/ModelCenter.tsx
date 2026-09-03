@@ -6,6 +6,8 @@ import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
+import { buildModelCenterContext } from '../../lib/assistantData'
 import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult } from '../../lib/engine'
 import { computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation } from '../../lib/engine'
 
@@ -37,6 +39,7 @@ export default function ModelCenter() {
   const { t } = useTranslation()
   const [messageApi, contextHolder] = message.useMessage()
   const { importResult, fields, spec } = useDataPipelineStore()
+  const { setContext } = useAssistantContextStore()
   const {
     models, fitting, transitioning, error,
     selectedModelId, loadModels, fit, transition,
@@ -58,6 +61,13 @@ export default function ModelCenter() {
   const [cvFolds, setCvFolds] = useState(5)
   const [fullValidation, setFullValidation] = useState<FullValidationResult | null>(null)
   const [fullValidationLoading, setFullValidationLoading] = useState(false)
+
+  useEffect(() => {
+    setContext(
+      'modelCenter',
+      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation }),
+    )
+  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, setContext])
 
   const datasetId = importResult?.dataset_id
   const inputOptions = fields

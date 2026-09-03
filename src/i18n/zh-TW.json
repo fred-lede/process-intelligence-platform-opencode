@@ -45,6 +45,8 @@
     "title": "AI 助手",
     "placeholder": "輸入訊息...",
     "thinking": "思考中...",
+    "clear": "清除對話",
+    "clearConfirm": "確定要清除這個對話嗎？",
     "welcome": "您好！我是您的 AI 助手，可以幫助您分析資料、解釋模型、建議實驗。請問有什麼可以幫您的？",
     "online": "在線",
     "offline": "離線"

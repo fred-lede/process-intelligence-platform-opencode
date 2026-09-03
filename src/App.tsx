@@ -44,7 +44,7 @@ export default function App() {
       <Content style={{ padding: 24, overflow: 'auto', background: '#F5F7FA' }}>
         {renderTab()}
       </Content>
-      <AssistantPanel />
+      <AssistantPanel activeTab={activeTab} />
     </Layout>
   )
 }

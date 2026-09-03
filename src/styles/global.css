@@ -35,3 +35,18 @@ body {
 .status-risk { color: var(--color-risk); }
 .status-ai { color: var(--color-ai); }
 
+/* AI 助手訊息捲動區：強制顯示捲軸（macOS overlay scrollbar 預設隱藏） */
+.assistant-messages::-webkit-scrollbar {
+  width: 8px;
+}
+.assistant-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+.assistant-messages::-webkit-scrollbar-thumb {
+  background: #c1c7d0;
+  border-radius: 4px;
+}
+.assistant-messages::-webkit-scrollbar-thumb:hover {
+  background: #9aa3ad;
+}
+

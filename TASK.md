@@ -162,11 +162,45 @@
 - **i18n** en/zh-TW：processFlow.*（31 keys）
 - 驗證 — 250 passed, 1 skipped (70% coverage), tsc/build clean
 
+### Process Flow Editor — Task 4: World/Viewport Transform + Pan/Zoom + fitView (bug fix)
+- **Bug 根因**：`computeLayout` 以 (0,0) 為中心，兩未連接節點同層時 `startY=-V_GAP/2` 產生負 y 座標，SVG viewport 從 (0,0) 起 → 負座標節點被裁出畫面，且無拖曳/平移可恢復
+- **修復**：改為「世界座標」(各節點 `x`/`y` 欄位) + viewport transform `<g transform="translate(pan) scale(zoom)">`
+- **新增**：pan（拖背景）/ zoom（滾輪，0.5–2）+ `fitView()` 初次載入時讓所有節點（含負座標）可見；不重新佈局
+- **保留**：`computeLayout` 定義（export 以滿足 noUnusedLocals，供後續 auto-layout 重用）但不再用於渲染；節點位置改由 `node.x ?? 0` / `node.y ?? 0`
+- **節點/port 新增 data 屬性**：`data-node`（群組）、`data-node-id` + `data-port="out"/"in"`（兩個圓點）；port 拖曳連接留待後續任務
+- **移除**：未使用的 `toWorld` helper（tsc noUnusedLocals 會報錯）
+- 驗證 — tsc --noEmit clean、npm run build 成功
+
+### Process Flow Editor — Task 5: Draggable nodes + position persistence (commit 9a8b5a3)
+- **新增**：拖曳節點（pointer-capture on `<g>` `onPointerDown` → `startNodeDrag`），move 時以 screen delta / zoom 更新 nodes x/y
+- **持久化**：`pointerUp` 時 `updateProcessNode` 儲存位置；失敗 rollback 回原位 + `messageApi.error('Failed to save position')`（i18n 留待後續任務）
+- **保留**：節點自訂 `data-node` + `handleBackgroundPointerDown` 對 `[data-node]` 跳過 pan → 背景 pan 與節點 drag 不衝突
+- **移除**：`toWorld`/`svgRectLeft`/`svgRectTop`（drag 直接用 clientX 差分，未使用，避免 noUnusedLocals）
+- 驗證 — tsc --noEmit clean、npm run build 成功
+
+### Process Flow Editor — Task 6: Zoom controls, auto-layout button, minimap overlay (commit a00ba5b)
+- **Zoom 控制列**：+/- 按鈕（×1.25/×0.8，範圍 0.5–2）、百分比顯示（點擊重置為 100%）、Fit View 按鈕（FullscreenOutlined）
+- **Auto Layout 按鈕**：呼叫 `computeLayout` 重新佈局 → 更新 nodes x/y → 持久化 → fitView 對齊
+- **Minimap**：SVG 右下角 140×96px，節點以 `NODE_COLORS` 色塊顯示，藍色框顯示當前 viewport 可見區域（worldVisible origin/size 計算）
+- **新增 import**：ZoomInOutlined, ZoomOutOutlined, FullscreenOutlined, ApartmentOutlined
+- **i18n keys**：`processFlow.zoomFit` / `processFlow.autoLayout`（尚未加入翻譯檔，顯示 raw key）
+- 驗證 — tsc --noEmit clean、npm run build 成功
+
+### Process Flow Editor — Task 7: Drag from port to connect nodes (commit 6eadc55)
+- **Port 連接拖曳**：`onPointerDown` 在 OUT/IN port 圓點啟動 `startConnect`，記錄來源節點 + world 座標
+- **連接草稿**：`connectDraft` + `connectCursor` 狀態追蹤拖曳中的臨時連線
+- **hover 偵測**：`handlePointerMove` 中透過 `document.elementFromPoint` + `[data-port]` 命中測試偵測目標 port，`hoverTarget` 狀態
+- **提交/取消**：`handlePointerUp` 中若 `hoverTarget` 存在且非自身 → `handleConnect` 建立邊；否則取消
+- **臨時虛線**：拖曳中渲染 dashed blue bezier（`svga` + `strokeDasharray="4 2"`）
+- **座標轉換**：新增 `clientToWorld` helper（screen → world via svgRef.getBoundingClientRect + pan/zoom）
+- **port 圓點屬性**：僅保留 valued form `data-port="out"` / `data-port="in"`（無重複 bare `data-port`）
+- 驗證 — tsc --noEmit clean、npm run build 成功
+
 ---
 **專案總體**：
 - **代碼行數**：~15,100 行
 - **Commits**：220+
-- **測試**：250 passed, 1 skipped（70% coverage）
+- **測試**：255 passed, 1 skipped（70% coverage）
 - **Phase 0–11i**：全部完成 ✅
 - **多語言**：en / zh-TW / es-MX（3 種）✅
 - **模型類型**：6 種（linear / quadratic / RF / hybrid / logistic / weibull）✅
@@ -188,3 +222,62 @@
 - **HTMLReportGenerator 重寫**：渲染全部 14 項（severity badge / 防注入 / percentile / 異常貢獻排名）
 - **前端**：`ReportParams` + `Report.tsx` 傳入 spec/lsl/usl/蒙地卡羅參數
 - 驗證 — 250 passed, 1 skipped (70% coverage), tsc/build clean, smoke 渲染 11 section（commit a565cc9）
+
+### Process Flow Editor — Task 8: Node data mapping panel (規格 §11A) (commit c8240c5)
+- **資料映射區塊**：屬性面板「Connect to」之前加入，5 個 selects：
+  - `input_data_sources` / `output_data_sources`：`Select mode="multiple"`，options 來自已註冊資料集（`getDatasets()`）
+  - `in_control_parameters` / `out_quality_outputs` / `machine_mapping`：`Select mode="tags"`（自由輸入）
+- **saveMapping**：`updateProcessNode(id, { [field]: vals })` 持久化 + optimistic graph 更新；失敗 `messageApi.error`
+- **驗證** — tsc --noEmit clean、npm run build 成功（spec reviewer 逐行核對 5 selects + persist 正確）
+
+### Process Flow Editor — Task 9: i18n 三語 keys (commit 2335b58)
+- **en / zh-TW / es-MX** 三語新增 16 keys：autoLayout / autoLayoutDone / autoLayoutError / saveError / dataMapping / inputDataSources / outputDataSources / selectDataSources / controlParameters / qualityOutputs / machineMapping / typeOrSelect / zoomIn / zoomOut / zoomReset / zoomFit
+- **移除 raw key 顯示**：Task 6/8 新增但尚未本地化的 keys 現在全部有翻譯
+- **es-MX 補齊**：發現 es-MX 原本**完全缺少整個 `processFlow` 區塊**（前幾次 commit 未同步）→ 依 en/zh-TW 補齊完整 processFlow（既有 31 keys + 新 16 keys 全翻譯），與其他語系一致
+- **驗證** — 三檔 JSON 有效、程式化檢查所有 `t('processFlow.*')` 引用 keys 三語皆存在、tsc --noEmit clean
+
+### Process Flow Editor — Task 10: 最終整合驗證 (全部完成)
+- **引擎**：`cd engine && .venv/bin/python -m pytest tests/ -q` → **255 passed, 1 skipped**
+- **前端**：`npx tsc --noEmit` clean + `npm run build` 成功（chunk 大小警告為既有，非本次造成）
+- **全部 10 Tasks commit 至 main**：5706bef(T1) fcaa2b5(T2) f465f0e(T3) 531a59a(T4) 9a8b5a3(T5) a00ba5b(T6) 6eadc55(T7) c8240c5(T8) 2335b58(T9)
+
+### AI 助手「思考中」動畫未顯示 (bug fix)
+- **根因（Console 證據確認）**：加入 `console.log` 診斷後確認 `handleSend` 正常執行、`loading=true` 確實多次 re-render、`aiChat` **即時 resolve**（`success: true`，本機 Ollama 毫秒級回應）→ 狀態機與渲染皆正常，問題純粹是「回應太快，loading true 的視覺期間太短，使用者感知不到」
+- **修復 1**：loading 指示器由「訊息串底部的 bubble」改為**面板頂部固定綠色橫幅 banner**（`padding/borderBottom/background #ecfdf5` + Spin + 粗體綠字），不依賴訊息串 scroll 位置
+- **修復 2**：`finally` 內最小顯示時間由 400ms 提高到 **900ms**，即使即時回應也保證使用者清楚地看到「思考中」橫幅
+- **診斷**：以常駐 DOM 的 `DEBUG-STRIP-A` 橘色條驗證 —— user 確認**橘條與綠條均正常渲染**，證明面板該位置渲染無礙；**實機驗證：送出訊息時頂部綠色「思考中」橫幅正常出現 ✅**
+- **最終定案（真正根因）**：user 觀察確認「AI 回答瞬間一次顯示，綠條出現時間過短」→ 因本機 AI 即時回應，`loading` 期間幾乎為零。**修復**：`handleSend` 改為「先讓「思考中」橫幅顯示滿 `MIN_THINK_MS=800ms`，才把 assistant 回覆 append 進訊息串」→ 產生可感知的「思考中 → 回答」順序（即使 AI 毫秒級回應）。`finally` 只負責等待剩餘時間，回覆真正 commit 改到等待之後
+- **清理**：移除 DEBUG 橘條、`loadingBarRef` 與 `showLoadingBar` 命令式切換（與 `loading` 驅動的 inline style 衝突），回歸純 `{loading && banner}` + 800ms 最小思考顯示
+- 驗證 — tsc --noEmit clean、npm run build 成功
+
+## In Progress / Next
+- **AI 助手對話區捲動 + 常駐捲軸**：Sider 設 `height:100vh + overflow:hidden`（對齊螢幕高度）；訊息區 `flex:1, minHeight:0, maxHeight:calc(100vh - 118px), overflowY:auto`（硬性高度上限，內容超過即出現捲軸，可上拉看舊對話、自動置底顯示最新）；`global.css` 新增 `.assistant-messages::-webkit-scrollbar` 強制顯示 8px 灰捲軸（macOS overlay scrollbar 預設隱藏）。**實機驗證：訊息超過一屏即出現灰捲軸 ✅**
+- **AI 助手依導航上下文回答（spec §7.3 / §16.1）**：新增 `src/lib/assistantGuide.ts`（`buildAssistantSystemPrompt(activeTab)` + 12 個 tab 的精準使用/圖表說明：名稱、用途、操作步驟、關鍵圖表判讀、權限邊界）；`AssistantPanel` 接收 `activeTab` prop，每次送訊時在 payload 前端插入 `role:'system'` 系統提示（當前頁面說明 + 整體工作流程 + 建議式回答準則）；`App.tsx` 傳入 `activeTab`。tsc/build clean
+- **AI 回答語言對應介面語言**：`buildAssistantSystemPrompt(activeTab, language)` 新增語言指令 —— `zh*`→繁體中文、`es*`→西班牙文、其餘→英文；`AssistantPanel` 以 `i18n.language` 帶入每次送訊的 system 提示。tsc/build clean
+- **AI 助手移除 Enter 送出 + 清除對話按鈕**：移除 Input `onPressEnter`（避免誤送，僅可點 Send）；標題列新增 `ClearOutlined` + `Popconfirm` 清除對話（i18n 三語 `assistant.clear`/`clearConfirm`）；loading 中停用。tsc/build clean
+- **AI 解讀目前頁面真實數據/圖表（spec §16.1「解釋目前頁面與圖表」）**：
+  - 新增 `src/stores/assistantContextStore.ts`：Zustand store，`context: Record<AppTab,string>` + `setContext(tab, summary)`
+  - 新增 `src/lib/assistantData.ts`：各頁面數據摘要 builder（DataImport 欄位/規格、Exploration 分布/趨勢/時序/GRR、ModelCenter 交互/SHAP/外插/CV/完整驗證、SPC 控制圖/能力指數、MonteCarlo NG機率/百分位/異常排名、Prediction 輸入與預測值、Validation 模型比較/實驗通過率、Reports 是否產生）
+  - 8 個 feature 頁面各自呼叫 `setContext(tab, buildXxxContext(...))`，把當下實際結果寫入共享 store
+  - `buildAssistantSystemPrompt(activeTab, language, dataContext?)`：該頁有真實數據時追加 `CURRENT PAGE DATA`，指示 AI 解讀實際數值、指出健康/風險、給具體下一步（而非只列功能）
+  - `AssistantPanel` 讀取 `context[activeTab]` 併入每次送的 system 提示
+  - 驗證 — tsc --noEmit clean、npm run build 成功
+- **待使用者手動 E2E（`npm run dev`）**：切到有數據的頁面（如 SPC/MonteCarlo 跑完）問 AI「解讀這個結果」，確認用真實數據判讀；AI 回答語言對應介面語言（en/zh-TW/es-MX）；拖曳節點 → 位置持久化；port 拖曳連線；縮放/自動佈局/minimap；資料映射編輯後重載保持 —— 自動化驗證（255 passed / tsc / build）已全數通過，僅剩互動式畫布之人工確認
+- **進度註記**：原 TASK.md 標註「250 passed」實際為引擎舊計數，本次 255 passed（含新增 manifest 節點測試）
+
+### Process Flow Editor — 響應式全視窗佈局 (commit baffe58)
+- **根容器**：`<Space>` 改為 flex column，`height: calc(100vh - 48px)`（對應 Content padding 24×2）→ 填滿中央區域高度
+- **Diagram Card**：`flex:1 + display:flex column`，body `flex:1`；畫布 container 由固定 `height:500` 改為 `flex:1` → ResizeObserver 自動依可用高度縮放 SVG（畫布填滿剩餘空間）
+- **Properties Card**：`height:100% + display:flex column`，body `flex:1 + overflow:auto` → 屬性面板填滿高度、內容過長可捲動
+- 驗證 — tsc --noEmit clean、npm run build 成功
+
+### Process Flow Editor — 灰色繪圖區填滿視窗 (commit 32e9e93)
+- **根因**：`<svg>` 用顯式像素 `width={viewportSize.w} / height={viewportSize.h}` 指定尺寸，若 ResizeObserver 量到偏小值（flex 高度未完全解析時），灰色繪圖區就比卡片小
+- **修復**：SVG 改為 CSS `width:100%; height:100%` 填滿 container（container 為 `flex:1` 填滿 card body）→ 灰色繪圖區必定覆蓋整個 Diagram 卡片；`viewportSize` 仍由 ResizeObserver 量測供 pan/zoom/minimap 數學使用
+- 驗證 — tsc --noEmit clean、npm run build 成功
+
+### Process Flow Editor — 連線拖曳修正 + minimap 角落校正 (commit 9b77d6d)
+- **連線無法連上（主要 bug）**：port 圓點有 `onPointerUp={(e)=>e.stopPropagation()}`，而 `startConnect` 把 pointer 捕獲到來源 port 圓點 → pointerup 冒泡到來源圓點即被 stopPropagation 擋住，SVG 上層 `handlePointerUp`（負責提交/取消連線）永遠收不到 → 連線永不建立。**修復**：移除兩個 port 的 `onPointerUp` stopPropagation
+- **連線目標太難命中**：原 hover 只認 5px 的 port 圓點，極難精準。**修復**：`elementFromPoint` 同時接受整個目標節點 `[data-node]`（fallback），落在節點本體即可連到該節點；並新增綠色高亮框提示連接目標
+- **minimap 不在角落**：minimap `translate` 用 `viewportSize`，若量測偏小則不到角落。**修復**：改用實際 SVG 尺寸 `svgRef.getBoundingClientRect()`（回退 viewportSize）定位 → 貼齊真實右下角
+- 驗證 — tsc --noEmit clean、npm run build 成功

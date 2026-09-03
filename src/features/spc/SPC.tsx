@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Form, Input, Typography, Table, Tag } from 'antd'
 import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { analyzeSPC, type SPCAnalysisResult } from '../../lib/engine'
+import { buildSpcContext } from '../../lib/assistantData'
 
 const CHART_TYPES = ['i-mr', 'xbar-r', 'xbar-s'] as const
 type ChartType = typeof CHART_TYPES[number]
@@ -21,6 +23,7 @@ const WE_RULE_NAMES: Record<number, string> = {
 export default function SPC() {
   const { t } = useTranslation()
   const { importResult, spec } = useDataPipelineStore()
+  const { setContext } = useAssistantContextStore()
 
   const [chartType, setChartType] = useState<ChartType>('i-mr')
   const [column, setColumn] = useState<string | undefined>(spec?.outputField)
@@ -38,6 +41,10 @@ export default function SPC() {
       .map(([name]) => name)
     setNumericColumns(cols)
   }, [importResult])
+
+  useEffect(() => {
+    setContext('spc', buildSpcContext(result))
+  }, [result, setContext])
 
   const handleAnalyze = async () => {
     if (!importResult || !column) return

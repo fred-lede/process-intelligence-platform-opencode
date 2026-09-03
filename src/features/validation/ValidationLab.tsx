@@ -24,6 +24,8 @@ import {
 } from '../../lib/engine'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
+import { buildValidationContext } from '../../lib/assistantData'
 
 const PRIORITY_COLORS: Record<string, string> = {
   high: 'red',
@@ -35,11 +37,16 @@ export default function ValidationLab() {
   const { t } = useTranslation()
   const { importResult } = useDataPipelineStore()
   const { models, loadModels } = useModelStore()
+  const { setContext } = useAssistantContextStore()
   const [messageApi, contextHolder] = message.useMessage()
 
   const [fullValidation, setFullValidation] = useState<FullValidationResult | null>(null)
   const [fullValidationLoading, setFullValidationLoading] = useState(false)
   const [experiments, setExperiments] = useState<ExperimentRecord[]>([])
+
+  useEffect(() => {
+    setContext('validation', buildValidationContext({ fullValidation, experiments }))
+  }, [fullValidation, experiments, setContext])
   const [experimentsLoading, setExperimentsLoading] = useState(false)
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>()
   const [modelInfo, setModelInfo] = useState<{ equation: string; inputs: string[]; model_type: string } | null>(null)

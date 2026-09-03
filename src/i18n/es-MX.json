@@ -44,6 +44,8 @@
     "title": "Asistente de IA",
     "placeholder": "Escribe tu mensaje...",
     "thinking": "Pensando...",
+    "clear": "Limpiar",
+    "clearConfirm": "¿Limpiar esta conversación?",
     "welcome": "¡Hola! Soy tu asistente de IA. Puedo ayudarte a analizar datos, explicar modelos y sugerir experimentos. ¿Cómo puedo ayudarte hoy?",
     "online": "En línea",
     "offline": "Fuera de línea"

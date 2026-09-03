@@ -1,14 +1,22 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin } from 'antd'
-import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin, Popconfirm } from 'antd'
+import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined, ClearOutlined } from '@ant-design/icons'
 import { aiChat, checkAIHealth, type AIChatMessage } from '../../lib/engine'
 import { useAIStore } from '../../stores/aiStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
+import { buildAssistantSystemPrompt } from '../../lib/assistantGuide'
+import type { AppTab } from '../../types'
 
 const { Sider } = Layout
 
-export default function AssistantPanel() {
-  const { t } = useTranslation()
+interface AssistantPanelProps {
+  activeTab: AppTab
+}
+
+export default function AssistantPanel({ activeTab }: AssistantPanelProps) {
+  const { t, i18n } = useTranslation()
+  const { context } = useAssistantContextStore()
   const [messages, setMessages] = useState<AIChatMessage[]>([
     { role: 'assistant', content: t('assistant.welcome') }
   ])
@@ -46,43 +54,80 @@ export default function AssistantPanel() {
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setLoading(true)
-    // Let React flush the loading state and the browser paint before awaiting
-    // (otherwise React 18 auto-batching can skip the loading frame on fast calls).
+    // Let React flush the loading state and the browser paint before awaiting.
     await new Promise(r => setTimeout(r, 0))
 
+    // Keep the "thinking" banner visible for a guaranteed minimum time so the
+    // green bar is clearly seen BEFORE the reply reveals itself (a perceptible
+    // think -> answer sequence even though the local AI answers instantly).
+    const MIN_THINK_MS = 800
     const started = Date.now()
+
+    let reply: string
     try {
-      const result = await aiChat([...messages, userMessage])
-      setMessages(prev => [...prev, { role: 'assistant', content: result.response ?? `Error: ${result.error ?? 'Unknown error'}` }])
+      const payload: AIChatMessage[] = [
+        { role: 'system', content: buildAssistantSystemPrompt(activeTab, i18n.language, context[activeTab]) },
+        ...messages,
+        userMessage,
+      ]
+      const result = await aiChat(payload)
+      reply = result.response ?? `Error: ${result.error ?? 'Unknown error'}`
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Failed to connect to AI assistant.' }])
+      reply = 'Failed to connect to AI assistant.'
     } finally {
-      // Keep the spinner visible for a minimum time so fast replies don't hide it instantly.
-      const remaining = Math.max(0, 400 - (Date.now() - started))
+      const remaining = Math.max(0, MIN_THINK_MS - (Date.now() - started))
       await new Promise(r => setTimeout(r, remaining))
-      setLoading(false)
     }
+
+    setMessages(prev => [...prev, { role: 'assistant', content: reply }])
+    setLoading(false)
+  }
+
+  const handleClear = () => {
+    setInput('')
+    setMessages([{ role: 'assistant', content: t('assistant.welcome') }])
   }
 
   return (
     <Sider
       width={320}
       theme="light"
-      style={{ borderLeft: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column' }}
+      style={{ borderLeft: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
     >
-      <div style={{ padding: 16, borderBottom: '1px solid #e5e7eb' }}>
-        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography.Title level={5} style={{ margin: 0 }}>{t('assistant.title')}</Typography.Title>
-          {health === true ? (
-            <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontSize: 12 }}>Online</Tag>
-          ) : health === false ? (
-            <Tag color="error" icon={<CloseCircleOutlined />} style={{ fontSize: 12 }}>Offline</Tag>
-          ) : null}
-        </Space>
+          <Space size={8}>
+            {health === true ? (
+              <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontSize: 12, margin: 0 }}>Online</Tag>
+            ) : health === false ? (
+              <Tag color="error" icon={<CloseCircleOutlined />} style={{ fontSize: 12, margin: 0 }}>Offline</Tag>
+            ) : null}
+            <Popconfirm
+              title={t('assistant.clearConfirm')}
+              onConfirm={handleClear}
+              okText={t('common.confirm')}
+              cancelText={t('common.cancel')}
+            >
+              <Button size="small" type="text" icon={<ClearOutlined />} disabled={loading}>
+                {t('assistant.clear')}
+              </Button>
+            </Popconfirm>
+          </Space>
+        </div>
 
       </div>
 
-      <div style={{ flex: 1, padding: 16, overflow: 'auto' }}>
+      {loading && (
+        <div style={{ padding: '10px 16px', borderBottom: '1px solid #d1fae5', background: '#ecfdf5', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Spin size="small" />
+          <Typography.Text style={{ fontSize: 13, color: '#10b981', fontWeight: 600 }}>{t('assistant.thinking')}</Typography.Text>
+        </div>
+      )}
+      <div
+        className="assistant-messages"
+        style={{ flex: '1 1 0', minHeight: 0, maxHeight: 'calc(100vh - 118px)', overflowY: 'auto', overflowX: 'hidden', padding: 16 }}
+      >
         {messages.map((msg, idx) => (
           <div key={idx} style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
             <Avatar
@@ -95,17 +140,6 @@ export default function AssistantPanel() {
             </div>
           </div>
         ))}
-        {loading && (
-          <div style={{ marginBottom: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Avatar size="small" icon={<RobotOutlined />} style={{ backgroundColor: '#10b981', marginTop: 4 }} />
-            <div style={{ flex: 1, background: '#ecfdf5', padding: '10px 14px', borderRadius: 8, minWidth: 120, display: 'flex', alignItems: 'center' }}>
-              <Space direction="horizontal" size={8}>
-                <Spin size="small" style={{ color: '#10b981' }} />
-                <Typography.Text style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>{t('assistant.thinking')}</Typography.Text>
-              </Space>
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -115,7 +149,6 @@ export default function AssistantPanel() {
             placeholder={t('assistant.placeholder')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onPressEnter={handleSend}
             disabled={loading || health === false}
           />
           <Button

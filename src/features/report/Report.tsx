@@ -1,19 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Button, Space, Alert, message, Tag } from 'antd'
 import { FileTextOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { generateReport } from '../../lib/engine'
+import { buildReportsContext } from '../../lib/assistantData'
 
 export default function Report() {
   const { t } = useTranslation()
   const [messageApi, contextHolder] = message.useMessage()
   const { importResult, spec } = useDataPipelineStore()
   const { models } = useModelStore()
+  const { setContext } = useAssistantContextStore()
 
   const [generating, setGenerating] = useState(false)
   const [reportHtml, setReportHtml] = useState<string | null>(null)
+  const [lastFormat, setLastFormat] = useState<'html' | 'pdf' | 'excel' | null>(null)
+
+  useEffect(() => {
+    setContext('reports', buildReportsContext(!!lastFormat, lastFormat ?? ''))
+  }, [lastFormat, setContext])
 
   const datasetId = importResult?.dataset_id
   const modelIds = models.map(m => m.model_id)
@@ -62,6 +70,7 @@ export default function Report() {
       }
 
       messageApi.success(t('report.generateSuccess'))
+      setLastFormat(format)
     } catch (err) {
       messageApi.error(t('report.generateError'))
     } finally {

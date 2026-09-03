@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Typography, Tag, InputNumber, Statistic, Modal, Input, message, Row, Col } from 'antd'
 import { PlusOutlined, MinusOutlined, SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, type ModelInfo, type PredictionScenario } from '../../lib/engine'
+import { buildPredictionContext } from '../../lib/assistantData'
 
 function DraggableSlider({ min, max, value, onChange, style }: {
   min: number
@@ -84,6 +86,7 @@ function DraggableSlider({ min, max, value, onChange, style }: {
 export default function Prediction() {
   const { t } = useTranslation()
   const { importResult, spec } = useDataPipelineStore()
+  const { setContext } = useAssistantContextStore()
 
   const [models, setModels] = useState<Array<{ model_id: string; model_type: string; equation: string }>>([])
   const [selectedModel, setSelectedModel] = useState<string | undefined>()
@@ -96,6 +99,10 @@ export default function Prediction() {
   const [scenarioName, setScenarioName] = useState('')
   const [scenarioNotes, setScenarioNotes] = useState('')
   const [messageApi, contextHolder] = message.useMessage()
+
+  useEffect(() => {
+    setContext('prediction', buildPredictionContext({ modelInfo, inputValues, predicted }))
+  }, [modelInfo, inputValues, predicted, setContext])
 
   useEffect(() => {
     listModels().then(r => {

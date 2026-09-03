@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Form, Input, Switch, Typography, Table, Tag, Row, Col } from 'antd'
 import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { analyzeMonteCarlo, listModels, type MonteCarloResult } from '../../lib/engine'
+import { buildMonteCarloContext } from '../../lib/assistantData'
 
 export default function MonteCarlo() {
   const { t } = useTranslation()
   const { importResult, spec } = useDataPipelineStore()
+  const { setContext } = useAssistantContextStore()
 
   const [models, setModels] = useState<Array<{ model_id: string; model_type: string; equation: string }>>([])
   const [selectedModel, setSelectedModel] = useState<string | undefined>()
@@ -25,6 +28,10 @@ export default function MonteCarlo() {
       }
     }).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    setContext('monteCarlo', buildMonteCarloContext(result))
+  }, [result, setContext])
 
   const handleRun = async () => {
     if (!importResult || !selectedModel) return

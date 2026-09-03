@@ -15,6 +15,8 @@ import {
   type GrrResult,
 } from '../../lib/engine'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
+import { buildExplorationContext } from '../../lib/assistantData'
 
 function densityBars(fit: DistributionFitResult) {
   const edges = fit.histogram.edges
@@ -38,6 +40,7 @@ const FIT_COLORS = ['#1677ff', '#722ed1', '#fa8c16']
 export default function Exploration() {
   const { t } = useTranslation()
   const { importResult, fields, spec } = useDataPipelineStore()
+  const { setContext } = useAssistantContextStore()
   const [column, setColumn] = useState<string | undefined>(spec?.outputField)
   const [trendColumn, setTrendColumn] = useState<string | undefined>(spec?.outputField)
   const [loading, setLoading] = useState(false)
@@ -67,6 +70,10 @@ export default function Exploration() {
     () => new Set(fields.filter((f) => f.confirmed).map((f) => f.originalName)),
     [fields],
   )
+
+  useEffect(() => {
+    setContext('exploration', buildExplorationContext({ fits, series, tsFeatures, grrResult }))
+  }, [fits, series, tsFeatures, grrResult, setContext])
 
   const loadFits = async () => {
     if (!importResult || !column) return

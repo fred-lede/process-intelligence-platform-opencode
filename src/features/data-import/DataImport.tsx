@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Card,
@@ -28,6 +28,8 @@ import {
   type QualityIssue,
 } from '../../lib/engine'
 import { useDataPipelineStore, type FieldAssignment } from '../../stores/dataPipelineStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
+import { buildDataImportContext } from '../../lib/assistantData'
 
 interface DataImportProps {
   onDetected?: () => void
@@ -51,6 +53,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
   const {
     importResult,
     fields,
+    spec,
     quality,
     setImportResult,
     setDetectedFields,
@@ -60,9 +63,22 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
     confirmAllFields,
     resetAll,
   } = useDataPipelineStore()
+  const { setContext } = useAssistantContextStore()
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setContext(
+      'dataImport',
+      buildDataImportContext({
+        fields,
+        spec,
+        rowCount: importResult?.row_count ?? null,
+        columnCount: importResult?.column_count ?? null,
+      }),
+    )
+  }, [fields, spec, importResult, setContext])
 
   const handlePickFile = async () => {
     setError(null)
