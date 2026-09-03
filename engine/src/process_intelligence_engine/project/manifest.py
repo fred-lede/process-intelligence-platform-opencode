@@ -115,6 +115,8 @@ class ProcessNode:
     out_quality_outputs: list[str] = field(default_factory=list)
     machine_mapping: list[str] = field(default_factory=list)
     rework_policy: str = "default"  # default | rework | scrap | hold
+    x: float = 0.0
+    y: float = 0.0
     active: bool = True
     created_at: str = ""
 
@@ -400,7 +402,8 @@ class ProjectEngine:
     def create_process_node(self, display_name: str, node_type: str,
                             sequence_or_edges: list[dict] | None = None,
                             input_data_sources: list[str] | None = None,
-                            rework_policy: str = "default") -> dict:
+                            rework_policy: str = "default",
+                            x: float = 0.0, y: float = 0.0) -> dict:
         self._ensure_project()
         manifest = self._load()
         node = ProcessNode(
@@ -410,6 +413,7 @@ class ProjectEngine:
             sequence_or_edges=sequence_or_edges or [],
             input_data_sources=input_data_sources or [],
             rework_policy=rework_policy,
+            x=x, y=y,
             active=True,
             created_at=self._now(),
         )
