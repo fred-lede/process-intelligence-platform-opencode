@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Select, Space, Button, Alert, Typography, Tag, InputNumber, Statistic, Modal, Input, message } from 'antd'
+import { Card, Select, Space, Button, Alert, Typography, Tag, InputNumber, Statistic, Modal, Input, message, Row, Col } from 'antd'
 import { PlusOutlined, MinusOutlined, SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, type ModelInfo, type PredictionScenario } from '../../lib/engine'
@@ -159,8 +159,8 @@ export default function Prediction() {
       </Card>
 
       {modelInfo && (
-        <div style={{ display: 'flex', gap: 16, width: '100%' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <Row gutter={[16, 16]} style={{ width: '100%' }}>
+          <Col flex="1 1 auto" style={{ minWidth: 0 }}>
             <Card title={t('prediction.equation')} size="small">
               <pre style={{ fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, margin: '0 0 12px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{modelInfo.equation}</pre>
               {modelInfo.inputs.map(inp => {
@@ -172,42 +172,39 @@ export default function Prediction() {
                 return (
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <span style={{ fontWeight: 600, fontSize: 13 }}>{inp}</span>
+                        <span style={{ fontWeight: 600, fontSize: 13 }}>{inp}
+                          <span style={{ fontWeight: 400, fontSize: 11, color: '#999', marginLeft: 8 }}>
+                            Min: {Number(min).toFixed(2)} / Mean: {(stats?.mean ?? 0).toFixed(2)} / Max: {Number(max).toFixed(2)}
+                          </span>
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <Button size="small" icon={<MinusOutlined />} onClick={() => handleInputChange(inp, Number(val) - Number(step))} style={{ width: 28, padding: 0, flexShrink: 0 }} />
+                        <input
+                          type="range"
+                          min={min}
+                          max={max}
+                          step={step}
+                          value={val}
+                          onChange={e => handleInputChange(inp, Number(e.target.value))}
+                          style={{ flex: 1, minWidth: 0, accentColor: '#1677ff' }}
+                        />
+                        <Button size="small" icon={<PlusOutlined />} onClick={() => handleInputChange(inp, Number(val) + Number(step))} style={{ width: 28, padding: 0, flexShrink: 0 }} />
                         <InputNumber
                           value={val}
                           onChange={v => handleInputChange(inp, v)}
                           precision={2}
-                          style={{ width: 90 }}
+                          style={{ width: 90, flexShrink: 0 }}
                           min={min}
                           max={max}
-                          addonBefore={
-                            <Button size="small" icon={<MinusOutlined />} onClick={() => handleInputChange(inp, Number(val) - Number(step))} style={{ width: 28, padding: 0 }} />
-                          }
-                          addonAfter={
-                            <Button size="small" icon={<PlusOutlined />} onClick={() => handleInputChange(inp, Number(val) + Number(step))} style={{ width: 28, padding: 0 }} />
-                          }
                         />
-                      </div>
-                      <input
-                        type="range"
-                        min={min}
-                        max={max}
-                        step={step}
-                        value={val}
-                        onChange={e => handleInputChange(inp, Number(e.target.value))}
-                        style={{ width: '100%', accentColor: '#1677ff' }}
-                      />
-                      <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
-                        <span style={{ fontSize: 11, color: '#999' }}>Min: {Number(min).toFixed(2)}</span>
-                        <span style={{ fontSize: 11, color: '#999' }}>Mean: {(stats?.mean ?? 0).toFixed(2)}</span>
-                        <span style={{ fontSize: 11, color: '#999' }}>Max: {Number(max).toFixed(2)}</span>
                       </div>
                     </div>
                 )
               })}
             </Card>
-          </div>
-          <div style={{ width: 240, flexShrink: 0 }}>
+          </Col>
+          <Col flex="0 0 260px">
             <Card title={t('prediction.predictedOutput')} size="small" style={{ height: '100%' }}>
               <Space direction="vertical" style={{ width: '100%' }}>
                 <Statistic
@@ -257,8 +254,8 @@ export default function Prediction() {
                 )}
               </Space>
             </Card>
-          </div>
-        </div>
+          </Col>
+        </Row>
       )}
 
       {!modelInfo && importResult && (
