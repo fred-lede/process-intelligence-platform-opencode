@@ -79,15 +79,16 @@ export default function Settings() {
 
   useEffect(() => {
     loadModels()
+    console.log('[Settings] Provider changed to:', aiConfig.provider, 'prev config:', prev)
     if (aiConfig.provider === 'ollama') {
       aiForm.setFieldValue('model', 'gemma4:e2b-mlx')
-      setAiConfig(prev => ({ ...prev, provider: 'ollama', model: 'gemma4:e2b-mlx', api_key: '' }))
+      setAiConfig(prev => { const next = { ...prev, provider: 'ollama', model: 'gemma4:e2b-mlx', api_key: '' }; console.log('[Settings] -> ollama:', next); return next })
     } else if (aiConfig.provider === 'openai') {
       aiForm.setFieldValue('model', 'gpt-4o')
-      setAiConfig(prev => ({ ...prev, provider: 'openai', model: 'gpt-4o' }))
+      setAiConfig(prev => { const next = { ...prev, provider: 'openai', model: 'gpt-4o' }; console.log('[Settings] -> openai:', next); return next })
     } else if (aiConfig.provider === 'custom') {
       aiForm.setFieldValue('model', '')
-      setAiConfig(prev => ({ ...prev, provider: 'custom', model: '' }))
+      setAiConfig(prev => { const next = { ...prev, provider: 'custom', model: '' }; console.log('[Settings] -> custom:', next); return next })
     }
   }, [aiConfig.provider])
 
@@ -262,7 +263,7 @@ export default function Settings() {
           <Form
             form={aiForm}
             layout="vertical"
-            onValuesChange={(_, changes) => setAiConfig(prev => ({ ...prev, ...changes }) as AIProviderConfig)}
+            onValuesChange={(_, changes) => { console.log('[Settings] onValuesChange:', changes); setAiConfig(prev => { const next = { ...prev, ...changes }; console.log('[Settings] merged:', next); return next as AIProviderConfig }) }}
           >
             <Form.Item name="provider" label={t('settings.providerType')}>
               <Select
