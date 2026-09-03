@@ -16,7 +16,7 @@
 
 - **前端**: React 18 + TypeScript + Ant Design 5 + Zustand + i18next
 - **桌面框架**: Tauri 2.0 (Rust)
-- **分析引擎**: Python 3.11+ (numpy, pandas, scikit-learn, scipy, shap)
+- **分析引擎**: Python 3.11（不支援 3.12+） (numpy, pandas, scikit-learn, scipy, shap)
 - **圖表庫**: Plotly.js
 - **資料儲存**: 記憶體 DatasetRegistry (原始資料不上雲)
 
@@ -26,7 +26,7 @@
 
 - Rust 1.77+（[安裝指南](https://www.rust-lang.org/tools/install)）
 - Node.js 18+
-- Python 3.11+
+- Python 3.11（不支援 3.12+）
 - 系統 WebView (macOS: WebKit / Windows: WebView2)
 
 ### 安裝 Rust（若尚未安裝）
