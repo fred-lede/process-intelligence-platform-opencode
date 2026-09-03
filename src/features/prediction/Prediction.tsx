@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Select, Space, Button, Alert, Typography, Tag, Slider, InputNumber, Row, Col, Statistic, Modal, Input, message } from 'antd'
+import { Card, Select, Space, Button, Alert, Typography, Tag, Slider, InputNumber, Statistic, Modal, Input, message } from 'antd'
 import { SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, type ModelInfo, type PredictionScenario } from '../../lib/engine'
