@@ -14,6 +14,7 @@ export default function AssistantPanel() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [models, setModels] = useState<string[]>([])
   const [health, setHealth] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const refreshKey = useAIStore((s) => s.refreshKey)
