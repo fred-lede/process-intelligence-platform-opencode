@@ -101,7 +101,20 @@
     "qualityStatus": "Quality Status",
     "checksum": "Checksum",
     "registered_at": "Registered At",
-    "templates": "Templates"
+    "templates": "Templates",
+    "thinking": "Thinking...",
+    "welcome": "Welcome to Process Intelligence Platform",
+    "welcomeSubtitle": "Interpretable, traceable, switchable-model process analysis combining traditional DOE with AI assistance.",
+    "createNew": "Create New Project",
+    "openExisting": "Open Existing Project",
+    "projectDescription": "Description",
+    "engineTitle": "Analysis Engine",
+    "engineDescription": "The analysis engine handles data import, distribution fitting, DOE modeling, Monte Carlo simulation and report generation.",
+    "saveProject": "Save Project",
+    "savedTo": "Project saved to {{path}}",
+    "opened": "Project opened from {{path}}",
+    "saveNoData": "Import data first before saving a project.",
+    "newDone": "Started a new project."
   },
   "dataImport": {
     "stepPick": "Pick File",
