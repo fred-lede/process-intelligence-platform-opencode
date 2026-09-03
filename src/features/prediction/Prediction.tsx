@@ -241,16 +241,27 @@ export default function Prediction() {
             <Card title={t('prediction.equation')} size="small">
               <pre style={{ fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, margin: '0 0 12px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{modelInfo.equation}</pre>
               {modelInfo.inputs.map(inp => {
-                const stats = importResult?.stats.column_stats[inp]
+                const s = importResult?.stats.column_stats[inp]
                 const val = inputValues[inp] ?? 0
-                const mean = stats?.mean ?? val
-                const spread = stats?.std ?? (Math.abs(mean) || 1)
-                let min = stats?.min ?? mean - 3 * spread
-                let max = stats?.max ?? mean + 3 * spread
-                if (!(min < val && val < max)) {
-                  min = mean - 3 * spread
-                  max = mean + 3 * spread
+                const num = (x: unknown) => (typeof x === 'number' && isFinite(x) ? x : undefined)
+                const statMean = num(s?.mean)
+                const statStd = num(s?.std)
+                const statMin = num(s?.min)
+                const statMax = num(s?.max)
+                const mean = statMean ?? val
+                let spread: number
+                if (statStd !== undefined && statStd > 0) {
+                  spread = statStd
+                } else if (statMin !== undefined && statMax !== undefined && statMax > statMin) {
+                  spread = Math.max((statMax - statMin) / 6, Math.abs(mean) || 1)
+                } else {
+                  spread = Math.abs(mean) || 1
                 }
+                const cap = Math.max(Math.abs(mean), 1) * 100
+                if (spread > cap) spread = cap
+                if (!isFinite(spread) || spread <= 0) spread = 1
+                let min = mean - 3 * spread
+                let max = mean + 3 * spread
                 if (min >= max || !isFinite(min) || !isFinite(max)) {
                   min = mean - 1
                   max = mean + 1
@@ -265,7 +276,7 @@ export default function Prediction() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <span style={{ fontWeight: 600, fontSize: 13 }}>{inp}
                           <span style={{ fontWeight: 400, fontSize: 11, color: '#999', marginLeft: 8 }}>
-                            Min: {Number(min).toFixed(2)} / Mean: {(stats?.mean ?? 0).toFixed(2)} / Max: {Number(max).toFixed(2)}
+                            {Number(min).toFixed(2)} — {Number(max).toFixed(2)}
                           </span>
                         </span>
                       </div>
