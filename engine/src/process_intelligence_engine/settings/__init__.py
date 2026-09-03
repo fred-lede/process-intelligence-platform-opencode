@@ -82,12 +82,14 @@ class SettingsManager:
                 import aiohttp
                 url = f"{self._config.base_url.rstrip('/')}/models"
                 headers = {"Authorization": f"Bearer {self._config.api_key}"} if self._config.api_key else {}
-                async def _check() -> bool:
+                async def _check() -> dict:
                     async with aiohttp.ClientSession() as session:
                         async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                            return resp.status == 200
-                is_healthy = asyncio.run(_check())
-                return {"success": is_healthy}
+                            body = await resp.text()
+                            if resp.status != 200:
+                                return {"success": False, "error": f"HTTP {resp.status}: {body[:300]}"}
+                            return {"success": True}
+                return asyncio.run(_check())
         except Exception as e:
             return {"success": False, "error": str(e)}
 
