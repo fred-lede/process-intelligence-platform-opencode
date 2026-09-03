@@ -32,3 +32,20 @@ def test_from_dict_old_data_without_x_y_defaults_zero():
     n = ProcessNode.from_dict({"process_node_id": "1", "display_name": "A", "node_type": "aoi"})
     assert n.x == 0.0
     assert n.y == 0.0
+
+def test_node_data_mapping_fields_update():
+    eng = _engine()
+    node = eng.create_process_node("A", "aoi")
+    nid = node["process_node_id"]
+    updated = eng.update_process_node(nid, {
+        "input_data_sources": ["ds1", "ds2"],
+        "output_data_sources": ["ds3"],
+        "in_control_parameters": ["temp", "speed"],
+        "out_quality_outputs": ["width", "height"],
+        "machine_mapping": ["M1"],
+    })
+    assert updated["input_data_sources"] == ["ds1", "ds2"]
+    assert updated["output_data_sources"] == ["ds3"]
+    assert updated["in_control_parameters"] == ["temp", "speed"]
+    assert updated["out_quality_outputs"] == ["width", "height"]
+    assert updated["machine_mapping"] == ["M1"]
