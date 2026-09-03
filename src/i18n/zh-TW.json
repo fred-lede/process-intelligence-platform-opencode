@@ -533,5 +533,18 @@
     "exploratory": "探索階段",
     "needsMoreData": "需補充資料",
     "notRecommended": "不建議使用"
+  },
+  "copula": {
+    "title": "聯合異常機率",
+    "mode": "結合模式",
+    "independent": "獨立",
+    "gaussianCopula": "高斯 Copula",
+    "direct": "直接指定",
+    "pairCorrelation": "配對相關性",
+    "jointProb": "聯合機率",
+    "independentExpected": "獨立期許值",
+    "correlationIndex": "相關性指數",
+    "noAnomalies": "需要至少 2 個異常情境才能進行 Copula 分析。",
+    "compute": "計算聯合機率"
   }
 }

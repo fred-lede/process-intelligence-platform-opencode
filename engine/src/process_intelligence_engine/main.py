@@ -66,6 +66,7 @@ from process_intelligence_engine.features.time_series import (
     compute_time_features,
     compute_consecutive_exceedance,
 )
+from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 
 
@@ -1088,6 +1089,9 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series(params)
     if method == "features/consecutive_exceedance":
         return _handle_consecutive_exceedance(params)
+
+    if method == "copula/joint":
+        return _handle_copula_joint(params)
 
     raise ValueError(f"Unknown method: {method}")
 

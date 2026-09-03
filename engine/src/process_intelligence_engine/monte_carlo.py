@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from .copula import compute_joint_probabilities, CopulaResult
+
 
 def sample_from_distribution(
     values: list[float],
@@ -77,26 +79,49 @@ def apply_anomalies(
     values: list[float],
     anomalies: list[dict[str, Any]] | None,
     rng: np.random.Generator,
+    copula_result: CopulaResult | None = None,
 ) -> list[float]:
     """Apply anomaly events to input values based on occurrence probability.
 
     Each anomaly is checked independently; when triggered the magnitude is
     added (direction ``"above"``) or subtracted (direction ``"below"``).
+
+    If a ``copula_result`` is provided, joint occurrence probabilities are
+    used to determine correlated anomaly events.
     """
     if not anomalies:
         return list(values)
 
     result = list(values)
+    n_anomalies = len(anomalies)
+    ids = [a.get("anomaly_id", f"anomaly_{j}") for j, a in enumerate(anomalies)]
+    probs = np.array([a.get("occurrence_probability", 0.0) for a in anomalies])
+
     for i in range(len(result)):
-        for anomaly in anomalies:
-            if rng.random() >= anomaly.get("occurrence_probability", 0.0):
-                continue
-            magnitude = _get_magnitude(anomaly, rng)
-            direction = anomaly.get("direction", "above")
-            if direction == "below":
-                result[i] -= magnitude
-            else:
-                result[i] += magnitude
+        if copula_result and copula_result.mode != "independent" and n_anomalies >= 2:
+            # Sample joint occurrence pattern from Copula
+            u = rng.uniform(0, 1, n_anomalies)
+            for j in range(n_anomalies):
+                if u[j] > probs[j]:
+                    continue
+                anomaly = anomalies[j]
+                magnitude = _get_magnitude(anomaly, rng)
+                direction = anomaly.get("direction", "above")
+                if direction == "below":
+                    result[i] -= magnitude
+                else:
+                    result[i] += magnitude
+        else:
+            # Original independent behavior
+            for anomaly in anomalies:
+                if rng.random() >= anomaly.get("occurrence_probability", 0.0):
+                    continue
+                magnitude = _get_magnitude(anomaly, rng)
+                direction = anomaly.get("direction", "above")
+                if direction == "below":
+                    result[i] -= magnitude
+                else:
+                    result[i] += magnitude
     return result
 
 
@@ -232,10 +257,34 @@ def run_monte_carlo(
         sampled_inputs[col] = np.array(sample_from_distribution(col_data.tolist(), n=n_simulations, seed=rng.integers(0, 2**31)))
 
     # Apply anomalies to each input column
+    copula_result: CopulaResult | None = None
     if enable_anomalies and anomalies:
+        # Compute joint occurrence probabilities if multiple anomalies
+        if len(anomalies) >= 2:
+            corr_matrix = [a.get("correlation_matrix", []) for a in anomalies]
+            # Check if any anomaly has a correlation_matrix (pairwise)
+            has_correlation = any(
+                a.get("correlation_matrix") for a in anomalies
+            )
+            if has_correlation:
+                # Build correlation matrix from anomaly data
+                n_a = len(anomalies)
+                corr = np.eye(n_a)
+                for a in anomalies:
+                    if "correlation_matrix" in a and a["correlation_matrix"]:
+                        cm = a["correlation_matrix"]
+                        if len(cm) == n_a:
+                            corr = np.array(cm, dtype=float)
+                copula_result = compute_joint_probabilities(
+                    anomalies, correlation_matrix=corr.tolist(), seed=seed
+                )
+            else:
+                copula_result = compute_joint_probabilities(
+                    anomalies, seed=seed
+                )
         for col in input_columns:
             sampled_inputs[col] = np.array(
-                apply_anomalies(sampled_inputs[col].tolist(), anomalies, rng)
+                apply_anomalies(sampled_inputs[col].tolist(), anomalies, rng, copula_result)
             )
 
     # Predict outputs
@@ -339,4 +388,5 @@ def run_monte_carlo(
         "multi_anomaly_ng": multi_anomaly_ng,
         "violations": violations,
         "output_values": output_values.tolist(),
+        "copula": copula_result.to_dict() if copula_result else None,
     }

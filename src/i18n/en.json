@@ -533,5 +533,18 @@
     "exploratory": "Exploratory",
     "needsMoreData": "Needs More Data",
     "notRecommended": "Not Recommended"
+  },
+  "copula": {
+    "title": "Joint Anomaly Probability",
+    "mode": "Combination Mode",
+    "independent": "Independent",
+    "gaussianCopula": "Gaussian Copula",
+    "direct": "Direct Specification",
+    "pairCorrelation": "Pair Correlation",
+    "jointProb": "Joint Probability",
+    "independentExpected": "Independent Expected",
+    "correlationIndex": "Correlation Index",
+    "noAnomalies": "Need at least 2 anomalies for Copula analysis.",
+    "compute": "Compute Joint Probabilities"
   }
 }

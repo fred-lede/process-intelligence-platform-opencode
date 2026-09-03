@@ -975,3 +975,33 @@ export async function getApprovalStatus(params: { resource_type: ApprovalResourc
 export async function listApprovalRecords(params: ListApprovalRecordsParams = {}): Promise<{ records: ApprovalRecord[] }> {
   return engineCall<{ records: ApprovalRecord[] }>('approval/records', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 11c: Copula Joint Probability -----------------------------------
+
+export interface CopulaResult {
+  mode: 'independent' | 'gaussian_copula' | 'direct'
+  joint_probabilities: Record<string, number>
+  pair_correlations?: Array<{
+    anomaly_a: string
+    anomaly_b: string
+    joint_probability: number
+    independent_expected: number
+    correlation: number
+  }>
+  warning?: string
+}
+
+export interface CopulaParams {
+  anomalies: Array<{
+    anomaly_id: string
+    occurrence_probability: number
+    correlation_matrix?: number[][]
+  }>
+  correlation_matrix?: number[][]
+  direct_joints?: Record<string, number>
+  seed?: number
+}
+
+export async function computeCopula(params: CopulaParams): Promise<CopulaResult> {
+  return engineCall<CopulaResult>('copula/joint', params as unknown as Record<string, unknown>)
+}
