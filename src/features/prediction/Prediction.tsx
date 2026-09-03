@@ -160,46 +160,44 @@ export default function Prediction() {
 
       {modelInfo && (
         <div style={{ display: 'flex', gap: 16, width: '100%' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <Card title={t('prediction.equation')} size="small">
-              <Typography.Text code style={{ fontSize: 14 }}>{modelInfo.equation}</Typography.Text>
-              <div style={{ marginTop: 12 }}>
-                {modelInfo.inputs.map(inp => {
-                  const stats = importResult?.stats.column_stats[inp]
-                  const min = stats?.min ?? (inputValues[inp] ?? 0) - 3 * (stats?.std ?? 5)
-                  const max = stats?.max ?? (inputValues[inp] ?? 0) + 3 * (stats?.std ?? 5)
-                  const val = inputValues[inp] ?? 0
-                  return (
-                    <div key={inp} style={{ marginBottom: 12 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <Typography.Text strong>{inp}</Typography.Text>
-                        <InputNumber
-                          value={val}
-                          onChange={v => handleInputChange(inp, v)}
-                          precision={2}
-                          style={{ width: 100 }}
-                          min={min}
-                          max={max}
-                        />
-                      </div>
-                      <div style={{ width: '100%' }}>
-                        <Slider
-                          min={min}
-                          max={max}
-                          value={val}
-                          onChange={v => handleInputChange(inp, v)}
-                          step={(max - min) / 100}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', gap: 12 }}>
-                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>Min: {min.toFixed(2)}</Typography.Text>
-                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>Mean: {stats?.mean?.toFixed(2) ?? 'N/A'}</Typography.Text>
-                        <Typography.Text type="secondary" style={{ fontSize: 11 }}>Max: {max.toFixed(2)}</Typography.Text>
-                      </div>
+          <div style={{ flex: 1 }}>
+            <Card title={t('prediction.equation')} size="small" bodyStyle={{ padding: '12px 16px' }}>
+              <Typography.Text code style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>{modelInfo.equation}</Typography.Text>
+              {modelInfo.inputs.map(inp => {
+                const stats = importResult?.stats.column_stats[inp]
+                const min = stats?.min ?? (inputValues[inp] ?? 0) - 3 * (stats?.std ?? 5)
+                const max = stats?.max ?? (inputValues[inp] ?? 0) + 3 * (stats?.std ?? 5)
+                const val = inputValues[inp] ?? 0
+                return (
+                  <div key={inp} style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Typography.Text strong style={{ fontSize: 13 }}>{inp}</Typography.Text>
+                      <InputNumber
+                        value={val}
+                        onChange={v => handleInputChange(inp, v)}
+                        precision={2}
+                        style={{ width: 90 }}
+                        min={min}
+                        max={max}
+                      />
                     </div>
-                  )
-                })}
-              </div>
+                    <div style={{ width: '100%' }}>
+                      <Slider
+                        min={Number(min)}
+                        max={Number(max)}
+                        value={Number(val)}
+                        onChange={v => handleInputChange(inp, Number(v))}
+                        step={Math.max(0.01, (Number(max) - Number(min)) / 100)}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>Min: {Number(min).toFixed(2)}</Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>Mean: {(stats?.mean ?? 0).toFixed(2)}</Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>Max: {Number(max).toFixed(2)}</Typography.Text>
+                    </div>
+                  </div>
+                )
+              })}
             </Card>
           </div>
           <div style={{ width: 240, flexShrink: 0 }}>
