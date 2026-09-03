@@ -90,3 +90,11 @@
 - i18n en/zh-TW 完整支援
 - App.tsx 路由整合
 - 驗證 — 250 passed, 1 skipped (86% coverage), tsc/build clean
+
+### Phase 11b — 短期任務補強
+- **Logistic Regression** — `fitters.py` 新增 `fit_logistic_regression()`（二元 NG 預測，支援 accuracy/recall/AUC）
+- **時間序列特徵** — `features/time_series.py`（lag/rolling/drift/連續超標）+ 2 個 IPC handlers
+- **What-if 情境保存** — `prediction/scenario/save+list+delete` IPC + `Prediction.tsx` 新增儲存情境 Modal
+- **審核工作流** — `approval/workflow.py`（submit/approve/reject + status + records）+ 5 個 IPC handlers
+- i18n en/zh-TW：prediction.scenario* / timeSeries* / approval*
+- 驗證 — 250 passed, 1 skipped (81% coverage), tsc/build clean
