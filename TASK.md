@@ -180,3 +180,11 @@
 - **雲端去識別化**：遮罩預覽 + 強制確認 + 審核紀錄 ✅
 - **專案檔案系統**：project_manifest.json + 9 目錄 + 製程群組/節點 ✅
 - **製程流程圖**：SVG 可交互編輯器 + 拓撲佈局 + 環狀檢測 ✅
+
+### Phase 11j — 完整 14 項規格報告（§17.2）
+- **ReportData 擴充**：time_range/spec/distribution_fits/anomalies/monte_carlo/credibility/process_window 等欄位
+- **handler 組裝**：`_handle_report_generate` 防禦式組裝 14 項 + `_spec_serializable`/`_proposed_process_window` 輔助
+- **best_model 回退**：無 validated/approved 時退而取第一個模型
+- **HTMLReportGenerator 重寫**：渲染全部 14 項（severity badge / 防注入 / percentile / 異常貢獻排名）
+- **前端**：`ReportParams` + `Report.tsx` 傳入 spec/lsl/usl/蒙地卡羅參數
+- 驗證 — 250 passed, 1 skipped (70% coverage), tsc/build clean, smoke 渲染 11 section（commit a565cc9）
