@@ -205,6 +205,10 @@ export default function ProcessFlow() {
     (miniH - 12) / (worldBounds.maxY - worldBounds.minY || 1),
   )
 
+  const svgActual = svgRef.current?.getBoundingClientRect()
+  const sw = svgActual?.width || viewportSize.w
+  const sh = svgActual?.height || viewportSize.h
+
   const fitView = () => {
     const pad = 40
     const { minX, minY, maxX, maxY } = worldBounds
@@ -291,8 +295,10 @@ export default function ProcessFlow() {
       setConnectCursor({ x: w.x, y: w.y })
       const el = document.elementFromPoint(e.clientX, e.clientY) as Element | null
       const portEl = el?.closest?.('[data-port]') as HTMLElement | null
-      if (portEl && portEl.dataset.nodeId && portEl.dataset.nodeId !== connectDraft.fromId) {
-        setHoverTarget({ id: portEl.dataset.nodeId, port: (portEl.dataset.port as 'in' | 'out') || 'in' })
+      const nodeEl = el?.closest?.('[data-node]') as HTMLElement | null
+      const targetId = portEl?.dataset.nodeId || nodeEl?.dataset?.node
+      if (targetId && targetId !== connectDraft.fromId) {
+        setHoverTarget({ id: targetId, port: (portEl?.dataset.port as 'in' | 'out') || 'in' })
       } else {
         setHoverTarget(null)
       }
@@ -550,6 +556,7 @@ export default function ProcessFlow() {
               {graph.nodes.map(node => {
                 const pos = { x: node.x ?? 0, y: node.y ?? 0 }
                 const isSelected = selectedNodeId === node.process_node_id
+                const isConnectTarget = hoverTarget?.id === node.process_node_id
                 const color = NODE_COLORS[node.node_type] || NODE_COLORS.default
                 return (
                   <g
@@ -567,6 +574,15 @@ export default function ProcessFlow() {
                         rx={8} ry={8}
                         fill="none" stroke={portColor} strokeWidth={2}
                         strokeDasharray="4 2"
+                      />
+                    )}
+                    {/* Connect target highlight */}
+                    {isConnectTarget && (
+                      <rect
+                        x={pos.x - 4} y={pos.y - 4}
+                        width={NODE_WIDTH + 8} height={NODE_HEIGHT + 8}
+                        rx={9} ry={9}
+                        fill="none" stroke="#52c41a" strokeWidth={2}
                       />
                     )}
                     {/* Node body */}
@@ -601,14 +617,12 @@ export default function ProcessFlow() {
                       cx={pos.x + NODE_WIDTH} cy={pos.y + NODE_HEIGHT / 2} r={5}
                       fill={portColor} stroke="#fff" strokeWidth={1.5}
                       onPointerDown={(e) => startConnect(e, node.process_node_id)}
-                      onPointerUp={(e) => e.stopPropagation()}
                       style={{ cursor: 'crosshair' }}
                     />
                     <circle data-node-id={node.process_node_id} data-port="in"
                       cx={pos.x} cy={pos.y + NODE_HEIGHT / 2} r={5}
                       fill={portColor} stroke="#fff" strokeWidth={1.5}
                       onPointerDown={(e) => startConnect(e, node.process_node_id)}
-                      onPointerUp={(e) => e.stopPropagation()}
                       style={{ cursor: 'crosshair' }}
                     />
                   </g>
@@ -619,7 +633,7 @@ export default function ProcessFlow() {
                   const visibleX = -pan.x / zoom
                   const visibleY = -pan.y / zoom
                   return (
-                    <g transform={`translate(${viewportSize.w - miniW - 12}, ${viewportSize.h - miniH - 12})`} opacity={0.95}>
+                    <g transform={`translate(${sw - miniW - 12}, ${sh - miniH - 12})`} opacity={0.95}>
                       <rect x={0} y={0} width={miniW} height={miniH} rx={6} fill="#ffffff" stroke="#d9d9d9" />
                       <g transform={`translate(6,6) scale(${miniScale})`}>
                         {graph.nodes.map(n => (
