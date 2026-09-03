@@ -10,6 +10,10 @@ import {
   CheckOutlined,
   WarningOutlined,
   ArrowRightOutlined,
+  ZoomInOutlined,
+  ZoomOutOutlined,
+  FullscreenOutlined,
+  ApartmentOutlined,
 } from '@ant-design/icons'
 import {
   getFlowGraph,
@@ -167,6 +171,12 @@ export default function ProcessFlow() {
     return { minX, minY, maxX, maxY }
   }, [graph.nodes])
 
+  const miniW = 140, miniH = 96
+  const miniScale = Math.min(
+    (miniW - 12) / (worldBounds.maxX - worldBounds.minX || 1),
+    (miniH - 12) / (worldBounds.maxY - worldBounds.minY || 1),
+  )
+
   const fitView = () => {
     const pad = 40
     const { minX, minY, maxX, maxY } = worldBounds
@@ -320,6 +330,33 @@ export default function ProcessFlow() {
     }
   }
 
+  const handleAutoLayout = async () => {
+    try {
+      const { layout: newLayout } = computeLayout(graph.nodes, graph.edges)
+      const updated = graph.nodes.map(n => {
+        const p = newLayout.get(n.process_node_id)
+        return p ? { ...n, x: p.x, y: p.y } : n
+      })
+      setGraph(prev => ({ ...prev, nodes: updated }))
+      for (const u of updated) {
+        await updateProcessNode(u.process_node_id, { x: u.x, y: u.y })
+      }
+      const padding = 40
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const u of updated) {
+        minX = Math.min(minX, u.x ?? 0); minY = Math.min(minY, u.y ?? 0)
+        maxX = Math.max(maxX, (u.x ?? 0) + NODE_WIDTH); maxY = Math.max(maxY, (u.y ?? 0) + NODE_HEIGHT)
+      }
+      const bw = (maxX - minX) || 1, bh = (maxY - minY) || 1
+      const z = Math.min((viewportSize.w - 2 * padding) / bw, (viewportSize.h - 2 * padding) / bh, 1.5)
+      setZoom(Math.max(0.5, z))
+      setPan({ x: (viewportSize.w - bw * z) / 2 - minX * z, y: (viewportSize.h - bh * z) / 2 - minY * z })
+      messageApi.success('Layout applied')
+    } catch {
+      messageApi.error('Failed to apply layout')
+    }
+  }
+
   const portColor = '#1677ff'
   const svga = (cx: number, cy: number, tx: number, ty: number) => {
     const dx = tx - cx
@@ -350,6 +387,15 @@ export default function ProcessFlow() {
           </Button>
           <Button icon={<CheckOutlined />} onClick={() => { void loadData() }} loading={loading}>
             {t('processFlow.refresh')}
+          </Button>
+          <Space.Compact>
+            <Button icon={<ZoomInOutlined />} onClick={() => setZoom(z => Math.min(2, z * 1.25))} />
+            <Button onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</Button>
+            <Button icon={<ZoomOutOutlined />} onClick={() => setZoom(z => Math.max(0.5, z * 0.8))} />
+            <Button icon={<FullscreenOutlined />} onClick={() => fitView()} title={t('processFlow.zoomFit')} />
+          </Space.Compact>
+          <Button icon={<ApartmentOutlined />} onClick={() => { void handleAutoLayout() }}>
+            {t('processFlow.autoLayout')}
           </Button>
           {validation && (
             <Space>
@@ -496,6 +542,35 @@ export default function ProcessFlow() {
                 )
               })}
                 </g>
+                {graph.nodes.length > 0 && (() => {
+                  const visibleX = -pan.x / zoom
+                  const visibleY = -pan.y / zoom
+                  return (
+                    <g transform={`translate(${viewportSize.w - miniW - 12}, ${viewportSize.h - miniH - 12})`} opacity={0.95}>
+                      <rect x={0} y={0} width={miniW} height={miniH} rx={6} fill="#ffffff" stroke="#d9d9d9" />
+                      <g transform={`translate(6,6) scale(${miniScale})`}>
+                        {graph.nodes.map(n => (
+                          <rect
+                            key={n.process_node_id}
+                            x={(n.x ?? 0) - worldBounds.minX}
+                            y={(n.y ?? 0) - worldBounds.minY}
+                            width={NODE_WIDTH}
+                            height={NODE_HEIGHT}
+                            rx={2}
+                            fill={NODE_COLORS[n.node_type] || NODE_COLORS.default}
+                          />
+                        ))}
+                      </g>
+                      <rect
+                        x={6 + (visibleX - worldBounds.minX) * miniScale}
+                        y={6 + (visibleY - worldBounds.minY) * miniScale}
+                        width={(viewportSize.w / zoom) * miniScale}
+                        height={(viewportSize.h / zoom) * miniScale}
+                        fill="none" stroke="#1677ff" strokeWidth={1.5}
+                      />
+                    </g>
+                  )
+                })()}
               </svg>
             </div>
           )}
