@@ -1111,3 +1111,206 @@ export async function confirmCloudUpload(params: CloudUploadParams): Promise<Clo
 export async function listCloudUploadRecords(params: { dataset_id?: string; operator?: string } = {}): Promise<{ records: UploadRecord[] }> {
   return engineCall<{ records: UploadRecord[] }>('cloud/records', params as unknown as Record<string, unknown>)
 }
+
+// --- Phase 11h: Project Manifest & Filesystem (spec 11A) -------------------
+
+export interface ProcessGroup {
+  process_group_id: string
+  display_name: string
+  directory_name: string
+  description: string
+  input_templates: string[]
+  output_templates: string[]
+  quality_label_templates: string[]
+  unit_profile: Record<string, string>
+  active: boolean
+  created_at: string
+}
+
+export interface ProcessNode {
+  process_node_id: string
+  display_name: string
+  node_type: string
+  sequence_or_edges: Array<{ from: string; to: string; condition?: string }>
+  input_data_sources: string[]
+  output_data_sources: string[]
+  in_control_parameters: string[]
+  out_quality_outputs: string[]
+  machine_mapping: string[]
+  rework_policy: 'default' | 'rework' | 'scrap' | 'hold'
+  active: boolean
+  created_at: string
+}
+
+export interface DatasetRegistration {
+  dataset_id: string
+  source_path: string
+  source_file: string
+  format: string
+  row_count: number
+  column_count: number
+  time_range?: { start: string; end: string }
+  partition_keys: string[]
+  schema_version: string
+  checksum: string
+  quality_status: 'unknown' | 'good' | 'degraded' | 'poor'
+  sensitive_columns: string[]
+  cloud_transfer_policy: 'off' | 'preview' | 'approved'
+  registered_at: string
+}
+
+export interface ProjectManifest {
+  project_id: string
+  project_name: string
+  operator: string
+  version: string
+  created_at: string
+  updated_at: string
+  project_root: string
+  source_data_dirs: string[]
+  process_groups: ProcessGroup[]
+  process_nodes: ProcessNode[]
+  dataset_count: number
+  model_count: number
+  settings: Record<string, unknown>
+}
+
+export interface ProjectDirs {
+  source_data: string
+  registry: string
+  curated_data: string
+  analysis_data: string
+  models: string
+  simulations: string
+  experiments: string
+  reports: string
+  audit: string
+}
+
+export interface ScanResult {
+  path: string
+  name: string
+  size_bytes: number
+  format: string
+}
+
+export interface ProjectSourceDir {
+  path: string
+  name: string
+  exists: boolean
+  file_count: number
+}
+
+// Manifest
+export async function getProjectManifest(): Promise<ProjectManifest> {
+  return engineCall<ProjectManifest>('project/manifest', {})
+}
+
+export async function createProject(params: { root: string; name?: string; operator?: string }): Promise<{ project_id: string; project_name: string; project_root: string; created_at: string }> {
+  return engineCall<{ project_id: string; project_name: string; project_root: string; created_at: string }>('project/create', params as unknown as Record<string, unknown>)
+}
+
+export async function openProject(root: string): Promise<{ project_id: string; project_name: string; project_root: string; datasets: number; process_groups: number }> {
+  return engineCall<{ project_id: string; project_name: string; project_root: string; datasets: number; process_groups: number }>('project/open', { root })
+}
+
+export async function updateProjectSettings(updates: Record<string, unknown>): Promise<Record<string, unknown>> {
+  return engineCall<Record<string, unknown>>('project/settings', { updates })
+}
+
+// Directories
+export async function getProjectDirs(): Promise<ProjectDirs> {
+  return engineCall<ProjectDirs>('project/dirs', {})
+}
+
+export async function listSourceDirs(): Promise<ProjectSourceDir[]> {
+  const r = await engineCall<{ dirs: ProjectSourceDir[] }>('project/source-dirs', {})
+  return r.dirs
+}
+
+export async function addSourceDir(params: { directory_name: string; absolute_path: string }): Promise<{ added: boolean; path: string; target: string }> {
+  return engineCall<{ added: boolean; path: string; target: string }>('project/source-dirs', { action: 'add', ...params } as unknown as Record<string, unknown>)
+}
+
+export async function scanSourceDir(directory_path: string): Promise<ScanResult[]> {
+  const r = await engineCall<{ files: ScanResult[] }>('project/scan', { directory_path })
+  return r.files
+}
+
+// Process groups
+export async function getProcessGroups(): Promise<ProcessGroup[]> {
+  const r = await engineCall<{ process_groups: ProcessGroup[] }>('project/process-groups', {})
+  return r.process_groups
+}
+
+export async function createProcessGroup(params: {
+  display_name: string
+  directory_name: string
+  description?: string
+  input_templates?: string[]
+  output_templates?: string[]
+  quality_label_templates?: string[]
+  unit_profile?: Record<string, string>
+}): Promise<ProcessGroup> {
+  return engineCall<ProcessGroup>('project/process-group/create', params as unknown as Record<string, unknown>)
+}
+
+export async function updateProcessGroup(group_id: string, updates: Record<string, unknown>): Promise<ProcessGroup> {
+  return engineCall<ProcessGroup>('project/process-group/update', { process_group_id: group_id, updates } as unknown as Record<string, unknown>)
+}
+
+export async function deleteProcessGroup(group_id: string): Promise<{ deleted: boolean }> {
+  return engineCall<{ deleted: boolean }>('project/process-group/delete', { process_group_id: group_id })
+}
+
+export async function getProcessGroupTemplates(): Promise<Array<{ name: string; description: string }>> {
+  const r = await engineCall<{ templates: Array<{ name: string; description: string }> }>('project/process-group-templates', {})
+  return r.templates
+}
+
+// Process nodes
+export async function getProcessNodes(): Promise<ProcessNode[]> {
+  const r = await engineCall<{ process_nodes: ProcessNode[] }>('project/process-nodes', {})
+  return r.process_nodes
+}
+
+export async function createProcessNode(params: {
+  display_name: string
+  node_type: string
+  sequence_or_edges?: Array<{ from: string; to: string; condition?: string }>
+  input_data_sources?: string[]
+  rework_policy?: string
+}): Promise<ProcessNode> {
+  return engineCall<ProcessNode>('project/process-node/create', params as unknown as Record<string, unknown>)
+}
+
+export async function updateProcessNode(node_id: string, updates: Record<string, unknown>): Promise<ProcessNode> {
+  return engineCall<ProcessNode>('project/process-node/update', { process_node_id: node_id, updates } as unknown as Record<string, unknown>)
+}
+
+export async function deleteProcessNode(node_id: string): Promise<{ deleted: boolean }> {
+  return engineCall<{ deleted: boolean }>('project/process-node/delete', { process_node_id: node_id })
+}
+
+// Datasets
+export async function getDatasets(): Promise<DatasetRegistration[]> {
+  const r = await engineCall<{ datasets: DatasetRegistration[] }>('project/datasets', {})
+  return r.datasets
+}
+
+export async function registerDataset(params: {
+  source_path: string
+  dataset_id?: string
+  format?: string
+  row_count?: number
+  column_count?: number
+  partition_keys?: string[]
+  time_range?: { start: string; end: string }
+  quality_status?: string
+}): Promise<DatasetRegistration> {
+  return engineCall<DatasetRegistration>('project/dataset/register', params as unknown as Record<string, unknown>)
+}
+
+export async function updateDataset(dataset_id: string, updates: Record<string, unknown>): Promise<DatasetRegistration | null> {
+  return engineCall<DatasetRegistration | null>('project/dataset/update', { dataset_id, updates } as unknown as Record<string, unknown>)
+}

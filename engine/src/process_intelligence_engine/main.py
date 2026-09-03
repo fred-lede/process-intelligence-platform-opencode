@@ -37,6 +37,7 @@ from process_intelligence_engine.data.deidentify import (
     record_upload,
     list_upload_records,
 )
+from process_intelligence_engine.project.manifest import ProjectEngine, _PROCESS_GROUP_TEMPLATES
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
@@ -135,6 +136,7 @@ class DatasetRegistry:
 REGISTRY = DatasetRegistry()
 MODEL_REGISTRY = ModelRegistry()
 AUTH_MANAGER = AuthManager()
+PROJECT_ENGINE = ProjectEngine()
 
 
 class ExperimentRecord:
@@ -1110,6 +1112,45 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "cloud/records":
         return _handle_cloud_records(params)
 
+    if method == "project/manifest":
+        return _handle_project_manifest(params)
+    if method == "project/create":
+        return _handle_project_create(params)
+    if method == "project/open":
+        return _handle_project_open(params)
+    if method == "project/settings":
+        return _handle_project_settings(params)
+    if method == "project/dirs":
+        return _handle_project_dirs(params)
+    if method == "project/source-dirs":
+        return _handle_project_source_dirs(params)
+    if method == "project/scan":
+        return _handle_project_scan(params)
+    if method == "project/process-groups":
+        return _handle_project_process_groups(params)
+    if method == "project/process-group/create":
+        return _handle_project_process_group_create(params)
+    if method == "project/process-group/update":
+        return _handle_project_process_group_update(params)
+    if method == "project/process-group/delete":
+        return _handle_project_process_group_delete(params)
+    if method == "project/process-group-templates":
+        return _handle_project_process_group_templates(params)
+    if method == "project/process-nodes":
+        return _handle_project_process_nodes(params)
+    if method == "project/process-node/create":
+        return _handle_project_process_node_create(params)
+    if method == "project/process-node/update":
+        return _handle_project_process_node_update(params)
+    if method == "project/process-node/delete":
+        return _handle_project_process_node_delete(params)
+    if method == "project/datasets":
+        return _handle_project_datasets(params)
+    if method == "project/dataset/register":
+        return _handle_project_dataset_register(params)
+    if method == "project/dataset/update":
+        return _handle_project_dataset_update(params)
+
     raise ValueError(f"Unknown method: {method}")
 
 
@@ -1367,6 +1408,121 @@ def _handle_cloud_records(params: dict) -> dict:
     operator = params.get("operator")
     records = list_upload_records(dataset_id, operator)
     return {"records": records}
+
+
+# ---------------------------------------------------------------------------
+# Project manifest (spec 11A)
+# ---------------------------------------------------------------------------
+
+
+def _handle_project_manifest(params: dict) -> dict:
+    return PROJECT_ENGINE.get_manifest()
+
+
+def _handle_project_create(params: dict) -> dict:
+    root = params["root"]
+    name = params.get("name", "Untitled")
+    operator = params.get("operator", "anonymous")
+    return PROJECT_ENGINE.create_project(root, name, operator)
+
+
+def _handle_project_open(params: dict) -> dict:
+    root = params["root"]
+    return PROJECT_ENGINE.open_project(root)
+
+
+def _handle_project_settings(params: dict) -> dict:
+    updates = params.get("updates", {})
+    return PROJECT_ENGINE.update_settings(updates)
+
+
+def _handle_project_dirs(params: dict) -> dict:
+    return PROJECT_ENGINE.get_directories()
+
+
+def _handle_project_source_dirs(params: dict) -> dict:
+    return PROJECT_ENGINE.list_source_dirs()
+
+
+def _handle_project_scan(params: dict) -> dict:
+    directory_path = params["directory_path"]
+    return PROJECT_ENGINE.scan_source_dir(directory_path)
+
+
+def _handle_project_process_groups(params: dict) -> dict:
+    manifest = PROJECT_ENGINE._load()
+    return {"process_groups": [g.to_dict() for g in manifest.process_groups]}
+
+
+def _handle_project_process_group_create(params: dict) -> dict:
+    return PROJECT_ENGINE.create_process_group(
+        display_name=params["display_name"],
+        directory_name=params["directory_name"],
+        description=params.get("description", ""),
+        input_templates=params.get("input_templates", []),
+        output_templates=params.get("output_templates", []),
+        quality_label_templates=params.get("quality_label_templates", []),
+        unit_profile=params.get("unit_profile", {}),
+    )
+
+
+def _handle_project_process_group_update(params: dict) -> dict:
+    return PROJECT_ENGINE.update_process_group(params["process_group_id"], params.get("updates", {}))
+
+
+def _handle_project_process_group_delete(params: dict) -> dict:
+    deleted = PROJECT_ENGINE.delete_process_group(params["process_group_id"])
+    return {"deleted": deleted}
+
+
+def _handle_project_process_group_templates(params: dict) -> dict:
+    return {"templates": _PROCESS_GROUP_TEMPLATES}
+
+
+def _handle_project_process_nodes(params: dict) -> dict:
+    manifest = PROJECT_ENGINE._load()
+    return {"process_nodes": [n.to_dict() for n in manifest.process_nodes]}
+
+
+def _handle_project_process_node_create(params: dict) -> dict:
+    return PROJECT_ENGINE.create_process_node(
+        display_name=params["display_name"],
+        node_type=params["node_type"],
+        sequence_or_edges=params.get("sequence_or_edges", []),
+        input_data_sources=params.get("input_data_sources", []),
+        rework_policy=params.get("rework_policy", "default"),
+    )
+
+
+def _handle_project_process_node_update(params: dict) -> dict:
+    return PROJECT_ENGINE.update_process_node(params["process_node_id"], params.get("updates", {}))
+
+
+def _handle_project_process_node_delete(params: dict) -> dict:
+    deleted = PROJECT_ENGINE.delete_process_node(params["process_node_id"])
+    return {"deleted": deleted}
+
+
+def _handle_project_datasets(params: dict) -> dict:
+    return {"datasets": PROJECT_ENGINE.list_datasets()}
+
+
+def _handle_project_dataset_register(params: dict) -> dict:
+    return PROJECT_ENGINE.register_dataset(
+        source_path=params["source_path"],
+        dataset_id=params.get("dataset_id"),
+        format=params.get("format", "csv"),
+        row_count=params.get("row_count", 0),
+        column_count=params.get("column_count", 0),
+        partition_keys=params.get("partition_keys", []),
+        time_range=params.get("time_range"),
+        quality_status=params.get("quality_status", "unknown"),
+    )
+
+
+def _handle_project_dataset_update(params: dict) -> dict:
+    result = PROJECT_ENGINE.update_dataset(params["dataset_id"], params.get("updates", {}))
+    return result or {"error": "dataset not found"}
 
 
 def _read_request() -> dict | None:
