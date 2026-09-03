@@ -164,7 +164,7 @@ export default function MonteCarlo() {
           </Row>
 
           <Card title={t('monteCarlo.outputDistribution')} size="small">
-            <Space direction="horizontal" style={{ width: '100%' }}>
+            <div style={{ display: 'flex', gap: 16, width: '100%' }}>
               <Plot
                 data={[histogramTrace].filter(Boolean)}
                 layout={{
@@ -187,7 +187,7 @@ export default function MonteCarlo() {
                 config={{ responsive: true, displayModeBar: false }}
                 style={{ flex: 1 }}
               />
-            </Space>
+            </div>
           </Card>
 
           {result.anomaly_rankings.length > 0 && (
