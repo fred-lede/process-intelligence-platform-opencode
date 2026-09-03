@@ -101,20 +101,7 @@
     "qualityStatus": "品質狀態",
     "checksum": "Checksum",
     "registered_at": "註冊時間",
-    "templates": "範本",
-    "thinking": "思考中...",
-    "welcome": "歡迎使用製程智慧分析平台",
-    "welcomeSubtitle": "可解釋、可追溯、可切換模型的製程分析平台，結合傳統 DOE 與 AI 輔助分析。",
-    "createNew": "建立新專案",
-    "openExisting": "開啟現有專案",
-    "projectDescription": "說明",
-    "engineTitle": "分析引擎",
-    "engineDescription": "分析引擎處理資料匯入、分布配適、DOE 模型、蒙地卡羅模擬與報告產生。",
-    "saveProject": "儲存專案",
-    "savedTo": "專案已儲存至 {{path}}",
-    "opened": "已從 {{path}} 開啟專案",
-    "saveNoData": "儲存前請先匯入資料。",
-    "newDone": "已開始新專案。"
+    "templates": "範本"
   },
   "dataImport": {
     "stepPick": "選擇檔案",
@@ -372,7 +359,7 @@
       "inconclusive": "待確認",
       "unknown": "未知"
     },
-    "resultLabel": "結果",
+    "resultLabel": "結果"
   },
   "report": {
     "title": "報告",
