@@ -262,7 +262,7 @@ export default function Settings() {
           <Form
             form={aiForm}
             layout="vertical"
-            onValuesChange={(_, all) => setAiConfig(all as AIProviderConfig)}
+            onValuesChange={(_, changes) => setAiConfig(prev => ({ ...prev, ...changes }) as AIProviderConfig)}
           >
             <Form.Item name="provider" label={t('settings.providerType')}>
               <Select
