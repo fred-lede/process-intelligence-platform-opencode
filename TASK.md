@@ -98,3 +98,12 @@
 - **審核工作流** — `approval/workflow.py`（submit/approve/reject + status + records）+ 5 個 IPC handlers
 - i18n en/zh-TW：prediction.scenario* / timeSeries* / approval*
 - 驗證 — 250 passed, 1 skipped (81% coverage), tsc/build clean
+
+### Phase 11c — 中期任務（第一批）
+- **PDF 匯出** — 引擎支援 `report/generate` format=pdf + `Report.tsx` 新增 PDF 按鈕
+- **Weibull 迴歸** — `fit_weibull_regression()`（MLE 估計 shape k + log(λ)=Xβ），`MODEL_FITTERS` 註冊
+- **可信度評分** — `validation.py:compute_credibility()`（6 維度：資料覆蓋/預測準確/統計穩定/工程合理/驗證程度/外插風險）
+- **Credibility UI** — ValidationLab 模型表格新增可信度等級欄位 + 分數細節卡片
+- i18n en/zh-TW：credibility.*
+- 測試修正：`test_report_generate_unsupported_format` 改為 json
+- 驗證 — 250 passed, 1 skipped (80% coverage), tsc/build clean
