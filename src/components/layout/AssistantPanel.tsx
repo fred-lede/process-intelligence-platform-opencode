@@ -98,10 +98,10 @@ export default function AssistantPanel() {
         {loading && (
           <div style={{ marginBottom: 12, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <Avatar size="small" icon={<RobotOutlined />} style={{ backgroundColor: '#10b981', marginTop: 4 }} />
-            <div style={{ flex: 1, background: '#f0f9ff', padding: '10px 14px', borderRadius: 8, minWidth: 120 }}>
+            <div style={{ flex: 1, background: '#ecfdf5', padding: '10px 14px', borderRadius: 8, minWidth: 120, display: 'flex', alignItems: 'center' }}>
               <Space direction="horizontal" size={8}>
-                <Spin size="small" />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t('assistant.thinking')}</Typography.Text>
+                <Spin size="small" style={{ color: '#10b981' }} />
+                <Typography.Text style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>{t('assistant.thinking')}</Typography.Text>
               </Space>
             </div>
           </div>
