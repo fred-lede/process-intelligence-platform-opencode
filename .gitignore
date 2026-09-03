@@ -3,6 +3,7 @@ node_modules/
 dist/
 *.log
 .npm/
+release/
 
 # Rust / Tauri
 src-tauri/target/
