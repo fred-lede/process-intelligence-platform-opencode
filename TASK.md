@@ -136,3 +136,26 @@
 - **審核紀錄** — operator、provider、model_version、mask_rules、upload_hash、purpose
 - i18n en/zh-TW：cloud.*（20 keys）
 - 驗證 — 250 passed, 1 skipped (74% coverage), tsc/build clean
+
+---
+**專案總體**：
+- **代码行數**：~13,649 行（src + engine/src）
+- **Commits**：197
+- **測試**：250 passed, 1 skipped（74% coverage）
+- **Phase 0–11**：全部完成 ✅
+- **Phase 11b–11g**：短期 + 中期任務全部完成 ✅
+- **多語言**：en / zh-TW / es-MX（3 種）✅
+- **模型類型**：doe_linear / doe_quadratic / random_forest / residual_hybrid / logistic_regression / weibull_regression（6 種）✅
+- **AI 助手**：Ollama / OpenAI / Azure / Custom（4 種 provider）✅
+- **SPC**：I-MR / X-bar+R / X-bar-S + WE 7 規則 + Cp/Cpk/Pp/Ppk ✅
+- **蒙地卡羅**：正常/異常抽樣 + Copula 聯合機率 + NG 機率 ✅
+- **驗證實驗**：Full validation + 實驗建議 + 實驗記錄 ✅
+- **可信度評分**：6 維度綜合評分（spec 21）✅
+- **GRR**：AIEM 方法 + 判定 + 警告 ✅
+- **時間序列**：lag/rolling/drift/連續超標 ✅
+- **審核工作流**：submit/approve/reject（Reviewer 角色）✅
+- **雲端去識別化**：遮罩預覽 + 強制確認 + 審核紀錄 ✅
+
+**剩餘長期任務**：
+- 製程節點可配置 / 流程圖（spec 11A）— 需較大 UI 工作量
+- 資料目錄結構（source_data/registry/curated_data 等）— 檔案系統層級
