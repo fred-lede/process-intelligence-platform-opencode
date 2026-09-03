@@ -168,6 +168,7 @@ export default function Prediction() {
                 const min = stats?.min ?? (inputValues[inp] ?? 0) - 3 * (stats?.std ?? 5)
                 const max = stats?.max ?? (inputValues[inp] ?? 0) + 3 * (stats?.std ?? 5)
                 const val = inputValues[inp] ?? 0
+                const step = Math.max(0.01, (max - min) / 100)
                 return (
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
