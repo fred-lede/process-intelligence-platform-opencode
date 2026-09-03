@@ -21,6 +21,7 @@ import {
   createProcessNode,
   updateProcessNode,
   deleteProcessNode,
+  getDatasets,
   type FlowGraph,
   type FlowNode,
   type FlowEdge,
@@ -119,6 +120,7 @@ export default function ProcessFlow() {
   const [form] = Form.useForm()
 
   const selectedNode = graph.nodes.find(n => n.process_node_id === selectedNodeId) || null
+  const [datasets, setDatasets] = useState<Array<{ value: string; label: string }>>([])
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -177,6 +179,12 @@ export default function ProcessFlow() {
   }
 
   useEffect(() => { void loadData() }, [])
+
+  useEffect(() => {
+    void getDatasets().then(regs => setDatasets(
+      regs.map(r => ({ value: r.dataset_id, label: r.source_file || r.dataset_id })),
+    )).catch(() => {})
+  }, [])
 
   const worldBounds = useMemo(() => {
     const pts = graph.nodes.map(n => ({
@@ -366,6 +374,21 @@ export default function ProcessFlow() {
       await loadData()
     } catch {
       messageApi.error(t('processFlow.disconnectError'))
+    }
+  }
+
+  const saveMapping = async (field: string, vals: string[]) => {
+    if (!selectedNode) return
+    try {
+      await updateProcessNode(selectedNode.process_node_id, { [field]: vals } as Record<string, unknown>)
+      setGraph(prev => ({
+        ...prev,
+        nodes: prev.nodes.map(n =>
+          n.process_node_id === selectedNode.process_node_id ? { ...n, [field]: vals } : n,
+        ),
+      }))
+    } catch {
+      messageApi.error(t('processFlow.saveError'))
     }
   }
 
@@ -667,6 +690,41 @@ export default function ProcessFlow() {
                   </div>
                 </div>
               )}
+              <div style={{ marginTop: 12, fontSize: 12, fontWeight: 600 }}>
+                {t('processFlow.dataMapping')}
+              </div>
+              <span style={{ fontSize: 12, color: '#6b7280' }}>{t('processFlow.inputDataSources')}</span>
+              <Select mode="multiple" allowClear style={{ width: '100%' }}
+                placeholder={t('processFlow.selectDataSources')}
+                options={datasets}
+                value={selectedNode.input_data_sources || []}
+                onChange={vals => void saveMapping('input_data_sources', vals as string[])}
+              />
+              <span style={{ fontSize: 12, color: '#6b7280' }}>{t('processFlow.outputDataSources')}</span>
+              <Select mode="multiple" allowClear style={{ width: '100%' }}
+                placeholder={t('processFlow.selectDataSources')}
+                options={datasets}
+                value={selectedNode.output_data_sources || []}
+                onChange={vals => void saveMapping('output_data_sources', vals as string[])}
+              />
+              <span style={{ fontSize: 12, color: '#6b7280' }}>{t('processFlow.controlParameters')}</span>
+              <Select mode="tags" style={{ width: '100%' }}
+                placeholder={t('processFlow.typeOrSelect')}
+                value={selectedNode.in_control_parameters || []}
+                onChange={vals => void saveMapping('in_control_parameters', vals as string[])}
+              />
+              <span style={{ fontSize: 12, color: '#6b7280' }}>{t('processFlow.qualityOutputs')}</span>
+              <Select mode="tags" style={{ width: '100%' }}
+                placeholder={t('processFlow.typeOrSelect')}
+                value={selectedNode.out_quality_outputs || []}
+                onChange={vals => void saveMapping('out_quality_outputs', vals as string[])}
+              />
+              <span style={{ fontSize: 12, color: '#6b7280' }}>{t('processFlow.machineMapping')}</span>
+              <Select mode="tags" style={{ width: '100%' }}
+                placeholder={t('processFlow.typeOrSelect')}
+                value={selectedNode.machine_mapping || []}
+                onChange={vals => void saveMapping('machine_mapping', vals as string[])}
+              />
               {/* Connect to node selector */}
               <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>
                 {t('processFlow.connectTo')}:
