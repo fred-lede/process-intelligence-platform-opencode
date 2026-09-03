@@ -14,6 +14,8 @@ const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_quadratic', labelKey: 'modelCenter.modelType.doeQuadratic' },
   { value: 'random_forest', labelKey: 'modelCenter.modelType.randomForest' },
   { value: 'residual_hybrid', labelKey: 'modelCenter.modelType.residualHybrid' },
+  { value: 'logistic_regression', labelKey: 'modelCenter.modelType.logisticRegression' },
+  { value: 'weibull_regression', labelKey: 'modelCenter.modelType.weibullRegression' },
 ]
 
 const STATUS_TRANSITIONS: Partial<Record<ModelStatus, ModelStatus[]>> = {

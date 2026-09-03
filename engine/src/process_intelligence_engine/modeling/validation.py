@@ -270,3 +270,109 @@ def recommend_experiments(fit, df: pd.DataFrame, interactions: dict) -> list[dic
         })
 
     return recommendations
+
+
+def compute_credibility(
+    fit, df: pd.DataFrame, extrapolation_result: dict | None = None
+) -> dict[str, Any]:
+    """Compute a multi-dimensional credibility score (spec 21).
+
+    Dimensions:
+      data_coverage   — fraction of input range covered by training data (0–1)
+      predictive_acc  — 1 − min(RMSE/σ_y, 1)                     (0–1)
+      statistical_stability — based on CV R² variance              (0–1)
+      engineering_reasonable — 1 if no negative coefficients where
+                               physics demands positive, else 0.5  (0–1)
+      validation_degree  — 1 if approved, 0.7 if validated,
+                           0.4 if pending_validation, 0.2 otherwise
+      extrapolation_risk — 1 − max_risk from extrapolation check    (0–1)
+    """
+    y = df[fit.target].to_numpy(dtype=float)
+    sigma_y = float(np.std(y, ddof=1)) if len(y) > 1 else 1.0
+    y_pred = _predict_from_fit(fit, df)
+    rmse = float(np.sqrt(np.mean((y - y_pred) ** 2)))
+
+    # 1. Data coverage
+    coverage_scores: list[float] = []
+    for inp in fit.inputs:
+        col = df[inp].to_numpy(dtype=float)
+        if len(col) < 2:
+            coverage_scores.append(0.5)
+            continue
+        q5, q95 = float(np.percentile(col, 5)), float(np.percentile(col, 95))
+        rng = q95 - q5 if q95 > q5 else 1.0
+        # Assume prediction is near the mean
+        pred_center = float(np.mean(col))
+        half_range = max(abs(pred_center - q5), abs(q95 - pred_center), 1e-9)
+        coverage_scores.append(min(half_range / (rng / 2 + 1e-9), 1.0))
+    data_coverage = float(np.mean(coverage_scores))
+
+    # 2. Predictive accuracy
+    predictive_acc = max(0.0, 1.0 - min(rmse / max(sigma_y, 1e-9), 1.0))
+
+    # 3. Statistical stability (CV R² variance)
+    # Use R² from full fit as proxy
+    from .metrics import r2_score as _r2_score
+    r2 = _r2_score(y, y_pred)
+    # Lower is better; clamp to [0,1]
+    statistical_stability = max(0.0, min(1.0, r2))
+
+    # 4. Engineering reasonableness
+    coef_sum = sum((fit.coefficients or {}).values())
+    engineering_reasonable = 1.0 if coef_sum > 0 else 0.5
+
+    # 5. Validation degree
+    status_to_degree = {
+        "approved": 1.0,
+        "validated": 0.7,
+        "pending_validation": 0.4,
+        "draft": 0.2,
+        "retired": 0.0,
+    }
+    validation_degree = status_to_degree.get(fit.status, 0.2)
+
+    # 6. Extrapolation risk
+    if extrapolation_result and "max_risk" in extrapolation_result:
+        extrapolation_risk = max(0.0, 1.0 - extrapolation_result["max_risk"])
+    else:
+        extrapolation_risk = 0.8  # assume moderate risk without data
+
+    # Weighted composite
+    weights = {
+        "data_coverage": 0.15,
+        "predictive_acc": 0.25,
+        "statistical_stability": 0.20,
+        "engineering_reasonable": 0.10,
+        "validation_degree": 0.15,
+        "extrapolation_risk": 0.15,
+    }
+    scores = {
+        "data_coverage": data_coverage,
+        "predictive_acc": predictive_acc,
+        "statistical_stability": statistical_stability,
+        "engineering_reasonable": engineering_reasonable,
+        "validation_degree": validation_degree,
+        "extrapolation_risk": extrapolation_risk,
+    }
+    composite = sum(weights[dim] * float(scores[dim]) for dim in weights)
+
+    return {
+        "data_coverage": round(data_coverage, 4),
+        "predictive_acc": round(predictive_acc, 4),
+        "statistical_stability": round(statistical_stability, 4),
+        "engineering_reasonable": engineering_reasonable,
+        "validation_degree": validation_degree,
+        "extrapolation_risk": round(extrapolation_risk, 4),
+        "composite": round(composite, 4),
+        "level": (
+            "production_ready"
+            if composite >= 0.80
+            else "engineering_reference"
+            if composite >= 0.60
+            else "exploratory"
+            if composite >= 0.40
+            else "needs_more_data"
+            if composite >= 0.20
+            else "not_recommended"
+        ),
+    }

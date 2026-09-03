@@ -18,6 +18,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score, roc_auc_score
+from scipy.optimize import minimize
 
 from .metrics import (
     mean_absolute_error,
@@ -33,6 +34,7 @@ MODEL_TYPES = {
     "random_forest": "random_forest",
     "residual_hybrid": "residual_hybrid",
     "logistic_regression": "logistic_regression",
+    "weibull_regression": "weibull_regression",
 }
 
 STATUS = ("draft", "pending_validation", "validated", "approved", "retired")
@@ -292,4 +294,96 @@ def fit_logistic_regression(
         n_test=len(X_te),
         created_at=_now(),
         model=lr,
+    )
+
+
+def _weibull_nll(params: np.ndarray, X: np.ndarray, t: np.ndarray) -> float:
+    """Negative log-likelihood for Weibull regression.
+
+    log(λ) = X @ β,  shape = k
+    NLL = Σ [ log(k) - k*log(λ) + (k-1)*log(t) - (t/λ)^k ]
+    """
+    beta = params[:-1]
+    log_k = params[-1]
+    k = np.exp(log_k)
+    log_lambda = X @ beta
+    lambda_val = np.exp(log_lambda)
+    if np.any(lambda_val <= 0) or k <= 0:
+        return 1e15
+    nll = np.sum(
+        np.log(k)
+        - k * np.log(lambda_val)
+        + (k - 1.0) * np.log(t)
+        - (t / lambda_val) ** k
+    )
+    return float(nll)
+
+
+def fit_weibull_regression(
+    df: pd.DataFrame,
+    target: str,
+    inputs: list[str],
+    test_size: float = 0.3,
+    random_state: int | None = None,
+) -> ModelFit:
+    """Fit a Weibull regression model for reliability / life-data analysis.
+
+    The scale parameter λ is modeled as log(λ) = β₀ + β₁x₁ + … + βₚxₚ.
+    The shape k is constant across observations.
+    """
+    if not inputs:
+        raise ValueError("at least one input is required")
+    t = df[target].to_numpy(dtype=float)
+    if np.any(t <= 0):
+        raise ValueError("Weibull target values must be strictly positive")
+    X = df[inputs].to_numpy(dtype=float)
+    X_tr, X_te, t_tr, t_te = _train_test(X, t, test_size, random_state)
+    n_features = X_tr.shape[1]
+    # Initial guess: log(scale) from OLS on log(t), shape ≈ 1
+    log_t = np.log(t_tr)
+    X_with_intercept = np.column_stack([np.ones(len(t_tr)), X_tr])
+    beta_init, _, _, _ = np.linalg.lstsq(X_with_intercept, log_t, rcond=None)
+    start = np.concatenate([beta_init, [0.0]])  # log(k)=0 → k=1
+
+    result = minimize(
+        _weibull_nll,
+        start,
+        args=(X_tr, t_tr),
+        method="Nelder-Mead",
+        options={"maxiter": 5000, "xatol": 1e-8, "fatol": 1e-8},
+    )
+    beta = result.x[:-1]
+    log_k = result.x[-1]
+    k = float(np.exp(log_k))
+    lambda_te = np.exp(X_te @ beta)
+    # Reliability at test times
+    r_te = np.exp(-(t_te / lambda_te) ** k)
+    # AIC
+    aic = float(2 * (n_features + 1) - 2 * result.fun)
+    # Median time-to-failure for test set
+    median_ttf = float(lambda_te * (np.log(2) ** (1.0 / k)))
+    coefficients = {
+        inputs[i]: float(beta[i]) for i in range(n_features)
+    }
+    coefficients["_intercept"] = float(beta[0])
+    coefficients["_weibull_shape"] = k
+    return ModelFit(
+        model_type="weibull_regression",
+        target=target,
+        inputs=list(inputs),
+        metrics={
+            "aic": aic,
+            "shape_k": k,
+            "median_ttf": float(np.mean(median_ttf)),
+            "mean_ll": float(-result.fun / len(t_tr)),
+        },
+        coefficients=coefficients,
+        equation=(
+            f"Weibull(shape={k:.3f}), log(λ) = {beta[0]:.4g} + "
+            + " + ".join(f"{beta[i+1]:+.4g}*{inputs[i]}" for i in range(n_features))
+        ),
+        n_train=len(t_tr),
+        n_test=len(t_te),
+        created_at=_now(),
+        model={"beta": beta, "k": k, "inputs": inputs},
     )

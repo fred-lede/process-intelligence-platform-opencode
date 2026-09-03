@@ -18,7 +18,7 @@ export default function Report() {
   const datasetId = importResult?.dataset_id
   const modelIds = models.map(m => m.model_id)
 
-  const handleGenerate = async (format: 'html' | 'excel') => {
+  const handleGenerate = async (format: 'html' | 'pdf' | 'excel') => {
     if (!datasetId) {
       messageApi.error(t('report.noData'))
       return
@@ -36,18 +36,20 @@ export default function Report() {
 
       if (format === 'html' && result.content) {
         setReportHtml(result.content)
-      } else if (format === 'excel' && result.content_base64) {
+      } else if ((format === 'pdf' || format === 'excel') && result.content_base64) {
         const byteCharacters = atob(result.content_base64)
         const byteNumbers = new Array(byteCharacters.length)
         for (let i = 0; i < byteCharacters.length; i++) {
           byteNumbers[i] = byteCharacters.charCodeAt(i)
         }
         const byteArray = new Uint8Array(byteNumbers)
-        const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        const ext = format === 'pdf' ? 'pdf' : 'xlsx'
+        const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        const blob = new Blob([byteArray], { type: mimeType })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'report.xlsx'
+        a.download = `report.${ext}`
         a.click()
         URL.revokeObjectURL(url)
       }
@@ -89,6 +91,13 @@ export default function Report() {
                 onClick={() => handleGenerate('html')}
               >
                 {t('report.htmlButton')}
+              </Button>
+              <Button
+                icon={<DownloadOutlined />}
+                loading={generating}
+                onClick={() => handleGenerate('pdf')}
+              >
+                {t('report.pdfButton')}
               </Button>
               <Button
                 icon={<DownloadOutlined />}

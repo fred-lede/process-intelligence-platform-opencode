@@ -33,7 +33,7 @@ from process_intelligence_engine.data.quality import run_quality_checks
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
-from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments
+from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments, compute_credibility
 from process_intelligence_engine.modeling.model_selection import compare_models
 from process_intelligence_engine.modeling.experiment_recommendation import recommend_experiments as recommend_experiments_full
 from process_intelligence_engine.modeling.fitters import (
@@ -42,12 +42,14 @@ from process_intelligence_engine.modeling.fitters import (
     fit_random_forest,
     fit_residual_hybrid,
     fit_logistic_regression,
+    fit_weibull_regression,
 )
 from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
 from process_intelligence_engine.reporting.models import ReportData
 from process_intelligence_engine.reporting.html import HTMLReportGenerator
 from process_intelligence_engine.reporting.excel import ExcelReportGenerator
+from process_intelligence_engine.reporting.pdf import PDFReportGenerator
 from process_intelligence_engine.auth.models import UserRole, AuditAction
 from process_intelligence_engine.auth.manager import AuthManager
 from process_intelligence_engine.ai.ollama_client import get_ollama_client
@@ -474,6 +476,7 @@ MODEL_FITTERS = {
     "random_forest": fit_random_forest,
     "residual_hybrid": fit_residual_hybrid,
     "logistic_regression": fit_logistic_regression,
+    "weibull_regression": fit_weibull_regression,
 }
 
 
@@ -537,11 +540,13 @@ def _handle_validation_analyze(params: dict) -> dict:
     residual_result = analyze_residuals(fit, df)
     interactions = {"significant_pairs": []}
     recommendations = recommend_experiments(fit, df, interactions)
+    credibility = compute_credibility(fit, df)
 
     return {
         **cv_result,
         **residual_result,
         "recommendations": recommendations,
+        "credibility": credibility,
     }
 
 
@@ -575,11 +580,17 @@ def _handle_validation_full(params: dict) -> dict:
     }
     exp_recommendation = recommend_experiments_full(best_fit, df, interactions, validation_result)
 
+    credibility_per_model = {
+        mid: compute_credibility(MODEL_REGISTRY._get_unlocked(mid), df)
+        for mid in model_ids
+    }
+
     return {
         **comparison,
         "residual_analysis": residual_analysis,
         "interaction_analysis": interactions,
         "experiment_recommendations": exp_recommendation,
+        "credibility": credibility_per_model,
     }
 
 
@@ -644,6 +655,10 @@ def _handle_report_generate(params: dict) -> dict:
         generator = HTMLReportGenerator(report_data)
         result = generator.generate()
         return {"format": "html", "content": result}
+    elif output_format == "pdf":
+        generator = PDFReportGenerator(report_data)
+        pdf_bytes = generator.generate()
+        return {"format": "pdf", "content_base64": pdf_bytes.hex()}
     elif output_format == "excel":
         generator = ExcelReportGenerator(report_data)
         result = generator.generate()

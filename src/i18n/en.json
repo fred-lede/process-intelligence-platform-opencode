@@ -196,7 +196,9 @@
       "doeLinear": "DOE Linear",
       "doeQuadratic": "DOE Quadratic",
       "randomForest": "Random Forest",
-      "residualHybrid": "Residual Hybrid"
+      "residualHybrid": "Residual Hybrid",
+      "logisticRegression": "Logistic Regression",
+      "weibullRegression": "Weibull Regression"
     },
     "target": {
       "label": "Target (Output)",
@@ -318,6 +320,7 @@
     "infoDetail": "Export the analysis results as HTML or Excel file.",
     "htmlButton": "Generate HTML",
     "excelButton": "Download Excel",
+    "pdfButton": "Download PDF",
     "preview": "HTML Preview",
     "generateSuccess": "Report generated successfully",
     "generateError": "Failed to generate report"
@@ -514,5 +517,21 @@
     "rejectError": "Failed to reject",
     "onlyReviewerCanApprove": "Only Reviewer or Admin can approve/reject",
     "notDraft": "Resource must be in draft status to submit for review"
+  },
+  "credibility": {
+    "title": "Credibility Score",
+    "composite": "Composite Score",
+    "dataCoverage": "Data Coverage",
+    "predictiveAcc": "Predictive Accuracy",
+    "statisticalStability": "Statistical Stability",
+    "engineeringReasonable": "Engineering Reasonable",
+    "validationDegree": "Validation Degree",
+    "extrapolationRisk": "Extrapolation Risk",
+    "level": "Confidence Level",
+    "productionReady": "Production Ready",
+    "engineeringReference": "Engineering Reference",
+    "exploratory": "Exploratory",
+    "needsMoreData": "Needs More Data",
+    "notRecommended": "Not Recommended"
   }
 }

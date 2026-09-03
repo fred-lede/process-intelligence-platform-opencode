@@ -88,7 +88,7 @@ def test_report_generate_unsupported_format():
         handle_request("report/generate", {
             "project_name": "Test",
             "dataset_id": dataset_id,
-            "format": "pdf",
+            "format": "json",
         })
 
 

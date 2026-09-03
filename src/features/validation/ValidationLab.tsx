@@ -320,8 +320,65 @@ export default function ValidationLab() {
                   key: 'score',
                   render: (v: number) => v?.toFixed(4),
                 },
+                {
+                  title: t('credibility.level'),
+                  key: 'credibility_level',
+                  width: 120,
+                  render: (_: unknown, record: { model_id: string }) => {
+                    const cred = fullValidation.credibility?.[record.model_id]
+                    if (!cred) return '-'
+                    const levelColors: Record<string, string> = {
+                      production_ready: 'success',
+                      engineering_reference: 'processing',
+                      exploratory: 'warning',
+                      needs_more_data: 'error',
+                      not_recommended: 'default',
+                    }
+                    return (
+                      <Tag color={levelColors[cred.level] || 'default'}>
+                        {t(`credibility.${cred.level}`) || cred.level}
+                      </Tag>
+                    )
+                  },
+                },
               ]}
             />
+
+            {/* Credibility detail */}
+            {Object.entries(fullValidation.credibility || {}).length > 0 && (
+              <Card size="small" title={t('credibility.title')} style={{ marginTop: 8 }}>
+                <Row gutter={[8, 8]}>
+                  {Object.entries(fullValidation.credibility).map(([modelId, cred]) => {
+                    const model = fullValidation.models.find(m => m.model_id === modelId)
+                    const levelColors: Record<string, string> = {
+                      production_ready: '#16a34a',
+                      engineering_reference: '#2563eb',
+                      exploratory: '#ca8a04',
+                      needs_more_data: '#dc2626',
+                      not_recommended: '#6b7280',
+                    }
+                    return (
+                      <Col span={12} key={modelId}>
+                        <div style={{ marginBottom: 8 }}>
+                          <Typography.Text strong style={{ fontSize: 12 }}>{model?.model_type || modelId}</Typography.Text>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: levelColors[cred.level] || '#6b7280' }}>
+                            {cred.composite.toFixed(3)}
+                          </div>
+                          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                            {t(`credibility.${cred.level}`) || cred.level}
+                          </Typography.Text>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#6b7280' }}>
+                          <div>{t('credibility.dataCoverage')}: {(cred.data_coverage * 100).toFixed(0)}%</div>
+                          <div>{t('credibility.predictiveAcc')}: {(cred.predictive_acc * 100).toFixed(0)}%</div>
+                          <div>{t('credibility.extrapolationRisk')}: {(cred.extrapolation_risk * 100).toFixed(0)}%</div>
+                        </div>
+                      </Col>
+                    )
+                  })}
+                </Row>
+              </Card>
+            )}
 
             {/* Interaction analysis */}
             {fullValidation.interaction_analysis.significant_pairs.length > 0 && (

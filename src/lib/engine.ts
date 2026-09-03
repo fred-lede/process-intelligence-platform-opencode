@@ -233,6 +233,8 @@ export type ModelType =
   | 'doe_quadratic'
   | 'random_forest'
   | 'residual_hybrid'
+  | 'logistic_regression'
+  | 'weibull_regression'
 
 export type ModelStatus =
   | 'draft'
@@ -370,6 +372,16 @@ export interface ValidationResult {
   stats: { mean: number; std: number; skewness: number; kurtosis: number }
   normality_test: { statistic: number; p_value: number; is_normal: boolean }
   recommendations: { type: string; reason: string; factors?: string[]; method?: string }[]
+  credibility: {
+    data_coverage: number
+    predictive_acc: number
+    statistical_stability: number
+    engineering_reasonable: number
+    validation_degree: number
+    extrapolation_risk: number
+    composite: number
+    level: 'production_ready' | 'engineering_reference' | 'exploratory' | 'needs_more_data' | 'not_recommended'
+  }
 }
 
 export async function analyzeValidation(params: {
@@ -414,6 +426,16 @@ export interface FullValidationResult {
     recommendations: ExperimentRecommendation[]
     summary: string
   }
+  credibility: Record<string, {
+    data_coverage: number
+    predictive_acc: number
+    statistical_stability: number
+    engineering_reasonable: number
+    validation_degree: number
+    extrapolation_risk: number
+    composite: number
+    level: string
+  }>
 }
 
 export async function runFullValidation(params: {

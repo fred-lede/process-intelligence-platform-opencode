@@ -196,7 +196,9 @@
       "doeLinear": "DOE 線性",
       "doeQuadratic": "DOE 二次",
       "randomForest": "隨機樹",
-      "residualHybrid": "殘差混合"
+      "residualHybrid": "殘差混合",
+      "logisticRegression": "Logistic 迴歸",
+      "weibullRegression": "Weibull 迴歸"
     },
     "target": {
       "label": "目標欄位（輸出）",
@@ -318,6 +320,7 @@
     "infoDetail": "將分析結果匯出為 HTML 或 Excel 檔案。",
     "htmlButton": "產生 HTML",
     "excelButton": "下載 Excel",
+    "pdfButton": "下載 PDF",
     "preview": "HTML 預覽",
     "generateSuccess": "報告產生成功",
     "generateError": "報告產生失敗"
@@ -514,5 +517,21 @@
     "rejectError": "退回失敗",
     "onlyReviewerCanApprove": "僅審核者或管理員可核准/退回",
     "notDraft": "資源必須為草稿狀態才能提交審核"
+  },
+  "credibility": {
+    "title": "可信度評分",
+    "composite": "綜合分數",
+    "dataCoverage": "資料覆蓋度",
+    "predictiveAcc": "預測準確度",
+    "statisticalStability": "統計穩定性",
+    "engineeringReasonable": "工程合理性",
+    "validationDegree": "驗證程度",
+    "extrapolationRisk": "外插風險",
+    "level": "信心等級",
+    "productionReady": "量產可用",
+    "engineeringReference": "工程參考",
+    "exploratory": "探索階段",
+    "needsMoreData": "需補充資料",
+    "notRecommended": "不建議使用"
   }
 }
