@@ -510,3 +510,12 @@
 - [x] **前端**：`ReportParams` 新增 `spec/lsl/usl/runs_length/n_simulations/seed/enable_anomalies`；`Report.tsx` 傳入 spec 與蒙地卡羅參數
 - [x] 保留既有報告單元測試（truncation、percentage、badge）並補齊格式
 - **驗證**：引擎測試 250 passed；smoke 端到端渲染 11 個 section 全出；tsc + vite build 通過
+
+## 2026-09-04 — 報告加入 SVG 圖表
+
+- [x] **charting.py 新增**：輕量 SVG 產生器 `histogram_svg`（直方圖 + 擬合曲線 + LSL/USL 超規線 + NG 區著色）、`heatmap_svg`（交互作用強度熱圖）
+- [x] **正常分布（§5）**：各數值欄位直方圖 + 擬合曲線；異常時於同欄標記 threshold 閾值線
+- [x] **蒙地卡羅 Output 分布（§10）**：輸出直方圖 + 超規 LSL/USL + NG 區著色
+- [x] **交互作用熱圖（§8）**：`interactions.matrix` + `factors` 視覺化
+- [x] handler 組裝 `distribution_fits` 補入 fit 的 `histogram`/`pdf`
+- 驗證 — 250 passed；smoke 渲染 6 個 SVG（3 分布 + 1 異常 + 1 蒙地卡羅 + 1 熱圖），LSL/USL 標記齊全

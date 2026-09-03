@@ -6,6 +6,7 @@ from typing import Any
 
 from .base import ReportGenerator
 from .models import ReportData
+from .charting import histogram_svg, heatmap_svg
 
 SEVERITY_BADGE = {
     "critical": "badge-danger",
@@ -116,7 +117,14 @@ class HTMLReportGenerator(ReportGenerator):
     def _render_distributions(self) -> str:
         if not self.data.distribution_fits:
             return ""
+        limits = (self.data.spec or {}).get("limits") or {}
+        anomaly_limits = {}
+        for a in self.data.anomalies:
+            if a.get("target_input") and a.get("threshold") is not None:
+                anomaly_limits.setdefault(a["target_input"], []).append(a)
+
         body = "<table><tr><th>欄位</th><th>最佳分布</th><th>AIC</th><th>KS p 值</th><th>偏態</th><th>峰度</th></tr>"
+        charts = []
         for col, fits in self.data.distribution_fits.items():
             if not fits:
                 continue
@@ -126,7 +134,37 @@ class HTMLReportGenerator(ReportGenerator):
                 f"<td>{self._fmt(f.get('aic'))}</td><td>{self._fmt(f.get('ks_p_value'))}</td>"
                 f"<td>{self._fmt(f.get('skewness'))}</td><td>{self._fmt(f.get('kurtosis'))}</td></tr>"
             )
-        body += "</table>"
+            hist = f.get("histogram") or {}
+            edges = hist.get("edges") or hist.get("bins") or []
+            counts = hist.get("counts") or []
+            if edges and counts:
+                lsl = limits.get("lsl") if col == self.data.best_model.get("target") else None
+                usl = limits.get("usl") if col == self.data.best_model.get("target") else None
+                chart = histogram_svg(
+                    edges=edges,
+                    counts=counts,
+                    title=f"{col} 分布",
+                    fit_curve=f.get("pdf") or None,
+                    lsl=lsl,
+                    usl=usl,
+                    xlabel=col,
+                )
+                # overlay anomaly thresholds for this column
+                for anom in anomaly_limits.get(col, []):
+                    thr = anom.get("threshold")
+                    ap = None
+                    if anom.get("direction") in ("above", "higher"):
+                        ap = histogram_svg(
+                            edges=edges, counts=counts, title=f"{col} — 異常({anom.get('name')}) 高於閾值",
+                            fit_curve=f.get("pdf") or None, lsl=thr, xlabel=col)
+                    elif anom.get("direction") in ("below", "lower"):
+                        ap = histogram_svg(
+                            edges=edges, counts=counts, title=f"{col} — 異常({anom.get('name')}) 低於閾值",
+                            fit_curve=f.get("pdf") or None, usl=thr, xlabel=col)
+                    if ap:
+                        charts.append(ap)
+                charts.append(chart)
+        body += "</table>" + "<div style='margin-top:16px;'>" + "".join(charts) + "</div>"
         return self._section("正常分布", body)
 
     def _render_anomalies(self) -> str:
@@ -188,14 +226,19 @@ class HTMLReportGenerator(ReportGenerator):
         return self._section("最終方程式/模型", body)
 
     def _render_interactions(self) -> str:
-        pairs = (self.data.interactions or {}).get("significant_pairs") or []
+        data = self.data.interactions or {}
+        pairs = data.get("significant_pairs") or []
         sig = [p for p in pairs if p.get("significant")]
-        if not sig:
-            return self._section("重要因素與交互作用", "<div class='info-box'>無顯著交互作用</div>")
-        body = "<table><tr><th>因子 A</th><th>因子 B</th><th>強度</th></tr>"
-        for p in sig:
-            body += f"<tr><td>{self._e(p.get('i'))}</td><td>{self._e(p.get('j'))}</td><td>{self._fmt(p.get('strength'))}</td></tr>"
-        body += "</table>"
+        body = "<div class='info-box'>" + ("發現顯著交互作用" if sig else "未發現顯著交互作用") + "</div>"
+        if sig:
+            body += "<table><tr><th>因子 A</th><th>因子 B</th><th>強度</th></tr>"
+            for p in sig:
+                body += f"<tr><td>{self._e(p.get('i'))}</td><td>{self._e(p.get('j'))}</td><td>{self._fmt(p.get('strength'))}</td></tr>"
+            body += "</table>"
+        matrix = data.get("matrix")
+        factors = data.get("factors") or []
+        if matrix and factors:
+            body += heatmap_svg(matrix=matrix, labels=list(factors), title="交互作用強度熱圖")
         return self._section("重要因素與交互作用", body)
 
     def _render_monte_carlo(self) -> str:
@@ -215,6 +258,20 @@ class HTMLReportGenerator(ReportGenerator):
             for k in ("p1", "p5", "p50", "p95", "p99"):
                 body += f"<td>{self._fmt(pct.get(k))}</td>"
             body += "</tr></table>"
+        hist = mc.get("histogram") or {}
+        edges = hist.get("edges") or hist.get("bins") or []
+        counts = hist.get("counts") or []
+        if edges and counts:
+            limits = (self.data.spec or {}).get("limits") or {}
+            body += histogram_svg(
+                edges=edges,
+                counts=counts,
+                title="Output 分布（紅線 = 超規區間）",
+                fit_curve=None,
+                lsl=limits.get("lsl"),
+                usl=limits.get("usl"),
+                xlabel="Output",
+            )
         rankings = mc.get("anomaly_rankings") or []
         if rankings:
             body += "<h3>異常貢獻排名</h3><table><tr><th>異常 ID</th><th>欄位</th><th>NG 數</th><th>NG 機率</th></tr>"

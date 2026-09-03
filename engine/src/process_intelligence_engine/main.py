@@ -710,6 +710,8 @@ def _handle_report_generate(params: dict) -> dict:
                     "ks_p_value": f.ks_p_value,
                     "skewness": f.skewness,
                     "kurtosis": f.kurtosis,
+                    "histogram": f.histogram,
+                    "pdf": f.pdf,
                 }]
     except Exception:
         pass
