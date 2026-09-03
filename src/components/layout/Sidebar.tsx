@@ -93,6 +93,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           options={[
             { value: 'en', label: 'English' },
             { value: 'zh-TW', label: '繁體中文' },
+            { value: 'es-MX', label: 'Español (México)' },
           ]}
         />
         <Button
