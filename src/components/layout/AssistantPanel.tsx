@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin } from 'antd'
 import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
-import { aiChat, checkAIHealth, type AIChatMessage } from '../../lib/engine'
+import { aiChat, checkAIHealth, listAIModels, type AIChatMessage } from '../../lib/engine'
 import { useAIStore } from '../../stores/aiStore'
 
 const { Sider } = Layout
@@ -17,6 +17,15 @@ export default function AssistantPanel() {
   const [health, setHealth] = useState<boolean | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const refreshKey = useAIStore((s) => s.refreshKey)
+
+  const loadModels = async () => {
+    try {
+      const result = await listAIModels()
+      if (result.success && result.models) {
+        setModels(result.models)
+      }
+    } catch { /* ignore */ }
+  }
 
   useEffect(() => {
     loadModels()
