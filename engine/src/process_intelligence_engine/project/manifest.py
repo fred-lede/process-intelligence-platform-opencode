@@ -312,6 +312,7 @@ class ProjectEngine:
         return {"added": True, "path": absolute_path, "target": str(target)}
 
     def list_source_dirs(self) -> list[dict]:
+        self._ensure_project()
         manifest = self._load()
         result = []
         for d in manifest.source_data_dirs:
@@ -468,6 +469,7 @@ class ProjectEngine:
         return ds.to_dict()
 
     def list_datasets(self) -> list[dict]:
+        self._ensure_project()
         manifest = self._load()
         return [ds.to_dict() for ds in manifest.datasets]
 
@@ -498,7 +500,7 @@ class ProjectEngine:
     # -- process flow graph validation --------------------------------------
 
     def get_flow_graph(self) -> dict[str, Any]:
-        """Return the process flow graph as nodes + edges."""
+        self._ensure_project()
         manifest = self._load()
         nodes = [n.to_dict() for n in manifest.process_nodes]
         # Extract edges from all nodes
@@ -516,7 +518,8 @@ class ProjectEngine:
         return {"nodes": nodes, "edges": edges}
 
     def validate_flow_graph(self) -> dict[str, Any]:
-        """Validate the process flow graph for issues.
+        self._ensure_project()
+        manifest = self._load()
 
         Returns warnings and errors.
         """
