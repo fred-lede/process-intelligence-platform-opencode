@@ -404,3 +404,90 @@
 |------|------|
 | af522e2 | feat(monte_carlo): add monte_carlo/run IPC handler |
 
+## 2026-09-03 — Phase 10 Interactive Prediction
+
+- [x] `prediction.py` + `main.py` — `prediction/predict` + `prediction/model_info` IPC handlers
+- [x] `src/lib/engine.ts` — `PredictionResult`, `ModelInfo`, `InputRange` + API 函數
+- [x] `src/features/prediction/Prediction.tsx` — Live 滑桿 + 數值輸入 + 規格判定
+- [x] `src/i18n/en.json` + `zh-TW.json` — prediction section
+- 驗證：250 tests pass, tsc/build clean
+
+## 2026-09-03 — Phase 11 Validation Lab
+
+- [x] `main.py` — `experiment/record`, `experiment/list`, `experiment/get` IPC handlers
+- [x] `src/lib/engine.ts` — `ExperimentRecord` + API 函數
+- [x] `src/features/validation/ValidationLab.tsx` — 完整驗證 + 實驗記錄 + 歷史表格
+- [x] i18n en/zh-TW — validationLab section
+- 驗證：250 tests pass, tsc/build clean
+
+## 2026-09-03 — Phase 11b 短期補強
+
+- [x] **Logistic Regression** — `fitters.py:fit_logistic_regression()`（binary NG prediction, accuracy/recall/AUC）
+- [x] **Weibull Regression** — `fitters.py:fit_weibull_regression()`（MLE, shape k + log(λ)=Xβ）
+- [x] **時間序列特徵** — `features/time_series.py`（lag/rolling/drift/連續超標）+ 2 IPC handlers
+- [x] **審核工作流** — `approval/workflow.py`（submit/approve/reject + status + records）+ 5 IPC handlers
+- [x] **What-if 情境保存** — `prediction/scenario/*` IPC + Prediction.tsx Modal
+- [x] i18n en/zh-TW：prediction.scenario* / timeSeries* / approval*
+- 驗證：250 tests pass, tsc/build clean
+
+## 2026-09-03 — Phase 11c 中期第一批
+
+- [x] **PDF 報告匯出** — `pdf.py` + `main.py` format=pdf handler + `Report.tsx` PDF 按鈕
+- [x] **可信度六維評分** — `validation.py:compute_credibility()`（data_coverage/predictive_acc/statistical_stability/engineering_reasonable/validation_degree/extrapolation_risk）
+- [x] **Credibility UI** — ValidationLab 表格新增可信度等級欄位 + 分數卡片
+- [x] i18n：credibility.*
+- 驗證：250 tests pass, tsc/build clean
+
+## 2026-09-03 — Phase 11d Copula 聯合機率
+
+- [x] **copula.py** — 高斯 Copula + 獨立 + 直接指定三種模式（100K Monte Carlo samples）
+- [x] **Monte Carlo 整合** — `apply_anomalies()` 支援 Copula 相關性，`run_monte_carlo()` 回傳 `copula` 結果
+- [x] **Correlation matrix 驗證** — 正定矩陣檢查 + 失敗自動 fallback
+- [x] IPC handler `copula/joint`
+- [x] i18n：copula.*
+- 驗證：250 tests pass, tsc/build clean
+
+## 2026-09-03 — Phase 11e GRR + 時間序列 UI
+
+- [x] **GRR 引擎** — `data/grr.py`（AIEM 方法：EV/AV/GRR/PV/TV/%GRR + verdict + warnings）
+- [x] **GRR IPC** — `data/grr` handler + `analyzeGRR()` TypeScript API
+- [x] **時間序列 UI** — Exploration 新增 Time Series tab（lag/rolling/drift 圖表）
+- [x] **GRR UI** — Exploration 新增 GRR tab（選欄位 → 分析 → 結果 + 警告）
+- [x] i18n：exploration.timeSeriesTab / grr.*
+- 驗證：250 tests pass, tsc/build clean
+
+## 2026-09-03 — Phase 11f es-MX 翻譯
+
+- [x] **es-MX.json** — 541 keys，覆蓋全部 22 個 i18n section
+- [x] `i18n/index.ts` 註冊 es-MX
+- [x] Sidebar 語言選單新增「Español (México)」
+- 符合規格 19 多語言要求
+
+## 2026-09-03 — Phase 11g 雲端去識別化
+
+- [x] **deidentify.py** — `DeidentificationEngine`：敏感欄位 SHA-256 雜湊遮蔽 + 數值高斯噪音 + 上傳雜湊
+- [x] **IPC handlers** — `cloud/preview` / `cloud/upload` / `cloud/records`
+- [x] **Settings UI** — 雲端上傳區塊（noise σ / 預覽表格 / 強制確認 Modal）
+- [x] 審核紀錄：operator / provider / model_version / mask_rules / upload_hash / purpose
+- [x] i18n：cloud.*
+- 符合規格 11A + 24 雲端安全要求
+
+## 2026-09-03 — Phase 11h 檔案系統資料目錄結構
+
+- [x] **project/manifest.py** — `ProjectEngine`：on-disk `project_manifest.json` + 9 目錄自動建立
+- [x] **資料模型** — `DatasetRegistration`（checksum/quality/cloud_policy）+ `ProcessGroup` + `ProcessNode`
+- [x] **18 IPC handlers** — manifest/create/open/settings/dirs/source-dirs/scan/process-groups/*/process-nodes/*/datasets/*/dataset/register/update
+- [x] **TypeScript** — 20 API 函數 + 完整類型
+- [x] i18n：project.*（53 keys）
+- 符合規格 11A 資料資產管理要求
+
+## 2026-09-03 — Phase 11i 製程流程圖
+
+- [x] **ProcessFlow.tsx** — SVG 流程圖（拓撲排序佈局 + 節點卡片 + 貝茲曲線邊 + 選中高亮）
+- [x] **節點管理** — 新增 Modal（名稱/類型/重工政策）+ 刪除
+- [x] **連接管理** — 多選連接目標節點 + 斷開連接
+- [x] **圖形驗證** — DFS 環狀檢測 + 孤立節點警告（`validate_flow_graph` IPC）
+- [x] **Sidebar** 新增「製程流程」導航項目
+- [x] i18n：processFlow.*（31 keys）
+- 符合規格 11A 製程節點可配置要求
+

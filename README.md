@@ -190,6 +190,7 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 
 - **HTML 報告**: 專案資訊、欄位角色、模型比較、交互作用、實驗建議
 - **Excel 匯出**: 多 Sheet（專案資訊、欄位角色、模型比較、交互作用矩陣、實驗建議）
+- **PDF 匯出**: 使用 WeasyPrint 生成 PDF（需系統圖形庫）
 - **報告頁面**: 即時預覽 + 下載功能
 
 ### Phase 6 — 企業化 ✅
@@ -199,21 +200,96 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 - **設定頁面**: 登入/登出、使用者管理、稽核日誌表格
 - **權限控制**: 基於角色的功能存取控制
 
+### Phase 7 — AI 助手 ✅
+
+- **Ollama 客戶端**: 聊天/生成/列出模型/健康檢查
+- **多 Provider 支援**: Ollama (local) / OpenAI (cloud) / Azure / Custom (自訂 Endpoint)
+- **AI 助手面板**: 右側可收合，支援 Enter 發送、思考動畫
+- **模型下拉選單**: 從 API 載入可用模型，支援搜尋
+- **設定持久化**: 修復保存時 api_key/base_url 流失問題
+
+### Phase 8 — SPC 統計製程控制 ✅
+
+- **控制圖**: I-MR / X-bar+R / X-bar-S（自動根據子群組大小選擇）
+- **Western Electric 7 規則**: 違規偵測與表格化顯示
+- **能力指數**: Cp / Cpk / Pp / Ppk
+- **IPC handlers**: `spc/analyze` + `spc/capability`
+
+### Phase 9 — 蒙地卡羅異常風險模擬 ✅
+
+- **抽樣引擎**: Normal / Gamma / Lognormal / Empirical（含直方圖抽樣）
+- **異常整合**: 指定異常 + 自然發生風險模式
+- **聯合機率**: 支援獨立假設 + Copula 相關矩陣模式
+- **NG 機率**: 輸出分布 + 百分位數（P1/P5/P50/P95/P99）
+- **風險排名**: 異常貢獻度排序 + 交互作用熱圖
+
+### Phase 10 — 互動預測 (What-if) ✅
+
+- **Live 滑桿**: 拖曳即時更新預測
+- **數值輸入**: 精準輸入 + 範圍限制（基於訓練數據）
+- **規格判定**: In Spec / Below LSL / Above USL（含距離邊界顯示）
+- **還原預設**: 一鍵恢復至資料平均值
+
+### Phase 11 — 驗證實驗 (Validation Lab) ✅
+
+- **完整驗證**: 跨模型 CV + 殘差分析 + 交互作用 + 實驗建議
+- **實驗記錄**: 記錄 planned/actual inputs、predicted/actual output、result（pass/fail）
+- **實驗歷史**: 合格率、平均絕對誤差統計 + 排序表格
+- **可信度評分**: 六維度（資料覆蓋 / 預測準確 / 統計穩定 / 工程合理 / 驗證程度 / 外插風險）→ 綜合分數 + 等級（production_ready / engineering_reference / exploratory / needs_more_data / not_recommended）
+
+### Phase 11b — 短期補強 ✅
+
+- **Logistic Regression**: 二元 NG 預測（accuracy / recall / AUC）
+- **Weibull 迴歸**: 可靠度 / 壽命資料分析（MLE shape k + log(λ)=Xβ）
+- **時間序列特徵**: lag / rolling mean / rolling std / drift / 連續超標次數
+- **審核工作流**: submit / approve / reject（含 Reviewer 角色）
+- **What-if 情境保存**: 儲存與載入預測情境（可比較多個參數設定）
+
+### Phase 11c~11i — 中期擴充 ✅
+
+- **Copula 聯合機率**: 高斯 Copula（相關矩陣）/ 獨立 / 直接指定三種模式
+- **GRR 量測系統分析**: AIEM 方法（EV / AV / GRR / PV / TV / %GRR + 判定）
+- **雲端去識別化上傳**: SHA-256 雜湊遮蔽 + 高斯噪音 + 強制確認 Modal
+- **專案檔案系統**: `project_manifest.json` + 9 個目錄結構 + 製程群組/節點管理
+- **製程流程圖**: SVG 可交互編輯器 + 拓撲排序佈局 + 環狀檢測
+
+### 多語言 ✅
+
+- **English**（預設）
+- **繁體中文**（zh-TW）
+- **Español (México)**（es-MX）— 541 keys 完整翻譯
+
+### 模型類型（6 種）
+
+| 類型 | 說明 | 適用場景 |
+|---|---|---|
+| `doe_linear` | 線性 DOE | 主要效應分析 |
+| `doe_quadratic` | 二次 DOE | 曲率 + 交互作用 |
+| `random_forest` | 隨機森林回歸 | 非線性殘差補償 |
+| `residual_hybrid` | 混合模型 | Y = f_DOE(X) + r_RF(X) |
+| `logistic_regression` | Logistic 迴歸 | 二元 NG/OK 預測 |
+| `weibull_regression` | Weibull 迴歸 | 可靠度 / 壽命分析 |
+
 ## 測試統計
 
 | 項目 | 數值 |
 |------|------|
-| **測試總數** | 181 tests |
-| **覆蓋率** | 89% |
-| **Commits** | 72 |
+| **測試總數** | 250 tests |
+| **跳過** | 1 |
+| **覆蓋率** | 70% |
+| **Commits** | 202 |
+| **總代碼行數** | ~15,100 行 |
+| **多語言** | 3（en / zh-TW / es-MX） |
 
 ## 設計原則
 
-- 不綁定特定產業 (非僅車載 ECU)
+- 不綁定特定產業（非僅車載 ECU）
 - 原始資料預設不送往雲端
 - 傳統 DOE 永遠保留為回退方案
 - 所有自動建議可解釋、可追溯、可人工覆核
-- AI 助手支援多語言 (en/zh-TW)
+- AI 助手支援三語言（en / zh-TW / es-MX）
+- 資料上雲前必須遮罩 + 使用者確認 + 審核紀錄
+- 製程節點與流程可配置（不寫死產業名稱）
 
 ## 技術決策記錄
 
@@ -221,10 +297,13 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 |------|------|
 | 桌面框架 | Tauri 2.0 |
 | Python 版本 | 3.11 (bundled venv) |
-| 本地 AI | 延後 (Phase 5+) |
-| i18n 語言 | en + zh-TW |
+| 本地 AI | Ollama (local) + OpenAI/Azure/Custom |
+| i18n 語言 | en + zh-TW + es-MX |
 | 資料粒度 | 單片產品/單一測試樣本 |
 | 模型儲存 | 記憶體 (DatasetRegistry) |
+| 雲端策略 | 預設不上雲；上雲前遮罩 + 確認 |
+| 製程定義 | JSON 配置（不硬編產業名稱） |
+| 流程圖 | SVG 可交互編輯器 |
 
 ## 快速測試資料
 
