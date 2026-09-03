@@ -137,6 +137,14 @@
 - i18n en/zh-TW：cloud.*（20 keys）
 - 驗證 — 250 passed, 1 skipped (74% coverage), tsc/build clean
 
+### Phase 11h — 檔案系統資料目錄結構 (spec 11A)
+- **project/manifest.py** — `ProjectEngine`：on-disk `project_manifest.json` + 9 個目錄自動建立
+- **資料模型** — `DatasetRegistration`（checksum/quality/cloud_policy）+ `ProcessGroup` + `ProcessNode`
+- **18 個 IPC handlers**：manifest/create/open/settings/dirs/source-dirs/scan/process-groups/group/create/update/delete/templates/nodes/node/create/update/delete/datasets/dataset/register/update
+- **TypeScript** — 20 API 函數 + 完整類型（ProjectManifest/ProcessGroup/ProcessNode/DatasetRegistration/ScanResult）
+- **i18n** en/zh-TW：project.*（53 keys）
+- 驗證 — 250 passed, 1 skipped (71% coverage), tsc/build clean
+
 ---
 **專案總體**：
 - **代码行數**：~13,649 行（src + engine/src）
