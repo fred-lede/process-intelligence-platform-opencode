@@ -1576,9 +1576,15 @@ def _handle_cloud_preview(params: dict) -> dict:
     excluded_columns = params.get("excluded_columns", [])
     noise_std = float(params.get("noise_std", 0.0))
     seed = int(params.get("seed", 42))
+    strategy_overrides = params.get("strategy_overrides", {})
 
     preview = generate_upload_preview(
-        df, dataset_id, sensitive_columns, excluded_columns, noise_std, seed
+        df, dataset_id,
+        sensitive_columns=sensitive_columns,
+        excluded_columns=excluded_columns,
+        strategy_overrides=strategy_overrides,
+        noise_std=noise_std,
+        seed=seed,
     )
     return _plain_types(preview.to_dict())
 
@@ -1591,13 +1597,19 @@ def _handle_cloud_upload(params: dict) -> dict:
     excluded_columns = params.get("excluded_columns", [])
     noise_std = float(params.get("noise_std", 0.0))
     seed = int(params.get("seed", 42))
+    strategy_overrides = params.get("strategy_overrides", {})
     operator = params.get("operator", "anonymous")
     provider = params.get("provider", "custom")
     model_version = params.get("model_version", "unknown")
     purpose = params.get("purpose", "")
 
     preview = generate_upload_preview(
-        df, dataset_id, sensitive_columns, excluded_columns, noise_std, seed
+        df, dataset_id,
+        sensitive_columns=sensitive_columns,
+        excluded_columns=excluded_columns,
+        strategy_overrides=strategy_overrides,
+        noise_std=noise_std,
+        seed=seed,
     )
     record = record_upload(operator, provider, model_version, preview, purpose)
 

@@ -325,3 +325,60 @@ def test_handle_copula_invalid_matrix_falls_back_with_warning():
     )
     assert result["mode"] == "independent"
     assert "warning" in result
+
+
+# ---------------------------------------------------------------------------
+# cloud/preview & cloud/upload – strategy_overrides passthrough
+# ---------------------------------------------------------------------------
+
+
+def test_handle_cloud_preview_passes_strategy_overrides(tmp_path):
+    csv_text = "\n".join(
+        ["temperature,operator,ok_flag", "230.5,Alice,OK", "241.0,Bob,NG", "255.2,Carol,OK"]
+    )
+    dataset_id = _import_csv_and_return_id(tmp_path, csv_text)
+
+    result = handle_request(
+        "cloud/preview",
+        {
+            "dataset_id": dataset_id,
+            "sensitive_columns": ["temperature"],
+            "strategy_overrides": {"temperature": "noise"},
+            "noise_std": 0.5,
+        },
+    )
+    assert result["noise_config"]["temperature"]["method"] == "gaussian"
+    assert result["noise_config"]["temperature"]["std"] == 0.5
+
+
+def test_handle_cloud_preview_and_upload_consistent(tmp_path):
+    csv_text = "\n".join(
+        ["temperature,operator,ok_flag", "230.5,Alice,OK", "241.0,Bob,NG", "255.2,Carol,OK"]
+    )
+    dataset_id = _import_csv_and_return_id(tmp_path, csv_text)
+
+    preview = handle_request(
+        "cloud/preview",
+        {
+            "dataset_id": dataset_id,
+            "sensitive_columns": ["operator"],
+            "strategy_overrides": {"operator": "hash"},
+        },
+    )
+    assert preview["mask_strategies"]["operator"] == "hash"
+
+    result = handle_request(
+        "cloud/upload",
+        {
+            "dataset_id": dataset_id,
+            "sensitive_columns": ["operator"],
+            "strategy_overrides": {"operator": "hash"},
+            "operator": "qa",
+            "provider": "azure",
+            "model_version": "gpt-5",
+            "purpose": "training",
+        },
+    )
+    assert result["record_id"]
+    assert result["columns_uploaded"]
+    assert "operator" in result["masked_columns"]
