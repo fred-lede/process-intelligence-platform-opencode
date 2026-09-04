@@ -1,9 +1,10 @@
 import { save, open } from '@tauri-apps/plugin-dialog'
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs'
 import type { FieldAssignment, SpecConfiguration } from '../stores/dataPipelineStore'
-import type { QualityReport } from './engine'
+import type { ControlLimitsMap } from '../stores/dataPipelineStore'
+import type { QualityReport, AnomalyScenario, AnalysisPackage } from './engine'
 
-export const PROJECT_FORMAT_VERSION = 1
+export const PROJECT_FORMAT_VERSION = 2
 
 export interface ProjectFile {
   version: number
@@ -15,6 +16,9 @@ export interface ProjectFile {
   fields: FieldAssignment[] | null
   quality: QualityReport | null
   spec: SpecConfiguration | null
+  anomalyScenarios: AnomalyScenario[] | null
+  controlLimits: ControlLimitsMap | null
+  analysisPackage: AnalysisPackage | null
 }
 
 const PROJECT_FILTER = [{ name: 'Project', extensions: ['piproj.json'] }]
@@ -24,6 +28,9 @@ export function buildProjectFile(
   fields: FieldAssignment[],
   quality: QualityReport | null,
   spec: SpecConfiguration | null,
+  anomalyScenarios: AnomalyScenario[] = [],
+  controlLimits: ControlLimitsMap = {},
+  analysisPackage: AnalysisPackage | null = null,
 ): ProjectFile {
   return {
     version: PROJECT_FORMAT_VERSION,
@@ -33,6 +40,9 @@ export function buildProjectFile(
     fields: fields.length ? fields : null,
     quality,
     spec,
+    anomalyScenarios: anomalyScenarios.length ? anomalyScenarios : null,
+    controlLimits: Object.keys(controlLimits).length ? controlLimits : null,
+    analysisPackage,
   }
 }
 

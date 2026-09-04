@@ -45,6 +45,13 @@ interface DataPipelineState {
   confirmAnomaly: (anomalyId: string) => void
   confirmAllAnomalies: () => void
   setAnalysisPackage: (pkg: AnalysisPackage) => void
+  /** Bulk-restore analysis artifacts when opening a saved project, bypassing
+   *  the reset semantics of the granular setters. */
+  restoreAnalysis: (args: {
+    anomalyScenarios: AnomalyScenario[]
+    controlLimits: ControlLimitsMap
+    analysisPackage: AnalysisPackage | null
+  }) => void
   updateFieldRole: (originalName: string, role: FieldRole) => void
   confirmField: (originalName: string, confirmed?: boolean) => void
   confirmAllFields: () => void
@@ -121,6 +128,15 @@ export const useDataPipelineStore = create<DataPipelineState>((set) => ({
     })),
 
   setAnalysisPackage: (pkg) => set({ analysisPackage: pkg }),
+
+  restoreAnalysis: ({ anomalyScenarios, controlLimits, analysisPackage }) =>
+    set({
+      controlLimits,
+      anomalyScenarios,
+      anomalyScenariosConfirmed:
+        anomalyScenarios.length > 0 && anomalyScenarios.every((s) => s.user_confirmed),
+      analysisPackage,
+    }),
 
   updateFieldRole: (originalName, role) =>
     set((state) => {

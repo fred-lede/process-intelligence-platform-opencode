@@ -22,10 +22,14 @@ export default function ProjectOverview() {
     fields,
     quality,
     spec,
+    controlLimits,
+    anomalyScenarios,
+    analysisPackage,
     setImportResult,
     setFields,
     setQuality,
     setSpec,
+    restoreAnalysis,
     resetAll,
   } = useDataPipelineStore()
 
@@ -46,6 +50,9 @@ export default function ProjectOverview() {
         fields,
         quality,
         spec,
+        anomalyScenarios,
+        controlLimits,
+        analysisPackage,
       )
       const target = await saveProjectFile(data)
       if (target) messageApi.success(t('project.savedTo', { path: target }))
@@ -68,6 +75,11 @@ export default function ProjectOverview() {
       if (data.fields) setFields(data.fields)
       if (data.quality) setQuality(data.quality)
       if (data.spec) setSpec(data.spec)
+      restoreAnalysis({
+        anomalyScenarios: data.anomalyScenarios ?? [],
+        controlLimits: data.controlLimits ?? {},
+        analysisPackage: data.analysisPackage ?? null,
+      })
       messageApi.success(t('project.opened', { path: data.import.file_path }))
     } catch (err) {
       messageApi.error(err instanceof Error ? err.message : String(err))

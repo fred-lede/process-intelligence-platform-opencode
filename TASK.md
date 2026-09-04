@@ -64,6 +64,15 @@
 - **注意**：需重新 build + relaunch app 才會生效
 - **Files changed** — `src-tauri/capabilities/default.json`
 
+### 專案儲存擴展 Tier 1（存異常情境/控制界限/analysis package）
+- **Status**: DONE
+- `.piproj.json` 格式 v1 → **v2**：`ProjectFile` 新增 `anomalyScenarios`、`controlLimits`（ControlLimitsMap）、`analysisPackage`
+- `buildProjectFile` 加 3 個可選參數（缺省空陣列/null）；關檔時保留 v1 向後相容（null fallback）
+- store 新增 `restoreAnalysis` bulk action——`setSpec` 後呼叫（`setSpec` 會清 controlLimits/anomalies/package），還原 `controlLimits` + `anomalyScenarios` + `anomalyScenariosConfirmed`（derive:f all user_confirmed）+ `analysisPackage`
+- `ProjectOverview.tsx`：handleSave 帶入 3 state；handleOpen 在 `setSpec` 後 `restoreAnalysis`
+- 驗證：tsc --noEmit clean、npm run build 成功
+- **Files changed** — `src/lib/project.ts`, `src/stores/dataPipelineStore.ts`, `src/features/project/ProjectOverview.tsx`
+
 <!-- NEXT_ITEM_ANCHOR -->
 
 - Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo
