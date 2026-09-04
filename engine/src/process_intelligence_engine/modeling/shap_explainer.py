@@ -13,6 +13,7 @@ def compute_shap(
     fit: ModelFit,
     df: pd.DataFrame,
     nsamples: int = 100,
+    max_explain: int = 1000,
 ) -> dict[str, Any]:
     """Compute SHAP values for a fitted model.
 
@@ -20,6 +21,10 @@ def compute_shap(
         fit: A fitted ModelFit object
         df: The dataset used for fitting
         nsamples: Number of samples to use for background data (default 100)
+        max_explain: Maximum number of rows to compute SHAP values for.
+            SHAP cost scales with the number of rows explained, so capping
+            keeps a single call bounded (and prevents it from monopolising
+            the engine's single-threaded request loop).
 
     Returns:
         {
@@ -29,14 +34,37 @@ def compute_shap(
         }
     """
     if fit.model_type == "doe_linear" or fit.model_type == "doe_quadratic":
-        return _compute_shap_linear(fit, df, nsamples)
+        return _compute_shap_linear(fit, df, nsamples, max_explain)
     elif fit.model_type == "random_forest":
-        return _compute_shap_tree(fit, df, nsamples)
+        return _compute_shap_tree(fit, df, nsamples, max_explain)
     else:
         raise ValueError(f"Unsupported model type for SHAP: {fit.model_type}")
 
 
-def _compute_shap_linear(fit: ModelFit, df: pd.DataFrame, nsamples: int) -> dict:
+def _explain_sample(
+    df: pd.DataFrame,
+    inputs: list[str],
+    nsamples: int,
+    max_explain: int,
+) -> tuple[pd.DataFrame, pd.DataFrame, np.ndarray]:
+    """Return (background, explain) dataframes and the explain row indices.
+
+    The background window is capped by ``nsamples``; the rows actually
+    explained are capped by ``max_explain`` (sampled deterministically when
+    the dataset is larger) so tree SHAP stays bounded on large data.
+    """
+    X = df[inputs]
+    bg = X.sample(n=min(nsamples, len(X)), random_state=42) if len(X) > nsamples else X
+    if len(X) > max_explain:
+        explain = X.sample(n=max_explain, random_state=42)
+    else:
+        explain = X
+    return bg, explain, len(X)
+
+
+def _compute_shap_linear(
+    fit: ModelFit, df: pd.DataFrame, nsamples: int, max_explain: int
+) -> dict:
     """SHAP for linear/quadratic models using LinearExplainer."""
     try:
         import shap
@@ -44,13 +72,8 @@ def _compute_shap_linear(fit: ModelFit, df: pd.DataFrame, nsamples: int) -> dict
         raise ImportError("shap is required for SHAP analysis. Install with: pip install shap")
 
     inputs = fit.inputs
+    bg_data, explain, _ = _explain_sample(df, inputs, nsamples, max_explain)
     X = df[inputs]
-
-    # Sample background data
-    if len(X) > nsamples:
-        bg_data = X.sample(n=nsamples, random_state=42)
-    else:
-        bg_data = X
 
     # Build linear approximation from coefficients
     intercept = fit.coefficients.get("_intercept", 0.0)
@@ -78,7 +101,7 @@ def _compute_shap_linear(fit: ModelFit, df: pd.DataFrame, nsamples: int) -> dict
     explainer = shap.LinearExplainer((coef_array, intercept), bg_data, model_output="linear")
 
     # Adjust for quadratic and interaction terms
-    shap_values = explainer.shap_values(X)
+    shap_values = explainer.shap_values(explain)
 
     # Ensure shap_values is 2D
     if shap_values.ndim == 3:
@@ -99,7 +122,9 @@ def _compute_shap_linear(fit: ModelFit, df: pd.DataFrame, nsamples: int) -> dict
     }
 
 
-def _compute_shap_tree(fit: ModelFit, df: pd.DataFrame, nsamples: int) -> dict:
+def _compute_shap_tree(
+    fit: ModelFit, df: pd.DataFrame, nsamples: int, max_explain: int
+) -> dict:
     """SHAP for tree-based models using TreeExplainer."""
     try:
         import shap
@@ -107,16 +132,11 @@ def _compute_shap_tree(fit: ModelFit, df: pd.DataFrame, nsamples: int) -> dict:
         raise ImportError("shap is required for SHAP analysis. Install with: pip install shap")
 
     inputs = fit.inputs
+    bg_data, explain, _ = _explain_sample(df, inputs, nsamples, max_explain)
     X = df[inputs]
 
-    # Sample background data
-    if len(X) > nsamples:
-        bg_data = X.sample(n=nsamples, random_state=42)
-    else:
-        bg_data = X
-
-    explainer = shap.TreeExplainer(fit.model)
-    shap_values = explainer.shap_values(X, check_additivity=False)
+    explainer = shap.TreeExplainer(fit.model, data=bg_data)
+    shap_values = explainer.shap_values(explain, check_additivity=False)
 
     # Ensure 2D
     if shap_values.ndim == 3:

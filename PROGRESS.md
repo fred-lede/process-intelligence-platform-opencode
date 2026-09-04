@@ -535,3 +535,4 @@
 - **註記**：上表先前 TASK/PROGRESS 計數「250 passed」為引擎舊值，本次實測為 255 passed
 
 - [x] **時間序列數值欄位修復（commit `c5058b5`）**：`tsColumn`/`trendColumn` 預設改為自動落在第一個數值欄（原預設 `spec?.outputField` 可能為非數值如 `result`，導致 `compute_time_features` 於 `astype(float)` 拋錯、前端顯示錯誤 Alert 無輸出）；按鈕 handler 加守衛顯示明確 `valueColNotNumeric` 訊息（en/zh-TW/es-MX 三語）。驗證：三語 JSON 有效、tsc --noEmit clean、npm run build 成功。
+- [x] **120s timeout 根因修復（SRP 版規）**：`fit_random_forest`/`fit_residual_hybrid`/cross-validation RF 改為有界樹（`max_depth=10, min_samples_leaf=5`）；`compute_shap` 新增 `max_explain=1000` 封頂實際解釋列數。實測 50k 列 shap 由 `>200s`（封鎖單執行緒引擎迴圈→`engine call timed out after 120s`）降為 **5.55s**。驗證：引擎 267 passed, 1 skipped。

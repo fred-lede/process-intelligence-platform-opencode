@@ -167,13 +167,21 @@ def fit_random_forest(
     test_size: float = 0.3,
     random_state: int | None = None,
     n_estimators: int = 100,
+    max_depth: int | None = 10,
+    min_samples_leaf: int = 5,
 ) -> ModelFit:
     if not inputs:
         raise ValueError("at least one input is required")
     X = df[inputs].to_numpy(dtype=float)
     y = df[target].to_numpy(dtype=float)
     X_tr, X_te, y_tr, y_te = _train_test(X, y, test_size, random_state)
-    rf = RandomForestRegressor(n_estimators=n_estimators, random_state=random_state, n_jobs=1)
+    rf = RandomForestRegressor(
+        n_estimators=n_estimators,
+        random_state=random_state,
+        n_jobs=1,
+        max_depth=max_depth,
+        min_samples_leaf=min_samples_leaf,
+    )
     rf.fit(X_tr, y_tr)
     y_pred = rf.predict(X_te)
     return ModelFit(
@@ -197,6 +205,8 @@ def fit_residual_hybrid(
     test_size: float = 0.3,
     random_state: int | None = None,
     n_estimators: int = 100,
+    max_depth: int | None = 10,
+    min_samples_leaf: int = 5,
 ) -> ModelFit:
     if not inputs:
         raise ValueError("at least one input is required")
@@ -215,7 +225,13 @@ def fit_residual_hybrid(
     # DOE quadratic captures interpretable curvature on the training slice.
     doe = LinearRegression().fit(D[train_idx], y[train_idx])
     residual = y[train_idx] - doe.predict(D[train_idx])
-    rf = RandomForestRegressor(n_estimators=n_estimators, random_state=random_state, n_jobs=1)
+    rf = RandomForestRegressor(
+        n_estimators=n_estimators,
+        random_state=random_state,
+        n_jobs=1,
+        max_depth=max_depth,
+        min_samples_leaf=min_samples_leaf,
+    )
     rf.fit(X[train_idx], residual)
     y_pred = doe.predict(D[test_idx]) + rf.predict(X[test_idx])
     y_test = y[test_idx]

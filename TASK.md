@@ -7,6 +7,7 @@
 - Monte Carlo IPC handler (`monte_carlo/run`) — main.py import + handler + dispatch
 - 5 IPC handler tests (basic, unknown model, with anomalies, no bounds, unknown dataset)
 - **品質檢查補強（commit pending）**：`quality.py` 新增 4 個原本只定義未執行的檢查——`invalid_format`（格式混用）、`unit_mixing`（單位混用）、`input_out_of_range`（超出工程範圍，支援 input_ranges 直用 + 中位數±8×MAD 統計啟發）、`missing_spec`（output 缺 LSL/USL）；`run_quality_checks` 新增可選參數 `input_columns`/`output_columns`/`input_ranges`/`spec`（不傳則略過或統計回退），`_handle_quality` 透傳。**前端**：DataImport 品質呼叫帶 input/output_columns（統計 OOR）；ProcessDefine「儲存並確認」後以確認的規格觸發「品質複查」（they trigger missing_spec 與用控制界限當 range 的 input_out_of_range），新增品質複查 Card+table+i18n 三語 9 keys。引擎測試 264 passed, 1 skipped；前端 tsc/build clean
+- **120s time-out 根因（bug fix）**：`fit_random_forest` 無界 `max_depth`/`min_samples_leaf` 使大資料集樹的 leaf 數 ≈ n_train → shap `TreeExplainer` 隨資料量爆炸（實測 50k 列 SHAP **>200s**）。該呼叫在引擎**單一執行緒**迴圈（main.py:1728）同步執行，封鎖後續請求；Rust `engine_call` 120s timeout（commands/mod.rs:41）→ 使用者期間按的 `features/time_series` 逾時報「engine call timed out after 120s」。修復：`fitters.py`/`validation.py` RF 加 `max_depth=10, min_samples_leaf=5`；`shap_explainer.py` `compute_shap` 加 `max_explain=1000` 封頂實際解釋列數（`_explain_sample`），`main.py` 透傳。驗證：50k 端到端 shap 5.55s（vs >200s）；引擎 267 passed, 1 skipped
 
 ### Phase 0 — 基礎建設
 - Tauri 2.0 + React 18 + TypeScript + Python 3.11 專案骨架

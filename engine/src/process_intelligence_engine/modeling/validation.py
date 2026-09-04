@@ -64,7 +64,9 @@ def _refit_from_fit(fit, df: pd.DataFrame) -> Any:
     elif fit.model_type == "random_forest":
         X = df[fit.inputs].to_numpy(dtype=float)
         y = df[fit.target].to_numpy(dtype=float)
-        rf = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=1)
+        rf = RandomForestRegressor(
+            n_estimators=100, random_state=42, n_jobs=1, max_depth=10, min_samples_leaf=5
+        )
         rf.fit(X, y)
         fit_obj = ModelFit(
             model_type="random_forest", target=fit.target, inputs=fit.inputs, model=rf

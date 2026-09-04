@@ -531,9 +531,10 @@ def _handle_shap_explain(params: dict) -> dict:
     model_id = params["model_id"]
     dataset_id = params["dataset_id"]
     nsamples = params.get("nsamples", 100)
+    max_explain = params.get("max_explain", 1000)
     fit = MODEL_REGISTRY._get_unlocked(model_id)
     df = REGISTRY.get(dataset_id)
-    return compute_shap(fit, df, nsamples)
+    return compute_shap(fit, df, nsamples, max_explain)
 
 
 def _handle_extrapolation_check(params: dict) -> dict:
