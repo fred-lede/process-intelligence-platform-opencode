@@ -475,13 +475,29 @@ export default function Exploration() {
           <Table
             size="small"
             dataSource={tsFeatures.preview}
-            columns={tsFeatures.feature_columns.slice(0, 6).map((c) => ({
-              title: c,
-              dataIndex: c,
-              key: c,
-              render: (v: number) => v?.toFixed(4),
-            }))}
-            pagination={{ pageSize: 10 }}
+            columns={[
+              ...([timeColumn] as string[])
+                .filter(Boolean)
+                .map((c) => ({ title: c, dataIndex: c, key: c, width: 150 })),
+              ...([tsColumn] as string[])
+                .filter(Boolean)
+                .map((c) => ({
+                  title: c,
+                  dataIndex: c,
+                  key: c,
+                  width: 110,
+                  render: (v: number) => v?.toFixed(4),
+                })),
+              ...tsFeatures.feature_columns.map((c) => ({
+                title: c,
+                dataIndex: c,
+                key: c,
+                width: 120,
+                render: (v: number | null) => (v == null ? '—' : v.toFixed(4)),
+              })),
+            ]}
+            scroll={{ x: 'max-content' }}
+            pagination={{ pageSize: 10, showSizeChanger: false }}
             rowKey={(r) => String(r[timeColumn ?? ''])}
           />
         </>
