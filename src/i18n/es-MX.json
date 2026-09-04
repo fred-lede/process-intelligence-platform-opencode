@@ -160,6 +160,7 @@
     "valueColumn": "Valor",
     "windowSizes": "Ventanas",
     "computeFeatures": "Calcular características",
+    "valueColNotNumeric": "La columna de valor debe ser numérica para el análisis de series de tiempo.",
     "totalFeatures": "Características",
     "featureColumns": "Columnas",
     "noTsData": "Selecciona columnas de tiempo y valor, luego calcula características.",

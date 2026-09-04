@@ -88,6 +88,17 @@ export default function Exploration() {
   }, [timeColumn, timestampColumns])
 
   useEffect(() => {
+    if (numericColumns.length === 0) return
+    if (tsColumn && !numericColumns.includes(tsColumn)) {
+      setTsColumn(numericColumns[0])
+    }
+    if (trendColumn && !numericColumns.includes(trendColumn)) {
+      setTrendColumn(numericColumns[0])
+    }
+  }, [tsColumn, trendColumn, numericColumns])
+
+
+  useEffect(() => {
     setContext('exploration', buildExplorationContext({ fits, series, tsFeatures, grrResult }))
   }, [fits, series, tsFeatures, grrResult, setContext])
 
@@ -379,6 +390,10 @@ export default function Exploration() {
             disabled={!timeColumn || !tsColumn || !importResult}
             onClick={async () => {
               if (!importResult || !timeColumn || !tsColumn) return
+              if (!numericColumns.includes(tsColumn)) {
+                setError(t('exploration.valueColNotNumeric'))
+                return
+              }
               setTsLoading(true)
               try {
                 const result = await getTimeSeriesFeatures({

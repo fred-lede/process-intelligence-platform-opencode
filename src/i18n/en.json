@@ -248,6 +248,7 @@
     "valueColumn": "Value",
     "windowSizes": "Windows",
     "computeFeatures": "Compute Features",
+    "valueColNotNumeric": "Value column must be numeric for time-series analysis.",
     "totalFeatures": "Features",
     "featureColumns": "Columns",
     "noTsData": "Select time and value columns, then compute features.",

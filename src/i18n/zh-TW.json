@@ -248,6 +248,7 @@
     "valueColumn": "數值欄位",
     "windowSizes": "滑動視窗",
     "computeFeatures": "計算特徵",
+    "valueColNotNumeric": "時間序列分析需要數值欄位作為數值欄。",
     "totalFeatures": "特徵數",
     "featureColumns": "欄位",
     "noTsData": "請選擇時間與數值欄位，然後計算特徵。",
