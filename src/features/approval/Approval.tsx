@@ -260,7 +260,7 @@ export default function Approval() {
         resource_type: submitType,
         resource_id: submitResourceId,
         reviewer: submitReviewer,
-        reviewer_role: reviewerOption?.role ?? 'engineer',
+        reviewer_role: reviewerOption?.role ?? 'reviewer',
         comments: submitComments || undefined,
       })
       messageApi.success(t('approval.submitSuccess'))

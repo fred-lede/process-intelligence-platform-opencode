@@ -630,6 +630,7 @@
     "action": "Acción",
     "onlyReviewer": "Solo revisor o administrador puede revisar",
     "time": "Hora",
+    "records": "Registros de aprobación",
     "loadError": "Error al cargar datos de aprobación",
     "actionError": "Error en la acción",
     "commentsPlaceholder": "Agregar comentarios..."

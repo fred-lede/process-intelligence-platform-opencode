@@ -614,6 +614,7 @@
     "action": "操作",
     "onlyReviewer": "僅審核者或管理員可審核",
     "time": "時間",
+    "records": "審核紀錄",
     "loadError": "載入審核資料失敗",
     "actionError": "操作失敗",
     "commentsPlaceholder": "新增備註..."

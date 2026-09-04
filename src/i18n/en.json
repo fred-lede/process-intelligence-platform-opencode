@@ -614,6 +614,7 @@
     "action": "Action",
     "onlyReviewer": "Only reviewer or admin can review",
     "time": "Time",
+    "records": "Approval Records",
     "loadError": "Failed to load approval data",
     "actionError": "Action failed",
     "commentsPlaceholder": "Add comments..."
