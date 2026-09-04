@@ -163,6 +163,14 @@ const TAB_GUIDES: Record<AppTab, TabGuide> = {
       `A report can be exported as HTML, PDF, or Excel. Guide the user to choose the report type, select/include sections and spec limits, ` +
       `and export. Mention that a report can be marked as a formal version only with explicit confirmation.`,
   },
+  approval: {
+    name: 'Approval Workflow',
+    body:
+      `This page manages the approval workflow for models and reports. Users can submit models or reports for review by selecting a ` +
+      `reviewer. Only users with the Reviewer or Admin role can approve or reject submissions. The page shows all resources with their ` +
+      `current status (draft, pending review, approved, rejected, retired) and a full audit trail of approval actions. Guide the user ` +
+      `to submit resources for review, and explain that only reviewers or admins can perform approval actions.`,
+  },
   spc: {
     name: 'SPC Control',
     body:

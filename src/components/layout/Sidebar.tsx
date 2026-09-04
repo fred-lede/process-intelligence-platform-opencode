@@ -15,6 +15,7 @@ import {
   LineChartOutlined,
   DatabaseOutlined,
   DotChartOutlined,
+  AuditOutlined,
 } from '@ant-design/icons'
 import type { AppTab } from '../../types'
 import { useState } from 'react'
@@ -38,6 +39,7 @@ const tabItems = [
   { key: 'copula', icon: <DotChartOutlined /> },
   { key: 'prediction', icon: <SlidersOutlined /> },
   { key: 'reports', icon: <FileTextOutlined /> },
+  { key: 'approval', icon: <AuditOutlined /> },
   { key: 'spc', icon: <LineChartOutlined /> },
   { key: 'dataAssets', icon: <DatabaseOutlined /> },
 ]

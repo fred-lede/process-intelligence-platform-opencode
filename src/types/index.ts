@@ -9,6 +9,7 @@ export type AppTab =
   | 'copula'
   | 'prediction'
   | 'reports'
+  | 'approval'
   | 'spc'
   | 'processFlow'
   | 'dataAssets'

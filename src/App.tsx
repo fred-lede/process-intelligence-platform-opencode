@@ -8,6 +8,7 @@ import ProcessDefine from './features/process-define/ProcessDefine'
 import Exploration from './features/exploration/Exploration'
 import ModelCenter from './features/model-center/ModelCenter'
 import Report from './features/report/Report'
+import Approval from './features/approval/Approval'
 import FeaturePlaceholder from './components/common/FeaturePlaceholder'
 import Settings from './features/settings/Settings'
 import SPC from './features/spc/SPC'
@@ -31,6 +32,7 @@ export default function App() {
     if (activeTab === 'exploration') return <Exploration />
     if (activeTab === 'modelCenter') return <ModelCenter />
     if (activeTab === 'reports') return <Report />
+    if (activeTab === 'approval') return <Approval />
     if (activeTab === 'spc') return <SPC />
     if (activeTab === 'monteCarlo') return <MonteCarlo />
     if (activeTab === 'copula') return <Copula />
