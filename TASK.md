@@ -258,6 +258,24 @@
 - **清理**：移除 DEBUG 橘條、`loadingBarRef` 與 `showLoadingBar` 命令式切換（與 `loading` 驅動的 inline style 衝突），回歸純 `{loading && banner}` + 800ms 最小思考顯示
 - 驗證 — tsc --noEmit clean、npm run build 成功
 
+### Cloud Upload de-identification strategy_overrides (Task 3 — IPC wiring)
+- **Status**: DONE
+- **Scope** — `_handle_cloud_preview` and `_handle_cloud_upload` in `main.py` now extract `strategy_overrides = params.get("strategy_overrides", {})` and pass it via keyword args to `generate_upload_preview`
+- **Tests** — 2 new: `test_handle_cloud_preview_passes_strategy_overrides` (verifies noise_config entry for a noise override), `test_handle_cloud_preview_and_upload_consistent` (verifies hash override + upload record)
+- **Full suite** — 280 passed, 1 skipped
+- **Commit** — `dd76028`
+- **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_handlers.py`
+
+### Cloud Upload de-identification strategy_overrides (Task 1)
+- **Status**: DONE_WITH_CONCERNS
+- **deidentify.py** — `generate_preview` 新增 `strategy_overrides: dict[str, str] | None = None` 參數，支援 per-column masking 策略覆蓋（hash / masked / noise）
+- **Bug fix** — 修正上傳 hash 計算中 `upload_data[col]` → `df[col]`（masked 欄位不在 transmitted 中，原碼 KeyError）
+- **噪聲配置** — noise_std>0 時 transmitted 數值欄自動加噪，`strategy_overrides={"col":"noise"}` 亦可主動啟用
+- **測試** — `test_deidentify.py` 4 個案例：2 passed（noise/噪聲忽略），2 failed（hash/masked 輸出）因 `apply_masking` 只含 `transmitted_columns`，masked 欄位未列入輸出 DataFrame → Task 2 需修正
+- **全量** — 275 passed, 2 failed（新測試 apply_masking 限制）, 1 skipped（既有）
+- **Commit** — `4fc6fd6`
+- **Files changed** — `engine/src/process_intelligence_engine/data/deidentify.py`, `engine/tests/test_deidentify.py`
+
 ## In Progress / Next
 ### 探索分析「時間序列」時間欄位無法選取 (bug fix)
 - **根因**：`Exploration.tsx` 時間欄位 `<Select>` 的 `options` 邏輯**顛倒**——`numericColumns.length > 0 ? [] : 全部欄位`。若資料集有數值欄（幾乎必有）→ 下拉**全空** → `timeColumn` 永遠無法選取 →「時間序列」按鈕 disabled。`timeColumn` 初始亦為 `undefined` 且從不自動選。
