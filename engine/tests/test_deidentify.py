@@ -27,8 +27,10 @@ def test_strategy_overrides_mask_with_hash():
     )
     assert preview.mask_strategies["operator"] == "hash"
     out = apply_deidentification(df, preview)
-    assert set(out["operator"].unique()) == {"MASKED"}
-    assert out["operator"].iloc[0] == "MASKED"
+    # hash strategy produces 8-char hex strings
+    for val in out["operator"]:
+        assert len(val) == 8
+        assert all(c in "0123456789abcdef" for c in val)
 
 
 def test_strategy_overrides_mask_with_masked():
@@ -68,3 +70,19 @@ def test_noise_on_non_numeric_is_ignored():
     )
     assert preview.mask_strategies["operator"] == "hash"
     assert "operator" not in preview.noise_config
+
+
+def test_noise_masked_column_gets_noise():
+    df = _sample_df()
+    preview = deid.generate_preview(
+        df,
+        "ds1",
+        sensitive_columns=["temperature"],
+        strategy_overrides={"temperature": "noise"},
+        noise_std=0.5,
+    )
+    out = apply_deidentification(df, preview, seed=3)
+    # column present, numeric, and differs from original (noise applied)
+    assert "temperature" in out.columns
+    assert pd.api.types.is_float_dtype(out["temperature"])
+    assert (out["temperature"] != df["temperature"]).any()

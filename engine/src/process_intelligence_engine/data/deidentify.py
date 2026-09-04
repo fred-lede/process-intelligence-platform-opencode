@@ -168,6 +168,9 @@ class DeidentificationEngine:
                 noise_config[col] = {"std": noise_std, "method": "gaussian"}
             elif pd.api.types.is_numeric_dtype(df[col]) and noise_std > 0:
                 noise_config[col] = {"std": noise_std, "method": "gaussian"}
+        for col in masked:
+            if overrides.get(col) == "noise" and pd.api.types.is_numeric_dtype(df[col]):
+                noise_config[col] = {"std": noise_std, "method": "gaussian"}
 
         # Compute upload hash (SHA-256 of transmitted data summary)
         upload_data = df[transmitted].copy()
@@ -212,18 +215,20 @@ class DeidentificationEngine:
     ) -> pd.DataFrame:
         """Apply masking to produce the actual uploaded DataFrame."""
         rng = np.random.default_rng(seed)
-        df_out = df[preview.transmitted_columns].copy()
+        df_out = df[preview.transmitted_columns + list(preview.masked_columns)].copy()
 
-        # Hash sensitive columns that were included in transmitted
-        for col in preview.transmitted_columns:
-            if preview.mask_strategies.get(col) == "hash":
+        # Hash / mask sensitive columns
+        for col in preview.masked_columns:
+            strategy = preview.mask_strategies.get(col)
+            if strategy == "hash":
                 df_out[col] = df_out[col].apply(
                     lambda x: sha256(str(x).encode()).hexdigest()[:8] if pd.notna(x) else "NULL"
                 )
-            elif preview.mask_strategies.get(col) == "replace":
+            elif strategy in ("masked", "replace"):
                 df_out[col] = "MASKED"
+            # strategy "noise": leave values warm; noise applied below
 
-        # Add noise to numeric columns
+        # Add noise to numeric columns (transmitted or noise-masked)
         for col, cfg in preview.noise_config.items():
             if col in df_out.columns and cfg["method"] == "gaussian":
                 noise = rng.normal(0, cfg["std"], len(df_out))
