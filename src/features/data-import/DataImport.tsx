@@ -11,6 +11,7 @@ import {
   Tag,
   Alert,
   Tooltip,
+  message,
 } from 'antd'
 import {
   FileExcelOutlined,
@@ -60,10 +61,10 @@ function buildTemplateCsv(): string {
     'machine',
     'operator',
     'part',
-    'thickness',
-    'temperature',
-    'pressure',
-    'yield',
+    'input_temperature',
+    'input_voltage',
+    'output_thickness',
+    'output_pressure',
     'result',
   ]
   const operators = ['O-01', 'O-02', 'O-03']
@@ -82,11 +83,11 @@ function buildTemplateCsv(): string {
       for (let r = 0; r < reps; r++) {
         seq += 1
         const noise = (Math.random() - 0.5) * 0.012
-        const thickness = (1.62 + baseBias + noise).toFixed(4)
-        const temperature = (85 + (pi - 2) * 1.2 + (Math.random() - 0.5) * 1.6).toFixed(2)
-        const pressure = (3.4 + (Math.random() - 0.5) * 0.12).toFixed(3)
+        const inTemp = (85 + (pi - 2) * 1.2 + (Math.random() - 0.5) * 1.6).toFixed(2)
+        const inVoltage = (12 + (pi - 2) * 0.3 + (Math.random() - 0.5) * 0.2).toFixed(3)
+        const outThickness = (1.62 + baseBias + noise).toFixed(4)
+        const outPressure = (3.4 + (Math.random() - 0.5) * 0.12).toFixed(3)
         const fail = seq % 41 === 0
-        const yieldValue = (97.8 + (pi - 2) * 0.35 + (Math.random() - 0.5) * 0.9).toFixed(2)
         const day = 1 + Math.floor(seq / 15)
         const hour = 8 + Math.floor(seq / 3)
         const minute = (seq * 7) % 60
@@ -98,10 +99,10 @@ function buildTemplateCsv(): string {
           machine,
           op,
           part,
-          thickness,
-          temperature,
-          pressure,
-          yieldValue,
+          inTemp,
+          inVoltage,
+          outThickness,
+          outPressure,
           fail ? 'NG' : 'OK',
         ])
       }
@@ -216,10 +217,24 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
     }
   }
 
+  const hasOutputField = () => fields.some((f) => f.role === 'output')
+
   const handleConfirmAll = () => {
+    if (!hasOutputField()) {
+      message.error(t('dataImport.errNoOutput'))
+      return
+    }
     const confirmed = fields.map((f) => ({ ...f, confirmed: true }))
     confirmAllFields()
     void handleRunQuality(confirmed)
+  }
+
+  const handleFinish = () => {
+    if (!hasOutputField()) {
+      message.error(t('dataImport.errNoOutput'))
+      return
+    }
+    onFinished?.()
   }
 
   const qualityColumns: ColumnsType<QualityIssue> = [
@@ -432,7 +447,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
               <Button onClick={handleConfirmAll} type="primary" icon={<CheckOutlined />} loading={loading}>
                 {t('dataImport.confirmAll')}
               </Button>
-              <Button onClick={onFinished}>{t('common.next')}</Button>
+              <Button onClick={handleFinish}>{t('common.next')}</Button>
             </Space>
           </Space>
         </Card>
