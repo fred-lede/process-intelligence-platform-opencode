@@ -63,6 +63,7 @@ function buildTemplateCsv(): string {
     'thickness',
     'temperature',
     'pressure',
+    'yield',
     'result',
   ]
   const operators = ['O-01', 'O-02', 'O-03']
@@ -85,6 +86,7 @@ function buildTemplateCsv(): string {
         const temperature = (85 + (pi - 2) * 1.2 + (Math.random() - 0.5) * 1.6).toFixed(2)
         const pressure = (3.4 + (Math.random() - 0.5) * 0.12).toFixed(3)
         const fail = seq % 41 === 0
+        const yieldValue = (97.8 + (pi - 2) * 0.35 + (Math.random() - 0.5) * 0.9).toFixed(2)
         const day = 1 + Math.floor(seq / 15)
         const hour = 8 + Math.floor(seq / 3)
         const minute = (seq * 7) % 60
@@ -99,6 +101,7 @@ function buildTemplateCsv(): string {
           thickness,
           temperature,
           pressure,
+          yieldValue,
           fail ? 'NG' : 'OK',
         ])
       }
