@@ -534,3 +534,4 @@
 - **10 tasks 全部 commit 至 main**：`5706bef → fcaa2b5 → f465f0e → 531a59a → 9a8b5a3 → a00ba5b → 6eadc55 → c8240c5 → 2335b58`，每個 task 由 spec reviewer 逐行驗證後才 commit
 - **註記**：上表先前 TASK/PROGRESS 計數「250 passed」為引擎舊值，本次實測為 255 passed
 
+- [x] **時間序列數值欄位修復（commit `c5058b5`）**：`tsColumn`/`trendColumn` 預設改為自動落在第一個數值欄（原預設 `spec?.outputField` 可能為非數值如 `result`，導致 `compute_time_features` 於 `astype(float)` 拋錯、前端顯示錯誤 Alert 無輸出）；按鈕 handler 加守衛顯示明確 `valueColNotNumeric` 訊息（en/zh-TW/es-MX 三語）。驗證：三語 JSON 有效、tsc --noEmit clean、npm run build 成功。
