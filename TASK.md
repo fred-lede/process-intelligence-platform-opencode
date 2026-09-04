@@ -1,6 +1,22 @@
 # TASK.md
 
 ## Completed
+### Approval tab — Task 2: Frontend engine.ts approval + report API types and functions
+- **Status**: DONE
+- `ReportRecord` interface + `listReports()` added after `generateReport()` (line ~495)
+- Approval types/functions already existed (lines 937-1004): `ApprovalRecord`, `ApprovalAction`, `ApprovalResourceType`, `SubmitForReviewParams`, `ApproveParams`, `RejectParams`, `ListApprovalRecordsParams` + all 5 wrapper functions
+- `npx tsc --noEmit` — clean (no errors)
+- **Files changed** — `src/lib/engine.ts`
+
+### Approval tab — Task 1: REPORT_REGISTRY + report/list IPC (commit ffe8dd1)
+- **Status**: DONE
+- **reporting/registry.py** — `ReportRegistry` in-memory registry (threading.Lock, uuid, sorted by timestamp desc) + module singleton `_REPORT_REGISTRY`
+- **main.py** — import registry; `REPORT_REGISTRY.register(...)` inserted immediately before `if output_format == "html":` in `_handle_report_generate` (covers all 3 formats); new `_handle_report_list` + `report/list` dispatch
+- **Tests** — new `tests/test_report_registry.py` (2: register+list, empty); `test_main_handlers.py` new `test_handle_report_list_returns_registry` (generate html → list returns Proj X)
+- **Verification** — registry 2 passed; full suite **283 passed, 1 skipped** (baseline 280 + 3 new)
+- **Files changed** — `engine/src/process_intelligence_engine/reporting/registry.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_report_registry.py`, `engine/tests/test_main_handlers.py`
+<!-- NEXT_ITEM_ANCHOR -->
+
 - Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo
 - 14 tests covering normal/gamma/lognormal/histogram sampling, linear/quadratic prediction, anomaly injection, full simulation with/without bounds
 - 234 passed, 1 skipped (88% coverage)
@@ -282,6 +298,21 @@
 - **Verification** — `npx tsc --noEmit` clean, `npm run build` success (built in 10.06s)
 
 - **Cloud Upload 去識別化設定改進（規格 §11A/§24）— DONE + 已驗證**：Settings → Cloud Upload 卡片可選擇真實資料集並逐欄設定遮蔽策略。**Backend**：`deidentify.py` `strategy_overrides`（`{col:"hash"|"masked"|"noise"}`，優先於 dtype 自動判定，`noise` 僅數值欄）+ `apply_masking` 輸出含遮蔽欄並依策略正確遮蔽（避免數值敏感欄洩漏）；`main.py` `cloud/preview`/`cloud/upload` 透傳。**Tests**：`test_deidentify.py` 5 個 + `test_main_handlers.py` 2 個；引擎 **280 passed, 1 skipped**。**Frontend**：`engine.ts` params 加 `strategy_overrides`；Settings 新增資料集下拉（取代 `demo_dataset`）+ 逐欄分類/策略表格（`detectFields([], id)` 取欄位）+ `deriveColumns()`；i18n 三語 13 keys（es-MX 補齊整個 cloud section）。驗證：tsc --noEmit clean、npm run build 成功、三語 JSON 有效。**Commits**：`4fc6fd6`、`592ded9`、`dd76028`、`d5fb16d`、`5aae6ec`。
+
+### Approval tab — Task 3: Frontend Approval.tsx review UI component
+- **Status**: DONE
+- **Component** — `src/features/approval/Approval.tsx` (387 lines)
+  - On mount: `getCurrentUser()` (role), `listUsers()` (reviewers), `load()` fetches models/reports/records
+  - Resource table: models + reports merged, columns: Type, Resource(label), Status(Tag), Action
+  - Status resolution: `getApprovalStatus()` per resource, overridden by latest record action
+  - Action column: Approve/Reject buttons if `pending_review && canReview` (admin||engineer); muted text if pending && !canReview
+  - Submit modal: type selector, resource dropdown, reviewer dropdown, comments textarea → `submitForReview()`
+  - Approve/Reject modal: Alert label + comments textarea → `approveResource()`/`rejectResource()` with current user identity
+  - Records card: full audit table (time/type/resource/action/reviewer/comments)
+- **Reviewer identity** — `canReview = currentRole === 'admin' || currentRole === 'engineer'` (engine.ts UserRole has no 'reviewer'; 'engineer' is the review-capable role)
+- **tsc** — clean (no errors)
+- **Commit** — `9e01b00`
+- **Files changed** — `src/features/approval/Approval.tsx`
 
 ## In Progress / Next
 ### Cloud Upload de-identification — Tasks 4 & 5: engine types + UI dataset selection + per-column masking strategy
