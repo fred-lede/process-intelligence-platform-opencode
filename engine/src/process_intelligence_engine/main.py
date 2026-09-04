@@ -56,6 +56,7 @@ from process_intelligence_engine.modeling.fitters import (
 from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
 from process_intelligence_engine.reporting.models import ReportData
+from process_intelligence_engine.reporting.registry import _REPORT_REGISTRY as REPORT_REGISTRY
 from process_intelligence_engine.reporting.html import HTMLReportGenerator
 from process_intelligence_engine.reporting.excel import ExcelReportGenerator
 from process_intelligence_engine.reporting.pdf import PDFReportGenerator
@@ -801,6 +802,12 @@ def _handle_report_generate(params: dict) -> dict:
         process_window=process_window,
     )
 
+    REPORT_REGISTRY.register(
+        project_name=project_name,
+        operator=operator,
+        output_format=output_format,
+    )
+
     if output_format == "html":
         generator = HTMLReportGenerator(report_data)
         result = generator.generate()
@@ -815,6 +822,10 @@ def _handle_report_generate(params: dict) -> dict:
         return {"format": "excel", "content_base64": result.hex()}
     else:
         raise ValueError(f"Unsupported format: {output_format}")
+
+
+def _handle_report_list(params: dict) -> dict:
+    return {"reports": REPORT_REGISTRY.list()}
 
 
 def _spec_serializable(spec: dict, lsl, usl) -> dict:
@@ -1212,6 +1223,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "report/generate":
         return _handle_report_generate(params)
+
+    if method == "report/list":
+        return _handle_report_list(params)
 
     if method == "auth/login":
         return _handle_auth_login(params)

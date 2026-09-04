@@ -5,6 +5,7 @@ import json
 import pytest
 
 from process_intelligence_engine.main import handle_request, REGISTRY
+from process_intelligence_engine.reporting.registry import _REPORT_REGISTRY
 
 
 def _detect_fields_payload():
@@ -382,3 +383,16 @@ def test_handle_cloud_preview_and_upload_consistent(tmp_path):
     assert result["record_id"]
     assert result["columns_uploaded"]
     assert "operator" in result["masked_columns"]
+
+
+def test_handle_report_list_returns_registry(tmp_path):
+    _REPORT_REGISTRY._clear()
+    csv_text = "\n".join(["temp,flag", "1.0,OK", "2.0,OK", "3.0,NG"])
+    dataset_id = _import_csv_and_return_id(tmp_path, csv_text)
+    handle_request(
+        "report/generate",
+        {"dataset_id": dataset_id, "project_name": "Proj X", "operator": "qa", "format": "html"},
+    )
+    result = handle_request("report/list", {})
+    assert result["reports"]
+    assert result["reports"][0]["project_name"] == "Proj X"
