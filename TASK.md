@@ -15,6 +15,38 @@
 - **Tests** — new `tests/test_report_registry.py` (2: register+list, empty); `test_main_handlers.py` new `test_handle_report_list_returns_registry` (generate html → list returns Proj X)
 - **Verification** — registry 2 passed; full suite **283 passed, 1 skipped** (baseline 280 + 3 new)
 - **Files changed** — `engine/src/process_intelligence_engine/reporting/registry.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_report_registry.py`, `engine/tests/test_main_handlers.py`
+### Approval tab — Task 5: 收尾 docs + 最終驗證 + push
+- **Status**: DONE
+- 全引擎 **284 passed, 1 skipped**；`npx tsc --noEmit` clean；`npm run build` 成功
+- spec reviewer 找到 `approval.records` i18n key 缺漏（HIGH）→ 三語各加 `records`；`handleSubmit` fallback `reviewer_role: 'engineer'` → `'reviewer'`（LOW，避免後端拒絕）
+- 最終為 24 支 `approval.*` + `nav.approval` 全三語齊備（en/zh-TW/es-MX key set 一致）
+- Commits: `2c96032`, `ffe8dd1`, `9e01b00`, `96564c7`, `7fe956f`, `5d8bda9`
+- **Files changed** — 見各 task 條目
+
+### Approval tab — Task 4: 路由 + assistantGuide + i18n（commit 7fe956f）
+- **Status**: DONE
+- `src/types/index.ts` `AppTab` union 加 `'approval'`（於 `'reports'` 後）
+- `src/App.tsx` import `Approval` + `if (activeTab === 'approval') return <Approval />`
+- `src/components/layout/Sidebar.tsx` 加 `AuditOutlined` + `{ key: 'approval', icon: <AuditOutlined /> }`（reports 後）
+- `src/lib/assistantGuide.ts` 加 approval guide（submit / reviewer-admin 權限 / audit trail）
+- i18n 三語 `nav.approval` + `approval.*` 19 支新 key（en/zh-TW/es-MX key set 一致）
+- 驗證：JSON 有效、三語 approval key set 一致、tsc clean、build 成功
+
+### Approval tab — Task 3b: 新增 Reviewer 角色 + 對齊 canReview（commit 96564c7）
+- **Status**: DONE
+- **根因**：spec §20 定義 Reviewer（審核模型/報告），但系統角色只有 admin/engineer/viewer，且後端 `approve`/`reject` 只收 `("reviewer","admin")` → 前端 engineer 顯示可審核、後端卻拒絕。user 選「新增 Reviewer 角色」方案
+- **Backend**：`auth/models.py` `UserRole` 加 `REVIEWER = "reviewer"`（`_handle_auth_register` 的 `UserRole(role)` 自動接受）
+- **Frontend**：`engine.ts:510` `UserRole` 加 `'reviewer'`；Settings register modal role Select 加 Reviewer option + `roleColor` map 加 `reviewer:'purple'`；`Approval.tsx` `canReview` → `currentRole === 'reviewer' || currentRole === 'admin'`（submit 仍所有已登錄 user 可用）
+- **Tests**：`test_auth.py` 新增 `test_register_reviewer_role`；full suite **284 passed, 1 skipped**；tsc clean
+- **Files changed** — `engine/src/process_intelligence_engine/auth/models.py`, `engine/tests/test_auth.py`, `src/lib/engine.ts`, `src/features/settings/Settings.tsx`, `src/features/approval/Approval.tsx`
+
+### Approval tab — Task 3: Approval.tsx UI（commit 9e01b00）
+- **Status**: DONE
+- `src/features/approval/Approval.tsx` 完整審核 tab：資源表（modeling/list 的 model + report/list 的 report）Type/Resource/Status/Action 欄；`getApprovalStatus()` 依資源求 status + record 覆寫；pending_review 資源對 reviewer/admin 顯示 Approve/Reject（`canReview`）；Submit modal（type→resource→reviewer→comments→`submitForReview`）；Approve/Reject modal 用 `getCurrentUser()` 身份 + comments；Records card（`approval/records` 完整審計軌跡）
+- 已存在 engine.ts approval API（SubmitForReviewParams/ApproveParams/RejectParams/ApprovalRecord/ApprovalStatus + 5 個 wrapper functions）直接沿用，僅補 `ReportRecord` + `listReports()`
+- 驗證：tsc clean
+- **Files changed** — `src/features/approval/Approval.tsx`
+
 <!-- NEXT_ITEM_ANCHOR -->
 
 - Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo
