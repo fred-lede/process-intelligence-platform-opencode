@@ -55,6 +55,15 @@
 - 驗證：tsc clean、build 成功、三語 JSON 有效、無 output_pressure 殘留
 - **Files changed** — `src/features/data-import/DataImport.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
 
+### 專案儲存 ACL 修復（fs write_text_file not allowed by ACL）
+- **Status**: DONE
+- 使用者回報：儲存專案時報 `Command plugin:fs|write_text_file not allowed by ACL`
+- **根因**：`src/lib/project.ts:48` `saveProjectFile` 呼叫 `writeTextFile`，但 `src-tauri/capabilities/default.json` 只授權 `fs:default`——Tauri 2 的 `fs:default` 僅允許**唯讀** app dirs + mkdir，寫入命令需在 ACL 明確授權；且目標路徑需在 scope 內
+- **修復**：capability 追加 `{ "identifier": "fs:allow-write-text-file", "allow": [{ "path": "**" }] }`（grant write_text_file 命令 + 放行 save dialog 使用者選取路徑）
+- **驗證**：`cargo check` pass（ACL regenerate 成功；僅既有 dead-code warning `EngineManager::stop`）
+- **注意**：需重新 build + relaunch app 才會生效
+- **Files changed** — `src-tauri/capabilities/default.json`
+
 <!-- NEXT_ITEM_ANCHOR -->
 
 - Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo
