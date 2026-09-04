@@ -110,6 +110,7 @@ class DeidentificationEngine:
         excluded_columns: list[str] | None = None,
         noise_std: float = 0.0,
         seed: int = 42,
+        strategy_overrides: dict[str, str] | None = None,
     ) -> UploadPreview:
         """Generate a preview of what will be uploaded.
 
@@ -143,10 +144,18 @@ class DeidentificationEngine:
         masked = [c for c in cols if c in all_sensitive and c not in excluded]
         excluded_final = list(excluded)
 
+        overrides = strategy_overrides or {}
+
         # Build mask strategies
         mask_strategies: dict[str, str] = {}
         for col in masked:
-            if df[col].dtype in ("object", "string", "category"):
+            if overrides.get(col) == "hash":
+                mask_strategies[col] = "hash"
+            elif overrides.get(col) == "masked":
+                mask_strategies[col] = "masked"
+            elif overrides.get(col) == "noise" and pd.api.types.is_numeric_dtype(df[col]):
+                mask_strategies[col] = "noise"
+            elif df[col].dtype in ("object", "string", "category"):
                 mask_strategies[col] = "hash"
             else:
                 mask_strategies[col] = "replace"
@@ -155,14 +164,16 @@ class DeidentificationEngine:
         noise_config: dict[str, dict] = {}
         rng = np.random.default_rng(seed)
         for col in transmitted:
-            if pd.api.types.is_numeric_dtype(df[col]):
+            if overrides.get(col) == "noise" and pd.api.types.is_numeric_dtype(df[col]):
+                noise_config[col] = {"std": noise_std, "method": "gaussian"}
+            elif pd.api.types.is_numeric_dtype(df[col]) and noise_std > 0:
                 noise_config[col] = {"std": noise_std, "method": "gaussian"}
 
         # Compute upload hash (SHA-256 of transmitted data summary)
         upload_data = df[transmitted].copy()
         for col in masked:
             if mask_strategies.get(col) == "hash" and df[col].dtype in ("object", "string"):
-                upload_data[col] = upload_data[col].apply(
+                upload_data[col] = df[col].apply(
                     lambda x: sha256(str(x).encode()).hexdigest()[:8] if pd.notna(x) else "NULL"
                 )
             else:
@@ -275,10 +286,12 @@ def generate_upload_preview(
     excluded_columns: list[str] | None = None,
     noise_std: float = 0.0,
     seed: int = 42,
+    strategy_overrides: dict[str, str] | None = None,
 ) -> UploadPreview:
     """Convenience function for IPC handler."""
     return _DEID_ENGINE.generate_preview(
-        df, dataset_id, sensitive_columns, excluded_columns, noise_std, seed
+        df, dataset_id, sensitive_columns, excluded_columns, noise_std, seed,
+        strategy_overrides,
     )
 
 
