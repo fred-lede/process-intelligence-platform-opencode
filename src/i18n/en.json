@@ -696,7 +696,20 @@
     "warn": "Data will be de-identified before upload",
     "desc": "Before uploading to cloud AI, data is masked and anonymized. You must confirm before any data leaves your system.",
     "confirmWarn": "Confirm de-identified upload",
-    "confirmDesc": "The following data will be sent to the cloud AI provider after de-identification:"
+    "confirmDesc": "The following data will be sent to the cloud AI provider after de-identification:",
+    "dataset": "Dataset",
+    "selectDataset": "Select dataset to upload",
+    "field": "Field",
+    "dataType": "Type",
+    "classification": "Classification",
+    "strategy": "Masking Strategy",
+    "transmit": "Transmit",
+    "mask": "Mask",
+    "exclude": "Exclude",
+    "strategyHash": "Hash",
+    "strategyMasked": "MASKED value",
+    "strategyNoise": "Gaussian noise",
+    "noDataset": "Select a dataset to configure columns"
   },
   "processFlow": {
     "title": "Process Flow",

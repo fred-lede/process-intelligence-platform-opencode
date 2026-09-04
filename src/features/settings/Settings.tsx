@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message, InputNumber, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons'
-import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing, previewCloudUpload, confirmCloudUpload, listCloudUploadRecords, type UploadPreview, type UploadRecord } from '../../lib/engine'
+import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing, previewCloudUpload, confirmCloudUpload, listCloudUploadRecords, getDataAssets, detectFields, type UploadPreview, type UploadRecord, type DataAsset, type DetectedField } from '../../lib/engine'
 import { useAIStore } from '../../stores/aiStore'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
@@ -44,11 +44,54 @@ export default function Settings() {
   const [cloudPurpose, setCloudPurpose] = useState('')
   const [cloudProvider, setCloudProvider] = useState('custom')
   const [cloudModelVersion, setCloudModelVersion] = useState('unknown')
+  const [cloudDatasets, setCloudDatasets] = useState<DataAsset[]>([])
+  const [cloudDatasetId, setCloudDatasetId] = useState<string>('')
+  const [cloudFields, setCloudFields] = useState<DetectedField[]>([])
+  const [cloudLoadingFields, setCloudLoadingFields] = useState(false)
+  const [cloudColClass, setCloudColClass] = useState<Record<string, 'transmit' | 'mask' | 'exclude'>>({})
+  const [cloudColStrategy, setCloudColStrategy] = useState<Record<string, 'hash' | 'masked' | 'noise'>>({})
 
   useEffect(() => {
     loadData()
     loadSettings()
   }, [])
+
+  useEffect(() => {
+    getDataAssets()
+      .then(res => setCloudDatasets(res.datasets))
+      .catch(() => {})
+  }, [])
+
+  const loadCloudFields = async (datasetId: string) => {
+    if (!datasetId) return
+    setCloudLoadingFields(true)
+    try {
+      const res = await detectFields([], datasetId)
+      const fields = res.fields
+      setCloudFields(fields)
+      const cls: Record<string, 'transmit' | 'mask' | 'exclude'> = {}
+      const strat: Record<string, 'hash' | 'masked' | 'noise'> = {}
+      for (const f of fields) {
+        const isSensitive = f.role === 'sensitive' || f.role === 'identifier'
+        cls[f.name] = isSensitive ? 'mask' : 'transmit'
+        strat[f.name] = isSensitive ? 'hash' : 'masked'
+      }
+      setCloudColClass(cls)
+      setCloudColStrategy(strat)
+    } catch {
+      // engine may be unavailable in test
+    } finally {
+      setCloudLoadingFields(false)
+    }
+  }
+
+  const deriveColumns = () => {
+    const sensitive = Object.entries(cloudColClass).filter(([, c]) => c === 'mask').map(([n]) => n)
+    const excluded = Object.entries(cloudColClass).filter(([, c]) => c === 'exclude').map(([n]) => n)
+    const overrides: Record<string, string> = {}
+    for (const n of sensitive) overrides[n] = cloudColStrategy[n] ?? 'hash'
+    return { sensitive, excluded, overrides }
+  }
 
   const loadSettings = async (retryCount = 0) => {
     try {
@@ -391,6 +434,67 @@ export default function Settings() {
           style={{ marginBottom: 12 }}
         />
         <Space direction="vertical" style={{ width: '100%' }} size="small">
+          <Select
+            placeholder={t('cloud.selectDataset')}
+            value={cloudDatasetId || undefined}
+            onChange={id => { setCloudDatasetId(id); setCloudPreview(null); loadCloudFields(id) }}
+            style={{ width: 300 }}
+            loading={cloudLoadingFields}
+            options={cloudDatasets.map(d => ({ value: d.dataset_id, label: `${d.file_path} (${d.dataset_id})` }))}
+          />
+
+          {cloudDatasetId ? (
+            <Table
+              size="small"
+              rowKey="name"
+              loading={cloudLoadingFields}
+              dataSource={cloudFields}
+              pagination={false}
+              scroll={{ x: 520 }}
+              columns={[
+                { title: t('cloud.field'), dataIndex: 'name', width: 150 },
+                { title: t('cloud.dataType'), dataIndex: 'data_type', width: 80 },
+                {
+                  title: t('cloud.classification'),
+                  render: (_, r: DetectedField) => (
+                    <Select
+                      value={cloudColClass[r.name] ?? 'transmit'}
+                      onChange={v => setCloudColClass(prev => ({ ...prev, [r.name]: v }))}
+                      options={[
+                        { value: 'transmit', label: t('cloud.transmit') },
+                        { value: 'mask', label: t('cloud.mask') },
+                        { value: 'exclude', label: t('cloud.exclude') },
+                      ]}
+                      style={{ width: 120 }}
+                    />
+                  ),
+                },
+                {
+                  title: t('cloud.strategy'),
+                  render: (_, r: DetectedField) => {
+                    const isMasked = (cloudColClass[r.name] ?? 'transmit') === 'mask'
+                    const s = cloudColStrategy[r.name] ?? 'hash'
+                    return (
+                      <Select
+                        value={s}
+                        disabled={!isMasked}
+                        onChange={v => setCloudColStrategy(prev => ({ ...prev, [r.name]: v }))}
+                        options={[
+                          { value: 'hash', label: t('cloud.strategyHash') },
+                          { value: 'masked', label: t('cloud.strategyMasked') },
+                          { value: 'noise', label: t('cloud.strategyNoise') },
+                        ]}
+                        style={{ width: 140 }}
+                      />
+                    )
+                  },
+                },
+              ]}
+            />
+          ) : (
+            <Alert type="info" showIcon message={t('cloud.noDataset')} />
+          )}
+
           <Space wrap>
             <Input
               placeholder={t('cloud.purpose')}
@@ -428,10 +532,18 @@ export default function Settings() {
               type="primary"
               icon={<CloudOutlined />}
               loading={cloudLoading}
+              disabled={!cloudDatasetId}
               onClick={async () => {
                 setCloudLoading(true)
                 try {
-                  const result = await previewCloudUpload({ dataset_id: 'demo_dataset', noise_std: cloudNoiseStd })
+                  const { sensitive, excluded, overrides } = deriveColumns()
+                  const result = await previewCloudUpload({
+                    dataset_id: cloudDatasetId,
+                    sensitive_columns: sensitive,
+                    excluded_columns: excluded,
+                    strategy_overrides: overrides,
+                    noise_std: cloudNoiseStd,
+                  })
                   setCloudPreview(result)
                 } catch {
                   // engine may not be available in test
@@ -510,8 +622,12 @@ export default function Settings() {
           if (!cloudPreview) return
           setCloudConfirming(true)
           try {
+            const { sensitive, excluded, overrides } = deriveColumns()
             await confirmCloudUpload({
-              dataset_id: 'demo_dataset',
+              dataset_id: cloudDatasetId,
+              sensitive_columns: sensitive,
+              excluded_columns: excluded,
+              strategy_overrides: overrides,
               noise_std: cloudNoiseStd,
               operator: currentUser.username || 'anonymous',
               provider: cloudProvider,

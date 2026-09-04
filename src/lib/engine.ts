@@ -1088,6 +1088,7 @@ export interface CloudPreviewParams {
   dataset_id: string
   sensitive_columns?: string[]
   excluded_columns?: string[]
+  strategy_overrides?: Record<string, string>
   noise_std?: number
   seed?: number
 }
@@ -1105,6 +1106,7 @@ export interface CloudUploadParams {
   dataset_id: string
   sensitive_columns?: string[]
   excluded_columns?: string[]
+  strategy_overrides?: Record<string, string>
   noise_std?: number
   seed?: number
   operator: string

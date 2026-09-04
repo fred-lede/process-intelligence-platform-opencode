@@ -696,7 +696,20 @@
     "warn": "資料將去識別化後上傳",
     "desc": "上傳至雲端 AI 前，資料會被遮罩與匿名化。任何資料離開系統前都必須獲得您的確認。",
     "confirmWarn": "確認去識別化上傳",
-    "confirmDesc": "以下資料將去識別化後傳送至雲端 AI 提供者："
+    "confirmDesc": "以下資料將去識別化後傳送至雲端 AI 提供者：",
+    "dataset": "資料集",
+    "selectDataset": "選擇要上傳的資料集",
+    "field": "欄位",
+    "dataType": "型別",
+    "classification": "分類",
+    "strategy": "遮蔽策略",
+    "transmit": "傳送",
+    "mask": "遮蔽",
+    "exclude": "排除",
+    "strategyHash": "雜湊",
+    "strategyMasked": "遮罩值",
+    "strategyNoise": "高斯雜訊",
+    "noDataset": "請先選擇資料集以設定欄位"
   },
   "processFlow": {
     "title": "製程流程",
