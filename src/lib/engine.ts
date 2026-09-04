@@ -1027,6 +1027,7 @@ export interface CopulaParams {
   correlation_matrix?: number[][]
   direct_joints?: Record<string, number>
   seed?: number
+  n_samples?: number
 }
 
 export async function computeCopula(params: CopulaParams): Promise<CopulaResult> {

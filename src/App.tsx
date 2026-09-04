@@ -12,6 +12,7 @@ import FeaturePlaceholder from './components/common/FeaturePlaceholder'
 import Settings from './features/settings/Settings'
 import SPC from './features/spc/SPC'
 import MonteCarlo from './features/monte-carlo/MonteCarlo'
+import Copula from './features/copula/Copula'
 import Prediction from './features/prediction/Prediction'
 import ValidationLab from './features/validation/ValidationLab'
 import ProcessFlow from './features/process-flow/ProcessFlow'
@@ -32,6 +33,7 @@ export default function App() {
     if (activeTab === 'reports') return <Report />
     if (activeTab === 'spc') return <SPC />
     if (activeTab === 'monteCarlo') return <MonteCarlo />
+    if (activeTab === 'copula') return <Copula />
     if (activeTab === 'prediction') return <Prediction />
     if (activeTab === 'validation') return <ValidationLab />
     if (activeTab === 'processFlow') return <ProcessFlow />

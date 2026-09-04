@@ -10,6 +10,7 @@
     "modelCenter": "Model Center",
     "validation": "Validation Experiment",
     "monteCarlo": "Monte Carlo",
+    "copula": "Copula Correlation",
     "prediction": "Interactive Prediction",
     "reports": "Reports & Versions",
     "spc": "SPC Control",
@@ -625,7 +626,17 @@
     "independentExpected": "Independent Expected",
     "correlationIndex": "Correlation Index",
     "noAnomalies": "Need at least 2 anomalies for Copula analysis.",
-    "compute": "Compute Joint Probabilities"
+    "compute": "Compute Joint Probabilities",
+    "description": "Compute joint occurrence probabilities for multiple anomaly scenarios, using an independent assumption, a Gaussian Copula with a correlation matrix, or direct pair-wise joint probabilities.",
+    "noAnomalySource": "No anomaly scenarios are available. Run anomaly detection (Data Import / Exploration) first.",
+    "selectAnomalies": "Select anomaly scenarios",
+    "nSamples": "Samples",
+    "seed": "Seed",
+    "correlationMatrix": "Correlation matrix (Gaussian Copula)",
+    "directJoints": "Pair-wise joint probabilities (direct mode)",
+    "results": "Joint Probability Results",
+    "pair": "Anomaly Pair",
+    "noResultRows": "No joint probability pairs available."
   },
   "grr": {
     "title": "Gage R&R",

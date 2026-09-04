@@ -10,6 +10,7 @@
     "modelCenter": "Centro de Modelos",
     "validation": "Experimento de Validación",
     "monteCarlo": "Monte Carlo",
+    "copula": "Copula de correlación",
     "prediction": "Predicción Interactiva",
     "reports": "Informes y Versiones",
     "spc": "Control SPC",
@@ -641,7 +642,17 @@
     "independentExpected": "Esperado independiente",
     "correlationIndex": "Índice de correlación",
     "noAnomalies": "Se necesitan al menos 2 escenarios de anomalías para el análisis de copula.",
-    "compute": "Calcular probabilidades conjuntas"
+    "compute": "Calcular probabilidades conjuntas",
+    "description": "Calcula la probabilidad de ocurrencia conjunta de varios escenarios de anomalía, usando el supuesto independiente, una Copula Gaussiana con matriz de correlación o probabilidades conjuntas directas por pares.",
+    "noAnomalySource": "No hay escenarios de anomalías disponibles. Ejecuta la detección de anomalías primero (Importación / Exploración).",
+    "selectAnomalies": "Seleccionar escenarios de anomalía",
+    "nSamples": "Muestras",
+    "seed": "Semilla",
+    "correlationMatrix": "Matriz de correlación (Copula Gaussiana)",
+    "directJoints": "Probabilidades conjuntas por pares (modo directo)",
+    "results": "Resultados de probabilidad conjunta",
+    "pair": "Par de anomalías",
+    "noResultRows": "No hay pares de probabilidad conjunta disponibles."
   },
   "grr": {
     "title": "Gage R&R",

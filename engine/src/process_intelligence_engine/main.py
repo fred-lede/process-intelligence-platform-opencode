@@ -1523,6 +1523,28 @@ def _handle_approval_records(params: dict) -> dict:
     }
 
 
+def _handle_copula_joint(params: dict) -> dict:
+    """Compute joint occurrence probabilities for a set of anomalies.
+
+    Supports Gaussian Copula (with a correlation matrix), independent
+    assumption, or direct pair-joint probabilities.
+    """
+    anomalies = params.get("anomalies") or []
+    correlation_matrix = params.get("correlation_matrix")
+    direct_joints = params.get("direct_joints")
+    seed = params.get("seed")
+    n_samples = int(params.get("n_samples", 100_000))
+
+    result = compute_joint_probabilities(
+        anomalies,
+        correlation_matrix=correlation_matrix,
+        direct_joints=direct_joints,
+        seed=seed,
+        n_samples=n_samples,
+    )
+    return _plain_types(result.to_dict())
+
+
 def _handle_grr(params: dict) -> dict:
     """Run Gage R&R analysis on measurement data."""
     dataset_id = params.get("dataset_id")

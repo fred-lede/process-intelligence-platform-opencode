@@ -6,6 +6,7 @@ export type AppTab =
   | 'modelCenter'
   | 'validation'
   | 'monteCarlo'
+  | 'copula'
   | 'prediction'
   | 'reports'
   | 'spc'

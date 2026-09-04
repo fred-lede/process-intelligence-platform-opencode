@@ -10,6 +10,7 @@
     "modelCenter": "模型中心",
     "validation": "驗證實驗",
     "monteCarlo": "蒙地卡羅模擬",
+    "copula": "Copula 相關性",
     "prediction": "互動預測",
     "reports": "報告與版本",
     "spc": "SPC 管制圖",
@@ -625,7 +626,17 @@
     "independentExpected": "獨立期許值",
     "correlationIndex": "相關性指數",
     "noAnomalies": "需要至少 2 個異常情境才能進行 Copula 分析。",
-    "compute": "計算聯合機率"
+    "compute": "計算聯合機率",
+    "description": "計算多個異常情境的聯合發生機率，可使用獨立假設、帶相關矩陣的高斯 Copula，或直接指定成對聯合機率。",
+    "noAnomalySource": "目前沒有異常情境。請先在「資料匯入 / 探索」執行異常偵測。",
+    "selectAnomalies": "選擇異常情境",
+    "nSamples": "抽樣次數",
+    "seed": "種子",
+    "correlationMatrix": "相關矩陣（高斯 Copula）",
+    "directJoints": "成對聯合機率（直接指定）",
+    "results": "聯合機率結果",
+    "pair": "異常配對",
+    "noResultRows": "沒有可顯示的聯合機率配對。"
   },
   "grr": {
     "title": "量測系統分析 (GRR)",

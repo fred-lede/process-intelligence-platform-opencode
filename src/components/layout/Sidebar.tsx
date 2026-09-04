@@ -14,6 +14,7 @@ import {
   InfoCircleOutlined,
   LineChartOutlined,
   DatabaseOutlined,
+  DotChartOutlined,
 } from '@ant-design/icons'
 import type { AppTab } from '../../types'
 import { useState } from 'react'
@@ -34,6 +35,7 @@ const tabItems = [
   { key: 'processFlow', icon: <ApartmentOutlined /> },
   { key: 'validation', icon: <ThunderboltOutlined /> },
   { key: 'monteCarlo', icon: <RobotOutlined /> },
+  { key: 'copula', icon: <DotChartOutlined /> },
   { key: 'prediction', icon: <SlidersOutlined /> },
   { key: 'reports', icon: <FileTextOutlined /> },
   { key: 'spc', icon: <LineChartOutlined /> },

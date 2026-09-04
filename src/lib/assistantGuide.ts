@@ -137,6 +137,16 @@ const TAB_GUIDES: Record<AppTab, TabGuide> = {
       `Results include a histogram of predicted outputs, a CDF, an NG probability card, and an anomaly-risk ranking. Guide the user to ` +
       `set the sampling inputs, spec limits, whether to inject anomalies, and how to read the NG probability and risk ranking.`,
   },
+  copula: {
+    name: 'Copula Correlation',
+    body:
+      `This page analyzes the joint occurrence probability of multiple anomaly scenarios. The user selects two or more anomaly ` +
+      `scenarios (each with an occurrence probability) and a combination mode: independent (P(A∩B)=P(A)·P(B)), Gaussian Copula ` +
+      `(with an editable correlation matrix on the diagonal 1), or direct pair-wise joint probability. The result shows marginal ` +
+      `probabilities, pairwise joint probabilities, the independent-expected value, and a correlation index. Guide the user to ` +
+      `select at least 2 anomalies, choose how anomalies should be correlated, and interpret a joint probability higher than the ` +
+      `independent-expected value as positive correlation (co-occurrence more likely together).`,
+  },
   prediction: {
     name: 'Interactive Prediction (What-if)',
     body:

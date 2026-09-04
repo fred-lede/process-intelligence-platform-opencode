@@ -245,3 +245,83 @@ def test_handle_analysis_package_completion_states(tmp_path):
     )
     assert incomplete["complete"] is False
     assert "output" in "".join(incomplete["missing_requirements"])
+
+
+def _copula_anomalies():
+    return [
+        {"anomaly_id": "A", "occurrence_probability": 0.3},
+        {"anomaly_id": "B", "occurrence_probability": 0.4},
+    ]
+
+
+def test_handle_copula_independent_mode():
+    result = handle_request(
+        "copula/joint",
+        {"anomalies": _copula_anomalies()},
+    )
+    assert result["mode"] == "independent"
+    # product 0.3 * 0.4 = 0.12
+    key = "A&B"
+    assert abs(result["joint_probabilities"][key] - 0.12) < 1e-6
+    assert abs(result["joint_probabilities"]["A"] - 0.3) < 1e-6
+    assert abs(result["joint_probabilities"]["B"] - 0.4) < 1e-6
+    json.dumps(result)
+
+
+def test_handle_copula_single_anomaly_returns_marginal():
+    result = handle_request(
+        "copula/joint",
+        {"anomalies": [{"anomaly_id": "A", "occurrence_probability": 0.75}]},
+    )
+    assert result["mode"] == "independent"
+    assert abs(result["joint_probabilities"]["A"] - 0.75) < 1e-6
+
+
+def test_handle_copula_empty_anomalies():
+    result = handle_request("copula/joint", {"anomalies": []})
+    assert result["mode"] == "independent"
+    assert result["joint_probabilities"] == {}
+
+
+def test_handle_copula_direct_mode():
+    result = handle_request(
+        "copula/joint",
+        {
+            "anomalies": _copula_anomalies(),
+            "direct_joints": {"A&B": 0.5},
+        },
+    )
+    assert result["mode"] == "direct"
+    assert abs(result["joint_probabilities"]["A&B"] - 0.5) < 1e-6
+
+
+def test_handle_copula_gaussian_correlation_matrix(tmp_path):
+    result = handle_request(
+        "copula/joint",
+        {
+            "anomalies": _copula_anomalies(),
+            "correlation_matrix": [[1.0, 0.5], [0.5, 1.0]],
+            "seed": 42,
+            "n_samples": 20000,
+        },
+    )
+    assert result["mode"] == "gaussian_copula"
+    assert "pair_correlations" in result
+    assert len(result["pair_correlations"]) == 1
+    assert result["pair_correlations"][0]["anomaly_a"] == "A"
+    assert result["pair_correlations"][0]["anomaly_b"] == "B"
+    assert result["pair_correlations"][0]["correlation"] != 0.0
+    json.dumps(result)
+
+
+def test_handle_copula_invalid_matrix_falls_back_with_warning():
+    result = handle_request(
+        "copula/joint",
+        {
+            "anomalies": _copula_anomalies(),
+            # Not positive semidefinite
+            "correlation_matrix": [[1.0, 1.5], [1.5, 1.0]],
+        },
+    )
+    assert result["mode"] == "independent"
+    assert "warning" in result
