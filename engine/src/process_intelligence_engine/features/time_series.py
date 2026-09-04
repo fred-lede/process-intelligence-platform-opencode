@@ -68,13 +68,17 @@ def compute_time_features(
             feature_cols[f"{col}_drift"] = [0.0] * len(series)
 
     feature_df = pd.DataFrame(feature_cols)
+    # Include the raw value columns in the returned rows so downstream charts
+    # can draw the base series as reference. They are intentionally excluded
+    # from feature_columns / n_features (they are not derived features).
+    preview_df = feature_df.join(result_df[value_columns].reset_index(drop=True))
     return {
         "feature_columns": [
             c for c in feature_df.columns if c != time_column
         ],
         "n_rows": len(feature_df),
         "n_features": len([c for c in feature_df.columns if c != time_column]),
-        "preview": feature_df.head(20).to_dict(orient="records"),
+        "preview": preview_df.head(20).to_dict(orient="records"),
     }
 
 
