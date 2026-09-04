@@ -444,12 +444,16 @@ export default function Exploration() {
                 })
                 for (const feat of tsFeatures.feature_columns) {
                   if (feat === baseCol) continue
-                  const vals = tsFeatures.preview.map((r: Record<string, unknown>) => r[feat] as number | null)
-                  const nonNull = vals.filter((v): v is number => v !== null && v !== undefined)
-                  if (nonNull.length === 0) continue
+                  const pts = tsFeatures.preview
+                    .map((r: Record<string, unknown>, i: number) => ({
+                      i,
+                      v: r[feat] as number | null,
+                    }))
+                    .filter((p) => p.v !== null && p.v !== undefined)
+                  if (pts.length === 0) continue
                   traces.push({
-                    x: nonNull.map((_, i) => i),
-                    y: nonNull,
+                    x: pts.map((p) => p.i),
+                    y: pts.map((p) => p.v as number),
                     type: 'scatter' as const,
                     mode: 'lines' as const,
                     name: feat,
