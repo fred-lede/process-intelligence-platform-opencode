@@ -259,4 +259,51 @@ mod tests {
         assert_eq!(resp.get("pong"), Some(&Value::Bool(true)));
         manager.stop();
     }
+
+    #[test]
+    fn time_series_returns_fast_live_engine() {
+        let manifest = env!("CARGO_MANIFEST_DIR");
+        let csv = std::path::Path::new(manifest)
+            .parent()
+            .unwrap()
+            .join("data")
+            .join("test_dataset.csv");
+        let manager = default_engine();
+        manager.start().expect("engine should start");
+
+        let imported = manager
+            .call(
+                "data/import",
+                json!({ "file_path": csv.to_string_lossy() }),
+                Duration::from_secs(10),
+            )
+            .expect("import should succeed");
+        let dataset_id = imported["dataset_id"]
+            .as_str()
+            .expect("dataset_id present")
+            .to_string();
+
+        let start = std::time::Instant::now();
+        let resp = manager
+            .call(
+                "features/time_series",
+                json!({
+                    "dataset_id": dataset_id,
+                    "time_column": "time",
+                    "value_columns": ["temperature"],
+                    "window_sizes": [3, 5, 10],
+                }),
+                Duration::from_secs(10),
+            )
+            .expect("time_series should succeed");
+        let elapsed = start.elapsed();
+        assert!(resp.get("n_features").is_some(), "n_features present");
+        assert!(
+            elapsed.as_secs() < 10,
+            "time_series should return fast, took {:?}",
+            elapsed
+        );
+        eprintln!("time_series took {:?}", elapsed);
+        manager.stop();
+    }
 }

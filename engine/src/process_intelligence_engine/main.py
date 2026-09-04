@@ -16,6 +16,7 @@ This protocol keeps the engine language-agnostic and easily testable.
 from __future__ import annotations
 
 import json
+import math
 import sys
 import asyncio
 import threading
@@ -86,7 +87,10 @@ def _plain_types(value):
     numpy value.
     """
     if isinstance(value, (np.integer, np.floating, np.bool_)):
-        return value.item()
+        result = value.item()
+        if isinstance(result, float) and not math.isfinite(result):
+            return None
+        return result
     if isinstance(value, np.ndarray):
         return _plain_types(value.tolist())
     if isinstance(value, pd.Timestamp):
@@ -95,6 +99,8 @@ def _plain_types(value):
         return {k: _plain_types(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
         return [_plain_types(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
     return value
 
 
