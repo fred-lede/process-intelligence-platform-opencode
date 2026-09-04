@@ -65,6 +65,13 @@ def test_permission_viewer():
     assert mgr.has_permission(AuditAction.EXPORT_REPORT)
 
 
+def test_register_reviewer_role():
+    mgr = AuthManager()
+    user = mgr.register_user("reviewer1", UserRole.REVIEWER)
+    assert user.username == "reviewer1"
+    assert user.role == UserRole.REVIEWER
+
+
 def test_audit_log_captured():
     mgr = AuthManager()
     mgr.authenticate("admin", "pass")

@@ -9,6 +9,7 @@ from typing import Any, Optional
 class UserRole(str, Enum):
     ADMIN = "admin"
     ENGINEER = "engineer"
+    REVIEWER = "reviewer"
     VIEWER = "viewer"
 
 

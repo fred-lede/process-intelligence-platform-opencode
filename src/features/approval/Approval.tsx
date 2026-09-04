@@ -65,7 +65,7 @@ export default function Approval() {
   const [actionComments, setActionComments] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
-  const canReview = currentRole === 'admin' || currentRole === 'engineer'
+  const canReview = currentRole === 'admin' || currentRole === 'reviewer'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -116,7 +116,7 @@ export default function Approval() {
     listUsers().then((u) => {
       setReviewers(
         u.users
-          .filter((r) => r.role === 'admin' || r.role === 'engineer')
+          .filter((r) => r.role === 'admin' || r.role === 'reviewer')
           .map((r) => ({ label: `${r.username} (${r.role})`, value: r.username, role: r.role }))
       )
     })

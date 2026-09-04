@@ -493,9 +493,21 @@ export async function generateReport(params: ReportParams): Promise<ReportResult
   return engineCall<ReportResult>('report/generate', params as unknown as Record<string, unknown>)
 }
 
+export interface ReportRecord {
+  report_id: string
+  project_name: string
+  operator: string
+  format: string
+  timestamp: string
+}
+
+export async function listReports(): Promise<{ reports: ReportRecord[] }> {
+  return engineCall<{ reports: ReportRecord[] }>('report/list', {})
+}
+
 // --- Phase 6: Auth & Audit -----------------------------------------------
 
-export type UserRole = 'admin' | 'engineer' | 'viewer'
+export type UserRole = 'admin' | 'engineer' | 'reviewer' | 'viewer'
 
 export interface AuthResult {
   success: boolean

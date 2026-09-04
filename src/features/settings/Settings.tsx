@@ -247,7 +247,7 @@ export default function Settings() {
   }
 
   const roleColor = (role: UserRole) => {
-    const colors: Record<UserRole, string> = { admin: 'red', engineer: 'blue', viewer: 'gray' }
+    const colors: Record<UserRole, string> = { admin: 'red', engineer: 'blue', reviewer: 'purple', viewer: 'gray' }
     return colors[role] || 'default'
   }
 
@@ -409,6 +409,7 @@ export default function Settings() {
             <Select options={[
               { value: 'viewer', label: 'Viewer' },
               { value: 'engineer', label: 'Engineer' },
+              { value: 'reviewer', label: 'Reviewer' },
               { value: 'admin', label: 'Admin' },
             ]} />
           </Form.Item>
