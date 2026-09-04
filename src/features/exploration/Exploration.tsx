@@ -66,10 +66,26 @@ export default function Exploration() {
       .map(([name]) => name)
   }, [importResult])
 
+  const timestampColumns = useMemo(() => {
+    const fromRoles = fields
+      .filter((f) => f.role === 'timestamp')
+      .map((f) => f.originalName)
+    if (fromRoles.length > 0) return fromRoles
+    return (importResult?.columns || []).filter(
+      (c) => !numericColumns.includes(c),
+    )
+  }, [fields, importResult, numericColumns])
+
   const confirmedInputs = useMemo(
     () => new Set(fields.filter((f) => f.confirmed).map((f) => f.originalName)),
     [fields],
   )
+
+  useEffect(() => {
+    if (!timeColumn && timestampColumns.length > 0) {
+      setTimeColumn(timestampColumns[0])
+    }
+  }, [timeColumn, timestampColumns])
 
   useEffect(() => {
     setContext('exploration', buildExplorationContext({ fits, series, tsFeatures, grrResult }))
@@ -317,9 +333,7 @@ export default function Exploration() {
             style={{ width: 180 }}
             value={timeColumn}
             onChange={setTimeColumn}
-            options={numericColumns.length > 0
-              ? []
-              : (importResult?.columns || []).map((c) => ({ value: c, label: c }))}
+            options={timestampColumns.map((c) => ({ value: c, label: c }))}
             placeholder={t('exploration.selectTimeCol')}
           />
         </Form.Item>
