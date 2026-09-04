@@ -126,6 +126,8 @@
     "stepConfirm": "Confirm",
     "importSource": "Import Source",
     "importDescription": "Select an Excel (.xlsx, .xls) or CSV file to begin analysis.",
+    "downloadTemplate": "Download CSV Template",
+    "downloadTemplateDesc": "Download a sample CSV with columns ready for distribution, trend, time-series and GRR analysis.",
     "pickFile": "Select File",
     "pickAnother": "Select Another",
     "fileInfo.csv": "Imported {{rows}} rows, {{cols}} columns. Encoding: {{encoding}}",

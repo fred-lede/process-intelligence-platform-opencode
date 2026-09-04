@@ -126,6 +126,8 @@
     "stepConfirm": "確認",
     "importSource": "匯入來源",
     "importDescription": "選擇 Excel (.xlsx, .xls) 或 CSV 檔案開始分析。",
+    "downloadTemplate": "下載 CSV 範本",
+    "downloadTemplateDesc": "下載一份範例 CSV，欄位已涵蓋分佈、趨勢、時間序列與 GRR 分析。",
     "pickFile": "選擇檔案",
     "pickAnother": "重新選擇",
     "fileInfo.csv": "已匯入 {{rows}} 列、{{cols}} 欄。編碼：{{encoding}}",

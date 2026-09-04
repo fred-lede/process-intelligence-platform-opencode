@@ -78,6 +78,8 @@
     "selectFile": "Seleccionar archivo...",
     "dropZone": "Arrastra un archivo aquí o haz clic para seleccionar",
     "supportedFormats": "Formatos soportados: .xlsx, .xls, .csv",
+    "downloadTemplate": "Descargar plantilla CSV",
+    "downloadTemplateDesc": "Descarga un CSV de ejemplo con columnas listas para análisis de distribución, tendencia, serie de tiempo y GRR.",
     "previewTitle": "Vista previa de datos",
     "stepPreview": "Vista previa",
     "stepConfirm": "Confirmar roles",

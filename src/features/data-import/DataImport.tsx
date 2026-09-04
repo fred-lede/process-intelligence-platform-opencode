@@ -17,6 +17,7 @@ import {
   ImportOutlined,
   CheckOutlined,
   ReloadOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { pickDataFile } from '../../lib/filePicker'
@@ -47,6 +48,65 @@ const ROLE_OPTIONS: { value: FieldRole; color: string }[] = [
   { value: 'sensitive', color: 'red' },
   { value: 'excluded', color: 'red' },
 ]
+
+// Build a sample CSV whose columns auto-detect into roles usable by
+// distribution / trend / time-series / GRR analysis.
+// GRR structure: 3 operators × 5 parts × 3 reps = 45 rows.
+function buildTemplateCsv(): string {
+  const header = [
+    'lot',
+    'serial_no',
+    'datetime',
+    'machine',
+    'operator',
+    'part',
+    'thickness',
+    'temperature',
+    'pressure',
+    'result',
+  ]
+  const operators = ['O-01', 'O-02', 'O-03']
+  const parts = ['P-01', 'P-02', 'P-03', 'P-04', 'P-05']
+  const reps = 3
+  const lot = 'L240901-A'
+  const machines = ['Line-A', 'Line-B', 'Line-A', 'Line-B', 'Line-A']
+  const pad = (n: number) => String(n).padStart(4, '0')
+
+  const rows: string[][] = []
+  let seq = 0
+  operators.forEach((op, oi) => {
+    parts.forEach((part, pi) => {
+      const machine = machines[pi]
+      const baseBias = (oi - 1) * 0.004
+      for (let r = 0; r < reps; r++) {
+        seq += 1
+        const noise = (Math.random() - 0.5) * 0.012
+        const thickness = (1.62 + baseBias + noise).toFixed(4)
+        const temperature = (85 + (pi - 2) * 1.2 + (Math.random() - 0.5) * 1.6).toFixed(2)
+        const pressure = (3.4 + (Math.random() - 0.5) * 0.12).toFixed(3)
+        const fail = seq % 41 === 0
+        const day = 1 + Math.floor(seq / 15)
+        const hour = 8 + Math.floor(seq / 3)
+        const minute = (seq * 7) % 60
+        const datetime = `2026-09-0${day} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`
+        rows.push([
+          lot,
+          `SNC-${pad(seq)}`,
+          datetime,
+          machine,
+          op,
+          part,
+          thickness,
+          temperature,
+          pressure,
+          fail ? 'NG' : 'OK',
+        ])
+      }
+    })
+  })
+
+  return [header, ...rows].map((r) => r.join(',')).join('\n')
+}
 
 export default function DataImport({ onDetected, onFinished }: DataImportProps) {
   const { t } = useTranslation()
@@ -93,6 +153,17 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDownloadTemplate = () => {
+    const csv = buildTemplateCsv()
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'process-analysis-template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const handleDetect = async () => {
@@ -269,6 +340,11 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
             >
               {t('dataImport.pickFile')}
             </Button>
+            <Tooltip title={t('dataImport.downloadTemplateDesc')}>
+              <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+                {t('dataImport.downloadTemplate')}
+              </Button>
+            </Tooltip>
           </Space>
         ) : (
           <Space direction="vertical" style={{ width: '100%' }}>
