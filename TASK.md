@@ -256,6 +256,12 @@
 - **根因**：`Exploration.tsx` 時間欄位 `<Select>` 的 `options` 邏輯**顛倒**——`numericColumns.length > 0 ? [] : 全部欄位`。若資料集有數值欄（幾乎必有）→ 下拉**全空** → `timeColumn` 永遠無法選取 →「時間序列」按鈕 disabled。`timeColumn` 初始亦為 `undefined` 且從不自動選。
 - **後端無需改**：`compute_time_features`（time_series.py:35）對任何傳入欄位做 `pd.to_datetime` 再 sort，不要求 `timestamp` role。
 - **修復**：新增 `timestampColumns` memo——優先取 fields 中 `role==='timestamp'` 的欄位，否則回退到「非數值欄」；`<Select>` options 改用 `timestampColumns`；新增 useEffect 於資料載入時自動選第一個時間欄位。tsc --noEmit clean、npm run build 成功
+
+### 時間序列「計算特徵」失敗/卡住 (bug fix)
+- **根因**：`features/time_series.py` drift 計算無條件引用 `roll_mean_5`（line 57），但 rolling window 只在 `w <= len(series)` 時才建立。當資料列數 < 5（`window_sizes` 含 5）→ `roll_mean_5` 不存在 → `KeyError`；實測 rows=3、4 拋 KeyError，rows≥5 正常 0.001s 完成。
+- **後端已驗證**：in-process 直呼 `_handle_time_series` 對各種列數**皆快速回應**（成功或立即錯誤），Rust bridge 對 error 會 reject → 前端 `finally` 應停止轉圈；故主要缺陷為 drift KeyError。
+- **修復**：drift 改用「實際已建立的最大 window」（`max(w for w in window_sizes if roll_mean_w in feature_cols)`），無可用 window 時回退 0-drift，不再硬編碼 `roll_mean_5`。
+- **新增**：`tests/test_time_series.py` 3 個案例（全 window / <5 列不拋錯 / 部分 window 用最大可 fit 者）。引擎 267 passed, 1 skipped
 - **CSV 範本下載 + 明確分類 input/output（DataImport）**：`DataImport.tsx` 之 `buildTemplateCsv()`（3 operator × 5 part × 3 reps = 45 列，欄位：lot/serial_no/datetime/machine/operator/part/**input_temperature/input_voltage/output_thickness/output_pressure**/result）+ `handleDownloadTemplate()`（Blob + a.download）；匯入來源卡片「無檔」狀態新增「下載 CSV 範本」按鈕（含 Tooltip）；i18n 三語 `downloadTemplate`/`downloadTemplateDesc`。**前綴分類**：欄位名加 `input_`/`output_` 前綴清楚標示角色，引擎實測 `output_*` → output(0.85)、`input_*` → input(0.7)，證實「輸出不限良率、可為其它物理量」。**強制輸出欄位**：`handleConfirmAll`/`handleFinish(next)` 驗證 fields 至少一個 role=output，否則 `message.error`（i18n `dataImport.errNoOutput`）阻擋並提示；input 保留自動偵測+手動可改。涵蓋 分佈/趨勢/時間序列/GRR。tsc/build clean
 - **跨平台 Release CI（commit 1e5c5c2 + tag v0.1.0）**：新增 `.github/workflows/release.yml`（tauri-action）—— tag push `v*` 或手動 dispatch 觸發，4 個 matrix job 平行建置：macOS aarch64 / macOS x86_64 / ubuntu-22.04 / windows-latest；產出附到 GitHub Release（draft、`.msi`/`.exe`、`.dmg`、`.AppImage`/`.deb`）；`.gitignore` 新增 `release/`。**狀態：push 成功、tag v0.1.0 已推送，Actions「release」run in_progress（Windows 版由此自動產出）**
 - **macOS 本機 dmg**：`npm run tauri build` 成功產出 `.app`，但內建 create-dmg 之 Finder/AppleScript 美化步驟失敗；改用 `hdiutil create` 直接產乾淨 `.dmg`：`release/Process-Intelligence-Platform_0.1.0_aarch64.dmg`（arm64、8.9MB、含拖到 Applications 標準安裝版）

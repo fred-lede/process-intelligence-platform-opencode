@@ -52,11 +52,20 @@ def compute_time_features(
                 feature_cols[f"{col}_roll_std_{w}"] = (
                     series.rolling(w, min_periods=1).std().tolist()
                 )
-        # Drift: difference between rolling mean and raw value
-        feature_cols[f"{col}_drift"] = (
-            series - feature_cols[f"{col}_roll_mean_5"]
+        # Drift: difference between rolling mean and raw value.
+        # Use the largest window actually computed (a window is only created
+        # when it fits the row count), otherwise fall back to zero drift so a
+        # short series does not raise KeyError on the roll_mean_5 reference.
+        drift_win = max(
+            (w for w in window_sizes if f"{col}_roll_mean_{w}" in feature_cols),
+            default=None,
         )
-        feature_cols[f"{col}_drift"] = feature_cols[f"{col}_drift"].tolist()
+        if drift_win is not None:
+            feature_cols[f"{col}_drift"] = (
+                series - feature_cols[f"{col}_roll_mean_{drift_win}"]
+            ).tolist()
+        else:
+            feature_cols[f"{col}_drift"] = [0.0] * len(series)
 
     feature_df = pd.DataFrame(feature_cols)
     return {
