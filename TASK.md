@@ -276,7 +276,22 @@
 - **Commit** — `4fc6fd6`
 - **Files changed** — `engine/src/process_intelligence_engine/data/deidentify.py`, `engine/tests/test_deidentify.py`
 
+### Settings cloud upload strategy default fix + history population (commit 5aae6ec)
+- **Issue 1 (strategy mismatch)** — `loadCloudFields` initialized non-sensitive fields with strategy `'masked'`, but UI `?? 'hash'` fallback displayed `'hash'`. Fix: changed line 77 `strat[f.name] = 'hash'` (was `isSensitive ? 'hash' : 'masked'`) so stored value matches UI display when field is reclassified transmit→mask.
+- **Issue 2 (cloudHistory)** — Already correctly implemented (lines 640-641: `const records = await listCloudUploadRecords(); setCloudHistory(records.records)`). No change needed.
+- **Verification** — `npx tsc --noEmit` clean, `npm run build` success (built in 10.06s)
+
+- **Cloud Upload 去識別化設定改進（規格 §11A/§24）— DONE + 已驗證**：Settings → Cloud Upload 卡片可選擇真實資料集並逐欄設定遮蔽策略。**Backend**：`deidentify.py` `strategy_overrides`（`{col:"hash"|"masked"|"noise"}`，優先於 dtype 自動判定，`noise` 僅數值欄）+ `apply_masking` 輸出含遮蔽欄並依策略正確遮蔽（避免數值敏感欄洩漏）；`main.py` `cloud/preview`/`cloud/upload` 透傳。**Tests**：`test_deidentify.py` 5 個 + `test_main_handlers.py` 2 個；引擎 **280 passed, 1 skipped**。**Frontend**：`engine.ts` params 加 `strategy_overrides`；Settings 新增資料集下拉（取代 `demo_dataset`）+ 逐欄分類/策略表格（`detectFields([], id)` 取欄位）+ `deriveColumns()`；i18n 三語 13 keys（es-MX 補齊整個 cloud section）。驗證：tsc --noEmit clean、npm run build 成功、三語 JSON 有效。**Commits**：`4fc6fd6`、`592ded9`、`dd76028`、`d5fb16d`、`5aae6ec`。
+
 ## In Progress / Next
+### Cloud Upload de-identification — Tasks 4 & 5: engine types + UI dataset selection + per-column masking strategy
+- **Status**: DONE
+- **engine.ts** — Added `strategy_overrides?: Record<string, string>` to both `CloudPreviewParams` and `CloudUploadParams`
+- **Settings.tsx** — Dataset selector (`Select` from `getDataAssets`), per-column `Table` with classification (transmit/mask/exclude) and masking strategy (hash/masked/noise) selects; `deriveColumns()` helper computes sensitive/excluded/overrides for both preview and confirm calls; Preview button disabled until dataset selected; hardcoded `demo_dataset` replaced with `cloudDatasetId`
+- **i18n** — 13 new keys in `cloud` section across en/zh-TW/es-MX (`dataset`, `selectDataset`, `field`, `dataType`, `classification`, `strategy`, `transmit`, `mask`, `exclude`, `strategyHash`, `strategyMasked`, `strategyNoise`, `noDataset`); es-MX cloud section was missing entirely, added full cloud section
+- **Verification** — `npx tsc --noEmit` clean, `npm run build` success, JSON parse 3 locales ok
+- **Commit** — `d5fb16d`
+- **Files changed** — `src/lib/engine.ts`, `src/features/settings/Settings.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
 ### 探索分析「時間序列」時間欄位無法選取 (bug fix)
 - **根因**：`Exploration.tsx` 時間欄位 `<Select>` 的 `options` 邏輯**顛倒**——`numericColumns.length > 0 ? [] : 全部欄位`。若資料集有數值欄（幾乎必有）→ 下拉**全空** → `timeColumn` 永遠無法選取 →「時間序列」按鈕 disabled。`timeColumn` 初始亦為 `undefined` 且從不自動選。
 - **後端無需改**：`compute_time_features`（time_series.py:35）對任何傳入欄位做 `pd.to_datetime` 再 sort，不要求 `timestamp` role。
