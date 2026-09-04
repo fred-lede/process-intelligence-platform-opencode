@@ -23,7 +23,14 @@ import {
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useDataPipelineStore, type SpecConfiguration } from '../../stores/dataPipelineStore'
-import { detectAnomalies, buildAnalysisPackage, type AnomalyScenario } from '../../lib/engine'
+import {
+  detectAnomalies,
+  buildAnalysisPackage,
+  runQualityChecks,
+  type AnomalyScenario,
+  type QualityIssue,
+  type QualityReport,
+} from '../../lib/engine'
 import type { ControlLimits } from '../../lib/engine'
 
 const NUMERIC_TYPES = new Set(['int64', 'float64', 'int', 'float'])
@@ -72,6 +79,11 @@ export default function ProcessDefine() {
   const [detecting, setDetecting] = useState(false)
   const [detectError, setDetectError] = useState<string | null>(null)
 
+  // Quality re-run after spec confirmation (triggers missing_spec / input range).
+  const [specQuality, setSpecQuality] = useState<QualityReport | null>(null)
+  const [specQualityLoading, setSpecQualityLoading] = useState(false)
+  const [specQualityError, setSpecQualityError] = useState<string | null>(null)
+
   const outputCandidates = useMemo(() => {
     if (!importResult) return []
     const stats = importResult.stats.column_stats
@@ -116,6 +128,41 @@ export default function ProcessDefine() {
       inputUnits,
     }
     setSpec(cfg)
+    void runSpecQuality(cfg)
+  }
+
+  /** Re-run quality checks with the confirmed spec so missing_spec and
+   *  input out-of-range (using the entered control limits) can be flagged. */
+  const runSpecQuality = async (cfg: SpecConfiguration) => {
+    if (!importResult) return
+    setSpecQualityLoading(true)
+    setSpecQualityError(null)
+    try {
+      // Use user-entered control limits (where both bounds set) as ranges.
+      const ranges: Record<string, [number | null, number | null]> = {}
+      for (const name of inputs) {
+        const lim = controlLimits[name]
+        if (lim && lim.lcl != null && lim.ucl != null) {
+          ranges[name] = [lim.lcl, lim.ucl]
+        }
+      }
+      const report = await runQualityChecks({
+        dataset_id: importResult.dataset_id,
+        input_columns: inputs,
+        output_columns: cfg.outputField ? [cfg.outputField] : [],
+        input_ranges: ranges,
+        spec: cfg.outputField
+          ? {
+              [cfg.outputField]: { lsl: cfg.lsl, usl: cfg.usl, target: cfg.target },
+            }
+          : undefined,
+      })
+      setSpecQuality(report)
+    } catch (err) {
+      setSpecQualityError(String(err))
+    } finally {
+      setSpecQualityLoading(false)
+    }
   }
 
   /** Run anomaly detection via engine and store results. */
@@ -330,6 +377,38 @@ export default function ProcessDefine() {
 
   const unconfirmedCount = anomalyScenarios.filter((s) => !s.user_confirmed).length
 
+  const severityColor: Record<string, string> = { info: 'default', warning: 'orange', critical: 'red' }
+
+  const specQualityColumns: ColumnsType<QualityIssue> = [
+    {
+      title: t('processDefine.qualityCheck'),
+      dataIndex: 'check',
+      key: 'check',
+      width: 160,
+      render: (check: string) => <Tag>{check}</Tag>,
+    },
+    {
+      title: t('processDefine.qualityColumn'),
+      dataIndex: 'column',
+      key: 'column',
+      width: 140,
+      render: (c: string | null) => c ?? '—',
+    },
+    {
+      title: t('processDefine.qualitySeverity'),
+      dataIndex: 'severity',
+      key: 'severity',
+      width: 90,
+      render: (sev: string) => <Tag color={severityColor[sev] ?? 'default'}>{sev}</Tag>,
+    },
+    {
+      title: t('processDefine.qualityMessage'),
+      dataIndex: 'message',
+      key: 'message',
+      render: (msg: string) => msg,
+    },
+  ]
+
   if (requiresData) {
     return (
       <Card title={t('processDefine.title')}>
@@ -419,6 +498,34 @@ export default function ProcessDefine() {
             usl: spec.usl ?? '—',
           })}
         />
+      )}
+
+      {/* Quality re-run against the confirmed spec */}
+      {spec && (
+        <Card
+          title={
+            <Space>
+              {t('processDefine.qualityRerunTitle')}
+              {specQualityLoading ? <Tag color="processing">{t('processDefine.qualityRunning')}</Tag> : null}
+            </Space>
+          }
+        >
+          <Alert type="info" showIcon message={t('processDefine.qualityRerunHint')} style={{ marginBottom: 16 }} />
+          {specQualityError && <Alert type="error" showIcon message={specQualityError} style={{ marginBottom: 16 }} />}
+          {specQuality && specQuality.issues.length === 0 ? (
+            <Alert type="success" showIcon message={t('processDefine.qualityClean')} />
+          ) : specQuality ? (
+            <Table<QualityIssue>
+              size="small"
+              rowKey={(r) => `${r.check}-${r.column ?? ''}-${r.message}`}
+              columns={specQualityColumns}
+              dataSource={specQuality.issues}
+              pagination={false}
+            />
+          ) : (
+            <Typography.Text type="secondary">{t('processDefine.qualityRerunIdle')}</Typography.Text>
+          )}
+        </Card>
       )}
 
       <Space>

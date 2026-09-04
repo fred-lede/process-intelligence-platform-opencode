@@ -6,6 +6,7 @@
 - 234 passed, 1 skipped (88% coverage)
 - Monte Carlo IPC handler (`monte_carlo/run`) — main.py import + handler + dispatch
 - 5 IPC handler tests (basic, unknown model, with anomalies, no bounds, unknown dataset)
+- **品質檢查補強（commit pending）**：`quality.py` 新增 4 個原本只定義未執行的檢查——`invalid_format`（格式混用）、`unit_mixing`（單位混用）、`input_out_of_range`（超出工程範圍，支援 input_ranges 直用 + 中位數±8×MAD 統計啟發）、`missing_spec`（output 缺 LSL/USL）；`run_quality_checks` 新增可選參數 `input_columns`/`output_columns`/`input_ranges`/`spec`（不傳則略過或統計回退），`_handle_quality` 透傳。**前端**：DataImport 品質呼叫帶 input/output_columns（統計 OOR）；ProcessDefine「儲存並確認」後以確認的規格觸發「品質複查」（they trigger missing_spec 與用控制界限當 range 的 input_out_of_range），新增品質複查 Card+table+i18n 三語 9 keys。引擎測試 264 passed, 1 skipped；前端 tsc/build clean
 
 ### Phase 0 — 基礎建設
 - Tauri 2.0 + React 18 + TypeScript + Python 3.11 專案骨架
@@ -284,3 +285,9 @@
 - **連線目標太難命中**：原 hover 只認 5px 的 port 圓點，極難精準。**修復**：`elementFromPoint` 同時接受整個目標節點 `[data-node]`（fallback），落在節點本體即可連到該節點；並新增綠色高亮框提示連接目標
 - **minimap 不在角落**：minimap `translate` 用 `viewportSize`，若量測偏小則不到角落。**修復**：改用實際 SVG 尺寸 `svgRef.getBoundingClientRect()`（回退 viewportSize）定位 → 貼齊真實右下角
 - 驗證 — tsc --noEmit clean、npm run build 成功
+
+### 規格符合度稽核 (research-only, no code changes)
+- 對象：main spec `2026-09-02-ai-process-risk-platform-design.md`（§4/§6/§10-18/§20-22）+ 四個 sub-spec。
+- 完成稽核檔案：App.tsx、Sidebar.tsx、types/index.ts、lib/engine.ts、lib/project.ts、AssistantPanel.tsx、engine main.py 全部 handler、spc.py、reporting/{models,base,html,pdf,excel,charting}.py、data/quality.py、project/manifest.py。
+- 結論：Phase 0–11j 全數達成；但存在「backend-only」未接 UI 的功能（approval/copula 前端未呼叫）、data asset management 無獨立 tab、quality 4 檢查內建常量未執行、SPC X-bar 需使用者人工確認。
+- 詳見完整稽核報告（IMPLEMENTED / PARTIAL / NOT-DONE per feature）。

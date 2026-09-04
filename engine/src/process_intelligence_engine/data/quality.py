@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+import re
 
 import pandas as pd
 
@@ -276,12 +277,197 @@ def _check_batch_imbalance(
             )
 
 
+_UNIT_SUFFIX_RE = re.compile(r"([a-zA-Z°]+)$")
+_INPUT_OUT_OF_RANGE_MAD_FACTOR = 8.0
+
+
+def _is_numeric_str(s: object) -> bool:
+    """Return whether a string value can be parsed as a number."""
+    if not isinstance(s, str):
+        return False
+    try:
+        float(s.strip().replace(",", ""))
+        return True
+    except ValueError:
+        return False
+
+
+def _extract_unit_suffix(s: object) -> str | None:
+    """Extract a trailing alphabetic/degree unit suffix from a string value."""
+    if not isinstance(s, str):
+        return None
+    m = _UNIT_SUFFIX_RE.search(s.strip())
+    return m.group(1).lower() if m else None
+
+
+def _has_spec(limit: object) -> bool:
+    return limit is not None and not (isinstance(limit, float) and limit != limit)
+
+
+def _is_string_like(series: pd.Series) -> bool:
+    """Return whether a series holds string (object or 'str') values."""
+    return bool(
+        pd.api.types.is_object_dtype(series)
+        or (
+            hasattr(pd.api.types, "is_string_dtype")
+            and pd.api.types.is_string_dtype(series)
+        )
+    )
+
+
+def _check_invalid_format(df: pd.DataFrame, issues: list[QualityIssue]) -> None:
+    """Flag string columns whose values have inconsistent parseability.
+
+    Detects columns where the majority of values parse as numbers (or a
+    consistent date) but a minority use an invalid format, e.g. '12.5' vs
+    '12.5mm' or 'ab12'.
+    """
+    for col in df.columns:
+        series = df[col].dropna()
+        if series.empty or not _is_string_like(series):
+            continue
+        as_str = [str(v) for v in series]
+        numeric = [v for v in as_str if _is_numeric_str(v)]
+        non_numeric = [v for v in as_str if not _is_numeric_str(v)]
+        # Only act when format is genuinely inconsistent: both kinds present
+        # and the minority is non-trivial but not the whole column.
+        if not numeric or not non_numeric:
+            continue
+        minority = min(numeric, non_numeric, key=len)
+        if len(minority) / len(as_str) < 0.5:
+            examples = minority[:3]
+            issues.append(
+                QualityIssue(
+                    check=QualityCheck.INVALID_FORMAT,
+                    column=str(col),
+                    severity=QualityStatus.WARNING,
+                    message=(
+                        f"Column '{col}' mixes valid and invalid formats "
+                        f"({len(non_numeric)} non-numeric value(s), e.g. "
+                        f"{', '.join(repr(e) for e in examples)})."
+                    ),
+                    detail={
+                        "numeric_count": len(numeric),
+                        "non_numeric_count": len(non_numeric),
+                        "examples": examples,
+                    },
+                )
+            )
+
+
+def _check_unit_mixing(df: pd.DataFrame, issues: list[QualityIssue]) -> None:
+    """Flag string columns carrying more than one distinct unit suffix."""
+    for col in df.columns:
+        series = df[col].dropna()
+        if series.empty or not _is_string_like(series):
+            continue
+        suffixes: set[str] = set()
+        for v in series:
+            suffix = _extract_unit_suffix(str(v))
+            if suffix:
+                suffixes.add(suffix)
+        if len(suffixes) > 1:
+            issues.append(
+                QualityIssue(
+                    check=QualityCheck.UNIT_MIXING,
+                    column=str(col),
+                    severity=QualityStatus.WARNING,
+                    message=(
+                        f"Column '{col}' mixes units: "
+                        f"{', '.join(sorted(suffixes))}."
+                    ),
+                    detail={"units": sorted(suffixes)},
+                )
+            )
+
+
+def _check_input_out_of_range(
+    df: pd.DataFrame,
+    issues: list[QualityIssue],
+    input_columns: list[str],
+    input_ranges: dict[str, tuple[float | None, float | None]] | None = None,
+) -> None:
+    """Flag input values outside an engineering-reasonable range.
+
+    When `input_ranges` is provided (column -> (low, high); None = unbounded)
+    it is used directly. Otherwise a generous statistical bound
+    (median ± 8*MAD) approximates engineering plausibility.
+    """
+    input_ranges = input_ranges or {}
+    for col in input_columns or df.columns:
+        if col not in df.columns or not pd.api.types.is_numeric_dtype(df[col]):
+            continue
+        series = df[col].dropna().astype(float)
+        if len(series) < 3:
+            continue
+        lo, hi = input_ranges.get(str(col), (None, None))
+        if lo is None and hi is None:
+            median = float(series.median())
+            mad = float((series - median).abs().median() * 1.4826)
+            if mad == 0:
+                continue
+            lo = median - _INPUT_OUT_OF_RANGE_MAD_FACTOR * mad
+            hi = median + _INPUT_OUT_OF_RANGE_MAD_FACTOR * mad
+        out = series[(series < (lo if lo is not None else series.min() - 1)) |
+                     (series > (hi if hi is not None else series.max() + 1))]
+        if out.empty:
+            continue
+        issues.append(
+            QualityIssue(
+                check=QualityCheck.INPUT_OUT_OF_RANGE,
+                column=str(col),
+                severity=QualityStatus.WARNING,
+                message=(
+                    f"Column '{col}' has {len(out)} value(s) outside the "
+                    f"engineering range [{lo if lo is not None else '-inf'}, "
+                    f"{hi if hi is not None else 'inf'}]."
+                ),
+                detail={
+                    "out_of_range_count": int(len(out)),
+                    "range_lower": lo,
+                    "range_upper": hi,
+                },
+            )
+        )
+
+
+def _check_missing_spec(
+    df: pd.DataFrame,
+    issues: list[QualityIssue],
+    output_columns: list[str],
+    spec: dict[str, dict] | None = None,
+) -> None:
+    """Flag output columns that lack a lower and upper specification limit."""
+    spec = spec or {}
+    for col in output_columns:
+        if col not in df.columns:
+            continue
+        limits = spec.get(str(col), {})
+        lsl = limits.get("lsl")
+        usl = limits.get("usl")
+        if _has_spec(lsl) or _has_spec(usl):
+            continue
+        issues.append(
+            QualityIssue(
+                check=QualityCheck.MISSING_SPEC,
+                column=str(col),
+                severity=QualityStatus.WARNING,
+                message=f"Column '{col}' is an output but has no spec limits set.",
+                detail={"lsl": lsl, "usl": usl},
+            )
+        )
+
+
 def run_quality_checks(
     df: pd.DataFrame,
     categorical_columns: list[str] | None = None,
     quality_columns: list[str] | None = None,
     datetime_columns: list[str] | None = None,
     batch_columns: list[str] | None = None,
+    input_columns: list[str] | None = None,
+    output_columns: list[str] | None = None,
+    input_ranges: dict[str, tuple[float | None, float | None]] | None = None,
+    spec: dict[str, dict] | None = None,
 ) -> QualityReport:
     """Run the Phase 1 quality checks.
 
@@ -291,6 +477,14 @@ def run_quality_checks(
         quality_columns: column names holding OK/NG style outcome labels.
         datetime_columns: column names holding timestamps.
         batch_columns: column names holding batch identifiers.
+        input_columns: column names treated as process inputs. If empty,
+            all numeric columns are scanned by the out-of-range heuristic.
+        output_columns: column names treated as outputs, used for spec checks.
+        input_ranges: optional (low, high) engineering ranges per input column;
+            None means unbounded. Omitted columns fall back to the statistical
+            heuristic.
+        spec: optional per-output-column spec dicts, e.g.
+            {"thickness": {"lsl": 1.5, "usl": 1.8, "target": 1.65}}.
 
     Returns:
         A QualityReport.
@@ -299,6 +493,8 @@ def run_quality_checks(
     quality_columns = quality_columns or []
     datetime_columns = datetime_columns or []
     batch_columns = batch_columns or []
+    input_columns = input_columns or []
+    output_columns = output_columns or []
 
     issues: list[QualityIssue] = []
     _check_missing(df, issues)
@@ -308,6 +504,10 @@ def run_quality_checks(
     _check_time_order(df, issues, datetime_columns)
     _check_unbalanced_okng(df, issues, quality_columns)
     _check_batch_imbalance(df, issues, batch_columns)
+    _check_invalid_format(df, issues)
+    _check_unit_mixing(df, issues)
+    _check_input_out_of_range(df, issues, input_columns, input_ranges)
+    _check_missing_spec(df, issues, output_columns, spec)
 
     for issue in issues:
         if issue.severity == QualityStatus.CRITICAL:

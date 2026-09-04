@@ -208,6 +208,12 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
           .filter((f) => f.role === 'timestamp')
           .map((f) => f.originalName),
         batch_columns: [],
+        input_columns: finalFields
+          .filter((f) => f.role === 'input')
+          .map((f) => f.originalName),
+        output_columns: finalFields
+          .filter((f) => f.role === 'output')
+          .map((f) => f.originalName),
       })
       setQuality(report)
     } catch (err) {

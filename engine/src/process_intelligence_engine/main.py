@@ -353,6 +353,10 @@ def _handle_quality(params: dict) -> dict:
         quality_columns=params.get("quality_columns", []),
         datetime_columns=params.get("datetime_columns", []),
         batch_columns=params.get("batch_columns", []),
+        input_columns=params.get("input_columns", []),
+        output_columns=params.get("output_columns", []),
+        input_ranges=params.get("input_ranges"),
+        spec=params.get("spec"),
     )
     return {
         "row_count": report.row_count,

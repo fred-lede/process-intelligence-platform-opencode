@@ -113,3 +113,104 @@ def test_outlier_classification_field_present():
         "true_extreme_event",
         "undetermined",
     }
+
+
+def test_invalid_format_detection():
+    df = _make_df({"temperature": ["85.1", "85.2", "85mv", "85.3", "85.4"]})
+    report = run_quality_checks(df)
+
+    invalid = next(
+        (i for i in report.issues if i.check == QualityCheck.INVALID_FORMAT
+         and i.column == "temperature"), None
+    )
+    assert invalid is not None
+    assert invalid.severity == QualityStatus.WARNING
+    assert invalid.detail["non_numeric_count"] == 1
+
+
+def test_no_invalid_format_when_consistent_strings():
+    df = _make_df({"note": ["ok", "ng", "warn", "ok"]})
+    report = run_quality_checks(df)
+
+    assert not any(i.check == QualityCheck.INVALID_FORMAT for i in report.issues)
+
+
+def test_unit_mixing_detection():
+    df = _make_df({"length": ["12.5mm", "13.0mm", "0.51in", "13.1mm"]})
+    report = run_quality_checks(df)
+
+    unit = next(
+        (i for i in report.issues if i.check == QualityCheck.UNIT_MIXING
+         and i.column == "length"), None
+    )
+    assert unit is not None
+    assert set(unit.detail["units"]) == {"mm", "in"}
+
+
+def test_no_unit_mixing_when_single_unit():
+    df = _make_df({"length": ["12.5mm", "13.0mm", "13.1mm"]})
+    report = run_quality_checks(df)
+
+    assert not any(i.check == QualityCheck.UNIT_MIXING for i in report.issues)
+
+
+def test_input_out_of_range_with_provided_ranges():
+    df = _make_df({"temp": [220.0, 230.0, 255.0, 999.0, 228.0]})
+    report = run_quality_checks(
+        df,
+        input_columns=["temp"],
+        input_ranges={"temp": (210.0, 260.0)},
+    )
+
+    oor = next(
+        (i for i in report.issues if i.check == QualityCheck.INPUT_OUT_OF_RANGE
+         and i.column == "temp"), None
+    )
+    assert oor is not None
+    assert oor.detail["out_of_range_count"] == 1
+    assert oor.detail["range_lower"] == 210.0
+    assert oor.detail["range_upper"] == 260.0
+
+
+def test_input_out_of_range_statistical_heuristic():
+    df = _make_df({"temp": [100.0, 101.0, 102.0, 103.0, 104.0, 1500.0]})
+    report = run_quality_checks(df, input_columns=["temp"])
+
+    oor = next(
+        (i for i in report.issues if i.check == QualityCheck.INPUT_OUT_OF_RANGE
+         and i.column == "temp"), None
+    )
+    assert oor is not None
+
+
+def test_input_out_of_range_no_range_set():
+    df = _make_df({"temp": [255.0, 255.1, 255.2, 255.3, 255.4]})
+    report = run_quality_checks(df, input_columns=["temp"])
+
+    assert not any(i.check == QualityCheck.INPUT_OUT_OF_RANGE for i in report.issues)
+
+
+def test_missing_spec_detection():
+    df = _make_df({"thickness": [1.6, 1.61, 1.62, 1.63, 1.64]})
+    report = run_quality_checks(
+        df,
+        output_columns=["thickness"],
+        spec={"thickness": {"lsl": None, "usl": None, "target": 1.62}},
+    )
+
+    missing = next(
+        (i for i in report.issues if i.check == QualityCheck.MISSING_SPEC
+         and i.column == "thickness"), None
+    )
+    assert missing is not None
+
+
+def test_missing_spec_when_spec_present():
+    df = _make_df({"thickness": [1.6, 1.61, 1.62, 1.63, 1.64]})
+    report = run_quality_checks(
+        df,
+        output_columns=["thickness"],
+        spec={"thickness": {"lsl": 1.5, "usl": 1.8, "target": 1.62}},
+    )
+
+    assert not any(i.check == QualityCheck.MISSING_SPEC for i in report.issues)

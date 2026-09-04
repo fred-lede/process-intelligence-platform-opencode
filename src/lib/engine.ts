@@ -139,6 +139,10 @@ export async function runQualityChecks(params: {
   quality_columns?: string[]
   datetime_columns?: string[]
   batch_columns?: string[]
+  input_columns?: string[]
+  output_columns?: string[]
+  input_ranges?: Record<string, [number | null, number | null]>
+  spec?: Record<string, { lsl?: number | null; usl?: number | null; target?: number | null }>
 }): Promise<QualityReport> {
   return engineCall<QualityReport>('data/quality', params as unknown as Record<string, unknown>)
 }
