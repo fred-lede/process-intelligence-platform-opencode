@@ -73,6 +73,14 @@
 - 驗證：tsc --noEmit clean、npm run build 成功
 - **Files changed** — `src/lib/project.ts`, `src/stores/dataPipelineStore.ts`, `src/features/project/ProjectOverview.tsx`
 
+### es-MX 翻譯補齊（rebase 到 en 結構）
+- **Status**: DONE
+- 發現 es-MX 嚴重落後：**missing 168 keys**（en 有、es 缺）+ **stale 184 keys**（es 舊 schema 有、en 已無）——`dataImport`/`project`/`processDefine`/`modelCenter`/`settings`/`monteCarlo`/`nav` 等 section 是舊版結構
+- 用 Node script rebase：preserve 既有 541 筆、新增 168 筆西文翻譯、移除 184 筆 stale
+- 驗證：三語全 709 keys、0 missing、0 stale、JSON 有效、無 interpolation（{{var}}）失配、tsc --noEmit clean、npm run build 成功
+- README 更新：es-MX「541 keys」→「709 keys 三語 key set 完全一致」
+- **Files changed** — `src/i18n/es-MX.json`, `README.md`
+
 <!-- NEXT_ITEM_ANCHOR -->
 
 - Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo

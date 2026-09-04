@@ -257,7 +257,7 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 
 - **English**（預設）
 - **繁體中文**（zh-TW）
-- **Español (México)**（es-MX）— 541 keys 完整翻譯
+- **Español (México)**（es-MX）— 709 keys 完整翻譯（三語 key set 完全一致）
 
 ### 模型類型（6 種）
 
