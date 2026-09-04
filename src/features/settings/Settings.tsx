@@ -74,7 +74,7 @@ export default function Settings() {
       for (const f of fields) {
         const isSensitive = f.role === 'sensitive' || f.role === 'identifier'
         cls[f.name] = isSensitive ? 'mask' : 'transmit'
-        strat[f.name] = isSensitive ? 'hash' : 'masked'
+        strat[f.name] = 'hash'
       }
       setCloudColClass(cls)
       setCloudColStrategy(strat)
