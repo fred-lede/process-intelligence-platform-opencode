@@ -15,7 +15,8 @@
     "spc": "SPC Control",
     "settings": "System Settings",
     "about": "About",
-    "processFlow": "Process Flow"
+    "processFlow": "Process Flow",
+    "dataAssets": "Data Assets"
   },
   "common": {
     "confirm": "Confirm",
@@ -161,6 +162,24 @@
     "qualityMessage": "Issue",
     "qualitySummary": "Quality check on {{rows}} rows × {{cols}} columns found {{issues}} issue(s).",
     "qualityClean": "No quality issues detected."
+  },
+  "dataAssets": {
+    "title": "Data Assets",
+    "description": "Registered data assets imported into the current project, with column field roles and notes.",
+    "refresh": "Refresh",
+    "empty": "No data assets imported yet. Go to Data Import to add a dataset.",
+    "notesPlaceholder": "Add a note / tags for this asset...",
+    "fieldRoles": "Column field roles (detected)",
+    "noFields": "No field detection for this asset.",
+    "col": {
+      "file": "Source File",
+      "format": "Format",
+      "encoding": "Encoding",
+      "rows": "Rows",
+      "columns": "Columns",
+      "notes": "Notes",
+      "tags": "Tags"
+    }
   },
   "processDefine": {
     "title": "Process Definition",

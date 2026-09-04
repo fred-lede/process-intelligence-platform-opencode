@@ -14,7 +14,8 @@
     "reports": "Informes y Versiones",
     "spc": "Control SPC",
     "settings": "Configuración del Sistema",
-    "about": "Acerca de"
+    "about": "Acerca de",
+    "dataAssets": "Activos de Datos"
   },
   "common": {
     "confirm": "Confirmar",
@@ -112,6 +113,24 @@
     "usl": "USL (Límite Superior de Especificación)",
     "target": "Valor objetivo",
     "specHint": "Define los límites de especificación para el campo de salida"
+  },
+  "dataAssets": {
+    "title": "Activos de Datos",
+    "description": "Activos de datos registrados importados al proyecto actual, con roles de campo y notas.",
+    "refresh": "Actualizar",
+    "empty": "Aún no hay activos de datos importados. Ve a Importación para añadir un conjunto de datos.",
+    "notesPlaceholder": "Añade una nota / etiquetas para este activo...",
+    "fieldRoles": "Roles de campo (detectados)",
+    "noFields": "Sin detección de campos para este activo.",
+    "col": {
+      "file": "Archivo de origen",
+      "format": "Formato",
+      "encoding": "Codificación",
+      "rows": "Filas",
+      "columns": "Columnas",
+      "notes": "Notas",
+      "tags": "Etiquetas"
+    }
   },
   "processDefine": {
     "title": "Definición de Proceso",

@@ -15,7 +15,8 @@
     "spc": "SPC 管制圖",
     "settings": "系統設定",
     "about": "關於",
-    "processFlow": "製程流程"
+    "processFlow": "製程流程",
+    "dataAssets": "資料資產"
   },
   "common": {
     "confirm": "確認",
@@ -161,6 +162,24 @@
     "qualityMessage": "問題",
     "qualitySummary": "品質檢查 {{rows}} 列 × {{cols}} 欄，共發現 {{issues}} 個問題。",
     "qualityClean": "未發現資料品質問題。"
+  },
+  "dataAssets": {
+    "title": "資料資產",
+    "description": "已匯入目前專案的資料資產，包含欄位角色與備註。",
+    "refresh": "重新整理",
+    "empty": "尚未匯入任何資料資產，請前往「資料匯入」新增資料集。",
+    "notesPlaceholder": "為此資產新增備註 / 標籤...",
+    "fieldRoles": "欄位角色（偵測結果）",
+    "noFields": "此資產沒有欄位偵測結果。",
+    "col": {
+      "file": "來源檔案",
+      "format": "格式",
+      "encoding": "編碼",
+      "rows": "列數",
+      "columns": "欄數",
+      "notes": "備註",
+      "tags": "標籤"
+    }
   },
   "processDefine": {
     "title": "製程定義",

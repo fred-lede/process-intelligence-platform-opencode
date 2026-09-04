@@ -10,4 +10,5 @@ export type AppTab =
   | 'reports'
   | 'spc'
   | 'processFlow'
+  | 'dataAssets'
   | 'settings'

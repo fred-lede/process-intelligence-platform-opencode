@@ -147,6 +147,22 @@ export async function runQualityChecks(params: {
   return engineCall<QualityReport>('data/quality', params as unknown as Record<string, unknown>)
 }
 
+/** A single registered data asset (an imported dataset in the engine registry). */
+export interface DataAsset {
+  dataset_id: string
+  file_path: string
+  format: string
+  encoding: string
+  delimiter: string | null
+  row_count: number
+  column_count: number
+}
+
+/** List all data assets registered in the in-memory import registry. */
+export async function getDataAssets(): Promise<{ datasets: DataAsset[] }> {
+  return engineCall<{ datasets: DataAsset[] }>('data/datasets', {})
+}
+
 /** Fit distributions for a numeric column of a registered dataset. */
 export async function fitDistribution(
   dataset_id: string,

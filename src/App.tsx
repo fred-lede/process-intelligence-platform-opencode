@@ -15,6 +15,7 @@ import MonteCarlo from './features/monte-carlo/MonteCarlo'
 import Prediction from './features/prediction/Prediction'
 import ValidationLab from './features/validation/ValidationLab'
 import ProcessFlow from './features/process-flow/ProcessFlow'
+import DataAssets from './features/data-assets/DataAssets'
 import type { AppTab } from './types'
 
 const { Content } = Layout
@@ -34,6 +35,7 @@ export default function App() {
     if (activeTab === 'prediction') return <Prediction />
     if (activeTab === 'validation') return <ValidationLab />
     if (activeTab === 'processFlow') return <ProcessFlow />
+    if (activeTab === 'dataAssets') return <DataAssets />
     if (activeTab === 'settings') return <Settings />
     return <FeaturePlaceholder tabKey={activeTab} />
   }

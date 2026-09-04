@@ -79,6 +79,14 @@ const TAB_GUIDES: Record<AppTab, TabGuide> = {
       `(4) finalize the project. Help users: choose a supported file, resolve quality warnings, decide input/output roles, ` +
       `and understand the distribution summary shown for each numeric column (count, mean, std, min/max, uniqueness).`,
   },
+  dataAssets: {
+    name: 'Data Assets',
+    body:
+      `This page lists the data assets currently registered in the in-memory import registry (source file, format, encoding, row/column counts). ` +
+      `Each asset can be expanded to show the detected column field roles (e.g., input/output/identifier) and to attach a note/tag, which is ` +
+      `stored locally in the browser. Guide the user to refresh the list after importing a dataset, to inspect field roles, and to ` +
+      `understand that this registry is in-memory (not the persisted project manifest).`,
+  },
   processDefine: {
     name: 'Process Definition',
     body:
