@@ -47,6 +47,14 @@
 - 驗證：tsc clean
 - **Files changed** — `src/features/approval/Approval.tsx`
 
+### DataImport 模板下載微調
+- **Status**: DONE
+- a)「模板下載」按鈕位置優化：與「選擇檔案」並排、改為 `type="link"` 次要按鈕（`DataImport.tsx`）
+- b) 模板 CSV 改為多輸入、單輸出架構：5 輸入（input_temperature/voltage/pressure/speed/load）+ 單一輸出（output_thickness，移除 output_pressure）+ result
+- i18n 三語 `dataImport.downloadTemplateDesc` 標示「多輸入、單輸出」
+- 驗證：tsc clean、build 成功、三語 JSON 有效、無 output_pressure 殘留
+- **Files changed** — `src/features/data-import/DataImport.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
+
 <!-- NEXT_ITEM_ANCHOR -->
 
 - Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo

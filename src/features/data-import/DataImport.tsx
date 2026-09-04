@@ -54,6 +54,7 @@ const ROLE_OPTIONS: { value: FieldRole; color: string }[] = [
 // distribution / trend / time-series / GRR analysis.
 // GRR structure: 3 operators × 5 parts × 3 reps = 45 rows.
 function buildTemplateCsv(): string {
+  // Multi-input, single-output layout (matches the single-output pipeline).
   const header = [
     'lot',
     'serial_no',
@@ -63,8 +64,10 @@ function buildTemplateCsv(): string {
     'part',
     'input_temperature',
     'input_voltage',
+    'input_pressure',
+    'input_speed',
+    'input_load',
     'output_thickness',
-    'output_pressure',
     'result',
   ]
   const operators = ['O-01', 'O-02', 'O-03']
@@ -85,8 +88,10 @@ function buildTemplateCsv(): string {
         const noise = (Math.random() - 0.5) * 0.012
         const inTemp = (85 + (pi - 2) * 1.2 + (Math.random() - 0.5) * 1.6).toFixed(2)
         const inVoltage = (12 + (pi - 2) * 0.3 + (Math.random() - 0.5) * 0.2).toFixed(3)
+        const inPressure = (3.2 + (pi - 2) * 0.05 + (Math.random() - 0.5) * 0.15).toFixed(3)
+        const inSpeed = (120 + (pi - 2) * 2 + (Math.random() - 0.5) * 4).toFixed(1)
+        const inLoad = (68 + (pi - 2) * 1.5 + (Math.random() - 0.5) * 3).toFixed(2)
         const outThickness = (1.62 + baseBias + noise).toFixed(4)
-        const outPressure = (3.4 + (Math.random() - 0.5) * 0.12).toFixed(3)
         const fail = seq % 41 === 0
         const day = 1 + Math.floor(seq / 15)
         const hour = 8 + Math.floor(seq / 3)
@@ -101,8 +106,10 @@ function buildTemplateCsv(): string {
           part,
           inTemp,
           inVoltage,
+          inPressure,
+          inSpeed,
+          inLoad,
           outThickness,
-          outPressure,
           fail ? 'NG' : 'OK',
         ])
       }
@@ -356,19 +363,21 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
             <Typography.Paragraph type="secondary">
               {t('dataImport.importDescription')}
             </Typography.Paragraph>
-            <Button
-              type="primary"
-              icon={<FileExcelOutlined />}
-              loading={loading}
-              onClick={handlePickFile}
-            >
-              {t('dataImport.pickFile')}
-            </Button>
-            <Tooltip title={t('dataImport.downloadTemplateDesc')}>
-              <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                {t('dataImport.downloadTemplate')}
+            <Space wrap>
+              <Button
+                type="primary"
+                icon={<FileExcelOutlined />}
+                loading={loading}
+                onClick={handlePickFile}
+              >
+                {t('dataImport.pickFile')}
               </Button>
-            </Tooltip>
+              <Tooltip title={t('dataImport.downloadTemplateDesc')}>
+                <Button type="link" icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+                  {t('dataImport.downloadTemplate')}
+                </Button>
+              </Tooltip>
+            </Space>
           </Space>
         ) : (
           <Space direction="vertical" style={{ width: '100%' }}>
