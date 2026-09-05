@@ -255,7 +255,7 @@ export default function MonteCarlo() {
                 </Col>
                 <Col span={12}>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    {t('monteCarlo.sigmaOverall')}: {result.capability.sigma_overall.toFixed(3)}
+                    {t('monteCarlo.sigmaOverall')}: {result.capability.sigma_overall.toFixed(2)}
                   </Typography.Text>
                 </Col>
               </Row>

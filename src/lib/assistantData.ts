@@ -166,7 +166,7 @@ export function buildMonteCarloContext(result: MonteCarloResult | null): string 
   if (top.length) {
     lines.push(`Top anomaly risk contributors: ${top.map((a) => `${a.name} (${pct(a.ng_contribution)})`).join(', ')}.`)
   }
-  if (result.capability && result.capability.pp != null && result.capability.ppk != null) {
+  if (result.capability && result.capability.pp != null && result.capability.ppk != null && result.capability.sigma_overall != null) {
     lines.push(
       `Predicted capability (simulation): Pp=${num(result.capability.pp)}, Ppk=${num(result.capability.ppk)}, sigma_overall=${num(result.capability.sigma_overall)}.`,
     )

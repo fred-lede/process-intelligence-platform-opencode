@@ -165,15 +165,15 @@ export default function SPC() {
       })
       if (cl.i_ucl != null && x.length > 0) {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.i_ucl, cl.i_ucl],
-          mode: 'lines', name: 'UCL', line: { color: '#fa8c16', dash: 'dash' }, showlegend: false })
+          mode: 'lines', name: 'UCL', line: { color: '#fa8c16', dash: 'dash' } })
       }
       if (cl.i_lcl != null && x.length > 0) {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.i_lcl, cl.i_lcl],
-          mode: 'lines', name: 'LCL', line: { color: '#fa8c16', dash: 'dash' }, showlegend: false })
+          mode: 'lines', name: 'LCL', line: { color: '#fa8c16', dash: 'dash' } })
       }
       if (cl.i_center != null && x.length > 0) {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.i_center, cl.i_center],
-          mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' }, showlegend: false })
+          mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' } })
       }
       addSpecLines()
       const violX = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
@@ -191,11 +191,11 @@ export default function SPC() {
         })
         if (cl.mr_ucl != null && mrX.length > 0) {
           data.push({ x: [mrX[0], mrX[mrX.length - 1]], y: [cl.mr_ucl, cl.mr_ucl],
-            mode: 'lines', yaxis: 'y2', line: { color: '#fa8c16', dash: 'dash' }, showlegend: false })
+            mode: 'lines', yaxis: 'y2', line: { color: '#fa8c16', dash: 'dash' } })
         }
         if (cl.mr_center != null && mrX.length > 0) {
           data.push({ x: [mrX[0], mrX[mrX.length - 1]], y: [cl.mr_center, cl.mr_center],
-            mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' }, showlegend: false })
+            mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' } })
         }
       }
     } else {
@@ -206,15 +206,15 @@ export default function SPC() {
       })
       if (cl.x_ucl != null && x.length > 0) {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.x_ucl, cl.x_ucl],
-          mode: 'lines', name: 'UCL', line: { color: '#fa8c16', dash: 'dash' }, showlegend: false })
+          mode: 'lines', name: 'UCL', line: { color: '#fa8c16', dash: 'dash' } })
       }
       if (cl.x_lcl != null && x.length > 0) {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.x_lcl, cl.x_lcl],
-          mode: 'lines', name: 'LCL', line: { color: '#fa8c16', dash: 'dash' }, showlegend: false })
+          mode: 'lines', name: 'LCL', line: { color: '#fa8c16', dash: 'dash' } })
       }
       if (cl.x_center != null && x.length > 0) {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.x_center, cl.x_center],
-          mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' }, showlegend: false })
+          mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' } })
       }
       addSpecLines(true)
       const violX = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
@@ -232,11 +232,11 @@ export default function SPC() {
         })
         if (cl.r_ucl != null && rX.length > 0) {
           data.push({ x: [rX[0], rX[rX.length - 1]], y: [cl.r_ucl, cl.r_ucl],
-            mode: 'lines', yaxis: 'y2', line: { color: '#fa8c16', dash: 'dash' }, showlegend: false })
+            mode: 'lines', yaxis: 'y2', line: { color: '#fa8c16', dash: 'dash' } })
         }
         if (cl.r_center != null && rX.length > 0) {
           data.push({ x: [rX[0], rX[rX.length - 1]], y: [cl.r_center, cl.r_center],
-            mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' }, showlegend: false })
+            mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' } })
         }
       }
       if (result.chart_type === 'xbar-s' && result.s_values) {
@@ -248,11 +248,11 @@ export default function SPC() {
         })
         if (cl.s_ucl != null && sX.length > 0) {
           data.push({ x: [sX[0], sX[sX.length - 1]], y: [cl.s_ucl, cl.s_ucl],
-            mode: 'lines', yaxis: 'y2', line: { color: '#fa8c16', dash: 'dash' }, showlegend: false })
+            mode: 'lines', yaxis: 'y2', line: { color: '#fa8c16', dash: 'dash' } })
         }
         if (cl.s_center != null && sX.length > 0) {
           data.push({ x: [sX[0], sX[sX.length - 1]], y: [cl.s_center, cl.s_center],
-            mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' }, showlegend: false })
+            mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' } })
         }
       }
     }
