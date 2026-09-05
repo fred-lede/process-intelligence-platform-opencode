@@ -791,6 +791,7 @@ export interface MonteCarloResult {
   boxplot_data: MonteCarloBoxplotData
   anomaly_rankings: MonteCarloAnomalyRanking[]
   multi_anomaly_ng: number
+  capability?: SPCCapability | null
 }
 
 export interface MonteCarloAnalysisResult {

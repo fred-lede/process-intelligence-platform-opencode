@@ -500,7 +500,11 @@
     "sourceFromNode": "Desde nodo: {{name}}",
     "dataSourceNotLoaded": "Datos de origen no cargados. Importa el conjunto de datos para ejecutar la simulación.",
     "filterByNode": "Filtrar por nodo",
-    "nodeFilterCleared": "Limpiar filtro de nodo"
+    "nodeFilterCleared": "Limpiar filtro de nodo",
+    "predictedCapability": "Capacidad prevista (simulación)",
+    "pp": "Pp",
+    "ppk": "Ppk",
+    "sigmaOverall": "σ general"
   },
   "prediction": {
     "title": "Predicción Interactiva (What-if)",

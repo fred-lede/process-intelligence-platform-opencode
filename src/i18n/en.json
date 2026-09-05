@@ -498,7 +498,11 @@
     "sourceFromNode": "From node: {{name}}",
     "dataSourceNotLoaded": "Source data not loaded. Import the dataset to run the simulation.",
     "filterByNode": "Filter by node",
-    "nodeFilterCleared": "Clear node filter"
+    "nodeFilterCleared": "Clear node filter",
+    "predictedCapability": "Predicted Capability (simulation)",
+    "pp": "Pp",
+    "ppk": "Ppk",
+    "sigmaOverall": "σ overall"
   },
   "prediction": {
     "title": "Interactive Prediction (What-if)",

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Select, Space, Button, Alert, Form, Input, Switch, Typography, Table, Tag, Row, Col } from 'antd'
+import { Card, Select, Space, Button, Alert, Form, Input, Switch, Typography, Table, Tag, Row, Col, Statistic } from 'antd'
 import Plot from 'react-plotly.js'
 import NodeSourceFilter from '../../components/NodeSourceFilter'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
@@ -118,6 +118,8 @@ export default function MonteCarlo() {
     name: 'CDF',
   } : undefined
 
+  const capColor = (val: number) => (val >= 1.33 ? '#52c41a' : val >= 1.0 ? '#fa8c16' : '#ff4d4f')
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Card title={t('monteCarlo.title')}>
@@ -231,6 +233,34 @@ export default function MonteCarlo() {
               </Col>
             ))}
           </Row>
+
+          {result.capability && result.capability.pp != null && result.capability.ppk != null && result.capability.sigma_overall != null && (
+            <Card title={t('monteCarlo.predictedCapability')} size="small">
+              <Row gutter={16}>
+                <Col span={6}>
+                  <Statistic
+                    title={t('monteCarlo.pp')}
+                    value={result.capability.pp}
+                    precision={2}
+                    valueStyle={{ color: capColor(result.capability.pp) }}
+                  />
+                </Col>
+                <Col span={6}>
+                  <Statistic
+                    title={t('monteCarlo.ppk')}
+                    value={result.capability.ppk}
+                    precision={2}
+                    valueStyle={{ color: capColor(result.capability.ppk) }}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('monteCarlo.sigmaOverall')}: {result.capability.sigma_overall.toFixed(3)}
+                  </Typography.Text>
+                </Col>
+              </Row>
+            </Card>
+          )}
 
           <Card title={t('monteCarlo.outputDistribution')} size="small">
             <div style={{ display: 'flex', gap: 16, width: '100%' }}>

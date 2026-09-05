@@ -498,7 +498,11 @@
     "sourceFromNode": "來源節點：{{name}}",
     "dataSourceNotLoaded": "來源資料尚未載入，請先匯入資料集。",
     "filterByNode": "依節點篩選",
-    "nodeFilterCleared": "清除節點篩選"
+    "nodeFilterCleared": "清除節點篩選",
+    "predictedCapability": "預測能力指數（模擬）",
+    "pp": "Pp",
+    "ppk": "Ppk",
+    "sigmaOverall": "σ 整體"
   },
   "prediction": {
     "title": "互動預測 (What-if)",
