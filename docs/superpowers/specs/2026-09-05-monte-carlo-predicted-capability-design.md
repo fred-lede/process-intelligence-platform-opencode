@@ -1,7 +1,7 @@
-# 蒙地卡羅預測能力指數（Pp/Ppk, simulation-based）— 設計規格
+# 蒙地卡羅預測能力指數（Pp/Ppk, simulation-based）— 設計規格 v1.1
 
 日期：2026-09-05
-狀態：設計已批准（user 於 brainstorming 選定：Pp/Ppk、引擎端計算）
+狀態：**Done**（2026-09-05 實作完成 + polish）
 
 ## 目標
 
@@ -36,70 +36,94 @@
 `compute_capability(values, lsl=None, usl=None, subgroup_size=1)`。
 `subgroup_size=1` 時 σ_within = 整體 σ（spc.py:54-57），恰為 Pp/Ppk 語意。
 
-在 `run_monte_carlo`（monte_carlo.py:206）回傳 dict（:375-392）新增：
+在 `run_monte_carlo` 回傳 dict 新增：
 
 ```python
 "capability": compute_capability(output_values, lsl=lsl, usl=usl, subgroup_size=1),
 ```
 
-- import：`from .spc import compute_capability`（spc.py 無回依賴動態 module 需確認——monte_carlo.py
-  目前未 import spc，需驗證無 circular import）
+- import：`from .spc import compute_capability`（spc.py 無回依賴，無 circular import）
 - `lsl`/`usl` 參數 `run_monte_carlo` 已收（main.py:1123-1124 傳入）；兩側都設時
   `pp`/`ppk` 為數值，任缺一側時為 `None`（spc.py:80-86）
-- `output_values` 已計算存在（:390 回傳 .tolist()），無額外成本
+- `output_values` 已計算存在（回傳 .tolist()），無額外成本
 - **TDD 測試**（test_main_monte_carlo.py）：
   1. 有 lsl/usl → capability.pp/ppk 存在，且 pp == (usl-lsl)/(6*output_std)（ddof=1）、
-     ppk == min((usl-mean), (mean-lsl))/(3*output_std)（與回傳 output_mean/output_std 比對）
+     ppk == min((usl-mean), (mean-lsl))/(3*output_std)（與回傳 output_mean/output_std 比對）；
+     σ_overall == approx(output_std, rel=1e-5)（6 dp rounding 容許 rel=1e-5）
   2. 無 lsl/usl → capability.pp 為 None / ppk 為 None
 
 ### 前端（engine.ts + MonteCarlo.tsx）
 
 - `engine.ts`：`MonteCarloResult` interface 加 `capability?: SPCCapability | null`
-  （重用既有 `SPCCapability`，engine.ts:649）
-- `MonteCarlo.tsx`：現有 4 張統計卡 Row（:182-216）下方加一張
+  （重用既有 `SPCCapability`，engine.ts:649，字段含 cp/cpk/pp/ppk/sigma_within/sigma_overall/mean/n_subgroups/total_observations）
+- `MonteCarlo.tsx`：現有 4 張統計卡 Row（NG/Mean/Median/Multi-Anomaly）下方加一張
   「預測能力指數（simulation-based）」Card，欄位：
-  - **Pp**：值 + antd Tag 色（≥1.33 success / ≥1.0 warning / else error）
-  - **Ppk**：值 + 同上色標（SPC.tsx:126-127 同門檻）
-  - 下方小字 σ（= capability.sigma_overall）
-  - 僅當 `result.capability && capability.pp != null && capability.ppk != null` 才渲染
+  - **Pp**：antd Statistic，`precision={2}`，valueStyle 色標 ≥1.33 `#52c41a`（綠）
+    / ≥1.0 `#fa8c16`（橘）/ <1.0 `#ff4d4f`（紅）
+  - **Ppk**：同上色標
+  - 右側小字 σ（`capability.sigma_overall.toFixed(2)`）
+  - **僅當 `result.capability && capability.pp != null && capability.ppk != null && capability.sigma_overall != null` 才渲染**
   - 無 spec 時不顯示（不顯示空卡片）
+- `capColor` helper：`(val: number) => val >= 1.33 ? '#52c41a' : val >= 1.0 ? '#fa8c16' : '#ff4d4f'`
+  （與 SPC.tsx `capacityColor` 完全一致，threshold 與 hex 同）
 
 ### AI 助手 context（assistantData.ts）
 
-`buildMonteCarloContext`（monte_carlo.tsx:76 → lib/assistantData `buildMonteCarloContext`）
-在現有情境後補一行：
+`buildMonteCarloContext` 在「Top anomaly」行後新增條件式一行：
 
+```ts
+if (result.capability && result.capability.pp != null && result.capability.ppk != null && result.capability.sigma_overall != null) {
+  lines.push(`Predicted capability (simulation): Pp=${num(result.capability.pp)}, Ppk=${num(result.capability.ppk)}, sigma_overall=${num(result.capability.sigma_overall)}.`)
+}
 ```
-Predicted capability (simulation): Pp=Pp, Ppk=Ppk (if present).
-```
+
+三 guard（pp / ppk / sigma_overall 皆非 null）與 UI 卡對稱。`num()` 為既有 helper（null → `'N/A'`）。
 
 ### i18n（en / zh-TW / es-MX）
 
 `monteCarlo.*` 新增 4 keys，三語一致（key set parity 以 en 為 source of truth）：
 
-| key | en | zh-TW |
-|---|---|---|
-| `predictedCapability` | Predicted Capability (simulation) | 預測能力指數（模擬） |
-| `pp` | Pp | Pp |
-| `ppk` | Ppk | Ppk |
-| `sigmaOverall` | σ overall | σ 整體 |
+| key | en | zh-TW | es-MX |
+|---|---|---|---|
+| `predictedCapability` | Predicted Capability (simulation) | 預測能力指數（模擬） | Capacidad prevista (simulación) |
+| `pp` | Pp | Pp | Pp |
+| `ppk` | Ppk | Ppk | Ppk |
+| `sigmaOverall` | σ overall | σ 整體 | σ general |
 
-（es-MX 對應翻譯，interpolation 變數一致）
+（parity 驗證：`python3 -c "import json; ks=[set(json.load(open('src/i18n/%s.json'%f))['monteCarlo']) for f in ('en','zh-TW','es-MX')]; print('parity ok:', ks[0]==ks[1]==ks[2], 'count:', len(ks[0]))` 輸出 `parity ok: True count: 34`）
+
+## 實作後續 polish（v1.1 新增）
+
+2026-09-05 實作完成後依 code review 與 user 回饋做以下 polish，已納入本版本：
+
+1. **SPC 管制線圖例**（commit `1d2cb57`）：移除所有管制線 `showlegend: false`（UCL/LCL/CL/MR UCL+CL/R UCL+CL/S UCL+CL 共 12 處）→ 圖例可見橘虛=UCL/LCL、綠虛=CL、紫實=MR/R/S、紅實=LSL/USL；違規點仍隱藏
+2. **MC σ 精度對齊**（commit `1d2cb57`）：`.toFixed(3)` → `.toFixed(2)` 與 Pp/Ppk `precision={2}` 一致
+3. **MC AI context guard 對稱**（commit `1d2cb57`）：context guard 補 `sigma_overall != null`，與 UI 卡三 guard 一致
 
 ## 驗證
 
-- 引擎 full suite：red（新增 2 測試 FAIL）→ green；既有 **304 passed, 1 skipped** 維持
+- 引擎 full suite：**306 passed, 1 skipped**（baseline 304 + 2 新測試）
 - `npx tsc --noEmit` clean
-- `npm run build` 成功（chunk 警示為既有）
+- `npm run build` 成功（chunk 警示為既有，非本次引入）
 - 三語 `monteCarlo` key-set parity ok、JSON 有效
 
-## Files changed（預期）
+## Commit 序列
 
-- `engine/src/process_intelligence_engine/monte_carlo.py`
-- `engine/src/process_intelligence_engine/spc.py`（僅確認 import 依賴，不應改）
-- `engine/tests/test_main_monte_carlo.py`
-- `src/lib/engine.ts`
-- `src/features/monte-carlo/MonteCarlo.tsx`
-- `src/lib/assistantData.ts`
-- `src/i18n/en.json` / `zh-TW.json` / `es-MX.json`
-- docs（PROGRESS / TASK / README）
+| commit | 訊息 |
+|---|---|
+| `bb1b019` | feat(engine): monte carlo predicted capability (Pp/Ppk) via compute_capability |
+| `27eb722` | feat(monte-carlo): predicted capability (Pp/Ppk) card, AI context, i18n |
+| `a08c7e3` | docs: monte carlo predicted capability (Pp/Ppk) |
+| `1d2cb57` | fix(spc/monte-carlo): show control limits in legend; sync σ precision & guard |
+| `43e8b9d` | docs: TASK.md update for SPC legend + MC σ/guard polish |
+
+## Files changed（最終）
+
+- `engine/src/process_intelligence_engine/monte_carlo.py`（+1 import +1 dict entry）
+- `engine/tests/test_main_monte_carlo.py`（+2 測試）
+- `src/lib/engine.ts`（+1 欄位）
+- `src/features/monte-carlo/MonteCarlo.tsx`（+1 helper +1 card +1 Statistic import）
+- `src/lib/assistantData.ts`（+1 guard +1 行 context）
+- `src/features/spc/SPC.tsx`（polish：12 處 showlegend:false 移除）
+- `src/i18n/en.json` / `zh-TW.json` / `es-MX.json`（各 +4 keys）
+- docs（PROGRESS / TASK / README / spec / plan）
