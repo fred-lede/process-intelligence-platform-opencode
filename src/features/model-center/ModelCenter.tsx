@@ -18,6 +18,8 @@ const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'residual_hybrid', labelKey: 'modelCenter.modelType.residualHybrid' },
   { value: 'logistic_regression', labelKey: 'modelCenter.modelType.logisticRegression' },
   { value: 'weibull_regression', labelKey: 'modelCenter.modelType.weibullRegression' },
+  { value: 'xgboost', labelKey: 'modelCenter.modelType.xgboost' },
+  { value: 'lightgbm', labelKey: 'modelCenter.modelType.lightgbm' },
 ]
 
 const MODEL_DESC_KEY: Record<ModelType, string> = {
@@ -27,6 +29,8 @@ const MODEL_DESC_KEY: Record<ModelType, string> = {
   residual_hybrid: 'residualHybrid',
   logistic_regression: 'logisticRegression',
   weibull_regression: 'weibullRegression',
+  xgboost: 'xgboost',
+  lightgbm: 'lightgbm',
 }
 
 const STATUS_TRANSITIONS: Partial<Record<ModelStatus, ModelStatus[]>> = {

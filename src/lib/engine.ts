@@ -270,6 +270,8 @@ export type ModelType =
   | 'residual_hybrid'
   | 'logistic_regression'
   | 'weibull_regression'
+  | 'xgboost'
+  | 'lightgbm'
 
 export type ModelStatus =
   | 'draft'
