@@ -219,6 +219,8 @@ export default function Settings() {
       console.log('[Settings] Save result:', result)
       if (result.success) {
         setAiConfig(result.config)
+        aiForm.setFieldsValue(result.config)
+        modelForm.setFieldsValue(result.config)
         useAIStore.getState().refreshHealth()
         messageApi.success(t('settings.saveSuccess'))
       }
