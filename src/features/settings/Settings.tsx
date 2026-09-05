@@ -22,6 +22,7 @@ export default function Settings() {
     api_key: '',
     model: 'gemma4:e2b-mlx',
     enabled: true,
+    lightgbm_device: 'auto',
   })
   const [savingAI, setSavingAI] = useState(false)
   const [availableModels, setAvailableModels] = useState<string[]>([])
@@ -388,8 +389,13 @@ export default function Settings() {
         </Card>
 
         <Card title={<><ExperimentOutlined /> {t('settings.modelSettings')}</>}>
-          <Form layout="vertical" style={{ maxWidth: 400 }}>
-            <Form.Item label={t('settings.lightgbmDevice')} name="lightgbm_device">
+          <Form
+            layout="vertical"
+            style={{ maxWidth: 400 }}
+            initialValues={{ lightgbm_device: aiConfig.lightgbm_device ?? 'auto' }}
+            onValuesChange={(_, values) => setAiConfig(prev => ({ ...prev, ...values }))}
+          >
+            <Form.Item name="lightgbm_device" label={t('settings.lightgbmDevice')}>
               <Select
                 options={[
                   { value: 'auto', label: t('settings.lightgbmDeviceAuto') },
