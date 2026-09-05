@@ -54,7 +54,12 @@ export default function SPC() {
           dataSourceIds: pendingCtx.dataSourceIds,
         })
         if (dataSourceLoaded(pendingCtx.dataSourceIds, importResult?.dataset_id)) {
-          if (pendingCtx.field) {
+          const numericFields = new Set(
+            Object.entries(importResult?.stats.column_stats ?? {})
+              .filter(([, s]) => s.numeric)
+              .map(([name]) => name),
+          )
+          if (pendingCtx.field && numericFields.has(pendingCtx.field)) {
             setColumn(pendingCtx.field)
           }
           try {
