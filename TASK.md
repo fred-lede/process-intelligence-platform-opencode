@@ -1,11 +1,24 @@
 # TASK.md
 
 ## Completed
+### #4 v0.3.0 模型中心擴充、預測與蒙地卡羅支援全部 8 模型
+- **Status**: DONE
+- **內容**：
+  - 模型中心：說明文字、Equation 欄位、model-appropriate metrics（AUC/accuracy/shape_k/AIC）、i18n 補全
+  - Logistic 迴歸：支援字串二元目標（OK/NG）、前端連續目標預先檢查
+  - Weibull 迴歸：修正 intercept 索引 bug
+  - 蒙地卡羅：支援全部 8 種模型（tree models 用 `fit.model.predict()`）
+  - 互動預測（What-if）：支援全部 8 種模型
+  - 版本同步：engine `__version__` + API ping/health 回傳 0.3.0
+- **驗證**：`pytest tests/ -q` → **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in ~11s`
+- **Push**：`git push` ✅（commits `02321f0` ~ `3fed87a`，共 21 筆）
+- **Files changed** — `engine/src/process_intelligence_engine/{spc.py,main.py,prediction.py,monte_carlo.py,modeling/fitters.py} `、`src/features/{model-center/ModelCenter.tsx,prediction/Prediction.tsx,spc/SPC.tsx,exploration/Exploration.tsx}`、`src/lib/engine.ts`、`src/i18n/{en,zh-TW,es-MX}.json`、`src/components/layout/Sidebar.tsx`、`src-tauri/{tauri.conf.json,Cargo.toml}`、`PROGRESS.md`、`README.md`、`TASK.md`
+
 ### #3 v0.3.0 統計異常偵測收尾
 - **Status**: DONE
 - **Docs**：PROGRESS.md 新增 2026-09-05 v0.3.0 統計異常偵測條目；TASK.md 新增 Task 3 紀錄；README.md Phase 8 補 outlier/change point detection
-- **驗證**：`pytest tests/ -q` → **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` 成功
-- **Push**：待執行
+- **驗證**：`pytest tests/ -q` → **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.15s`
+- **Push**：`git push` `3958cd6..3a2dbd7 main -> main` ✅
 - **Files changed** — `PROGRESS.md`, `TASK.md`, `README.md`
 
 ### #1 engine/.coverage 停止追蹤

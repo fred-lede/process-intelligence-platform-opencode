@@ -673,6 +673,34 @@
 - **驗證**：引擎 **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` 成功；三語 parity `ok`
 - **Commits**：`8c8ece4`（engine）/ `6d0c55c`（frontend）
 
+## 2026-09-05 — v0.3.0 模型中心與預測/蒙地卡羅擴充
+
+- [x] **模型中心 UI（commits `02321f0` / `6f128b3`）**：
+  - 選單右側顯示每種模型的說明文字（含目標欄位限制、輸入限制）
+  - 模型說明 i18n key 使用 camelCase 映射表（`MODEL_DESC_KEY`）
+  - 模型表格新增 `Equation` 欄位 + 各模型適用的 metrics 列（AUC/accuracy/shape_k/AIC）
+  - i18n 三語各 +7 column keys（equation/AUC/accuracy/recall/shape_k/aic）
+- [x] **Logistic 迴歸修复（commits `162f20d` / `b6e1de1` / `322d229` / `d9a9d12`）**：
+  - 支援字串二元目標（OK/NG）：`pd.to_numeric(errors='coerce')` fallback → label encode
+  - 錯誤訊息：明確告知需要二元目標
+  - 前端預先檢查：`unique_count > 10` 時跳出 warning，不發請求
+  - 目標欄位選單：logistic 模式下顯示所有 `unique_count ≤ 10` 或 `unique_count == 2` 的欄位
+- [x] **Weibull 迴歸修复（commits `cf96409` / `ce7fdd5`）**：
+  - 修正 intercept/feature 索引錯位（`result.x[:-1]` → `result.x[:-2]`）
+  - 恢復 `np.mean` 遺漏
+- [x] **蒙地卡羅支援所有 8 模型（commits `fdef99c` / `cd1746e` / `3fed87a`）**：
+  - `predict_output` 新增 logistic/weibull 預測；`run_monte_carlo` 新增 `model` 參數
+  - Weibull `math.exp` overflow 防護（`log_lambda` clamp ±700）
+  - random_forest / xgboost / lightgbm / residual_hybrid：使用 `fit.model.predict()` 預測
+- [x] **互動預測（What-if）支援所有 8 模型（commit `dbb2c17` / `1a3bb3a`）**：
+  - `predict_single` 新增 `model` 參數；tree models 使用 `model.predict()` 而非系數公式
+  - 修正 compact coefficient key normalize（`x1x2` → `x1_x_x2`）
+- [x] **引擎版本同步（commits `105df02` / `7887a42`）**：
+  - `__init__.py` / `main.py` engine/ping 與 engine/health 回傳 `__version__`（不再硬編 `0.1.0`）
+  - About 對話框 / tauri.conf.json / Cargo.toml 更新至 `0.3.0`
+- [x] **i18n**：processDefine `lcl`/`ucl` keys（en/zh-TW/es-MX）
+- **驗證**：引擎 **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` 成功
+
 ## 2026-09-05 — SPC 批量分析 + 優化建議（multi-column + suggestions）
 
 - [x] **引擎（commits `9af8153` / `641bd13` / `19f6549`）**：`spc.py` 新增 `compute_spc_suggestions()`（檢查 Cpk<1.0 error / Cpk<1.33 warning、Rule 4 shift、Rule 5 trend、EWMA/CUSUM small shift）；`main.py` 新增 `_handle_spc_batch_analyze`（`spc/batch_analyze` IPC，支援 i-mr/ewma/cusum 多欄批量分析並附 suggestions）；3 個 fixup commit 修正 indentation / chart_type consistency / xbar error / EWMA test

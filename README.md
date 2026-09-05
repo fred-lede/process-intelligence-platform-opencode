@@ -341,9 +341,25 @@ data/test_dataset.csv
 - `analyzeSPC()` 新增 `control_limits` 參數，手設界限優先於自動 mean±3σ
 - Exploration 趨勢圖：所有 numeric 欄位均顯示自動計算的 UCL/LCL 虛線
 
+**模型中心擴充**
+- 模型類型選單右側顯示說明文字（含目標欄位與輸入限制）
+- 模型表格新增 Equation 欄位 + 各模型適用的 metrics 列（AUC/accuracy/shape_k/AIC）
+- Logistic 迴歸支援字串二元目標（OK/NG），前端預先檢查連續目標
+- 目標欄位選單：logistic 模式下顯示所有二元欄位（numeric 或文字）
+
+**蒙地卡羅與互動預測（What-if）擴充**
+- 支援全部 8 種模型：doe_linear / doe_quadratic / random_forest / xgboost / lightgbm / residual_hybrid / logistic_regression / weibull_regression
+- Tree models 使用 `fit.model.predict()` 直接預測；logistic 輸出 P(NG)；weibull 輸出 mean TTF
+
 **i18n**
 - processDefine 段新增 `lcl`/`ucl` 翻譯（en/zh-TW/es-MX）
 - spc 段新增 `outliers`/`changePoints` 等 6 keys ×3 語
+- modelCenter column 段新增 `equation/AUC/accuracy/shape_k/AIC` keys ×3 語
+- modelCenter modelType.desc 段新增 6 種模型說明文字 ×3 語
+
+**版本**
+- 引擎 `__version__` 與 API 回傳版本同步至 0.3.0
+- 前端 About 對話框顯示 v0.3.0
 
 ---
 
