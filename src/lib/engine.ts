@@ -500,7 +500,11 @@ export interface ExperimentRecommendation {
   priority: 'high' | 'medium' | 'low'
   factors: string[]
   settings: Record<string, number>[]
-  reason: string
+  key: string
+  strength?: number
+  skewness?: number
+  corr?: number
+  method?: string
 }
 
 export interface FullValidationResult {

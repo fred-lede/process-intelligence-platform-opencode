@@ -842,7 +842,7 @@ export default function ModelCenter() {
                   <strong>{t('modelCenter.residualDiagnostics')}:</strong>
                   <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
                     DW: {fullValidation.residual_analysis.durbin_watson.statistic.toFixed(3)}
-                    {' '}({t(`modelCenter.dw${fullValidation.residual_analysis.durbin_watson.interpretation.charAt(0).toUpperCase() + fullValidation.residual_analysis.durbin_watson.interpretation.slice(1)}`)})
+                    {' '}({t(`modelCenter.${fullValidation.residual_analysis.durbin_watson.interpretation}`)})
                   </div>
                 </div>
                 <div>
@@ -857,7 +857,13 @@ export default function ModelCenter() {
                           <Tag color={rec.priority === 'high' ? 'red' : rec.priority === 'medium' ? 'orange' : 'default'}>
                             {rec.priority}
                           </Tag>
-                          {rec.type}: {rec.reason}
+                          {t(`modelCenter.${rec.key}` as any, {
+                            factorA: rec.factors?.[0] ?? '',
+                            factorB: rec.factors?.[1] ?? '',
+                            strength: rec.strength?.toFixed(2) ?? '',
+                            skewness: rec.skewness?.toFixed(2) ?? '',
+                            corr: rec.corr?.toFixed(2) ?? '',
+                          })}
                         </span>
                       }
                       showIcon

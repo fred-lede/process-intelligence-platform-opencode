@@ -176,13 +176,13 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
     else:
         dw_stat = 2.0
 
-    # Interpretation
+    # Interpretation (camelCase keys for frontend i18n lookup)
     if dw_stat < 1.5:
-        interpretation = "positive_autocorrelation"
+        interpretation = "dwPositiveAutoCorr"
     elif dw_stat > 2.5:
-        interpretation = "negative_autocorrelation"
+        interpretation = "dwNegativeAutoCorr"
     else:
-        interpretation = "no_autocorrelation"
+        interpretation = "dwNoAutoCorr"
 
     return {
         "residuals": [float(r) for r in residuals],
@@ -223,7 +223,8 @@ def recommend_experiments(fit, df: pd.DataFrame, interactions: dict) -> list[dic
             recommendations.append({
                 "type": "interaction",
                 "factors": [pair["i"], pair["j"]],
-                "reason": f"Strong interaction between {pair['i']} and {pair['j']} detected (strength: {pair['strength']:.2f})"
+                "strength": pair["strength"],
+                "key": "recInteraction",
             })
 
     y = df[fit.target]
@@ -242,15 +243,15 @@ def recommend_experiments(fit, df: pd.DataFrame, interactions: dict) -> list[dic
                 "type": "transformation",
                 "factor": fit.target,
                 "method": "log" if skewness > 0 else "sqrt",
-                "reason": f"Residuals are {'right' if skewness > 0 else 'left'}-skewed (skewness: {skewness:.2f})"
+                "skewness": skewness,
+                "key": "recTransformationRightSkewed" if skewness > 0 else "recTransformationLeftSkewed",
             })
 
         if kurtosis > 1:
             recommendations.append({
                 "type": "transformation",
-                "factor": fit.target,
                 "method": "boxcox",
-                "reason": "Residuals have heavy tails (positive kurtosis)"
+                "key": "recTransformationHeavyTails",
             })
 
     abs_resid = np.abs(residuals)
@@ -263,13 +264,14 @@ def recommend_experiments(fit, df: pd.DataFrame, interactions: dict) -> list[dic
             "type": "range_expansion",
             "factor": factor,
             "direction": direction,
-            "reason": f"Residual variance increases with {factor} (correlation: {corr:.2f})"
+            "corr": float(corr),
+            "key": "recRangeExpansion",
         })
 
     if len(recommendations) < 2:
         recommendations.append({
             "type": "new_factor",
-            "reason": "Unexplained variance may be due to missing factors. Consider adding new input variables."
+            "key": "recNewFactor",
         })
 
     return recommendations

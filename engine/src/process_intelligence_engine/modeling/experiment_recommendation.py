@@ -33,24 +33,25 @@ def recommend_experiments(
                 "type": "interaction",
                 "priority": "high" if pair["strength"] > 0.5 else "medium",
                 "factors": [factor_a, factor_b],
+                "strength": pair["strength"],
                 "settings": [
                     {factor_a: center_a - range_a, factor_b: center_b - range_b},
                     {factor_a: center_a + range_a, factor_b: center_b + range_b},
                 ],
-                "reason": f"Strong {factor_a}×{factor_b} interaction (strength: {pair['strength']:.2f})",
+                "key": "recInteraction",
             })
 
     # 2. Check residual normality
     stats = validation.get("stats", {})
     skewness = stats.get("skewness", 0)
     if abs(skewness) > 1:
-        direction = "right" if skewness > 0 else "left"
         recommendations.append({
             "type": "transformation",
             "priority": "medium",
             "factors": [fit.target],
-            "settings": [],
-            "reason": f"Residuals are {direction}-skewed (skewness: {skewness:.2f}). Consider log/sqrt transformation.",
+            "method": "log" if skewness > 0 else "sqrt",
+            "skewness": skewness,
+            "key": "recTransformationRightSkewed" if skewness > 0 else "recTransformationLeftSkewed",
         })
 
     # 3. Check for heteroscedasticity (simplified)
@@ -69,8 +70,8 @@ def recommend_experiments(
                     "type": "range_expansion",
                     "priority": "medium",
                     "factors": [factor],
-                    "settings": [],
-                    "reason": f"Heteroscedasticity detected. Consider expanding {factor} range.",
+                    "corr": float(np.corrcoef(df[factor], residuals)[0, 1]) if len(residuals) > 1 else 0.0,
+                    "key": "recRangeExpansion",
                 })
 
     # 4. If few recommendations, suggest replicates
@@ -79,8 +80,7 @@ def recommend_experiments(
             "type": "replicate",
             "priority": "low",
             "factors": [],
-            "settings": [],
-            "reason": "Consider replicating center points to estimate pure error.",
+            "key": "recReplicate",
         })
 
     # 5. Suggest new factor exploration if needed
@@ -89,15 +89,15 @@ def recommend_experiments(
             "type": "new_factor",
             "priority": "low",
             "factors": [],
-            "settings": [],
-            "reason": "Unexplained variance may be due to missing factors. Consider adding new input variables.",
+            "key": "recNewFactor",
         })
 
-    # Generate summary
-    summary_parts = []
-    for rec in recommendations[:3]:
-        summary_parts.append(f"{rec['type']}: {rec['reason']}")
-    summary = " | ".join(summary_parts) if summary_parts else "Model analysis complete. No critical issues detected."
+    # Generate summary (use first rec's key for display)
+    if recommendations:
+        first = recommendations[0]
+        summary = f"{first['key']}: {first.get('factors', [])}"
+    else:
+        summary = "Model analysis complete. No critical issues detected."
 
     return {
         "recommendations": recommendations[:n_recommendations],
