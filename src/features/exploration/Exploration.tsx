@@ -468,6 +468,7 @@ export default function Exploration() {
                   time_column: timeColumn,
                   value_columns: [tsColumn],
                   window_sizes: windowSizes,
+                  ...filterArgs,
                 })
                 setTsFeatures(result)
               } catch (err) {
@@ -625,6 +626,7 @@ export default function Exploration() {
                   measurement_column: grrMeasurementCol,
                   part_column: grrPartCol,
                   operator_column: grrOperatorCol,
+                  ...filterArgs,
                 })
                 setGrrResult(result)
               } catch (err) {

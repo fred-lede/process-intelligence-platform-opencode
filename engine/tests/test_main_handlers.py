@@ -512,6 +512,62 @@ def test_handle_flow_graph_set_association_keys():
     assert again["association_keys"] == ["barcode", "batch_no"]
 
 
+def test_time_series_with_filter(tmp_path):
+    """Test time_series handler applies row filter."""
+    import numpy as np
+    from datetime import datetime, timedelta
+    rng = np.random.default_rng(42)
+    rows = ["time,x,category"]
+    for i in range(100):
+        t = datetime(2026, 1, 1) + timedelta(minutes=i)
+        cat = "A" if i < 50 else "B"
+        rows.append(f"{t.isoformat()},{rng.uniform():.6f},{cat}")
+    path = tmp_path / "ts.csv"
+    path.write_text("\n".join(rows), encoding="utf-8")
+    did = handle_request("data/import", {"file_path": str(path)})["dataset_id"]
+
+    # Without filter: should have 100 rows
+    result = handle_request("features/time_series", {
+        "dataset_id": did, "time_column": "time", "value_columns": ["x"],
+    })
+    assert result["n_rows"] == 100
+
+    # With filter: should have 50 rows
+    result2 = handle_request("features/time_series", {
+        "dataset_id": did, "time_column": "time", "value_columns": ["x"],
+        "filter_column": "category", "filter_value": "A",
+    })
+    assert result2["n_rows"] == 50
+
+
+def test_grr_with_filter(tmp_path):
+    """Test GRR handler applies row filter."""
+    import numpy as np
+    rng = np.random.default_rng(42)
+    rows = ["part,operator,measurement,category"]
+    for i in range(60):
+        rows.append(f"P{i%10},Op{i%3},{rng.uniform(9,11):.4f},{'A' if i<30 else 'B'}")
+    path = tmp_path / "grr.csv"
+    path.write_text("\n".join(rows), encoding="utf-8")
+    did = handle_request("data/import", {"file_path": str(path)})["dataset_id"]
+
+    result = handle_request("data/grr", {
+        "dataset_id": did, "measurement_column": "measurement",
+        "part_column": "part", "operator_column": "operator",
+    })
+    assert result["n_parts"] == 10
+    assert result["n_reps"] == 2
+
+    result2 = handle_request("data/grr", {
+        "dataset_id": did, "measurement_column": "measurement",
+        "part_column": "part", "operator_column": "operator",
+        "filter_column": "category", "filter_value": "A",
+    })
+    # 30 rows → 10 parts × 3 operators × 1 rep
+    assert result2["n_parts"] == 10
+    assert result2["n_reps"] == 1
+
+
 def test_handle_spec_suggest(tmp_path):
     """Test spec/suggest returns mean±3σ for a numeric column."""
     import numpy as np

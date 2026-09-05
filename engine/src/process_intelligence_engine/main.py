@@ -1659,6 +1659,7 @@ def _handle_time_series(params: dict) -> dict:
 
     if dataset_id:
         df = REGISTRY.get(dataset_id)
+        df = _apply_row_filter(df, params)
     else:
         columns = params["columns"]
         rows = params["rows"]
@@ -1779,6 +1780,7 @@ def _handle_grr(params: dict) -> dict:
 
     if dataset_id:
         df = REGISTRY.get(dataset_id)
+        df = _apply_row_filter(df, params)
     else:
         columns = params["columns"]
         rows = params["rows"]

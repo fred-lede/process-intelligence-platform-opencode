@@ -1041,6 +1041,8 @@ export interface TimeSeriesParams {
   time_column: string
   value_columns: string[]
   window_sizes?: number[]
+  filter_column?: string
+  filter_value?: string
 }
 
 export interface ConsecutiveExceedanceParams {
@@ -1189,6 +1191,8 @@ export interface GrrParams {
   measurement_column: string
   part_column: string
   operator_column: string
+  filter_column?: string
+  filter_value?: string
 }
 
 export async function analyzeGRR(params: GrrParams): Promise<GrrResult> {
