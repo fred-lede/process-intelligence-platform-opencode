@@ -1,6 +1,13 @@
 # TASK.md
 
 ## Completed
+### Task 4: SPC report enhancement — 收尾 docs + 最終驗證 + push
+- **Status**: DONE
+- **Docs**：PROGRESS.md 新增 2026-09-05 SPC 報告匯出增強條目；TASK.md 新增 Task 4 紀錄；README.md Phase 5 補 SPC 控制圖
+- **驗證**：`pytest tests/ -q` → **330 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.07s`
+- **Push**：待執行
+- **Files changed** — `PROGRESS.md`, `TASK.md`, `README.md`
+
 ### Task 3: SPC enhancement — 收尾 docs + 最終驗證 + push
 - **Status**: DONE
 - **Docs**：PROGRESS.md 新增 2026-09-05 SPC enhancement 條目；TASK.md 底部保留 Task 1/2 紀錄；README.md Phase 8 補 multi-column comparison + optimization suggestions
@@ -206,6 +213,20 @@
 
 <!-- NEXT_ITEM_ANCHOR -->
 
+### Task 3: Frontend + i18n for SPC report enhancement
+- **Status**: DONE
+- **實作**：`engine.ts` `ReportParams` 新增 `spc_columns?: string[]`（選用，預設由引擎自動取 output columns）；三語 `report` 區段各 +4 keys（spcSection/spcViolations/spcCapability/spcSuggestions）
+- **驗證**：三語 report parity `ok count: 14`（原 10 + 4）；`npx tsc --noEmit` EXIT 0
+- **Files changed** — `src/lib/engine.ts`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
+
+### Task 2: Engine — Auto SPC analysis in report generation
+- **Status**: DONE
+- **實作**：`main.py` `_handle_report_generate` 在 monte_carlo_result 之後加 SPC 分析 block（try/except 防禦），匯入 `compute_i_mr`/`compute_spc_suggestions`，依 `fields_list` output role 或 `num_cols[:1]` 決定分析欄位，每欄產出 chart_type/n_points/控制界限/violations/capability/suggestions/x_values/mr_values，傳入 `ReportData(spc_results=...)`
+- **測試**：`test_main_report.py` 新增 `test_report_generate_with_spc`（100 列 synthetic data，import CSV → report/generate，驗證 HTML 含 `SPC:` + `<svg>`）
+- **驗證**：`pytest tests/test_main_report.py -q` **7 passed**；`pytest tests/ -q` **330 passed, 1 skipped**（baseline 329 + 1 新）
+- **Commit**：`fbd5b3b feat(engine): auto SPC analysis in report generation`
+- **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_report.py`
+
 ### Task 4: Enhance assistantData context builders for SPC and Monte Carlo
 - **Status**: DONE
 - **實作**：`src/lib/assistantData.ts`
@@ -327,6 +348,13 @@
 - 5 IPC handler tests (basic, unknown model, with anomalies, no bounds, unknown dataset)
 - **品質檢查補強（commit pending）**：`quality.py` 新增 4 個原本只定義未執行的檢查——`invalid_format`（格式混用）、`unit_mixing`（單位混用）、`input_out_of_range`（超出工程範圍，支援 input_ranges 直用 + 中位數±8×MAD 統計啟發）、`missing_spec`（output 缺 LSL/USL）；`run_quality_checks` 新增可選參數 `input_columns`/`output_columns`/`input_ranges`/`spec`（不傳則略過或統計回退），`_handle_quality` 透傳。**前端**：DataImport 品質呼叫帶 input/output_columns（統計 OOR）；ProcessDefine「儲存並確認」後以確認的規格觸發「品質複查」（they trigger missing_spec 與用控制界限當 range 的 input_out_of_range），新增品質複查 Card+table+i18n 三語 9 keys。引擎測試 264 passed, 1 skipped；前端 tsc/build clean
 - **120s time-out 根因（bug fix）**：`fit_random_forest` 無界 `max_depth`/`min_samples_leaf` 使大資料集樹的 leaf 數 ≈ n_train → shap `TreeExplainer` 隨資料量爆炸（實測 50k 列 SHAP **>200s**）。該呼叫在引擎**單一執行緒**迴圈（main.py:1728）同步執行，封鎖後續請求；Rust `engine_call` 120s timeout（commands/mod.rs:41）→ 使用者期間按的 `features/time_series` 逾時報「engine call timed out after 120s」。修復：`fitters.py`/`validation.py` RF 加 `max_depth=10, min_samples_leaf=5`；`shap_explainer.py` `compute_shap` 加 `max_explain=1000` 封頂實際解釋列數（`_explain_sample`），`main.py` 透傳。驗證：50k 端到端 shap 5.55s（vs >200s）；引擎 267 passed, 1 skipped
+
+### Task 1: Engine — SPC report data model + SVG chart + HTML render
+- **Status**: DONE
+- **實作**：`models.py` 新增 `spc_results: list[dict]`；`charting.py` 新增 `control_chart_svg()`（I-MR 雙子圖 SVG，top=Individuals 帶 CL/UCL/LCL 虛線 + 違規點紅、bottom=MR chart 帶 CL/UCL + 紫線）；`html.py` 新增 `_render_spc()`（能力指數表 + 違規數 + 建議清單）+ 加入 sections 列表；`test_reporting.py` 新增 2 支測試
+- **驗證**：`pytest tests/test_reporting.py -q` → **11 passed, 1 skipped**（baseline 327 維持）
+- **Commit**：`b09aaa3 feat(engine): add SPC control chart to report generation`
+- **Files changed** — `engine/src/process_intelligence_engine/reporting/models.py`, `engine/src/process_intelligence_engine/reporting/charting.py`, `engine/src/process_intelligence_engine/reporting/html.py`, `engine/tests/test_reporting.py`
 - **時間序列「計算特徵」轉圈根因（bug fix, commit pending）**：重啟後仍轉圈、分布/趨勢正常→Rust 集成測試 `time_series_returns_fast_live_engine` 決定性複現 `Timeout(10s)`；reader 加 logging 發現 `ENGINE_READER_PARSE_FAIL len=8939 err=expected value column 414`。根因：時間序列 `lag`/`roll_std` 前幾列 warm-up 產生 **NaN**，Python `json.dumps` 預設輸出**非標準 `NaN`**，Rust `serde_json::from_str` 拒收→`continue` 靜默 drop response→`recv_timeout` 逾時→前端一直轉圈（分布/趨勢資料無 NaN 故正常）。修復：`main.py` `_plain_types`（所有 handler 序列化 choke-point）把非有限浮點（NaN/±Inf）→ `null`（Rust 接受）。新增 Rust 集成測試作為迴歸保護。驗證：Rust 2 passed（含新測試 0.75s）、引擎 267 passed 1 skipped、tsc + build clean
 - **時間序列結果表只顯示前 6 欄（commit pending）**：計算特徵後表格 `feature_columns.slice(0, 6)` 截斷，只剩 6/12 欄（`roll_mean_5/10`、`roll_std_5/10`、`drift` 等被隱藏）；user 對「分頁 page1/2 切換時欄位不變」感到困惑（其實跨分頁欄位本就不變，只是被截斷他以為有漏）。修復：移除 `slice(0,6)` 截斷，表格改為「時間欄 + 原始值欄 + 全部 feature_columns」，加 `scroll={{x:'max-content'}}` 橫向捲動與 `showSizeChanger:false`。驗證：tsc + build clean，user 確認表格顯示正常
 - **時間序列圖特徵虛線跑掉/水平（commit pending）**：特徵 trace 用 `x: nonNull.map((_, i) => i)` —— filter 掉溫風期 NaN 後把 x 重新從 0 編號，導致每個特徵系列的實際 row 位置錯位、與基底資料不對齊（Lag/Delta/roll 對不同數量的前導 NaN 做不同位移），跑掉成水平錯線。修復：preserve 原始 row index——`preview.map((r,i)=>({i,v:r[feat]})).filter(v!=null)`，用 `p.i` 當 x，讓所有特徵與基底共用同一 row-index 軸。驗證：tsc + build clean

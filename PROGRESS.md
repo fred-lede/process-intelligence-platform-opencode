@@ -652,6 +652,18 @@
   - 新增 4 支測試；全引擎 **326 passed, 1 skipped**（baseline 322 + 4）
   - **Files changed** — `engine/src/process_intelligence_engine/spc.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_spc.py`, `engine/tests/test_main_spc.py`
 
+## 2026-09-05 — SPC 報告匯出增強
+
+- [x] **引擎新增 `ReportData.spc_results` 欄位**（`reporting/models.py`）：`spc_results: list[dict]`
+- [x] **`charting.py` 新增 `control_chart_svg()`**：繪製 I-MR 控制圖 SVG（Individuals 圖帶 CL/UCL/LCL 虛線 + 違規點紅；MR 圖帶 CL/UCL + 紫線）
+- [x] **`html.py` 新增 `_render_spc()`**：渲染 SPC 章節（能力指數表格 + 控制圖 SVG + 違規統計 + 優化建議）
+- [x] **`_handle_report_generate` 自動對 output columns 跑 I-MR 分析**：匯入 `compute_i_mr`/`compute_spc_suggestions`，依 `fields_list` output role 決定分析欄位，每欄產出 chart_type/n_points/控制界限/violations/capability/suggestions
+- [x] **前端 `ReportParams` 加 `spc_columns?`**：選用，預設由引擎自動取 output columns
+- [x] **i18n +4 keys ×3 語**：`report.spcSection`/`spcViolations`/`spcCapability`/`spcSuggestions`
+- [x] **測試**：`test_main_report.py` 新增 `test_report_generate_with_spc`（100 列 synthetic data，HTML 含 `SPC:` + `<svg>`）
+- **驗證**：引擎 **330 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.07s`
+- **Commits**：`b09aaa3`（SVG + HTML）/ `fbd5b3b`（auto analysis）/ `fe66be0`（frontend + i18n）
+
 ## 2026-09-05 — SPC 批量分析 + 優化建議（multi-column + suggestions）
 
 - [x] **引擎（commits `9af8153` / `641bd13` / `19f6549`）**：`spc.py` 新增 `compute_spc_suggestions()`（檢查 Cpk<1.0 error / Cpk<1.33 warning、Rule 4 shift、Rule 5 trend、EWMA/CUSUM small shift）；`main.py` 新增 `_handle_spc_batch_analyze`（`spc/batch_analyze` IPC，支援 i-mr/ewma/cusum 多欄批量分析並附 suggestions）；3 個 fixup commit 修正 indentation / chart_type consistency / xbar error / EWMA test

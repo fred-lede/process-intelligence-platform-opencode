@@ -190,6 +190,7 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 ### Phase 5 — 報告產生 ✅
 
 - **HTML 報告**: 專案資訊、欄位角色、模型比較、交互作用、實驗建議
+- **SPC 控制圖**: I-MR 控制圖 SVG（Individuals + MR 雙子圖）、能力指數表格、違規統計、優化建議（自動對 output columns 分析）
 - **Excel 匯出**: 多 Sheet（專案資訊、欄位角色、模型比較、交互作用矩陣、實驗建議）
 - **PDF 匯出**: 使用 WeasyPrint 生成 PDF（需系統圖形庫）
 - **報告頁面**: 即時預覽 + 下載功能
