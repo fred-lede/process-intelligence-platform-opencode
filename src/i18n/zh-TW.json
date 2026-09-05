@@ -130,7 +130,7 @@
     "importSource": "匯入來源",
     "importDescription": "選擇 Excel (.xlsx, .xls) 或 CSV 檔案開始分析。",
     "downloadTemplate": "下載 CSV 範本",
-    "downloadTemplateDesc": "下載一份多輸入、單輸出的範例 CSV，欄位已涵蓋分佈、趨勢、時間序列與 GRR 分析。",
+    "downloadTemplateDesc": "下載包含 5 個輸入欄位 + 連續輸出 + 二元結果的範例 CSV，適用全部 8 種模型（DOE、隨機樹、XGBoost、LightGBM、殘差混合、Logistic、Weibull）。",
     "errNoOutput": "請先將至少一個欄位指定為輸出（品質指標），才能繼續。",
     "pickFile": "選擇檔案",
     "pickAnother": "重新選擇",

@@ -124,7 +124,7 @@
   },
   "dataImport": {
     "downloadTemplate": "Descargar plantilla CSV",
-    "downloadTemplateDesc": "Descarga un CSV de ejemplo con un diseño de múltiples entradas y una sola salida, listo para análisis de distribución, tendencia, serie de tiempo y GRR.",
+    "downloadTemplateDesc": "Descarga un CSV de ejemplo con 5 entradas + salida continua + resultado binario, compatible con los 8 modelos (DOE, RF, XGBoost, LightGBM, Híbrido, Logística, Weibull).",
     "errNoOutput": "Asigna al menos un campo como salida (métrica de calidad) antes de continuar.",
     "previewTitle": "Vista previa de datos",
     "stepPreview": "Vista previa",
