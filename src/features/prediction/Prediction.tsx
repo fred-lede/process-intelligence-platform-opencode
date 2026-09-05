@@ -305,16 +305,47 @@ export default function Prediction() {
           <Col flex="0 0 260px">
             <Card title={t('prediction.predictedOutput')} size="small" style={{ height: '100%' }}>
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Statistic
-                  title="Predicted Value"
-                  value={predicted ?? 0}
-                  precision={2}
-                  loading={loading}
-                />
-                {ngStatus && (
-                  <Tag color={ngStatus.color} style={{ fontSize: 14, padding: '4px 12px' }}>
-                    {ngStatus.text}
-                  </Tag>
+                {modelInfo?.model_type === 'logistic_regression' ? (
+                  <>
+                    <Statistic
+                      title={t('prediction.predictedProbability')}
+                      value={(predicted ?? 0) * 100}
+                      precision={1}
+                      suffix="%"
+                      loading={loading}
+                    />
+                    <Tag color={(predicted ?? 0) > 0.5 ? 'red' : 'green'} style={{ fontSize: 14, padding: '4px 12px' }}>
+                      {t((predicted ?? 0) > 0.5 ? 'prediction.ng' : 'prediction.ok')}
+                      {' · '}
+                      {(predicted ?? 0) > 0.5 ? t('prediction.highRisk') : t('prediction.lowRisk')}
+                    </Tag>
+                  </>
+                ) : modelInfo?.model_type === 'weibull_regression' ? (
+                  <>
+                    <Statistic
+                      title={t('prediction.predictedMeanTTF')}
+                      value={predicted ?? 0}
+                      precision={2}
+                      loading={loading}
+                    />
+                    <Tag color={(predicted ?? 0) > 1 ? 'green' : 'orange'} style={{ fontSize: 12, padding: '2px 8px' }}>
+                      {(predicted ?? 0) > 1 ? t('prediction.longLife') : t('prediction.shortLife')}
+                    </Tag>
+                  </>
+                ) : (
+                  <>
+                    <Statistic
+                      title={t('prediction.predictedOutput')}
+                      value={predicted ?? 0}
+                      precision={2}
+                      loading={loading}
+                    />
+                    {ngStatus && (
+                      <Tag color={ngStatus.color} style={{ fontSize: 14, padding: '4px 12px' }}>
+                        {ngStatus.text}
+                      </Tag>
+                    )}
+                  </>
                 )}
                 <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
                   <Button
