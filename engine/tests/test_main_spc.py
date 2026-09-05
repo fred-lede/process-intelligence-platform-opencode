@@ -128,6 +128,17 @@ def test_spc_analyze_with_filter(tmp_path):
     assert abs(result["subgroup_stats"]["x_mean"] - 50.0) < 1.5
 
 
+def test_spc_analyze_with_filter_missing_value(tmp_path):
+    did = _import_csv_for_spc_filter(tmp_path)
+    with pytest.raises(ValueError):
+        handle_request("spc/analyze", {
+            "dataset_id": did,
+            "column": "output",
+            "chart_type": "i-mr",
+            "filter_column": "work_order",
+        })
+
+
 def test_spc_analyze_with_filter_unknown_column(tmp_path):
     did = _import_csv_for_spc_filter(tmp_path)
     with pytest.raises(KeyError):
