@@ -146,6 +146,7 @@ class ProjectManifest:
     experiments: list[dict[str, Any]] = field(default_factory=list)
     reports: list[dict[str, Any]] = field(default_factory=list)
     settings: dict[str, Any] = field(default_factory=dict)
+    association_keys: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items()}
@@ -445,6 +446,13 @@ class ProjectEngine:
         self._save()
         return True
 
+    def set_association_keys(self, keys: list[str]) -> dict[str, Any]:
+        self._ensure_project()
+        manifest = self._load()
+        manifest.association_keys = [str(k).strip() for k in keys if str(k).strip()]
+        self._save()
+        return {"association_keys": list(manifest.association_keys)}
+
     # -- dataset registration (on-disk) -------------------------------------
 
     def register_dataset(self, source_path: str, dataset_id: str | None = None,
@@ -519,7 +527,7 @@ class ProjectEngine:
                         "to": target,
                         "condition": edge.get("condition", ""),
                     })
-        return {"nodes": nodes, "edges": edges}
+        return {"nodes": nodes, "edges": edges, "association_keys": list(manifest.association_keys)}
 
     def validate_flow_graph(self) -> dict[str, Any]:
         self._ensure_project()

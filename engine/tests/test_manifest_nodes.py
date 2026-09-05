@@ -49,3 +49,26 @@ def test_node_data_mapping_fields_update():
     assert updated["in_control_parameters"] == ["temp", "speed"]
     assert updated["out_quality_outputs"] == ["width", "height"]
     assert updated["machine_mapping"] == ["M1"]
+
+def test_manifest_association_keys_default_empty():
+    eng = _engine()
+    g = eng.get_flow_graph()
+    assert "association_keys" in g
+    assert g["association_keys"] == []
+
+def test_manifest_set_association_keys_persists():
+    eng = _engine()
+    eng.set_association_keys(["barcode", "serial_no", "batch_no"])
+    g = eng.get_flow_graph()
+    assert g["association_keys"] == ["barcode", "serial_no", "batch_no"]
+
+def test_manifest_association_keys_survive_reload():
+    import json
+    eng = _engine()
+    eng.set_association_keys(["work_order"])
+    # 重載 manifest 物件
+    from process_intelligence_engine.project.manifest import ProjectManifest
+    with open(eng._manifest_path, "r", encoding="utf-8") as f:
+        d = json.load(f)
+    m2 = ProjectManifest.from_dict(d)
+    assert m2.association_keys == ["work_order"]
