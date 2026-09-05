@@ -696,7 +696,7 @@ export default function ModelCenter() {
                         : rec.type === 'range_expansion'
                         ? 'modelCenter.recRangeExpansion'
                         : 'modelCenter.recNewFactor',
-                        { factorA: rec.factors?.[0] ?? '', factorB: rec.factors?.[1] ?? '', strength: rec.strength?.toFixed(2) ?? '', skewness: rec.skewness?.toFixed(2) ?? '', corr: rec.corr?.toFixed(2) ?? '' }
+                        { factorA: (rec as any).factors?.[0] ?? '', factorB: (rec as any).factors?.[1] ?? '', strength: (rec as any).strength?.toFixed(2) ?? '', skewness: (rec as any).skewness?.toFixed(2) ?? '', corr: (rec as any).corr?.toFixed(2) ?? '' }
                       )}
                       showIcon
                     />
