@@ -192,12 +192,12 @@
 
 <!-- NEXT_ITEM_ANCHOR -->
 
-### 2.0 AI 模型擴充 — 收尾 docs + 最終驗證 + push（commit pending）
+### 2.0 AI 模型擴充 — 收尾 docs + 最終驗證 + push
 - **Status**: DONE
-- **引擎**：`_auto_select_features` helper + RF hyperparameter exposure（`cb49b49`）；XGBoost/LightGBM fitters（`2073d53`）；empty-input guard（`c94e11e`）；SHAP 支援 XGBoost/LightGBM（`7404acf`）
-- **前端**：Tree Model Settings 卡片 + hyperparameter state + i18n 8 keys × 3 語（`f0d4979` / `2b71112`）
-- **驗證**：引擎 **316 passed, 1 skipped**（baseline 304 + 12 新）；`npx tsc --noEmit` clean；`npm run build` 成功
-- **Commits**：`cb49b49` / `2073d53` / `c94e11e` / `f0d4979` / `2b71112` / `7404acf`
+- **Commit**: `95284aa`
+- **引擎驗證**：316 passed, 1 skipped；tsc clean；build ✓ in 10.59s
+- **推送**：`2b71112..95284aa main -> main` ✅
+- **Files changed** — `PROGRESS.md`, `TASK.md`, `README.md`
 
 ### Task 4 — SHAP support for XGBoost and LightGBM（commit 7404acf）
 - **Status**: DONE
