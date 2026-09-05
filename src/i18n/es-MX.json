@@ -609,7 +609,13 @@
     "selectColumns": "Seleccionar columnas a comparar",
     "suggestions": "Sugerencias de Optimización",
     "noSuggestions": "El proceso es estable, no se necesita atención especial",
-    "column": "Columna"
+    "column": "Columna",
+    "outliers": "Valores atípicos",
+    "changePoints": "Puntos de cambio",
+    "outlierIQR": "Atípicos IQR",
+    "outlierZscore": "Atípicos Z-score",
+    "detectOutliers": "Detectar atípicos",
+    "detectChangePoints": "Detectar cambios"
   },
   "timeSeries": {
     "title": "Características de Serie de Tiempo",

@@ -607,7 +607,13 @@
     "selectColumns": "Select columns to compare",
     "suggestions": "Optimization Suggestions",
     "noSuggestions": "Process is stable, no special attention needed",
-    "column": "Column"
+    "column": "Column",
+    "outliers": "Outliers",
+    "changePoints": "Change Points",
+    "outlierIQR": "IQR Outliers",
+    "outlierZscore": "Z-score Outliers",
+    "detectOutliers": "Detect Outliers",
+    "detectChangePoints": "Detect Change Points"
   },
   "timeSeries": {
     "title": "Time Series Features",

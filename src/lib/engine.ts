@@ -737,6 +737,9 @@ export interface SPCAnalysisResult {
   lcl?: number
   cl?: number
   suggestions?: SPCSuggestion[]
+  outlier_indices?: number[]
+  change_points?: number[]
+  outlier_stats?: Record<string, number>
 }
 
 export interface SPCCapabilityResult {

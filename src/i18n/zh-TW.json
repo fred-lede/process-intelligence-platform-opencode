@@ -607,7 +607,13 @@
     "selectColumns": "選擇要比較的欄位",
     "suggestions": "優化建議",
     "noSuggestions": "製程穩定，無需特別注意",
-    "column": "欄位"
+    "column": "欄位",
+    "outliers": "離群值",
+    "changePoints": "改變點",
+    "outlierIQR": "IQR 離群值",
+    "outlierZscore": "Z-score 離群值",
+    "detectOutliers": "偵測離群值",
+    "detectChangePoints": "偵測改變點"
   },
   "timeSeries": {
     "title": "時間序列特徵",

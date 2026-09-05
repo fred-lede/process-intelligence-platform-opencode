@@ -254,6 +254,32 @@ export default function SPC() {
         data.push({ x: violX, y: violY, mode: 'markers', name: 'Violations',
           marker: { color: '#ff4d4f', size: 10, symbol: 'x' }, showlegend: false })
       }
+      // Outlier markers (blue circles)
+      if (res.outlier_indices && res.outlier_indices.length > 0) {
+        const ox = res.outlier_indices
+        const oy = res.chart_type === 'i-mr'
+          ? (res.x_values ?? []).filter((_, i) => ox.includes(i))
+          : (res.xbar_values ?? []).filter((_, i) => ox.includes(i))
+        data.push({
+          x: ox, y: oy, mode: 'markers',
+          name: t('spc.outliers'),
+          marker: { color: '#1677ff', size: 10, symbol: 'circle' },
+          showlegend: true,
+        })
+      }
+      // Change point markers (green triangles)
+      if (res.change_points && res.change_points.length > 0) {
+        const cx = res.change_points
+        const cy = res.chart_type === 'i-mr'
+          ? (res.x_values ?? []).filter((_, i) => cx.includes(i))
+          : (res.xbar_values ?? []).filter((_, i) => cx.includes(i))
+        data.push({
+          x: cx, y: cy, mode: 'markers',
+          name: t('spc.changePoints'),
+          marker: { color: '#52c41a', size: 12, symbol: 'triangle-up' },
+          showlegend: true,
+        })
+      }
       if (res.mr_values) {
         const mrX = res.mr_values.map((_, i) => i + 1)
         data.push({
@@ -357,6 +383,32 @@ export default function SPC() {
       if (violX.length > 0) {
         data.push({ x: violX, y: violY, mode: 'markers', name: 'Violations',
           marker: { color: '#ff4d4f', size: 10, symbol: 'x' }, showlegend: false })
+      }
+      // Outlier markers (blue circles)
+      if (res.outlier_indices && res.outlier_indices.length > 0) {
+        const ox = res.outlier_indices
+        const oy = res.chart_type === 'i-mr'
+          ? (res.x_values ?? []).filter((_, i) => ox.includes(i))
+          : (res.xbar_values ?? []).filter((_, i) => ox.includes(i))
+        data.push({
+          x: ox, y: oy, mode: 'markers',
+          name: t('spc.outliers'),
+          marker: { color: '#1677ff', size: 10, symbol: 'circle' },
+          showlegend: true,
+        })
+      }
+      // Change point markers (green triangles)
+      if (res.change_points && res.change_points.length > 0) {
+        const cx = res.change_points
+        const cy = res.chart_type === 'i-mr'
+          ? (res.x_values ?? []).filter((_, i) => cx.includes(i))
+          : (res.xbar_values ?? []).filter((_, i) => cx.includes(i))
+        data.push({
+          x: cx, y: cy, mode: 'markers',
+          name: t('spc.changePoints'),
+          marker: { color: '#52c41a', size: 12, symbol: 'triangle-up' },
+          showlegend: true,
+        })
       }
       if (res.chart_type === 'xbar-r' && res.r_values) {
         const rX = res.r_values.map((_, i) => i)
