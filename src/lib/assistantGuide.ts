@@ -97,10 +97,21 @@ const TAB_GUIDES: Record<AppTab, TabGuide> = {
   exploration: {
     name: 'Exploration',
     body:
-      `This page has three tabs. Distribution: histograms/percentiles of each numeric column and interpretation of shape/spread/outliers. ` +
-      `Trend: values over time/order to spot drift or shifts. Time Series: lag, rolling window, drift, and sustained-exceedance features ` +
-      `that summarize how columns evolve over time. Guide the user to pick a tab, choose a column, and interpret what each chart reveals ` +
-      `about process stability and normality. There is also a GRR (Gage R&R) measurement-system analysis feature for evaluating measurement variation.`,
+      `This page has four tabs for exploratory data analysis. ` +
+      `DISTRIBUTION TAB: Shows histograms and percentiles (P10/P50/P90) for each numeric column. ` +
+      `Interpret shape (normal, skewed left/right), spread (std vs mean), and outliers. ` +
+      `Normal distribution: symmetric bell curve, mean ≈ median. Skewed: tail pulls mean away from median. ` +
+      `Trend TAB: Plots values over time/order to detect drift (gradual shift) or step shifts (abrupt change). ` +
+      `Drift: values slowly move in one direction over time. Shift: sudden jump to new level. ` +
+      `TIME SERIES TAB: Computes lag features (correlation with past values), rolling statistics (mean/std over windows), ` +
+      `drift (trend slope), and sustained-exceedance counts (how long value stays beyond spec). ` +
+      `Lag>0.5: strong autocorrelation (past predicts future). Roll_std high: volatile process. ` +
+      `GRR TAB: Gage Repeatability & Reproducibility analysis using AIEM method. ` +
+      `EV (Equipment Variation) = repeatability (same operator, same part). ` +
+      `AV (Appraiser Variation) = reproducibility (different operators). ` +
+      `GRR = sqrt(EV² + AV²). %GRR = GRR / Total Variation × 100%. ` +
+      `Interpretation: <10% excellent, 10-30% marginal (may be acceptable), >30% poor (needs improvement). ` +
+      `Use this guide: pick a tab, choose a column, and interpret the chart in context of process stability.`,
   },
   modelCenter: {
     name: 'Model Center',
@@ -132,10 +143,22 @@ const TAB_GUIDES: Record<AppTab, TabGuide> = {
   monteCarlo: {
     name: 'Monte Carlo',
     body:
-      `This page runs anomaly risk simulation. It samples process inputs from chosen distributions (optionally with anomalies and copula ` +
-      `correlation between inputs), predicts the output via the fitted model, and computes NG (non-conforming) probability plus percentiles. ` +
-      `Results include a histogram of predicted outputs, a CDF, an NG probability card, and an anomaly-risk ranking. Guide the user to ` +
-      `set the sampling inputs, spec limits, whether to inject anomalies, and how to read the NG probability and risk ranking.`,
+      `This page runs anomaly risk simulation to predict output distribution under uncertainty. ` +
+      `HOW SIMULATION WORKS: (1) Samples process inputs from their fitted distributions (normal/gamma/lognormal). ` +
+      `(2) Optionally injects anomalies (shifts/spreads) at specified rates. (3) Predicts output via the fitted model ` +
+      `(linear/quadratic/RF/weibull). (4) Computes NG (non-conforming) probability = fraction of samples outside spec limits. ` +
+      `NG PROBABILITY INTERPRETATION: ` +
+      `<1% (green): excellent capability, process well within spec. ` +
+      `1-5% (yellow): adequate but watch — may need monitoring. ` +
+      `>5% (red): high risk, process likely produces defects. ` +
+      `Percentile Guide: P10 = 10th percentile (10% below this), P50 = median, P90 = 90th percentile (10% above this). ` +
+      `Use P10/P90 to estimate the natural process spread under variation. ` +
+      `Predicted Capability: Pp and Ppk computed from simulated output distribution using overall σ. ` +
+      `Pp ≥ 1.67 excellent, ≥ 1.33 adequate, < 1.33 needs improvement (same thresholds as Cp/Cpk). ` +
+      `Anomaly Risk Ranking: lists input factors sorted by their contribution to NG probability. ` +
+      `Higher-ranked factors are the biggest contributors to defects — target these for process improvement. ` +
+      `Use this guide: set sampling inputs and spec limits, choose anomaly injection if needed, ` +
+      `then interpret NG probability color and risk ranking to prioritize improvements.`,
   },
   copula: {
     name: 'Copula Correlation',
@@ -174,10 +197,31 @@ const TAB_GUIDES: Record<AppTab, TabGuide> = {
   spc: {
     name: 'SPC Control',
     body:
-      `This page performs Statistical Process Control. It builds control charts — I-MR, X-bar+R, X-bar+S — and runs the ` +
-      `Western Electric 7 rules to flag out-of-control signals (points beyond control limits, runs, trends). It also reports ` +
-      `process capability indices Cp, Cpk, Pp, Ppk. Guide the user to pick the chart type and column(s), then interpret ` +
-      `control-limit violations and capability values (e.g., Cpk below about 1.33 signals the process needs attention).`,
+      `This page performs Statistical Process Control with control charts and capability analysis. ` +
+      `CHART TYPE SELECTION: ` +
+      `- I-MR (Individuals + Moving Range): for single measurements per subgroup (subgroup_size=1). ` +
+      `- X-bar + R: for subgroups with 2-9 observations. R is sensitive to outliers. ` +
+      `- X-bar + S: for subgroups with 10+ observations. S is more efficient for larger subgroups. ` +
+      `- EWMA (Exponentially Weighted Moving Average): detects small sustained shifts (λ typically 0.05-0.2). ` +
+      `- CUSUM (Cumulative Sum): detects small shifts faster than EWMA (k typically 0.5, H typically 4-5). ` +
+      `CAPABILITY INDICES (Cp, Cpk, Pp, Ppk): ` +
+      `Cp = (USL - LSL) / (6 × σ_within). Measures potential capability (only spread, not centering). ` +
+      `Cpk = min((USL - μ) / (3×σ_within), (μ - LSL) / (3×σ_within)). Measures actual capability (spread + centering). ` +
+      `Pp/Ppk use overall σ instead of within σ (long-term vs short-term). ` +
+      `Thresholds: ≥ 1.67 excellent, ≥ 1.33 adequate (industry standard), < 1.33 needs improvement, < 1.0 poor. ` +
+      `If Cpk << Cp, process is off-center — adjust target mean. If Cpk ≈ Cp, process is centered but too variable. ` +
+      `WESTERN ELECTRIC 7 RULES (out-of-control signals): ` +
+      `Rule 1: One point beyond 3σ control limits → immediate investigation. ` +
+      `Rule 2: 2 of 3 consecutive points beyond 2σ (same side) → shift may be occurring. ` +
+      `Rule 3: 4 of 5 consecutive points beyond 1σ (same side) → sustained shift. ` +
+      `Rule 4: 8 consecutive points on same side of center line → process mean has shifted. ` +
+      `Rule 5: 6 consecutive points steadily increasing or decreasing → trend detected. ` +
+      `Rule 6: 14 consecutive points alternating up/down → systematic variation (over-control). ` +
+      `Rule 7: 15 consecutive points within 1σ (both sides) → stratification or reduced variation (check measurement). ` +
+      `OPTIMIZATION SUGGESTIONS: Engine computes suggestions based on Cpk (error if <1.0, warning if <1.33), ` +
+      `Rule 4/5 violations (shift_detected/trend_detected), and EWMA/CUSUM small-shift warnings. ` +
+      `Use this guide: select chart type and column, interpret violations by rule number, ` +
+      `check capability indices against thresholds, and follow optimization suggestions to prioritize actions.`,
   },
   settings: {
     name: 'System Settings',
