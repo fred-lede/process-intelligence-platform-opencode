@@ -146,6 +146,9 @@ export function buildSpcContext(result: SPCAnalysisResult | null): string {
       `Capability: Cp=${num(cap.cp)}, Cpk=${num(cap.cpk)}, Pp=${num(cap.pp)}, Ppk=${num(cap.ppk)}, mean=${num(cap.mean)}.`,
     )
   }
+  if (result.suggestions && result.suggestions.length > 0) {
+    lines.push(`Suggestions: ${result.suggestions.map(s => s.message).join('; ')}.`)
+  }
   if (cl.i_ucl !== null || cl.i_center !== null) {
     lines.push(
       `Control limits (I-chart, if present): center=${num(cl.i_center)}, UCL=${num(cl.i_ucl)}, LCL=${num(cl.i_lcl)}.`,

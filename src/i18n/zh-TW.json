@@ -590,7 +590,14 @@
     "cusumViolations": "CUSUM 違規",
     "ewmaZValue": "EWMA Z(t)",
     "cusumCP": "CUSUM C⁺",
-    "cusumCM": "CUSUM C⁻"
+    "cusumCM": "CUSUM C⁻",
+    "batchAnalyze": "批次分析",
+    "singleAnalysis": "單欄分析",
+    "compareColumns": "比較欄位",
+    "selectColumns": "選擇要比較的欄位",
+    "suggestions": "優化建議",
+    "noSuggestions": "製程穩定，無需特別注意",
+    "column": "欄位"
   },
   "timeSeries": {
     "title": "時間序列特徵",

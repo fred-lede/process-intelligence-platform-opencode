@@ -672,6 +672,17 @@ export interface SPCViolation {
   description: string
 }
 
+export interface SPCSuggestion {
+  severity: 'error' | 'warning' | 'info'
+  type: string
+  message: string
+}
+
+export interface SPCBatchResult {
+  results: Record<string, SPCAnalysisResult>
+  columns: string[]
+}
+
 export interface SPCCtrlLimits {
   chart_type: string
   i_center?: number
@@ -717,6 +728,7 @@ export interface SPCAnalysisResult {
   ucl?: number
   lcl?: number
   cl?: number
+  suggestions?: SPCSuggestion[]
 }
 
 export interface SPCCapabilityResult {
@@ -764,6 +776,21 @@ export async function getSPCCapability(params: {
   subgroup_size?: number
 }): Promise<SPCCapabilityResult> {
   return engineCall<SPCCapabilityResult>('spc/capability', params)
+}
+
+export async function analyzeSPCBatch(params: {
+  dataset_id: string
+  columns: string[]
+  chart_type?: string
+  subgroup_size?: number
+  lsl?: number
+  usl?: number
+  ewma_lambda?: number
+  ewma_L?: number
+  cusum_k?: number
+  cusum_H?: number
+}): Promise<SPCBatchResult> {
+  return engineCall<SPCBatchResult>('spc/batch_analyze', params as unknown as Record<string, unknown>)
 }
 
 // --- Phase 9: Monte Carlo Simulation ----------------------------------------

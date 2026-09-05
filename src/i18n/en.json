@@ -590,7 +590,14 @@
     "cusumViolations": "CUSUM Violations",
     "ewmaZValue": "EWMA Z(t)",
     "cusumCP": "CUSUM C⁺",
-    "cusumCM": "CUSUM C⁻"
+    "cusumCM": "CUSUM C⁻",
+    "batchAnalyze": "Batch Analysis",
+    "singleAnalysis": "Single Analysis",
+    "compareColumns": "Compare Columns",
+    "selectColumns": "Select columns to compare",
+    "suggestions": "Optimization Suggestions",
+    "noSuggestions": "Process is stable, no special attention needed",
+    "column": "Column"
   },
   "timeSeries": {
     "title": "Time Series Features",

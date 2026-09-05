@@ -5,7 +5,7 @@ import Plot from 'react-plotly.js'
 import NodeSourceFilter from '../../components/NodeSourceFilter'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { analyzeSPC, getFlowGraph, type SPCAnalysisResult } from '../../lib/engine'
+import { analyzeSPC, analyzeSPCBatch, getFlowGraph, type SPCAnalysisResult, type SPCBatchResult } from '../../lib/engine'
 import {
   consumeNodeContext,
   dataSourceLoaded,
@@ -87,6 +87,9 @@ export default function SPC() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [numericColumns, setNumericColumns] = useState<string[]>([])
+  const [batchMode, setBatchMode] = useState(false)
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([])
+  const [batchResult, setBatchResult] = useState<SPCBatchResult | null>(null)
 
   useEffect(() => {
     if (!importResult) return
@@ -100,6 +103,16 @@ export default function SPC() {
   useEffect(() => {
     setContext('spc', buildSpcContext(result))
   }, [result, setContext])
+
+  useEffect(() => {
+    if (!batchResult) return
+    const lines = Object.entries(batchResult.results)
+      .map(([, res]) => buildSpcContext(res))
+      .filter(Boolean)
+    if (lines.length) {
+      setContext('spc', lines.join('\n'))
+    }
+  }, [batchResult, setContext])
 
   const handleAnalyze = async () => {
     if (!importResult || !column) return
@@ -129,6 +142,31 @@ export default function SPC() {
     }
   }
 
+  const handleBatchAnalyze = async () => {
+    if (!importResult || selectedColumns.length === 0) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await analyzeSPCBatch({
+        dataset_id: importResult.dataset_id,
+        columns: selectedColumns,
+        chart_type: chartType,
+        subgroup_size: chartType === 'i-mr' ? 1 : subgroupSize,
+        lsl: spec?.lsl ?? undefined,
+        usl: spec?.usl ?? undefined,
+        ewma_lambda: chartType === 'ewma' ? ewmaLambda : undefined,
+        ewma_L: chartType === 'ewma' ? ewmaL : undefined,
+        cusum_k: chartType === 'cusum' ? cusumK : undefined,
+        cusum_H: chartType === 'cusum' ? cusumH : undefined,
+      })
+      setBatchResult(res)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const capacityColor = (val: number | null) => {
     if (val === null) return 'default'
     if (val >= 1.33) return 'success'
@@ -143,15 +181,14 @@ export default function SPC() {
     return t('spc.capacityPoor')
   }
 
-  const buildPlotData = () => {
-    if (!result) return []
-    const cl = result.control_limits
+  const buildPlotData = (res: SPCAnalysisResult) => {
+    const cl = res.control_limits
     const data: any[] = []
 
     const addSpecLines = (ref = false) => {
-      const xs = (result.chart_type === 'i-mr'
-        ? result.x_values?.map((_, i) => i)
-        : result.xbar_values?.map((_, i) => i)) ?? []
+      const xs = (res.chart_type === 'i-mr'
+        ? res.x_values?.map((_, i) => i)
+        : res.xbar_values?.map((_, i) => i)) ?? []
       if (xs.length === 0) return
       const push = (v: number | null | undefined, name: string) => {
         if (v == null) return
@@ -165,10 +202,10 @@ export default function SPC() {
       push(spec?.usl ?? null, 'USL')
     }
 
-    if (result.chart_type === 'i-mr') {
-      const x = result.x_values?.map((_, i) => i) ?? []
+    if (res.chart_type === 'i-mr') {
+      const x = res.x_values?.map((_, i) => i) ?? []
       data.push({
-        x, y: result.x_values ?? [], mode: 'lines+markers',
+        x, y: res.x_values ?? [], mode: 'lines+markers',
         name: 'Individuals', line: { color: '#1677ff' }, marker: { size: 6 },
       })
       if (cl.i_ucl != null && x.length > 0) {
@@ -184,16 +221,16 @@ export default function SPC() {
           mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' } })
       }
       addSpecLines()
-      const violX = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
-      const violY = (result.violations ?? []).map(v => result.x_values?.[v.point_idx] ?? 0)
+      const violX = (res.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
+      const violY = (res.violations ?? []).map(v => res.x_values?.[v.point_idx] ?? 0)
       if (violX.length > 0) {
         data.push({ x: violX, y: violY, mode: 'markers', name: 'Violations',
           marker: { color: '#ff4d4f', size: 10, symbol: 'x' }, showlegend: false })
       }
-      if (result.mr_values) {
-        const mrX = result.mr_values.map((_, i) => i + 1)
+      if (res.mr_values) {
+        const mrX = res.mr_values.map((_, i) => i + 1)
         data.push({
-          x: mrX, y: result.mr_values, mode: 'lines+markers', name: 'MR',
+          x: mrX, y: res.mr_values, mode: 'lines+markers', name: 'MR',
           line: { color: '#722ed1' }, marker: { size: 6 },
           yaxis: 'y2',
         })
@@ -206,46 +243,46 @@ export default function SPC() {
             mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' } })
         }
       }
-    } else if (result.chart_type === 'ewma') {
-      const z = result.z_values ?? []
-      const x = result.x_values?.map((_, i) => i) ?? []
+    } else if (res.chart_type === 'ewma') {
+      const z = res.z_values ?? []
+      const x = res.x_values?.map((_, i) => i) ?? []
       data.push({
         x, y: z, mode: 'lines+markers',
         name: t('spc.ewmaZValue'), line: { color: '#1677ff' }, marker: { size: 4 },
       })
-      if (result.ucl != null && x.length > 0) {
+      if (res.ucl != null && x.length > 0) {
         data.push({
-          x: [x[0], x[x.length - 1]], y: [result.ucl, result.ucl],
+          x: [x[0], x[x.length - 1]], y: [res.ucl, res.ucl],
           mode: 'lines', name: 'UCL',
           line: { color: '#fa8c16', dash: 'dash' }, showlegend: false,
         })
       }
-      if (result.lcl != null && x.length > 0) {
+      if (res.lcl != null && x.length > 0) {
         data.push({
-          x: [x[0], x[x.length - 1]], y: [result.lcl, result.lcl],
+          x: [x[0], x[x.length - 1]], y: [res.lcl, res.lcl],
           mode: 'lines', name: 'LCL',
           line: { color: '#fa8c16', dash: 'dash' }, showlegend: false,
         })
       }
-      if (result.cl != null && x.length > 0) {
+      if (res.cl != null && x.length > 0) {
         data.push({
-          x: [x[0], x[x.length - 1]], y: [result.cl, result.cl],
+          x: [x[0], x[x.length - 1]], y: [res.cl, res.cl],
           mode: 'lines', name: 'CL',
           line: { color: '#52c41a', dash: 'dash' }, showlegend: false,
         })
       }
-      const violZ = (result.violations ?? []).map(v => z[v.point_idx] ?? 0)
-      const violX = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
+      const violZ = (res.violations ?? []).map(v => z[v.point_idx] ?? 0)
+      const violX = (res.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
       if (violZ.length > 0) {
         data.push({
           x: violX, y: violZ, mode: 'markers', name: t('spc.ewmaViolations'),
           marker: { color: '#ff4d4f', size: 8, symbol: 'x' }, showlegend: false,
         })
       }
-    } else if (result.chart_type === 'cusum') {
-      const c_plus = result.c_plus ?? []
-      const c_minus = result.c_minus ?? []
-      const x = result.x_values?.map((_, i) => i) ?? []
+    } else if (res.chart_type === 'cusum') {
+      const c_plus = res.c_plus ?? []
+      const c_minus = res.c_minus ?? []
+      const x = res.x_values?.map((_, i) => i) ?? []
       data.push({
         x, y: c_plus, mode: 'lines+markers',
         name: t('spc.cusumCP'), line: { color: '#1677ff' }, marker: { size: 4 },
@@ -254,25 +291,25 @@ export default function SPC() {
         x, y: c_minus, mode: 'lines+markers',
         name: t('spc.cusumCM'), line: { color: '#722ed1' }, marker: { size: 4 },
       })
-      if (result.cusum_H != null && x.length > 0) {
+      if (res.cusum_H != null && x.length > 0) {
         data.push({
-          x: [x[0], x[x.length - 1]], y: [result.cusum_H, result.cusum_H],
+          x: [x[0], x[x.length - 1]], y: [res.cusum_H, res.cusum_H],
           mode: 'lines', name: 'H (limit)',
           line: { color: '#fa8c16', dash: 'dash' }, showlegend: false,
         })
       }
-      const violX_cusum = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
+      const violX_cusum = (res.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
       if (violX_cusum.length > 0) {
         data.push({
-          x: violX_cusum, y: violX_cusum.map(() => result.cusum_H ?? 5),
+          x: violX_cusum, y: violX_cusum.map(() => res.cusum_H ?? 5),
           mode: 'markers', name: t('spc.cusumViolations'),
           marker: { color: '#ff4d4f', size: 8, symbol: 'x' }, showlegend: false,
         })
       }
     } else {
-      const x = result.xbar_values?.map((_, i) => i) ?? []
+      const x = res.xbar_values?.map((_, i) => i) ?? []
       data.push({
-        x, y: result.xbar_values ?? [], mode: 'lines+markers',
+        x, y: res.xbar_values ?? [], mode: 'lines+markers',
         name: 'X-bar', line: { color: '#1677ff' }, marker: { size: 6 },
       })
       if (cl.x_ucl != null && x.length > 0) {
@@ -288,16 +325,16 @@ export default function SPC() {
           mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' } })
       }
       addSpecLines(true)
-      const violX = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
-      const violY = (result.violations ?? []).map(v => result.xbar_values?.[v.point_idx] ?? 0)
+      const violX = (res.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
+      const violY = (res.violations ?? []).map(v => res.xbar_values?.[v.point_idx] ?? 0)
       if (violX.length > 0) {
         data.push({ x: violX, y: violY, mode: 'markers', name: 'Violations',
           marker: { color: '#ff4d4f', size: 10, symbol: 'x' }, showlegend: false })
       }
-      if (result.chart_type === 'xbar-r' && result.r_values) {
-        const rX = result.r_values.map((_, i) => i)
+      if (res.chart_type === 'xbar-r' && res.r_values) {
+        const rX = res.r_values.map((_, i) => i)
         data.push({
-          x: rX, y: result.r_values, mode: 'lines+markers', name: 'R',
+          x: rX, y: res.r_values, mode: 'lines+markers', name: 'R',
           line: { color: '#722ed1' }, marker: { size: 6 },
           yaxis: 'y2',
         })
@@ -310,10 +347,10 @@ export default function SPC() {
             mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' } })
         }
       }
-      if (result.chart_type === 'xbar-s' && result.s_values) {
-        const sX = result.s_values.map((_, i) => i)
+      if (res.chart_type === 'xbar-s' && res.s_values) {
+        const sX = res.s_values.map((_, i) => i)
         data.push({
-          x: sX, y: result.s_values, mode: 'lines+markers', name: 'S',
+          x: sX, y: res.s_values, mode: 'lines+markers', name: 'S',
           line: { color: '#722ed1' }, marker: { size: 6 },
           yaxis: 'y2',
         })
@@ -330,15 +367,15 @@ export default function SPC() {
     return data
   }
 
-  const plotLayout: any = {
+  const buildPlotLayout = (chartType: string): any => ({
     margin: { t: 30, b: 40, l: 50, r: 30 },
     height: 350,
     showlegend: true,
     legend: { orientation: 'h', y: -0.15 },
     xaxis: { title: { text: 'Point Index' } },
-    yaxis: { title: { text: result?.chart_type === 'i-mr' ? 'Value' : result?.chart_type === 'ewma' ? 'Z(t)' : result?.chart_type === 'cusum' ? 'CUSUM' : 'X-bar' } },
-  }
-  plotLayout.yaxis2 = { overlaying: 'y', side: 'right', showgrid: false }
+    yaxis: { title: { text: chartType === 'i-mr' ? 'Value' : chartType === 'ewma' ? 'Z(t)' : chartType === 'cusum' ? 'CUSUM' : 'X-bar' } },
+    yaxis2: { overlaying: 'y', side: 'right', showgrid: false },
+  })
 
   const violColumns: any[] = [
     { title: t('spc.rule'), dataIndex: 'rule', key: 'rule', width: 140,
@@ -448,8 +485,26 @@ export default function SPC() {
           <Button type="primary" onClick={handleAnalyze} loading={loading} disabled={!hasData || !column}>
             {t('spc.analyze')}
           </Button>
+          <Button onClick={() => setBatchMode(!batchMode)}>
+            {batchMode ? t('spc.singleAnalysis') : t('spc.batchAnalyze')}
+          </Button>
         </Space>
         {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 12 }} />}
+        {batchMode && (
+          <Card title={t('spc.compareColumns')} size="small">
+            <Select
+              mode="multiple"
+              style={{ width: '100%', marginBottom: 12 }}
+              value={selectedColumns}
+              onChange={setSelectedColumns}
+              options={numericColumns.map(name => ({ value: name, label: name }))}
+              placeholder={t('spc.selectColumns')}
+            />
+            <Button type="primary" onClick={handleBatchAnalyze} loading={loading} disabled={selectedColumns.length === 0}>
+              {t('spc.analyze')}
+            </Button>
+          </Card>
+        )}
       </Card>
 
       {result && (
@@ -494,8 +549,8 @@ export default function SPC() {
 
           <Card title={t('spc.chartType')} size="small">
             <Plot
-              data={buildPlotData()}
-              layout={plotLayout}
+              data={buildPlotData(result)}
+              layout={buildPlotLayout(result.chart_type)}
               config={{ responsive: true, displayModeBar: false }}
               style={{ width: '100%' }}
             />
@@ -514,6 +569,64 @@ export default function SPC() {
               />
             )}
           </Card>
+
+          {result.suggestions && result.suggestions.length > 0 && (
+            <Card title={t('spc.suggestions')} size="small">
+              {result.suggestions.map((s, i) => (
+                <Alert
+                  key={i}
+                  type={s.severity === 'error' ? 'error' : 'warning'}
+                  message={s.message}
+                  showIcon
+                  style={{ marginBottom: 8 }}
+                />
+              ))}
+            </Card>
+          )}
+          {result && (!result.suggestions || result.suggestions.length === 0) && (
+            <Alert type="success" message={t('spc.noSuggestions')} showIcon />
+          )}
+        </>
+      )}
+
+      {batchResult && (
+        <>
+          <Card title={t('spc.compareColumns')} size="small">
+            <Table
+              dataSource={Object.entries(batchResult.results).map(([col, res]) => ({
+                key: col,
+                column: col,
+                cp: res.capability?.cp,
+                cpk: res.capability?.cpk,
+                pp: res.capability?.pp,
+                ppk: res.capability?.ppk,
+                violations: res.violations?.length ?? 0,
+              }))}
+              columns={[
+                { title: t('spc.column'), dataIndex: 'column', key: 'column' },
+                { title: 'Cp', dataIndex: 'cp', key: 'cp',
+                  render: (v: number) => <Tag color={capacityColor(v)}>{v?.toFixed(2) ?? 'N/A'}</Tag> },
+                { title: 'Cpk', dataIndex: 'cpk', key: 'cpk',
+                  render: (v: number) => <Tag color={capacityColor(v)}>{v?.toFixed(2) ?? 'N/A'}</Tag> },
+                { title: 'Pp', dataIndex: 'pp', key: 'pp',
+                  render: (v: number) => <Tag color={capacityColor(v)}>{v?.toFixed(2) ?? 'N/A'}</Tag> },
+                { title: 'Ppk', dataIndex: 'ppk', key: 'ppk',
+                  render: (v: number) => <Tag color={capacityColor(v)}>{v?.toFixed(2) ?? 'N/A'}</Tag> },
+                { title: t('spc.violations'), dataIndex: 'violations', key: 'violations' },
+              ]}
+              pagination={false}
+            />
+          </Card>
+          {Object.entries(batchResult.results).map(([col, res]) => (
+            <Card key={col} title={col} size="small">
+              <Plot
+                data={buildPlotData(res)}
+                layout={buildPlotLayout(res.chart_type)}
+                config={{ responsive: true, displayModeBar: false }}
+                style={{ width: '100%' }}
+              />
+            </Card>
+          ))}
         </>
       )}
 
