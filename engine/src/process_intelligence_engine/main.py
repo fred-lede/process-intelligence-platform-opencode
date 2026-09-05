@@ -817,6 +817,37 @@ def _handle_report_generate(params: dict) -> dict:
         except Exception:
             pass
 
+    # SPC analysis
+    spc_results = []
+    try:
+        from process_intelligence_engine.spc import compute_i_mr, compute_spc_suggestions
+        output_cols = [f['name'] for f in fields_list if f.get('role') == 'output']
+        if not output_cols:
+            output_cols = num_cols[:1]
+        for col in output_cols:
+            values = df[col].dropna().tolist()
+            if len(values) < 5:
+                continue
+            r = compute_i_mr(values, lsl=lsl, usl=usl)
+            suggestions = compute_spc_suggestions(r)
+            spc_results.append({
+                "column": col,
+                "chart_type": r["chart_type"],
+                "n_points": len(values),
+                "x_mean": r["control_limits"]["x"]["cl"],
+                "x_ucl": r["control_limits"]["x"]["ucl"],
+                "x_lcl": r["control_limits"]["x"]["lcl"],
+                "mr_ucl": r["control_limits"]["mr"]["ucl"],
+                "mr_mean": r["control_limits"]["mr"]["cl"],
+                "violations": len(r["violations"]),
+                "capability": r.get("capability"),
+                "suggestions": suggestions,
+                "x_values": r["x_values"],
+                "mr_values": r["mr_values"],
+            })
+    except Exception:
+        pass
+
     report_data = ReportData(
         project_name=project_name,
         operator=operator,
@@ -837,6 +868,7 @@ def _handle_report_generate(params: dict) -> dict:
         credibility=credibility,
         recommendations=recommendations,
         process_window=process_window,
+        spc_results=spc_results,
     )
 
     REPORT_REGISTRY.register(

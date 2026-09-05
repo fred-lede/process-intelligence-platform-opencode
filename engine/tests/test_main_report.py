@@ -103,3 +103,27 @@ def test_report_generate_json_serializable():
 
     import json
     json.dumps(result)
+
+
+def test_report_generate_with_spc(tmp_path):
+    """Test that report includes SPC analysis."""
+    import numpy as np
+    rng = np.random.default_rng(42)
+    n = 100
+    x1 = rng.uniform(0, 1, n)
+    y = 2.0 + 3.0 * x1 + rng.normal(0, 0.1, n)
+    rows = ["x1,y"]
+    for i in range(n):
+        rows.append(f"{x1[i]:.5f},{y[i]:.5f}")
+    path = tmp_path / "spc_report.csv"
+    path.write_text("\n".join(rows), encoding="utf-8")
+    did = handle_request("data/import", {"file_path": str(path)})["dataset_id"]
+
+    result = handle_request("report/generate", {
+        "dataset_id": did,
+        "format": "html",
+        "spec": {"outputField": "y", "lsl": 0.0, "usl": 10.0},
+    })
+    assert result["format"] == "html"
+    assert "SPC:" in result["content"]
+    assert "<svg" in result["content"]
