@@ -20,6 +20,15 @@ const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'weibull_regression', labelKey: 'modelCenter.modelType.weibullRegression' },
 ]
 
+const MODEL_DESC_KEY: Record<ModelType, string> = {
+  doe_linear: 'doeLinear',
+  doe_quadratic: 'doeQuadratic',
+  random_forest: 'randomForest',
+  residual_hybrid: 'residualHybrid',
+  logistic_regression: 'logisticRegression',
+  weibull_regression: 'weibullRegression',
+}
+
 const STATUS_TRANSITIONS: Partial<Record<ModelStatus, ModelStatus[]>> = {
   draft: ['pending_validation'],
   pending_validation: ['validated'],
@@ -281,7 +290,7 @@ export default function ModelCenter() {
                 options={MODEL_TYPES.map((m) => ({ value: m.value, label: t(m.labelKey) }))}
               />
               <Typography.Text type="secondary" style={{ marginLeft: 12, fontSize: 12 }}>
-                {t(`modelCenter.modelType.desc.${modelType}`)}
+                {t(`modelCenter.modelType.desc.${MODEL_DESC_KEY[modelType]}`)}
               </Typography.Text>
             </div>
             <div>
