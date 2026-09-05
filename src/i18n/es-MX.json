@@ -362,7 +362,13 @@
       "type": "Tipo",
       "status": "Estado",
       "actions": "Acciones",
-      "version": "Ver"
+      "version": "Ver",
+      "equation": "Ecuación",
+      "auc": "AUC",
+      "accuracy": "Precisión",
+      "recall": "Recall",
+      "shape_k": "Forma k",
+      "aic": "AIC"
     },
     "transitionSuccess": "Estado cambiado a {{status}}",
     "listTitle": "Modelos Ajustados",
