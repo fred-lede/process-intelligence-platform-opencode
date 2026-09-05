@@ -140,6 +140,23 @@ export default function SPC() {
     const cl = result.control_limits
     const data: any[] = []
 
+    const addSpecLines = (ref = false) => {
+      const xs = (result.chart_type === 'i-mr'
+        ? result.x_values?.map((_, i) => i)
+        : result.xbar_values?.map((_, i) => i)) ?? []
+      if (xs.length === 0) return
+      const push = (v: number | null | undefined, name: string) => {
+        if (v == null) return
+        data.push({
+          x: [xs[0], xs[xs.length - 1]], y: [v, v],
+          mode: 'lines', name: ref ? `${name} (ref)` : name,
+          line: { color: '#000000', width: 1.5 },
+        })
+      }
+      push(spec?.lsl ?? null, 'LSL')
+      push(spec?.usl ?? null, 'USL')
+    }
+
     if (result.chart_type === 'i-mr') {
       const x = result.x_values?.map((_, i) => i) ?? []
       data.push({
@@ -158,6 +175,7 @@ export default function SPC() {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.i_center, cl.i_center],
           mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' }, showlegend: false })
       }
+      addSpecLines()
       const violX = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
       const violY = (result.violations ?? []).map(v => result.x_values?.[v.point_idx] ?? 0)
       if (violX.length > 0) {
@@ -182,6 +200,7 @@ export default function SPC() {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.x_center, cl.x_center],
           mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' }, showlegend: false })
       }
+      addSpecLines(true)
       const violX = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
       const violY = (result.violations ?? []).map(v => result.xbar_values?.[v.point_idx] ?? 0)
       if (violX.length > 0) {

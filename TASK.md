@@ -1,6 +1,12 @@
 # TASK.md
 
 ## Completed
+### SPC 規格線 — LSL/USL 參考線於位置圖（Individuals / X-bar），離散圖 MR/R/S 不加
+- **Status**: DONE
+- **實作**：`SPC.tsx` `buildPlotData` 新增 `addSpecLines(ref?)`（`spec.lsl`/`spec.usl` 各側獨立，僅畫已提供的側；縱跨首尾 x；黑實線 width1.5、與 UCL/LCL 橘 dash 樣式明顯區別）——i-mr 分支 `Individuals` 直畫（legend `LSL`/`USL`）、xbar-r / xbar-s 分支 `X-bar` 標記 `LSL (ref)`/`USL (ref)`（單件規格參考語意）；**MR / R / S 分支不動**。legend 名沿用既有 hardcode 慣例（無新 i18n key）
+- **驗證**：`npx tsc --noEmit` clean；`npm run build` 成功（chunk 警示為既有）；無引擎變更（304 passed 維持）
+- **Files changed** — `src/features/spc/SPC.tsx`, `README.md`, `PROGRESS.md`, `TASK.md`（未提交 `engine/.coverage`/icons）
+
 ### Task 10（final）— 引擎 zero-row filter 守衛 + SPC numeric guard + docs sweep + 最終驗證 + push
 - **Status**: DONE
 - **Part A（引擎，TDD）**：`main.py` 新增 module-level `_apply_row_filter(df, params)` helper（unknown column → KeyError、缺 filter_value → ValueError、`astype(str) == str(filter_value)` mask、**mask 後空 → `ValueError("No rows match filter")`**），取代 4 handler（`_handle_spc_analyze`/`_handle_monte_carlo_run`/`_handle_distribution`/`_handle_series`）重複 inline mask block 為單行 `df = _apply_row_filter(df, params)`；error 訊息字串與既有測試完全一致。新增 4 測試（spc/mc/distribution/series 各一，filter 值匹配 0 列 → ValueError match="No rows match filter"）——RED 4 failed → GREEN；full suite **304 passed, 1 skipped**（baseline 300 + 4）

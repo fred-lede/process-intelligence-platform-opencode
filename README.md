@@ -211,6 +211,7 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 ### Phase 8 — SPC 統計製程控制 ✅
 
 - **控制圖**: I-MR / X-bar+R / X-bar-S（自動根據子群組大小選擇）
+- **規格線**: LSL/USL 參考線於位置圖（Individuals 直畫、X-bar 標記 (ref)）；離散圖 MR/R/S 不加
 - **Western Electric 7 規則**: 違規偵測與表格化顯示
 - **能力指數**: Cp / Cpk / Pp / Ppk
 - **IPC handlers**: `spc/analyze` + `spc/capability`
