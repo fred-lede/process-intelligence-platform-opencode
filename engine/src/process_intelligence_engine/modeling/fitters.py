@@ -20,6 +20,18 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score, roc_auc_score
 from scipy.optimize import minimize
 
+try:
+    import xgboost as xgb
+    XGBOOST_AVAILABLE = True
+except ImportError:
+    XGBOOST_AVAILABLE = False
+
+try:
+    import lightgbm as lgb
+    LIGHTGBM_AVAILABLE = True
+except ImportError:
+    LIGHTGBM_AVAILABLE = False
+
 from .metrics import (
     mean_absolute_error,
     mean_squared_error,
@@ -224,6 +236,112 @@ def fit_random_forest(
         n_test=len(X_te),
         created_at=_now(),
         model=rf,
+    )
+
+
+def fit_xgboost(
+    df: pd.DataFrame,
+    target: str,
+    inputs: list[str],
+    test_size: float = 0.3,
+    random_state: int | None = None,
+    n_estimators: int = 200,
+    max_depth: int = 6,
+    learning_rate: float = 0.1,
+    auto_select_features: bool = False,
+    importance_threshold: float = 0.01,
+    max_features: int = 5,
+) -> ModelFit:
+    if not inputs:
+        raise ValueError("at least one input is required")
+    if not XGBOOST_AVAILABLE:
+        raise ImportError("xgboost is required. Install with: pip install xgboost")
+
+    selected_inputs = inputs
+    if auto_select_features and len(inputs) > 1:
+        selected_inputs = _auto_select_features(
+            df, target, inputs, importance_threshold, max_features
+        )
+
+    X = df[selected_inputs].to_numpy(dtype=float)
+    y = df[target].to_numpy(dtype=float)
+    X_tr, X_te, y_tr, y_te = _train_test(X, y, test_size, random_state)
+
+    model = xgb.XGBRegressor(
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        learning_rate=learning_rate,
+        random_state=random_state,
+        verbosity=0,
+    )
+    model.fit(X_tr, y_tr)
+    y_pred = model.predict(X_te)
+
+    return ModelFit(
+        model_type="xgboost",
+        target=target,
+        inputs=list(inputs),
+        selected_inputs=list(selected_inputs),
+        metrics=_compute_all_metrics(y_te, y_pred, len(selected_inputs)),
+        coefficients=None,
+        equation=f"XGBoost(y, {selected_inputs})",
+        n_train=len(X_tr),
+        n_test=len(X_te),
+        created_at=_now(),
+        model=model,
+    )
+
+
+def fit_lightgbm(
+    df: pd.DataFrame,
+    target: str,
+    inputs: list[str],
+    test_size: float = 0.3,
+    random_state: int | None = None,
+    n_estimators: int = 200,
+    max_depth: int = 6,
+    learning_rate: float = 0.1,
+    auto_select_features: bool = False,
+    importance_threshold: float = 0.01,
+    max_features: int = 5,
+) -> ModelFit:
+    if not inputs:
+        raise ValueError("at least one input is required")
+    if not LIGHTGBM_AVAILABLE:
+        raise ImportError("lightgbm is required. Install with: pip install lightgbm")
+
+    selected_inputs = inputs
+    if auto_select_features and len(inputs) > 1:
+        selected_inputs = _auto_select_features(
+            df, target, inputs, importance_threshold, max_features
+        )
+
+    X = df[selected_inputs].to_numpy(dtype=float)
+    y = df[target].to_numpy(dtype=float)
+    X_tr, X_te, y_tr, y_te = _train_test(X, y, test_size, random_state)
+
+    model = lgb.LGBMRegressor(
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        learning_rate=learning_rate,
+        random_state=random_state,
+        verbose=-1,
+    )
+    model.fit(X_tr, y_tr)
+    y_pred = model.predict(X_te)
+
+    return ModelFit(
+        model_type="lightgbm",
+        target=target,
+        inputs=list(inputs),
+        selected_inputs=list(selected_inputs),
+        metrics=_compute_all_metrics(y_te, y_pred, len(selected_inputs)),
+        coefficients=None,
+        equation=f"LightGBM(y, {selected_inputs})",
+        n_train=len(X_tr),
+        n_test=len(X_te),
+        created_at=_now(),
+        model=model,
     )
 
 

@@ -52,6 +52,8 @@ from process_intelligence_engine.modeling.fitters import (
     fit_residual_hybrid,
     fit_logistic_regression,
     fit_weibull_regression,
+    fit_xgboost,
+    fit_lightgbm,
 )
 from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
@@ -515,6 +517,8 @@ MODEL_FITTERS = {
     "residual_hybrid": fit_residual_hybrid,
     "logistic_regression": fit_logistic_regression,
     "weibull_regression": fit_weibull_regression,
+    "xgboost": fit_xgboost,
+    "lightgbm": fit_lightgbm,
 }
 
 

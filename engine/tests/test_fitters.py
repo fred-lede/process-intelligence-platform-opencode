@@ -8,6 +8,8 @@ from process_intelligence_engine.modeling.fitters import (
     fit_doe_quadratic,
     fit_random_forest,
     fit_residual_hybrid,
+    fit_xgboost,
+    fit_lightgbm,
 )
 
 
@@ -119,3 +121,30 @@ def test_fit_random_forest_all_features_below_threshold():
     # With very high threshold, all features should be filtered
     with pytest.raises(ValueError, match="at least one input"):
         fit_random_forest(df, target="y", inputs=["noise1", "noise2"], auto_select_features=True, importance_threshold=0.9)
+
+
+def test_fit_xgboost_trains_and_scores():
+    df = _simple_df(n=200)
+    fit = fit_xgboost(df, target="y", inputs=["x1", "x2"])
+    assert fit.model_type == "xgboost"
+    assert fit.metrics["r2"] > 0.8
+
+
+def test_fit_lightgbm_trains_and_scores():
+    df = _simple_df(n=200)
+    fit = fit_lightgbm(df, target="y", inputs=["x1", "x2"])
+    assert fit.model_type == "lightgbm"
+    assert fit.metrics["r2"] > 0.8
+
+
+def test_fit_xgboost_auto_select():
+    rng = np.random.default_rng(42)
+    n = 200
+    x1 = rng.uniform(0, 1, n)
+    x2 = rng.uniform(0, 1, n)
+    noise = rng.uniform(0, 1, n)
+    y = 2.0 + 3.0 * x1 - 4.0 * x2 + rng.normal(0, 0.01, n)
+    df = pd.DataFrame({"x1": x1, "x2": x2, "noise": noise, "y": y})
+
+    fit = fit_xgboost(df, target="y", inputs=["x1", "x2", "noise"], auto_select_features=True)
+    assert "noise" not in fit.selected_inputs
