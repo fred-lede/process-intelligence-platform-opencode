@@ -318,7 +318,7 @@ export interface DoeStatisticsResult {
   coefficients: DoeCoefficientStat[]
   sig_count: number
   total_terms: number
-  interpretation: string
+  fit_level: 'excellent' | 'good' | 'moderate' | 'marginal' | 'poor' | null
   note?: string
 }
 

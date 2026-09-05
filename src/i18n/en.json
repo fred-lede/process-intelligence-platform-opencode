@@ -401,7 +401,12 @@
     "doeCI": "95% CI",
     "doeSig": "Sig.",
     "doeNotAvailable": "ANOVA statistics available for DOE linear/quadratic models only.",
-    "doeNoResult": "Click 'Compute Statistics' to perform ANOVA and coefficient p-value analysis."
+    "doeNoResult": "Click 'Compute Statistics' to perform ANOVA and coefficient p-value analysis.",
+    "doeFitExcellent": "Excellent fit: model is highly significant with strong explanatory power.",
+    "doeFitGood": "Good fit: model is statistically significant with reasonable predictive power.",
+    "doeFitModerate": "Moderate fit: model shows some significance but may need refinement.",
+    "doeFitMarginal": "Marginal fit: review individual coefficients and consider model simplification.",
+    "doeFitPoor": "Poor fit: model lacks statistical significance. Consider redesigning experiments or adding factors."
   },
   "validationLab": {
     "modelSelect": "Select Model",

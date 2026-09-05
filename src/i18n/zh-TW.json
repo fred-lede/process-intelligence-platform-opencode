@@ -401,7 +401,12 @@
     "doeCI": "95% 信心區間",
     "doeSig": "顯著",
     "doeNotAvailable": "ANOVA 統計僅適用於 DOE 線性/二次模型。",
-    "doeNoResult": "點擊「計算統計量」來進行 ANOVA 與係數 p 值分析。"
+    "doeNoResult": "點擊「計算統計量」來進行 ANOVA 與係數 p 值分析。",
+    "doeFitExcellent": "優異：模型高度顯著，解釋力強。",
+    "doeFitGood": "良好：模型統計顯著，預測力合理。",
+    "doeFitModerate": "中等：模型顯示部分顯著性，可能需要改進。",
+    "doeFitMarginal": "邊際：檢視個別係數，考慮簡化模型。",
+    "doeFitPoor": "不良：模型缺乏統計顯著性，建議重新設計實驗或增加因子。"
   },
   "validationLab": {
     "modelSelect": "選擇模型",

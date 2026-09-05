@@ -736,8 +736,8 @@ export default function ModelCenter() {
                       <span style={{ marginLeft: 8 }}>{doeStats.sig_count}/{doeStats.total_terms} {t('modelCenter.doeTermsSignificant')}</span>
                     </div>
                     <Alert
-                      type={doeStats.anova.significant ? 'success' : 'warning'}
-                      message={doeStats.interpretation}
+                      type={doeStats.anova!.significant ? 'success' : 'warning'}
+                      message={t(`modelCenter.doeFit${doeStats.fit_level ? doeStats.fit_level.charAt(0).toUpperCase() + doeStats.fit_level.slice(1) : 'Moderate'}`)}
                       showIcon
                       style={{ marginTop: 4 }}
                     />

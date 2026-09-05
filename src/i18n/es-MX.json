@@ -403,7 +403,12 @@
     "doeCI": "IC 95%",
     "doeSig": "Sig.",
     "doeNotAvailable": "Las estadísticas ANOVA están disponibles solo para modelos DOE lineales/cuadráticos.",
-    "doeNoResult": "Haz clic en 'Calcular Estadísticas' para realizar el análisis ANOVA y de p-valores de coeficientes."
+    "doeNoResult": "Haz clic en 'Calcular Estadísticas' para realizar el análisis ANOVA y de p-valores de coeficientes.",
+    "doeFitExcellent": "Ajuste excelente: el modelo es altamente significativo con fuerte poder explicativo.",
+    "doeFitGood": "Buen ajuste: el modelo es estadísticamente significativo con poder predictivo razonable.",
+    "doeFitModerate": "Ajuste moderado: el modelo muestra alguna significancia pero puede requerir refinamiento.",
+    "doeFitMarginal": "Ajuste marginal: revisar coeficientes individuales y considerar simplificación del modelo.",
+    "doeFitPoor": "Ajuste deficiente: el modelo carece de significancia estadística. Considere rediseñar experimentos o añadir factores."
   },
   "validationLab": {
     "modelSelect": "Seleccionar modelo",

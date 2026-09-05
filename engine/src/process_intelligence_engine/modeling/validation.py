@@ -400,7 +400,7 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             "adj_r2": None,
             "anova": None,
             "coefficients": [],
-            "interpretation": "",
+            "fit_level": None,
             "note": "ANOVA and p-values are available only for DOE linear/quadratic models.",
         }
 
@@ -482,6 +482,7 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
 
     r2 = float(1.0 - ss_res / ss_tot) if ss_tot > 0 else 0.0
     adj_r2 = float(1.0 - (1.0 - r2) * (n - 1) / max(n - p, 1))
+    sig_count = sum(1 for c in coeff_rows[1:] if c["significant"])  # exclude intercept
     sig_count = sum(1 for c in coeff_rows[1:] if c["significant"])
 
     if f_p_value < 0.001:
@@ -497,15 +498,15 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
     total_terms = p - 1
     sig_ratio = sig_count / max(total_terms, 1)
     if r2 >= 0.9 and f_p_value < 0.001 and sig_ratio >= 0.7:
-        interpretation = "Excellent fit: model is highly significant with strong explanatory power."
+        fit_level = "excellent"
     elif r2 >= 0.7 and f_p_value < 0.05 and sig_ratio >= 0.5:
-        interpretation = "Good fit: model is statistically significant with reasonable predictive power."
+        fit_level = "good"
     elif r2 >= 0.5 and f_p_value < 0.10:
-        interpretation = "Moderate fit: model shows some significance but may need refinement."
+        fit_level = "moderate"
     elif f_p_value >= 0.05 and r2 < 0.5:
-        interpretation = "Poor fit: model lacks statistical significance. Consider redesigning experiments or adding factors."
+        fit_level = "poor"
     else:
-        interpretation = "Marginal fit: review individual coefficients and consider model simplification."
+        fit_level = "marginal"
 
     return {
         "model_type": model_type,
@@ -524,5 +525,5 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         "coefficients": coeff_rows,
         "sig_count": sig_count,
         "total_terms": total_terms,
-        "interpretation": interpretation,
+        "fit_level": fit_level,
     }
