@@ -417,19 +417,23 @@ def fit_logistic_regression(
     """Fit a logistic regression model for binary classification (NG prediction)."""
     if not inputs:
         raise ValueError("at least one input is required")
-    y = df[target].astype(float)
-    unique_vals = y.unique()
-    if set(unique_vals).issubset({0.0, 1.0}):
-        pass  # already binary
-    elif len(unique_vals) == 2:
-        # Encode: first unique value -> 0, second -> 1
-        label_map = {v: i for i, v in enumerate(unique_vals)}
-        y = y.map(label_map).astype(float)
+    # Convert target to numeric: try coercion first; fall back to label encoding
+    numeric_y = pd.to_numeric(df[target], errors='coerce')
+    if not numeric_y.isna().all():
+        y = numeric_y
+        unique_vals = y.dropna().unique()
     else:
-        raise ValueError(
-            f"Logistic regression requires a binary target (2 distinct values). "
-            f"Column '{target}' has {len(unique_vals)} unique values: {list(unique_vals[:5])}"
-        )
+        y = df[target]
+        unique_vals = y.unique()
+        if len(unique_vals) == 2:
+            label_map = {v: i for i, v in enumerate(unique_vals)}
+            y = y.map(label_map)
+        elif len(unique_vals) != 2:
+            raise ValueError(
+                f"Logistic regression requires a binary target (2 distinct values). "
+                f"Column '{target}' has {len(unique_vals)} unique values: {list(unique_vals[:5])}"
+            )
+    y = y.astype(float)
     X = df[inputs].to_numpy(dtype=float)
     X_tr, X_te, y_tr, y_te = _train_test(X, y, test_size, random_state)
     lr = LogisticRegression(random_state=random_state, max_iter=1000)
