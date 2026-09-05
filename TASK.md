@@ -444,3 +444,10 @@
 - 完成稽核檔案：App.tsx、Sidebar.tsx、types/index.ts、lib/engine.ts、lib/project.ts、AssistantPanel.tsx、engine main.py 全部 handler、spc.py、reporting/{models,base,html,pdf,excel,charting}.py、data/quality.py、project/manifest.py。
 - 結論：Phase 0–11j 全數達成；但存在「backend-only」未接 UI 的功能（approval/copula 前端未呼叫）、data asset management 無獨立 tab、quality 4 檢查內建常量未執行、SPC X-bar 需使用者人工確認。
 - 詳見完整稽核報告（IMPLEMENTED / PARTIAL / NOT-DONE per feature）。
+
+### ProcessFlow 強化 — 設計討論（brainstorming）
+- **Status**: IN_PROGRESS（設計階段，尚未寫 code）
+- **User 方向**：導覽列製程流程「作用太薄弱」→ 兩者都要：(1) 補規格 §11A/§18.6 深度 (2) 讓流程圖驅動/參數化下游分析
+- **User 確認**：三階段深度整合（Step1 跨節點關聯鍵 barcode/序號/批次；Step2 節點資料面板→可點擊跳到對應分析 tab 帶入欄位/規格；Step3 下游 tab 依節點篩選入口）。規格深度（製程群組/目錄映射/資料流指標）留後續。
+- **探索發現**：ProcessFlow.tsx 已是完整 SVG 編輯器（817 行：拖曳/縮放/minimap/自動佈局/連線/資料來源與機台對映）。薄弱處 = 與分析 tab 斷連（SPC/MonteCarlo 只用 store 的 importResult+spec，不動用節點映射）。App.tsx 用 `useState activeTab` 管理切換（需 navigation store 才能帶 payload）。引擎 ProcessNode 無 association_keys 欄位。
+- **待辦**：提方案→設計文件→commit→user 審核→writing-plans
