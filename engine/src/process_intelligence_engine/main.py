@@ -1385,13 +1385,13 @@ def handle_request(method: str, params: dict) -> dict:
     Phase 2 methods: analysis/detect_anomalies, analysis/package.
     """
     if method == "engine/ping":
-        return {"pong": True, "version": "0.1.0"}
+        return {"pong": True, "version": __import__('process_intelligence_engine').__version__}
 
     if method == "engine/health":
         return {
             "status": "ok",
             "engine": "process-intelligence-engine",
-            "version": "0.1.0",
+            "version": __import__('process_intelligence_engine').__version__,
         }
 
     if method == "data/import":
