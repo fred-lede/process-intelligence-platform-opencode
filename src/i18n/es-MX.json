@@ -328,6 +328,8 @@
     },
     "fitButton": "Ajustar modelo",
     "fitSuccess": "Modelo ajustado exitosamente",
+    "deleteModelSuccess": "Modelo eliminado",
+    "confirmDeleteModel": "¿Eliminar este modelo? Esta acción no se puede deshacer.",
     "continuousTarget": "La variable objetivo \"{{column}}\" tiene {{n}} valores únicos (continua). La regresión logística requiere una variable objetivo binaria (0/1 o dos categorías). Seleccione otra variable objetivo o use un modelo de regresión.",
     "noInteraction": "No hay interacciones significativas.",
     "shapTitle": "Análisis SHAP",

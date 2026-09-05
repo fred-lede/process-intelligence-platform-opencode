@@ -54,8 +54,8 @@ export default function ModelCenter() {
   const { importResult, fields, spec } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
   const {
-    models, fitting, transitioning, error,
-    selectedModelId, loadModels, fit, transition,
+    models, fitting, transitioning, deleting, error,
+    selectedModelId, loadModels, fit, transition, deleteModel: deleteModelFn,
     selectModel, clearError,
   } = useModelStore()
 
@@ -156,6 +156,11 @@ export default function ModelCenter() {
   const handleTransition = async (modelId: string, newStatus: ModelStatus) => {
     await transition(modelId, newStatus)
     messageApi.success(t('modelCenter.transitionSuccess', { status: newStatus }))
+  }
+
+  const handleDeleteModel = async (modelId: string) => {
+    await deleteModelFn(modelId)
+    messageApi.success(t('modelCenter.deleteModelSuccess'))
   }
 
   const handleComputeInteractions = async () => {
@@ -286,7 +291,7 @@ export default function ModelCenter() {
     { title: t('modelCenter.column.shape_k'), dataIndex: ['metrics', 'shape_k'], key: 'shape_k', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
     { title: t('modelCenter.column.aic'), dataIndex: ['metrics', 'aic'], key: 'aic', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
     {
-      title: t('modelCenter.column.actions'), key: 'actions', width: 200,
+      title: t('modelCenter.column.actions'), key: 'actions', width: 240,
       render: (_, record) => {
         const nextStatuses = STATUS_TRANSITIONS[record.status] || []
         return (
@@ -296,6 +301,17 @@ export default function ModelCenter() {
                 <Button size="small" loading={transitioning}>{s}</Button>
               </Popconfirm>
             ))}
+            <Popconfirm
+              title={t('modelCenter.confirmDeleteModel')}
+              onConfirm={() => handleDeleteModel(record.model_id)}
+              okText={t('common.delete')}
+              cancelText={t('common.cancel')}
+              okButtonProps={{ danger: true }}
+            >
+              <Button size="small" danger type="text" loading={deleting}>
+                {t('common.delete')}
+              </Button>
+            </Popconfirm>
           </Space>
         )
       },

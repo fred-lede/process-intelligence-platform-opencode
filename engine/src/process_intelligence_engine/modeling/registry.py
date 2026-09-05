@@ -71,3 +71,10 @@ class ModelRegistry:
         if model_id not in self._models:
             raise KeyError(f"Unknown model_id: {model_id}")
         return self._models[model_id]
+
+    def delete(self, model_id: str) -> None:
+        """Remove a model from the registry."""
+        with self._lock:
+            if model_id not in self._models:
+                raise KeyError(f"Unknown model_id: {model_id}")
+            del self._models[model_id]

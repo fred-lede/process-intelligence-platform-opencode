@@ -326,6 +326,8 @@
     },
     "fitButton": "開始配適",
     "fitSuccess": "模型配適完成",
+    "deleteModelSuccess": "模型已刪除",
+    "confirmDeleteModel": "確定刪除此模型？此操作無法復原。",
     "continuousTarget": "目標欄位「{{column}}」有 {{n}} 個唯一值（連續變數）。邏輯迴歸需要二元目標（0/1 或兩類）。請更換目標欄位或改用迴歸模型。",
     "listTitle": "已配適模型",
     "column": {

@@ -1,11 +1,12 @@
 import { create } from 'zustand'
 import type { ModelFitDTO, ModelType, ModelStatus } from '../lib/engine'
-import { fitModel, listModels, transitionModel } from '../lib/engine'
+import { fitModel, listModels, transitionModel, deleteModel } from '../lib/engine'
 
 export interface ModelStore {
   models: ModelFitDTO[]
   fitting: boolean
   transitioning: boolean
+  deleting: boolean
   error: string | null
   selectedModelId: string | null
 
@@ -17,6 +18,7 @@ export interface ModelStore {
     inputs: string[]
   }) => Promise<ModelFitDTO | null>
   transition: (modelId: string, status: ModelStatus) => Promise<void>
+  deleteModel: (modelId: string) => Promise<void>
   selectModel: (modelId: string | null) => void
   clearError: () => void
 }
@@ -25,6 +27,7 @@ export const useModelStore = create<ModelStore>((set) => ({
   models: [],
   fitting: false,
   transitioning: false,
+  deleting: false,
   error: null,
   selectedModelId: null,
 
@@ -60,6 +63,20 @@ export const useModelStore = create<ModelStore>((set) => ({
       }))
     } catch (err) {
       set({ transitioning: false, error: String(err) })
+    }
+  },
+
+  deleteModel: async (modelId) => {
+    set({ deleting: true, error: null })
+    try {
+      await deleteModel(modelId)
+      set((s) => ({
+        models: s.models.filter((m) => m.model_id !== modelId),
+        deleting: false,
+        selectedModelId: s.selectedModelId === modelId ? null : s.selectedModelId,
+      }))
+    } catch (err) {
+      set({ deleting: false, error: String(err) })
     }
   },
 

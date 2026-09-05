@@ -562,6 +562,13 @@ def _handle_modeling_transition(params: dict) -> dict:
     return fit.to_dto()
 
 
+def _handle_modeling_delete(params: dict) -> dict:
+    """Delete a model from the registry."""
+    model_id = params["model_id"]
+    MODEL_REGISTRY.delete(model_id)
+    return {"success": True, "model_id": model_id}
+
+
 def _handle_interactions_compute(params: dict) -> dict:
     model_id = params["model_id"]
     dataset_id = params["dataset_id"]
@@ -1437,6 +1444,8 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/transition":
         return _handle_modeling_transition(params)
+    if method == "modeling/delete":
+        return _handle_modeling_delete(params)
 
     if method == "modeling/doe/generate":
         return _handle_doe_generate(params)

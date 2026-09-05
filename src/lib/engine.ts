@@ -375,6 +375,12 @@ export async function transitionModel(
   return engineCall<ModelFitDTO>('modeling/transition', { model_id, status })
 }
 
+export async function deleteModel(
+  model_id: string,
+): Promise<{ success: boolean; model_id: string }> {
+  return engineCall<{ success: boolean; model_id: string }>('modeling/delete', { model_id })
+}
+
 export async function computeDOEStatistics(
   params: DoeStatisticsParams,
 ): Promise<DoeStatisticsApiResponse> {
