@@ -206,6 +206,15 @@
 
 <!-- NEXT_ITEM_ANCHOR -->
 
+### Task 4: Enhance assistantData context builders for SPC and Monte Carlo
+- **Status**: DONE
+- **實作**：`src/lib/assistantData.ts`
+  - `buildSpcContext`：Capability 行加 Cpk status（GOOD/MARGINAL/POOR，閾值 ≥1.33 / ≥1.0，沿用 SPC.tsx capacityColor 慣例）；suggestions 依 `severity` 拆為 URGENT（error）與 WARNING（warning）兩行；控制界限行保留
+  - `buildMonteCarloContext`：NG probability 行加 risk level（ng_probability >5% HIGH / >1% MEDIUM / >0.1% MODERATE / else LOW）；predicted capability 行加 ppk status（GOOD/MARGINAL/POOR）
+- **驗證**：`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.07s`
+- **Commit**：`9b116f1 feat(assistant): enhance SPC/MC context builders with risk assessment` → `git push` ✅
+- **Files changed** — `src/lib/assistantData.ts`（+15/−4）
+
 ### Task 2: Frontend — Multi-column comparison + suggestions display
 - **Status**: DONE
 - **實作**：`engine.ts` 新增 `SPCSuggestion`/`SPCBatchResult` 型別 + `analyzeSPCBatch()`；`SPC.tsx` 加 `batchMode`/`selectedColumns`/`batchResult` state、批次切換按鈕、批次分析 UI、`handleBatchAnalyze`、`buildPlotData` 重構為接受 result 參數、`buildPlotLayout` 改為函數、比較表格 + 各欄圖表；`assistantData.ts` 補 suggestions 行；i18n 三語各 +7 keys（batchAnalyze/singleAnalysis/compareColumns/selectColumns/suggestions/noSuggestions/column）
@@ -738,3 +747,14 @@
 - **驗證**：`pytest tests/ -q` → 326 passed, 1 skipped
 - **Commit** — `9af8153`
 - **Files changed** — `engine/src/process_intelligence_engine/spc.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_spc.py`, `engine/tests/test_main_spc.py`
+
+### Task 1-3: Enhance assistantGuide SPC / Monte Carlo / Exploration domain knowledge
+- **Status**: DONE
+- **實作**：
+  - **SPC guide**：加入 chart type selection（I-MR / X-bar+R / X-bar+S / EWMA / CUSUM）、Cp/Cpk thresholds（≥1.67 excellent / ≥1.33 adequate / <1.33 needs improvement）、WE 7 rules interpretation、optimization suggestions interpretation、guide usage
+  - **Monte Carlo guide**：simulation mechanics（sampling + prediction + NG calculation）、NG probability thresholds（<1% green / 1-5% yellow / >5% red）、percentile interpretation、predicted capability explanation、anomaly risk ranking interpretation、guide usage
+  - **Exploration guide**：distribution tab（histogram / shape / outliers）、trend tab（drift / shift detection）、time series features（lag / rolling / drift / sustained exceedance）、GRR interpretation thresholds（<10% excellent / 10-30% marginal / >30% poor）、guide usage
+- **驗證**：`npx tsc --noEmit` EXIT 0
+- **Commits**：`8b37832`（feat）+ `98f38a5`（docs）
+- **Push**：✅
+- **Files changed** — `src/lib/assistantGuide.ts`（+56/-12）、`PROGRESS.md`
