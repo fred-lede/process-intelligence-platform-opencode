@@ -35,7 +35,7 @@ def compute_shap(
     """
     if fit.model_type == "doe_linear" or fit.model_type == "doe_quadratic":
         return _compute_shap_linear(fit, df, nsamples, max_explain)
-    elif fit.model_type == "random_forest":
+    elif fit.model_type in ("random_forest", "xgboost", "lightgbm"):
         return _compute_shap_tree(fit, df, nsamples, max_explain)
     else:
         raise ValueError(f"Unsupported model type for SHAP: {fit.model_type}")

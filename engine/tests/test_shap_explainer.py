@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
-from process_intelligence_engine.modeling.fitters import fit_doe_quadratic, fit_random_forest
+from process_intelligence_engine.modeling.fitters import fit_doe_quadratic, fit_lightgbm, fit_random_forest, fit_xgboost
 
 
 def _make_df(n=100):
@@ -38,6 +38,26 @@ def test_shap_random_forest():
     assert result["expected_value"] is not None
     assert len(result["feature_importance"]) == 3
     assert abs(sum(result["shap_values"][0])) - abs(result["expected_value"] - df["Y"].iloc[0]) < 0.5
+
+
+def test_shap_xgboost():
+    df = _make_df()
+    fit = fit_xgboost(df, target="Y", inputs=["A", "B", "C"])
+    result = compute_shap(fit, df)
+    assert result["expected_value"] is not None
+    assert len(result["feature_importance"]) == 3
+    assert len(result["shap_values"]) == len(df)
+    assert len(result["shap_values"][0]) == 3
+
+
+def test_shap_lightgbm():
+    df = _make_df()
+    fit = fit_lightgbm(df, target="Y", inputs=["A", "B", "C"])
+    result = compute_shap(fit, df)
+    assert result["expected_value"] is not None
+    assert len(result["feature_importance"]) == 3
+    assert len(result["shap_values"]) == len(df)
+    assert len(result["shap_values"][0]) == 3
 
 
 def test_shap_unknown_model_raises():
