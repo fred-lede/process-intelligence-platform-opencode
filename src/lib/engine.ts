@@ -706,6 +706,20 @@ export interface SPCCapabilityResult {
   capability: SPCCapability
 }
 
+function flattenControlLimits(res: SPCAnalysisResult): SPCAnalysisResult {
+  const raw = res.control_limits as unknown as Record<string, Record<string, number | undefined>>
+  const flat: SPCCtrlLimits = { chart_type: res.chart_type }
+  const isImr = res.chart_type === 'i-mr'
+  for (const [group, vals] of Object.entries(raw)) {
+    if (!vals || typeof vals !== 'object') continue
+    const prefix = group === 'x' ? (isImr ? 'i' : 'x') : group
+    if (vals.ucl !== undefined) (flat as any)[`${prefix}_ucl`] = vals.ucl
+    if (vals.lcl !== undefined) (flat as any)[`${prefix}_lcl`] = vals.lcl
+    if (vals.cl !== undefined) (flat as any)[`${prefix}_center`] = vals.cl
+  }
+  return { ...res, control_limits: flat }
+}
+
 export async function analyzeSPC(params: {
   dataset_id: string
   column: string
@@ -716,7 +730,8 @@ export async function analyzeSPC(params: {
   filter_column?: string
   filter_value?: string
 }): Promise<SPCAnalysisResult> {
-  return engineCall<SPCAnalysisResult>('spc/analyze', params)
+  const res = await engineCall<SPCAnalysisResult>('spc/analyze', params)
+  return flattenControlLimits(res)
 }
 
 export async function getSPCCapability(params: {

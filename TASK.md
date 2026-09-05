@@ -1,6 +1,14 @@
 # TASK.md
 
 ## Completed
+### SPC UCL/LCL 從未顯示 bug 修復（扁平 vs 巢狀 control_limits）
+- **Status**: DONE
+- **根因**：引擎 `compute_i_mr`/`compute_xbar_r`/`compute_xbar_s` 回傳巢狀 `control_limits`（`{'x': {ucl/lcl/cl}, 'mr'(或 r/s): {...}}`，spc.py:145/211/283），前端 `SPCCtrlLimits` 型別與 SPC.tsx/assistantData.ts 讀扁平 key（`x_ucl`/`i_ucl`/`i_center`…）→ 執行時全部 `undefined` → `cl.x_ucl != null` 恆 false → **UCL/LCL/CL 三條線自 Phase 8 起從未畫出**；AI context 同源「UCL=null」污染（assistantData.ts:149 `!== null` 對 undefined 為 true）
+- **修法**：`engine.ts` `analyzeSPC` 加 `flattenControlLimits(res)`——依 chart_type 攤平巢狀 group（i-mr 時 `x→i_*`、否則 `x→x_*`；`mr`/`r`/`s`→對應 prefix），單一 choke point 同時修好 SPC.tsx + assistantData.ts。無引擎/i18n/測試變更
+- **驗證**：`npx tsc --noEmit` clean；`npm run build` 成功
+- **side note**：i-mr 目前只畫 Individuals 圖（`yaxis2` 僅非 i-mr 建立，SPC.tsx:254-256），MR 有計算未 render——獨立範圍缺口，待決
+- **Files changed** — `src/lib/engine.ts`, `PROGRESS.md`, `TASK.md`
+
 ### SPC 規格線 — LSL/USL 參考線於位置圖（Individuals / X-bar），離散圖 MR/R/S 不加
 - **Status**: DONE
 - **實作**：`SPC.tsx` `buildPlotData` 新增 `addSpecLines(ref?)`（`spec.lsl`/`spec.usl` 各側獨立，僅畫已提供的側；縱跨首尾 x；黑實線 width1.5、與 UCL/LCL 橘 dash 樣式明顯區別）——i-mr 分支 `Individuals` 直畫（legend `LSL`/`USL`）、xbar-r / xbar-s 分支 `X-bar` 標記 `LSL (ref)`/`USL (ref)`（單件規格參考語意）；**MR / R / S 分支不動**。legend 名沿用既有 hardcode 慣例（無新 i18n key）

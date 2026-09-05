@@ -580,4 +580,10 @@
 
 ## 2026-09-05 — SPC 規格線（LSL/USL reference lines）
 
-- [x] **位置圖加規格線、離散圖不加**：SPC.tsx 新增 `addSpecLines(ref?)`—只加在縱軸單位＝量測值的圖：i-mr **Individuals** 直畫（legend：`LSL`/`USL`）、xbar-r / xbar-s **X-bar** 標記 `LSL (ref)`/`USL (ref)`（參考線語意）——黑實線、style 與 UCL/LCL（橘 dash）明顯區別、縱跨首尾 x；**MR / R / S 離散圖不加**（依 user 批准的逐張判定）。`spec.lsl`/`spec.usl` 各側獨立，僅畫已提供的側；純前端、無引擎/i18n 變更（legend 名沿用既有 hardcode 慣例）。驗證：`npx tsc --noEmit` clean、`npm run build` 成功。README Phase 8 補「規格線」一列。
+- [x] **位置圖加規格線、離散圖不加**：SPC.tsx 新增 `addSpecLines(ref?)`—只加在縱軸單位＝量測值的圖：i-mr **Individuals** 直畫（legend：`LSL`/`USL`）、xbar-r / xbar-s **X-bar** 標記 `LSL (ref)`/`USL (ref)`（參考線語意）——紅實線（`#f5222d`，user 反映黑線不佳後改）與 UCL/LCL 橘 dash 明顯區別、縱跨首尾 x；**MR / R / S 離散圖不加**（依 user 批准的逐張判定）。`spec.lsl`/`spec.usl` 各側獨立，僅畫已提供的側；純前端、無引擎/i18n 變更。驗證：`npx tsc --noEmit` clean、`npm run build` 成功。README Phase 8 補「規格線」一列。commits `8c67ec7` / `2b9709c`
+
+## 2026-09-05 — SPC UCL/LCL 從未顯示的 bug 修復
+
+- [x] **根因**：引擎 `compute_i_mr`/`compute_xbar_r`/`compute_xbar_s` 回傳**巢狀** `control_limits`（`{'x': {ucl/lcl/cl}, 'mr'(或 r/s): {...}}`，spc.py:145/211/283），但前端 `SPCCtrlLimits` 型別與 SPC.tsx/assistantData.ts 讀取的是**扁平** key（`x_ucl`/`i_ucl`/`i_center`…）→ 執行時全 `undefined` → `cl.x_ucl != null` 恆 false → UCL/LCL/CL 三條線**從 Phase 8 起從未畫出**；連 AI context 也一直是「UCL=null/LCL=null」（assistantData.ts:149 `!== null` 對 undefined 為真）。使用者回報規格線後追查發現（本次規格線功能無涉，讀的是 spec.lsl/usl）。
+- [x] **修法**：`engine.ts` `analyzeSPC` 內新增 `flattenControlLimits(res)`——依 `chart_type` 把巢狀 group（`x`→i-mr 時 `i_*`、否則 `x_*`；`mr`/`r`/`s`→對應 prefix）攤平為 `*_ucl/*_lcl/*_center`，`chart_type` 一併帶上；單一 choke point，SPC.tsx 與 assistantData.ts 同時修好。無引擎/i18n/測試變更。
+- [x] **side note**：i-mr 目前**只畫 Individuals 圖**（`yaxis2` 僅在非 i-mr 建立，SPC.tsx:254-256），MR 落點資料有計算但未 render——獨立於本次的既有範圍缺口，待 user 決定是否補。
