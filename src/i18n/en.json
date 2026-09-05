@@ -219,6 +219,7 @@
     "errTargetAbove": "Target must be ≤ USL.",
     "controlLimitsTitle": "Control Limits",
     "controlLimitsHint": "Leave blank to auto-detect (mean ± 3σ). Enter values to override per field.",
+    "autoSuggest": "Auto-suggest",
     "auto3sigma": "Auto 3σ",
     "lclPlaceholder": "LCL",
     "uclPlaceholder": "UCL",

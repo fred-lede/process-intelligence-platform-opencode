@@ -27,6 +27,7 @@ import {
   detectAnomalies,
   buildAnalysisPackage,
   runQualityChecks,
+  suggestSpecLimits,
   type AnomalyScenario,
   type QualityIssue,
   type QualityReport,
@@ -452,6 +453,22 @@ export default function ProcessDefine() {
             <Form.Item label={t('processDefine.usl')}>
               <InputNumber value={usl} onChange={(v) => setUsl(v)} />
             </Form.Item>
+            {outputField && importResult && (
+              <Button
+                size="small"
+                onClick={async () => {
+                  try {
+                    const r = await suggestSpecLimits({ dataset_id: importResult.dataset_id, column: outputField })
+                    setLsl(r.lsl)
+                    setUsl(r.usl)
+                  } catch {
+                    // ignore — user can set manually
+                  }
+                }}
+              >
+                {t('processDefine.autoSuggest')}
+              </Button>
+            )}
           </Space>
           <Alert type="info" showIcon message={t('processDefine.specConstraintHint')} />
         </Form>

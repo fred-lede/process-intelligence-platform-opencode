@@ -1204,6 +1204,30 @@ def _handle_spc_batch_analyze(params: dict) -> dict:
     return {"results": results, "columns": list(results.keys())}
 
 
+def _handle_spec_suggest(params: dict) -> dict:
+    """Suggest LSL/USL based on mean ± 3σ of a column."""
+    df = REGISTRY.get(params["dataset_id"])
+    column = params["column"]
+    if column not in df.columns:
+        raise KeyError(f"Unknown column: {column}")
+    values = df[column].dropna().tolist()
+    if len(values) < 5:
+        raise ValueError("Need at least 5 data points for suggestion")
+    arr = np.asarray(values, dtype=float)
+    mean = float(np.mean(arr))
+    std = float(np.std(arr, ddof=1)) if len(arr) > 1 else 0.0
+    if std <= 0:
+        raise ValueError("Cannot suggest limits: std is zero (constant values)")
+    return {
+        "success": True,
+        "column": column,
+        "mean": round(mean, 6),
+        "std": round(std, 6),
+        "lsl": round(mean - 3 * std, 6),
+        "usl": round(mean + 3 * std, 6),
+    }
+
+
 def _handle_spc_capability(params: dict) -> dict:
     """Compute process capability for a column."""
     df = REGISTRY.get(params["dataset_id"])
@@ -1353,6 +1377,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/validation/full":
         return _handle_validation_full(params)
+
+    if method == "spec/suggest":
+        return _handle_spec_suggest(params)
 
     if method == "report/generate":
         return _handle_report_generate(params)

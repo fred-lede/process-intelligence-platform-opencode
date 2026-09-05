@@ -222,6 +222,7 @@
     "errTargetAbove": "El objetivo debe ser ≤ USL.",
     "controlLimitsTitle": "Límites de Control",
     "controlLimitsHint": "Déjelo en blanco para auto-detección (media ± 3σ). Ingrese valores para sobrescribir por campo.",
+    "autoSuggest": "Sugerir auto.",
     "auto3sigma": "Auto 3σ",
     "lclPlaceholder": "LCL",
     "uclPlaceholder": "UCL",

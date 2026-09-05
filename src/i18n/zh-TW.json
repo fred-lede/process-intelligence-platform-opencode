@@ -219,6 +219,7 @@
     "errTargetAbove": "目標值必須 ≤ USL。",
     "controlLimitsTitle": "管制界限",
     "controlLimitsHint": "留空自動以 mean±3σ 偵測，或手動輸入覆寫。",
+    "autoSuggest": "自動建議",
     "auto3sigma": "自動 3σ",
     "lclPlaceholder": "LCL",
     "uclPlaceholder": "UCL",

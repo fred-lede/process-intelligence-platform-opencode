@@ -510,3 +510,50 @@ def test_handle_flow_graph_set_association_keys():
     assert result["association_keys"] == ["barcode", "batch_no"]
     again = handle_request("project/flow-graph", {})
     assert again["association_keys"] == ["barcode", "batch_no"]
+
+
+def test_handle_spec_suggest(tmp_path):
+    """Test spec/suggest returns mean±3σ for a numeric column."""
+    import numpy as np
+    rng = np.random.default_rng(42)
+    n = 100
+    values = [10.0 + i * 0.1 + rng.normal(0, 0.5) for i in range(n)]
+    rows = ["x"] + [f"{v:.6f}" for v in values]
+    path = tmp_path / "suggest.csv"
+    path.write_text("\n".join(rows), encoding="utf-8")
+    did = handle_request("data/import", {"file_path": str(path)})["dataset_id"]
+
+    result = handle_request("spec/suggest", {"dataset_id": did, "column": "x"})
+    assert result["success"]
+    assert result["column"] == "x"
+    assert result["lsl"] < result["mean"] < result["usl"]
+    assert abs(result["lsl"] - (result["mean"] - 3 * result["std"])) < 0.001
+    assert abs(result["usl"] - (result["mean"] + 3 * result["std"])) < 0.001
+
+
+def test_handle_spec_suggest_unknown_column_raises():
+    import numpy as np
+    rng = np.random.default_rng(42)
+    rows = ["x"] + [f"{rng.normal()}" for _ in range(10)]
+    import tempfile, os
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        f.write("\n".join(rows))
+        path = f.name
+    did = handle_request("data/import", {"file_path": path})["dataset_id"]
+    os.unlink(path)
+
+    with pytest.raises(KeyError):
+        handle_request("spec/suggest", {"dataset_id": did, "column": "nonexistent"})
+
+
+def test_handle_spec_suggest_constant_raises():
+    rows = ["x"] + ["5.0"] * 10
+    import tempfile, os
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as f:
+        f.write("\n".join(rows))
+        path = f.name
+    did = handle_request("data/import", {"file_path": path})["dataset_id"]
+    os.unlink(path)
+
+    with pytest.raises(ValueError, match="std is zero"):
+        handle_request("spec/suggest", {"dataset_id": did, "column": "x"})
