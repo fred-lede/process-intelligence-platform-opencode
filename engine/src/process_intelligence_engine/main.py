@@ -70,6 +70,8 @@ from process_intelligence_engine.spc import (
     compute_xbar_r,
     compute_xbar_s,
     compute_capability,
+    compute_ewma,
+    compute_cusum,
 )
 from process_intelligence_engine.monte_carlo import run_monte_carlo
 from process_intelligence_engine.prediction import predict_single, get_input_ranges
@@ -1100,6 +1102,22 @@ def _handle_spc_analyze(params: dict) -> dict:
         if not subgroups:
             raise ValueError("Not enough data points for requested subgroup_size")
         result = compute_xbar_s(subgroups, subgroup_size=subgroup_size, lsl=lsl, usl=usl)
+    elif chart_type == "ewma":
+        result = compute_ewma(
+            values,
+            lambda_param=params.get("ewma_lambda", 0.2),
+            L=params.get("ewma_L", 3.0),
+            lsl=lsl,
+            usl=usl,
+        )
+    elif chart_type == "cusum":
+        result = compute_cusum(
+            values,
+            k=params.get("cusum_k", 0.5),
+            H=params.get("cusum_H", 5.0),
+            lsl=lsl,
+            usl=usl,
+        )
     else:
         raise ValueError(f"Unknown chart_type: {chart_type}")
 

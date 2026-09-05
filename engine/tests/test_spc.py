@@ -6,6 +6,8 @@ import pytest
 
 from process_intelligence_engine.spc import (
     compute_capability,
+    compute_cusum,
+    compute_ewma,
     compute_i_mr,
     compute_xbar_r,
     compute_xbar_s,
@@ -174,3 +176,66 @@ def test_we_rule_7_detection():
     violations = detect_we_violations(values, center=0, sigma=1.0)
     rule7 = [v for v in violations if v["rule"] == "14_consecutive_alternating"]
     assert len(rule7) > 0
+
+
+def test_compute_ewma_basic():
+    """Test EWMA chart computation."""
+    rng = np.random.default_rng(42)
+    values = [10.0 + 0.1 * i + rng.normal(0, 0.1) for i in range(50)]
+    result = compute_ewma(values, lambda_param=0.2, L=3.0)
+
+    assert result["chart_type"] == "ewma"
+    assert len(result["z_values"]) == len(values)
+    assert result["ucl"] is not None
+    assert result["cl"] is not None
+    assert result["lcl"] is not None
+    assert result["lambda"] == 0.2
+    assert result["L"] == 3.0
+
+
+def test_compute_ewma_violations():
+    """Test EWMA violation detection."""
+    # Create data with clear shift (more pre-shift points so UCL < shifted mean)
+    values = [10.0] * 30 + [12.0] * 20  # shift from 10 to 12
+    result = compute_ewma(values, lambda_param=0.2, L=3.0)
+
+    # Should detect some violations after shift
+    assert len(result["violations"]) > 0
+    # Violations should be after the shift point
+    for v in result["violations"]:
+        assert v["point_idx"] >= 20
+
+
+def test_compute_cusum_basic():
+    """Test CUSUM chart computation."""
+    rng = np.random.default_rng(42)
+    values = [10.0 + rng.normal(0, 0.5) for _ in range(50)]
+    result = compute_cusum(values, k=0.5, H=5.0)
+
+    assert result["chart_type"] == "cusum"
+    assert len(result["c_plus"]) == len(values)
+    assert len(result["c_minus"]) == len(values)
+    assert result["k"] == 0.5
+    assert result["H"] == 5.0
+
+
+def test_compute_cusum_violations():
+    """Test CUSUM violation detection."""
+    # Create data with clear shift
+    values = [10.0] * 25 + [13.0] * 25  # shift from 10 to 13
+    result = compute_cusum(values, k=0.5, H=5.0)
+
+    # Should detect some violations
+    assert len(result["violations"]) > 0
+
+
+def test_compute_ewma_empty_raises():
+    """Test EWMA raises on empty input."""
+    with pytest.raises(ValueError, match="values must not be empty"):
+        compute_ewma([])
+
+
+def test_compute_cusum_empty_raises():
+    """Test CUSUM raises on empty input."""
+    with pytest.raises(ValueError, match="values must not be empty"):
+        compute_cusum([])

@@ -154,6 +154,103 @@ def compute_i_mr(
     }
 
 
+def compute_ewma(
+    values: list[float] | np.ndarray,
+    lambda_param: float = 0.2,
+    L: float = 3.0,
+    lsl: float | None = None,
+    usl: float | None = None,
+) -> dict[str, Any]:
+    """Compute EWMA control chart for detecting small shifts."""
+    arr = np.asarray(values, dtype=float)
+    if arr.size == 0:
+        raise ValueError("values must not be empty")
+
+    x_bar = float(np.mean(arr))
+    sigma = float(np.std(arr, ddof=1)) if arr.size > 1 else 0.0
+
+    # Compute EWMA statistic
+    z_values = [round(x_bar, 6)]
+    z = x_bar
+    for x in arr[1:]:
+        z = lambda_param * x + (1 - lambda_param) * z
+        z_values.append(round(z, 6))
+
+    # Control limits (constant for simplicity)
+    sigma_z = sigma * np.sqrt(lambda_param / (2 - lambda_param))
+    ucl = round(x_bar + L * sigma_z, 6)
+    lcl = round(max(0, x_bar - L * sigma_z), 6)
+
+    # Violations
+    violations = []
+    for i, z in enumerate(z_values):
+        if z > ucl or z < lcl:
+            violations.append({
+                "point_idx": i,
+                "rule": 1,
+                "description": f"EWMA z={z:.3f} outside limits [{lcl:.3f}, {ucl:.3f}]"
+            })
+
+    return {
+        "chart_type": "ewma",
+        "x_values": [round(float(v), 6) for v in arr],
+        "z_values": z_values,
+        "ucl": ucl,
+        "lcl": lcl,
+        "cl": round(x_bar, 6),
+        "lambda": lambda_param,
+        "L": L,
+        "violations": violations,
+    }
+
+
+def compute_cusum(
+    values: list[float] | np.ndarray,
+    k: float = 0.5,
+    H: float = 5.0,
+    lsl: float | None = None,
+    usl: float | None = None,
+) -> dict[str, Any]:
+    """Compute CUSUM control chart for detecting small shifts."""
+    arr = np.asarray(values, dtype=float)
+    if arr.size == 0:
+        raise ValueError("values must not be empty")
+
+    x_bar = float(np.mean(arr))
+    sigma = float(np.std(arr, ddof=1)) if arr.size > 1 else 0.0
+
+    # Compute CUSUM statistics (two-sided)
+    c_plus = [0.0]
+    c_minus = [0.0]
+    for x in arr[1:]:
+        if sigma > 0:
+            c_plus.append(round(max(0, c_plus[-1] + (x - x_bar) / sigma - k), 6))
+            c_minus.append(round(max(0, c_minus[-1] - (x - x_bar) / sigma - k), 6))
+        else:
+            c_plus.append(0.0)
+            c_minus.append(0.0)
+
+    # Violations
+    violations = []
+    for i in range(len(arr)):
+        if c_plus[i] > H or c_minus[i] > H:
+            violations.append({
+                "point_idx": i,
+                "rule": 1,
+                "description": f"CUSUM at {i} exceeds H={H}"
+            })
+
+    return {
+        "chart_type": "cusum",
+        "x_values": [round(float(v), 6) for v in arr],
+        "c_plus": c_plus,
+        "c_minus": c_minus,
+        "k": k,
+        "H": H,
+        "violations": violations,
+    }
+
+
 # ── X-bar / R Chart ──────────────────────────────────────────────────────────
 
 def compute_xbar_r(
