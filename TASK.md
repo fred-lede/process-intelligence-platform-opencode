@@ -1,6 +1,12 @@
 # TASK.md
 
 ## Completed
+### #1 engine/.coverage 停止追蹤
+- **Status**: DONE
+- **問題**：`.gitignore` 已有 `engine/.coverage` 行，但檔案早被 git 追蹤（`git ls-files` 有紀錄）
+- **修復**：`git rm --cached engine/.coverage` 移除索引中的追蹤，保留實體檔案
+- **驗證**：`git status --short` 不再顯示 `M engine/.coverage`；commit `1dd82ee`
+
 ### Task 4: SPC report enhancement — 收尾 docs + 最終驗證 + push
 - **Status**: DONE
 - **Docs**：PROGRESS.md 新增 2026-09-05 SPC 報告匯出增強條目；TASK.md 新增 Task 4 紀錄；README.md Phase 5 補 SPC 控制圖
