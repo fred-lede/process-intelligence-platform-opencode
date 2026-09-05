@@ -1318,8 +1318,8 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     df = _apply_row_filter(df, params)
     fit = MODEL_REGISTRY.get(model_id)
 
-    if fit.model_type not in ("doe_linear", "doe_quadratic"):
-        raise ValueError(f"Monte Carlo only supports doe_linear and doe_quadratic models, got {fit.model_type}")
+    if fit.model_type not in ("doe_linear", "doe_quadratic", "logistic_regression", "weibull_regression"):
+        raise ValueError(f"Monte Carlo only supports doe_linear, doe_quadratic, logistic_regression, and weibull_regression models, got {fit.model_type}")
 
     n_simulations = params.get("n_simulations", 10000)
     seed = params.get("seed", 42)

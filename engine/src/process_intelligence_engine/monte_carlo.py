@@ -131,45 +131,56 @@ def predict_output(
     coefficients: dict[str, float],
     inputs: dict[str, float],
 ) -> float:
-    """Predict output using DOE model coefficients.
+    """Predict output using model coefficients.
 
-    Supports ``"doe_linear"`` and ``"doe_quadratic"``.
-    Coefficient keys may use ``_x_`` syntax (e.g. ``"x1_x_x2"``),
-    caret syntax (e.g. ``"x1^2"``), or compact syntax (e.g. ``"x1x2"``).
+    Supports ``"doe_linear"``, ``"doe_quadratic"``, ``"logistic_regression"``,
+    and ``"weibull_regression"``.
     """
-    result = float(coefficients.get("_intercept", 0.0))
     input_names = sorted(inputs.keys())
 
     if model_type == "doe_linear":
+        result = float(coefficients.get("_intercept", 0.0))
         for x in input_names:
-            c = coefficients.get(x, 0.0)
-            result += c * inputs[x]
+            result += float(coefficients.get(x, 0.0)) * inputs[x]
         return result
 
     if model_type == "doe_quadratic":
-        # Linear terms
+        result = float(coefficients.get("_intercept", 0.0))
         for x in input_names:
             c = coefficients.get(x, 0.0)
             result += c * inputs[x]
-
-        # Quadratic and interaction terms — try multiple naming conventions
         for i, xi in enumerate(input_names):
             xi_val = inputs[xi]
-            # Squared term: x1_x_x1, x1^2, x1x1
             for key in (f"{xi}_x_{xi}", f"{xi}^2", f"{xi}{xi}"):
                 if key in coefficients:
                     result += coefficients[key] * xi_val ** 2
                     break
-
             for xj in input_names[i + 1:]:
                 xj_val = inputs[xj]
-                # Interaction term: x1_x_x2, x1*x2, x1x2
                 for key in (f"{xi}_x_{xj}", f"{xi}*{xj}", f"{xi}{xj}"):
                     if key in coefficients:
                         result += coefficients[key] * xi_val * xj_val
                         break
-
         return result
+
+    if model_type == "logistic_regression":
+        logit = float(coefficients.get("_intercept", 0.0))
+        for x in input_names:
+            logit += float(coefficients.get(x, 0.0)) * inputs[x]
+        # sigmoid → predicted P(NG) in [0, 1]
+        return 1.0 / (1.0 + math.exp(-logit))
+
+    if model_type == "weibull_regression":
+        intercept = float(coefficients.get("_intercept", 0.0))
+        k = float(coefficients.get("_weibull_shape", 1.0))
+        log_lambda = intercept
+        for x in input_names:
+            log_lambda += float(coefficients.get(x, 0.0)) * inputs[x]
+        lambda_val = math.exp(log_lambda)
+        # mean time-to-failure = lambda * Gamma(1 + 1/k)
+        from scipy.special import gamma
+        mean_ttf = lambda_val * gamma(1.0 + 1.0 / k)
+        return float(mean_ttf)
 
     raise ValueError(f"Unknown model_type: {model_type}")
 
@@ -224,7 +235,8 @@ def run_monte_carlo(
     df : pd.DataFrame
         Source data containing input columns.
     model_type : str
-        ``"doe_linear"`` or ``"doe_quadratic"``.
+        One of ``"doe_linear"``, ``"doe_quadratic"``, ``"logistic_regression"``,
+        or ``"weibull_regression"``.
     coefficients : dict
         DOE model coefficients.
     input_columns : list[str]
@@ -327,7 +339,8 @@ def run_monte_carlo(
                 violations.append({"index": int(i), "value": float(output_values[i]), "type": "above_usl", "limit": usl})
     else:
         ng_count = 0
-        ng_probability = 0.0
+        # For logistic_regression, each output is P(NG) → use mean as ng_probability
+        ng_probability = float(np.mean(output_values)) if model_type == "logistic_regression" else 0.0
 
     # Anomaly rankings (which anomalies contribute most to NG)
     anomaly_rankings: list[dict[str, Any]] = []
