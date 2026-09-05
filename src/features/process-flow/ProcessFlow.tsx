@@ -14,6 +14,9 @@ import {
   ZoomOutOutlined,
   FullscreenOutlined,
   ApartmentOutlined,
+  LineChartOutlined,
+  RobotOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons'
 import {
   getFlowGraph,
@@ -22,11 +25,13 @@ import {
   updateProcessNode,
   deleteProcessNode,
   getDatasets,
+  setAssociationKeys,
   type FlowGraph,
   type FlowNode,
   type FlowEdge,
   type FlowValidation,
 } from '../../lib/engine'
+import { useProcessFlowNavStore } from '../../stores/processFlowNavStore'
 
 const NODE_COLORS: Record<string, string> = {
   default: '#1677ff',
@@ -398,6 +403,26 @@ export default function ProcessFlow() {
     }
   }
 
+  const gotoAnalysisTab = (
+    tab: 'spc' | 'monteCarlo' | 'exploration',
+    node: FlowNode,
+  ) => {
+    const dataSourceIds = [
+      ...(node.output_data_sources ?? []),
+      ...(node.input_data_sources ?? []),
+    ]
+    const field =
+      tab === 'exploration'
+        ? node.in_control_parameters?.[0]
+        : node.out_quality_outputs?.[0]
+    useProcessFlowNavStore.getState().navigate(tab, {
+      nodeId: node.process_node_id,
+      displayName: node.display_name,
+      field,
+      dataSourceIds,
+    })
+  }
+
   const handleAutoLayout = async () => {
     try {
       const { layout: newLayout } = computeLayout(graph.nodes, graph.edges)
@@ -738,6 +763,37 @@ export default function ProcessFlow() {
                 value={selectedNode.machine_mapping || []}
                 onChange={vals => void saveMapping('machine_mapping', vals as string[])}
               />
+              {/* Jump to downstream analysis */}
+              <Typography.Text strong style={{ marginTop: 8 }}>
+                {t('processFlow.jumpToAnalysis')}
+              </Typography.Text>
+              {selectedNode.out_quality_outputs.length > 0 && (
+                <Space wrap>
+                  <Button
+                    size="small"
+                    icon={<LineChartOutlined />}
+                    onClick={() => gotoAnalysisTab('spc', selectedNode)}
+                  >
+                    {t('processFlow.jumpToSpc')}
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<RobotOutlined />}
+                    onClick={() => gotoAnalysisTab('monteCarlo', selectedNode)}
+                  >
+                    {t('processFlow.jumpToMonteCarlo')}
+                  </Button>
+                </Space>
+              )}
+              {selectedNode.in_control_parameters.length > 0 && (
+                <Button
+                  size="small"
+                  icon={<BarChartOutlined />}
+                  onClick={() => gotoAnalysisTab('exploration', selectedNode)}
+                >
+                  {t('processFlow.jumpToExploration')}
+                </Button>
+              )}
               {/* Connect to node selector */}
               <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>
                 {t('processFlow.connectTo')}:
@@ -776,12 +832,28 @@ export default function ProcessFlow() {
               </Button>
             </Space>
           ) : (
-            <Alert
-              type="info"
-              showIcon
-              message={t('processFlow.selectNode')}
-              description={t('processFlow.selectNodeDesc')}
-            />
+            <Space direction="vertical" style={{ width: '100%' }} size={8}>
+              <Typography.Text strong>{t('processFlow.associationKeys')}</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {t('processFlow.associationKeysDesc')}
+              </Typography.Text>
+              <Select
+                mode="tags"
+                style={{ width: '100%' }}
+                placeholder={t('processFlow.associationKeysPlaceholder')}
+                value={graph.association_keys}
+                onChange={async (vals) => {
+                  const keys = vals as string[]
+                  try {
+                    const res = await setAssociationKeys(keys)
+                    setGraph((prev) => ({ ...prev, association_keys: res.association_keys }))
+                    messageApi.success(t('processFlow.associationKeysSaved'))
+                  } catch {
+                    messageApi.error(t('processFlow.saveError'))
+                  }
+                }}
+              />
+            </Space>
           )}
         </Card>
       </div>
