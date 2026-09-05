@@ -504,6 +504,7 @@ export interface ReportParams {
   n_simulations?: number
   seed?: number
   enable_anomalies?: boolean
+  spc_columns?: string[]
 }
 
 export interface ReportResult {

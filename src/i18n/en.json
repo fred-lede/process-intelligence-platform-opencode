@@ -433,7 +433,11 @@
     "pdfButton": "Download PDF",
     "preview": "HTML Preview",
     "generateSuccess": "Report generated successfully",
-    "generateError": "Failed to generate report"
+    "generateError": "Failed to generate report",
+    "spcSection": "Statistical Process Control",
+    "spcViolations": "Violations",
+    "spcCapability": "Capability",
+    "spcSuggestions": "Suggestions"
   },
   "about": {
     "title": "About",

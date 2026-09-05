@@ -435,7 +435,11 @@
     "pdfButton": "Descargar PDF",
     "preview": "Vista previa HTML",
     "generateSuccess": "Informe generado exitosamente",
-    "generateError": "Error al generar informe"
+    "generateError": "Error al generar informe",
+    "spcSection": "Control Estadístico de Procesos",
+    "spcViolations": "Violaciones",
+    "spcCapability": "Capacidad",
+    "spcSuggestions": "Sugerencias"
   },
   "about": {
     "title": "Acerca de",

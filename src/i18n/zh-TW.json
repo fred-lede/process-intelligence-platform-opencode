@@ -433,7 +433,11 @@
     "pdfButton": "下載 PDF",
     "preview": "HTML 預覽",
     "generateSuccess": "報告產生成功",
-    "generateError": "報告產生失敗"
+    "generateError": "報告產生失敗",
+    "spcSection": "統計製程控制",
+    "spcViolations": "違規數",
+    "spcCapability": "能力指數",
+    "spcSuggestions": "優化建議"
   },
   "about": {
     "title": "關於",
