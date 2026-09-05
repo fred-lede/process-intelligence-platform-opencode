@@ -142,12 +142,20 @@ export function buildSpcContext(result: SPCAnalysisResult | null): string {
       `(${result.violations.map((v) => `rule ${v.rule}`).join(', ') || 'none'}).`,
   ]
   if (cap) {
+    const cpkStatus = cap.cpk === null ? 'N/A' : cap.cpk >= 1.33 ? 'GOOD' : cap.cpk >= 1.0 ? 'MARGINAL' : 'POOR'
     lines.push(
-      `Capability: Cp=${num(cap.cp)}, Cpk=${num(cap.cpk)}, Pp=${num(cap.pp)}, Ppk=${num(cap.ppk)}, mean=${num(cap.mean)}.`,
+      `Capability: Cp=${num(cap.cp)}, Cpk=${num(cap.cpk)} (${cpkStatus}), Pp=${num(cap.pp)}, Ppk=${num(cap.ppk)}, mean=${num(cap.mean)}.`,
     )
   }
   if (result.suggestions && result.suggestions.length > 0) {
-    lines.push(`Suggestions: ${result.suggestions.map(s => s.message).join('; ')}.`)
+    const urgent = result.suggestions.filter((s) => s.severity === 'error')
+    const warning = result.suggestions.filter((s) => s.severity === 'warning')
+    if (urgent.length > 0) {
+      lines.push(`URGENT: ${urgent.map((s) => s.message).join('; ')}.`)
+    }
+    if (warning.length > 0) {
+      lines.push(`WARNING: ${warning.map((s) => s.message).join('; ')}.`)
+    }
   }
   if (cl.i_ucl !== null || cl.i_center !== null) {
     lines.push(
@@ -161,8 +169,10 @@ export function buildMonteCarloContext(result: MonteCarloResult | null): string 
   if (!result) return ''
   const p = result.percentiles
   const top = (result.anomaly_rankings || []).slice(0, 5)
+  const riskLevel =
+    result.ng_probability > 0.05 ? 'HIGH' : result.ng_probability > 0.01 ? 'MEDIUM' : result.ng_probability > 0.001 ? 'MODERATE' : 'LOW'
   const lines = [
-    `Monte Carlo (${result.n_simulations} simulations): NG probability=${pct(result.ng_probability)}, ` +
+    `Monte Carlo (${result.n_simulations} simulations): NG probability=${pct(result.ng_probability)} (${riskLevel}), ` +
       `NG count=${result.ng_count}, output mean=${num(result.output_mean)}, std=${num(result.output_std)}, median=${num(result.output_median)}.`,
     `Percentiles: p1=${num(p.p1)}, p5=${num(p.p5)}, p50=${num(p.p50)}, p95=${num(p.p95)}, p99=${num(p.p99)}.`,
   ]
@@ -170,8 +180,9 @@ export function buildMonteCarloContext(result: MonteCarloResult | null): string 
     lines.push(`Top anomaly risk contributors: ${top.map((a) => `${a.name} (${pct(a.ng_contribution)})`).join(', ')}.`)
   }
   if (result.capability && result.capability.pp != null && result.capability.ppk != null && result.capability.sigma_overall != null) {
+    const ppkStatus = result.capability.ppk >= 1.33 ? 'GOOD' : result.capability.ppk >= 1.0 ? 'MARGINAL' : 'POOR'
     lines.push(
-      `Predicted capability (simulation): Pp=${num(result.capability.pp)}, Ppk=${num(result.capability.ppk)}, sigma_overall=${num(result.capability.sigma_overall)}.`,
+      `Predicted capability (simulation): Pp=${num(result.capability.pp)}, Ppk=${num(result.capability.ppk)} (${ppkStatus}), sigma_overall=${num(result.capability.sigma_overall)}.`,
     )
   }
   return lines.join('\n')
