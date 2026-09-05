@@ -316,6 +316,7 @@
     },
     "fitButton": "Ajustar modelo",
     "fitSuccess": "Modelo ajustado exitosamente",
+    "continuousTarget": "La variable objetivo \"{{column}}\" tiene {{n}} valores únicos (continua). La regresión logística requiere una variable objetivo binaria (0/1 o dos categorías). Seleccione otra variable objetivo o use un modelo de regresión.",
     "noInteraction": "No hay interacciones significativas.",
     "shapTitle": "Análisis SHAP",
     "computeSHAP": "Calcular SHAP",

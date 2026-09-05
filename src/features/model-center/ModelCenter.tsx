@@ -86,6 +86,13 @@ export default function ModelCenter() {
 
   const handleFit = async () => {
     if (!datasetId || !target || selectedInputs.length === 0) return
+    if (modelType === 'logistic_regression') {
+      const uq = importResult?.stats.column_stats?.[target]?.unique_count ?? 0
+      if (uq > 10) {
+        messageApi.warning(t('modelCenter.continuousTarget', { column: target, n: uq }))
+        return
+      }
+    }
     const params: {
       dataset_id: string
       model_type: ModelType

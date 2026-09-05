@@ -314,6 +314,7 @@
     },
     "fitButton": "Fit Model",
     "fitSuccess": "Model fitted successfully",
+    "continuousTarget": "The target \"{{column}}\" has {{n}} unique values (continuous). Logistic regression requires a binary target (0/1 or two distinct categories). Please select a different target or use a regression model instead.",
     "listTitle": "Fitted Models",
     "column": {
       "type": "Type",
