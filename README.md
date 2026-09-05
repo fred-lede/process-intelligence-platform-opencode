@@ -422,6 +422,12 @@ data/test_dataset.csv
 - Weibull 模型：顯示 mean TTF + 壽命 Tag（長/短）
 - 修正 compact coefficient key normalize（`x1x2` → `x1_x_x2`）
 
+**DOE 統計推論（ANOVA + p 值）**
+- 引擎 `compute_doe_statistics()`：ANOVA F 檢定 + 各係數 t 檢定 + p 值 + 95% 信心區間
+- 前端「DOE 統計推論」Card：顯著性表格 + 判讀說明
+- 判讀規則（工業標準）：p<0.001 極顯著 / p<0.01 顯著 / p<0.05 邊際顯著 / p≥0.05 不顯著
+- 輔助評語：依 R² × 顯著項比例 → Excellent/Good/Moderate/Poor fit
+
 **系統設定 — LightGBM 裝置**
 - 設定頁新增「LightGBM Device」下拉選單（auto / cpu / gpu）
 - `auto` 預設：先試 GPU，LightGBM 未編譯 GPU 時自動退回 CPU
