@@ -1,10 +1,13 @@
-"""Prediction engine for DOE models."""
+"""Prediction engine for DOE, logistic, and Weibull models."""
+from __future__ import annotations
+
+import math
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-SUPPORTED_MODELS = {"doe_linear", "doe_quadratic"}
+SUPPORTED_MODELS = {"doe_linear", "doe_quadratic", "logistic_regression", "weibull_regression"}
 
 _COEFF_RENAMES = {
     "x1x2": "x1_x_x2",
@@ -14,51 +17,65 @@ _COEFF_RENAMES = {
 
 
 def predict_single(model_type: str, coefficients: dict[str, float], inputs: dict[str, float]) -> float:
-    """Predict a single output value using DOE model coefficients.
+    """Predict output using model coefficients.
 
     Args:
-        model_type: "doe_linear" or "doe_quadratic"
+        model_type: one of "doe_linear", "doe_quadratic", "logistic_regression", "weibull_regression"
         coefficients: dict with keys like "_intercept", "x1", "x2",
                       "x1_x_x2", "x1_x_x1" (also accepts compact "x1x2", "x1x1")
+                      For logistic: plain coefficients; For weibull: "_weibull_shape" key
         inputs: dict mapping factor names to their values
 
     Returns:
-        Predicted output value
+        Predicted output value (probability for logistic, mean TTF for weibull)
 
     Raises:
         ValueError: if model_type is not supported
     """
     if model_type not in SUPPORTED_MODELS:
-        raise ValueError(f"Unsupported model type: {model_type!r}. "
-                         f"Expected one of {sorted(SUPPORTED_MODELS)}.")
+        raise ValueError(
+            f"Unsupported model type: {model_type!r}. "
+            f"Expected one of {sorted(SUPPORTED_MODELS)}."
+        )
 
     # Normalize coefficient keys (compact → spaced form)
-    normed = {}
-    for k, v in coefficients.items():
-        normed[_COEFF_RENAMES.get(k, k)] = v
+    normed = {**_COEFF_RENAMES, **coefficients}
 
-    result = float(normed.get("_intercept", 0.0))
+    if model_type in ("doe_linear", "doe_quadratic"):
+        result = float(normed.get("_intercept", 0.0))
+        for name, value in inputs.items():
+            coef = normed.get(name, 0.0)
+            result += coef * value
+            if model_type == "doe_quadratic":
+                sq_key = f"{name}_x_{name}"
+                coef_sq = normed.get(sq_key, 0.0)
+                result += coef_sq * value * value
+                for other_name in inputs:
+                    if other_name == name:
+                        continue
+                    inter_key = f"{name}_x_{other_name}"
+                    coef_inter = normed.get(inter_key, 0.0)
+                    result += coef_inter * value * inputs[other_name]
+        return float(result)
 
-    for name, value in inputs.items():
-        # linear term: key is just the factor name (e.g. "x1")
-        coef = normed.get(name, 0.0)
-        result += coef * value
+    if model_type == "logistic_regression":
+        logit = float(normed.get("_intercept", 0.0))
+        for name, value in inputs.items():
+            logit += float(normed.get(name, 0.0)) * value
+        return 1.0 / (1.0 + math.exp(-logit))
 
-        if model_type == "doe_quadratic":
-            # squared term: "x1_x_x1"
-            sq_key = f"{name}_x_{name}"
-            coef_sq = normed.get(sq_key, 0.0)
-            result += coef_sq * value * value
+    if model_type == "weibull_regression":
+        intercept = float(normed.get("_intercept", 0.0))
+        k = float(normed.get("_weibull_shape", 1.0))
+        log_lambda = intercept
+        for name, value in inputs.items():
+            log_lambda += float(normed.get(name, 0.0)) * value
+        log_lambda = max(min(log_lambda, 700.0), -700.0)
+        lambda_val = float(np.exp(log_lambda))
+        from scipy.special import gamma
+        return float(lambda_val * gamma(1.0 + 1.0 / k))
 
-            # interaction terms: "x1_x_x2"
-            for other_name in inputs:
-                if other_name == name:
-                    continue
-                inter_key = f"{name}_x_{other_name}"
-                coef_inter = normed.get(inter_key, 0.0)
-                result += coef_inter * value * inputs[other_name]
-
-    return float(result)
+    raise ValueError(f"Unhandled model type: {model_type}")
 
 
 def get_input_ranges(df: pd.DataFrame, input_columns: list[str]) -> dict[str, dict[str, float]]:
