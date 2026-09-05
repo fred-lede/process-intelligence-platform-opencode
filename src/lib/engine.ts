@@ -698,6 +698,8 @@ export async function analyzeSPC(params: {
   subgroup_size?: number
   lsl?: number
   usl?: number
+  filter_column?: string
+  filter_value?: string
 }): Promise<SPCAnalysisResult> {
   return engineCall<SPCAnalysisResult>('spc/analyze', params)
 }

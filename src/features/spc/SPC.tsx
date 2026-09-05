@@ -5,7 +5,7 @@ import { ApartmentOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { analyzeSPC, type SPCAnalysisResult } from '../../lib/engine'
+import { analyzeSPC, getFlowGraph, type SPCAnalysisResult } from '../../lib/engine'
 import {
   consumeNodeContext,
   dataSourceLoaded,
@@ -38,6 +38,8 @@ export default function SPC() {
     displayName: string
     dataSourceIds?: string[]
   } | null>(null)
+  const [nodeFilterColumn, setNodeFilterColumn] = useState<string | undefined>(undefined)
+  const [nodeFilterValue, setNodeFilterValue] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     if (consumedRef.current) return
@@ -51,8 +53,19 @@ export default function SPC() {
           displayName: node.display_name,
           dataSourceIds: pendingCtx.dataSourceIds,
         })
-        if (dataSourceLoaded(pendingCtx.dataSourceIds, importResult?.dataset_id) && pendingCtx.field) {
-          setColumn(pendingCtx.field)
+        if (dataSourceLoaded(pendingCtx.dataSourceIds, importResult?.dataset_id)) {
+          if (pendingCtx.field) {
+            setColumn(pendingCtx.field)
+          }
+          try {
+            const graph = await getFlowGraph()
+            const key = graph.association_keys[0]
+            if (key && importResult?.stats.column_stats?.[key]) {
+              setNodeFilterColumn(key)
+            }
+          } catch {
+            // ignore — filter default is optional
+          }
         }
       })()
     }
@@ -91,6 +104,9 @@ export default function SPC() {
         subgroup_size: chartType === 'i-mr' ? 1 : subgroupSize,
         lsl: spec?.lsl ?? undefined,
         usl: spec?.usl ?? undefined,
+        ...(nodeFilterColumn && nodeFilterValue
+          ? { filter_column: nodeFilterColumn, filter_value: nodeFilterValue }
+          : {}),
       })
       setResult(res)
     } catch (e) {
@@ -245,6 +261,43 @@ export default function SPC() {
             />
           )}
         <Space wrap style={{ marginBottom: 12 }}>
+          {sourcedFromNode &&
+            dataSourceLoaded(sourcedFromNode.dataSourceIds, importResult?.dataset_id) && (
+              <>
+                <Form.Item label={t('spc.filterByNode')} style={{ margin: 0 }}>
+                  <Select
+                    value={nodeFilterColumn}
+                    onChange={val => {
+                      setNodeFilterColumn(val)
+                      setNodeFilterValue(undefined)
+                    }}
+                    options={Object.keys(importResult?.stats.column_stats ?? {}).map(name => ({
+                      value: name,
+                      label: name,
+                    }))}
+                    allowClear
+                    placeholder={t('spc.filterByNode')}
+                    style={{ width: 160 }}
+                  />
+                </Form.Item>
+                <Input
+                  value={nodeFilterValue}
+                  onChange={e => setNodeFilterValue(e.target.value)}
+                  disabled={!nodeFilterColumn}
+                  placeholder={t('spc.sameSourceHint')}
+                  style={{ width: 180 }}
+                />
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setNodeFilterColumn(undefined)
+                    setNodeFilterValue(undefined)
+                  }}
+                >
+                  {t('spc.nodeFilterCleared')}
+                </Button>
+              </>
+            )}
           <Form.Item label={t('spc.chartType')} style={{ margin: 0 }}>
             <Select
               value={chartType}
