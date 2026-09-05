@@ -1,6 +1,13 @@
 # TASK.md
 
 ## Completed
+### Task 3: SPC enhancement — 收尾 docs + 最終驗證 + push
+- **Status**: DONE
+- **Docs**：PROGRESS.md 新增 2026-09-05 SPC enhancement 條目；TASK.md 底部保留 Task 1/2 紀錄；README.md Phase 8 補 multi-column comparison + optimization suggestions
+- **驗證**：`pytest tests/ -q` → **327 passed, 1 skipped**（baseline 322 + 5 新）；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.43s`
+- **Push**：`git push` ✅
+- **Files changed** — `PROGRESS.md`, `TASK.md`, `README.md`
+
 ### Task 3: EWMA/CUSUM — 收尾 docs + 最終驗證 + push
 - **Status**: DONE
 - **Docs**：PROGRESS.md 新增 2026-09-05 EWMA/CUSUM 條目；TASK.md 底部保留 Task 1/2 紀錄；README.md Phase 8 補 EWMA/CUSUM 支援一行
@@ -198,6 +205,12 @@
 - **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_monte_carlo.py`, `src/lib/engine.ts`, `src/features/monte-carlo/MonteCarlo.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`（未提交 `engine/.coverage`/icons）
 
 <!-- NEXT_ITEM_ANCHOR -->
+
+### Task 2: Frontend — Multi-column comparison + suggestions display
+- **Status**: DONE
+- **實作**：`engine.ts` 新增 `SPCSuggestion`/`SPCBatchResult` 型別 + `analyzeSPCBatch()`；`SPC.tsx` 加 `batchMode`/`selectedColumns`/`batchResult` state、批次切換按鈕、批次分析 UI、`handleBatchAnalyze`、`buildPlotData` 重構為接受 result 參數、`buildPlotLayout` 改為函數、比較表格 + 各欄圖表；`assistantData.ts` 補 suggestions 行；i18n 三語各 +7 keys（batchAnalyze/singleAnalysis/compareColumns/selectColumns/suggestions/noSuggestions/column）
+- **驗證**：三語 parity `ok count: 51`；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.14s`
+- **Files changed（commit 678af29）** — `src/lib/engine.ts`, `src/features/spc/SPC.tsx`, `src/lib/assistantData.ts`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
 
 ### Task 2: Frontend — EWMA and CUSUM UI and rendering
 - **Status**: DONE
@@ -716,3 +729,12 @@
 - **測試**：新增 6 支測試（`test_compute_ewma_basic`/`test_compute_ewma_violations`/`test_compute_cusum_basic`/`test_compute_cusum_violations`/`test_compute_ewma_empty_raises`/`test_compute_cusum_empty_raises`）；全引擎 **322 passed, 1 skipped**（baseline 316 + 6）
 - **驗證**：`pytest tests/ -q` → 322 passed, 1 skipped
 - **Files changed** — `engine/src/process_intelligence_engine/spc.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_spc.py`
+
+### Task 1 — Engine: Batch analyze + suggestions (TDD)
+- **Status**: DONE
+- **實作**：`spc.py` 新增 `compute_spc_suggestions()` — 檢查 Cpk（<1.0 error / <1.33 warning）、Rule 4（8_consecutive_same_side → shift_detected error）、Rule 5（6_consecutive_trend → trend_detected warning）、EWMA/CUSUM Rule 1（small_shift warning）；`main.py` 新增 `_handle_spc_batch_analyze`（`spc/batch_analyze`）支援 i-mr/ewma/cusum 多欄批量分析並附 suggestions
+- **測試**：新增 4 支（低 Cpk / shift / stable / batch IPC）
+- **結果**：引擎 **326 passed, 1 skipped**（baseline 322 + 4）
+- **驗證**：`pytest tests/ -q` → 326 passed, 1 skipped
+- **Commit** — `9af8153`
+- **Files changed** — `engine/src/process_intelligence_engine/spc.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_spc.py`, `engine/tests/test_main_spc.py`

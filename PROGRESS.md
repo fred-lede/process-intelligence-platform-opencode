@@ -638,3 +638,15 @@
 - [x] **測試**：新增 8 支（RF auto-select、hyperparameters、edge case、XGBoost/LightGBM fit、SHAP）
 - [x] **驗證**：引擎 **316 passed, 1 skipped**（baseline 304 + 12 新）；`npx tsc --noEmit` clean；`npm run build` 成功
 - **Commits**：`cb49b49` / `2073d53` / `c94e11e` / `f0d4979` / `2b71112` / `7404acf`
+- [x] **引擎 — SPC 批量分析 + 優化建議**（commit `9af8153`）：
+  - `spc.py` 新增 `compute_spc_suggestions()`（檢查 Cpk/Rule4 shift/Rule5 trend/EWMA-CUSUM small_shift）
+  - `main.py` 新增 `_handle_spc_batch_analyze`（`spc/batch_analyze` IPC，支援 i-mr/ewma/cusum 多欄）
+  - 新增 4 支測試；全引擎 **326 passed, 1 skipped**（baseline 322 + 4）
+  - **Files changed** — `engine/src/process_intelligence_engine/spc.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_spc.py`, `engine/tests/test_main_spc.py`
+
+## 2026-09-05 — SPC 批量分析 + 優化建議（multi-column + suggestions）
+
+- [x] **引擎（commits `9af8153` / `641bd13` / `19f6549`）**：`spc.py` 新增 `compute_spc_suggestions()`（檢查 Cpk<1.0 error / Cpk<1.33 warning、Rule 4 shift、Rule 5 trend、EWMA/CUSUM small shift）；`main.py` 新增 `_handle_spc_batch_analyze`（`spc/batch_analyze` IPC，支援 i-mr/ewma/cusum 多欄批量分析並附 suggestions）；3 個 fixup commit 修正 indentation / chart_type consistency / xbar error / EWMA test
+- [x] **前端（commit `678af29`）**：`engine.ts` 新增 `SPCSuggestion`/`SPCBatchResult` 型別 + `analyzeSPCBatch()`；`SPC.tsx` 加 `batchMode`/`selectedColumns`/`batchResult` state、批次切換按鈕、批次分析 UI、`handleBatchAnalyze`、`buildPlotData` 重構為接受 result 參數、`buildPlotLayout` 改為函數、比較表格 + 各欄圖表；`assistantData.ts` 補 suggestions 行；i18n 三語各 +7 keys（batchAnalyze/singleAnalysis/compareColumns/selectColumns/suggestions/noSuggestions/column）
+- [x] **驗證**：全引擎 **327 passed, 1 skipped**（baseline 322 + 5）；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.43s`；三語 parity `ok count: 51`
+- **Commits**：`9af8153` / `641bd13` / `19f6549` / `678af29`

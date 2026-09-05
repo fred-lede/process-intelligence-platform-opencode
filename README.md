@@ -215,7 +215,9 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 - **規格線**: LSL/USL 參考線於位置圖（Individuals 直畫、X-bar 標記 (ref)）；離散圖 MR/R/S 不加
 - **Western Electric 7 規則**: 違規偵測與表格化顯示
 - **能力指數**: Cp / Cpk / Pp / Ppk
-- **IPC handlers**: `spc/analyze` + `spc/capability`
+- **批量比較**: 多欄位同時分析 + 比較表格 + 各欄獨立控制圖
+- **優化建議**: 基於 Cpk/規則違反自動產生 shift/trend/能力不足警示
+- **IPC handlers**: `spc/analyze` + `spc/capability` + `spc/batch_analyze`
 
 ### Phase 9 — 蒙地卡羅異常風險模擬 ✅
 
