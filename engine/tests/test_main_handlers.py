@@ -613,3 +613,12 @@ def test_handle_spec_suggest_constant_raises():
 
     with pytest.raises(ValueError, match="std is zero"):
         handle_request("spec/suggest", {"dataset_id": did, "column": "x"})
+
+
+def test_apply_row_filter_rejects_empty_value():
+    """Test _apply_row_filter raises when filter_value is empty string."""
+    import pandas as pd
+    from process_intelligence_engine.main import _apply_row_filter
+    df = pd.DataFrame({"x": [1, 2, 3], "cat": ["A", "B", "A"]})
+    with pytest.raises(ValueError, match="filter_value is required"):
+        _apply_row_filter(df, {"filter_column": "cat", "filter_value": ""})

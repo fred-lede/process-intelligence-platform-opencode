@@ -403,7 +403,7 @@ def _apply_row_filter(df, params):
     if filter_column:
         if filter_column not in df.columns:
             raise KeyError(f"Unknown filter column: {filter_column}")
-        if filter_value is None:
+        if filter_value is None or filter_value == "":
             raise ValueError("filter_value is required when filter_column is set")
         df = df[df[filter_column].astype(str) == str(filter_value)]
         if df.empty:
