@@ -134,7 +134,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           <strong>{t('about.author')}:</strong> Fred Wang
         </Typography.Paragraph>
         <Typography.Paragraph>
-          <strong>{t('about.version')}:</strong> 0.2.0
+          <strong>{t('about.version')}:</strong> 0.3.0
         </Typography.Paragraph>
         <Typography.Paragraph>
           <strong>{t('about.license')}:</strong> MIT License

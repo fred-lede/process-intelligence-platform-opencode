@@ -327,6 +327,26 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.3.0（2026-09-05）
+
+**統計異常偵測（IQR + Z-score + CUSUM）**
+- 引擎 `detect_outliers()`：IQR 與 Z-score 雙閾值，返回 outlier_indices / n_outliers / stats
+- 引擎 `detect_change_points()`：CUSUM statistic，返回 change_points / n_change_points
+- `spc/analyze` 回傳 `outlier_indices` / `change_points` / `outlier_stats`
+- SPC 圖表：藍色圓點標示離群值、綠色三角形標示改變點
+- 製程定義手設 LCL/UCL 正確套用到 SPC 圖與趨勢圖
+- 6 支新測試；全引擎 345 passed, 1 skipped
+
+**管制界限修復**
+- `analyzeSPC()` 新增 `control_limits` 參數，手設界限優先於自動 mean±3σ
+- Exploration 趨勢圖：所有 numeric 欄位均顯示自動計算的 UCL/LCL 虛線
+
+**i18n**
+- processDefine 段新增 `lcl`/`ucl` 翻譯（en/zh-TW/es-MX）
+- spc 段新增 `outliers`/`changePoints` 等 6 keys ×3 語
+
+---
+
 ### v0.2.0（2026-09-05）
 
 **SPC 深化**
