@@ -554,7 +554,12 @@
     "capacityAcceptable": "Acceptable (1.0~1.33)",
     "capacityPoor": "Poor (<1.0)",
     "selectColumnHint": "Select an output column and click Analyze.",
-    "noDataHint": "Please import data first."
+    "noDataHint": "Please import data first.",
+    "sourceFromNode": "From node: {name}",
+    "dataSourceNotLoaded": "Source data not loaded. Import the dataset to analyze.",
+    "filterByNode": "Filter by node",
+    "nodeFilterCleared": "Node filter cleared",
+    "sameSourceHint": "(same source as node)"
   },
   "timeSeries": {
     "title": "Time Series Features",

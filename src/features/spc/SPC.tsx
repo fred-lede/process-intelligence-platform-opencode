@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Form, Input, Typography, Table, Tag } from 'antd'
+import { ApartmentOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { analyzeSPC, type SPCAnalysisResult } from '../../lib/engine'
+import {
+  consumeNodeContext,
+  dataSourceLoaded,
+  findNodeById,
+} from '../../lib/processFlowContext'
 import { buildSpcContext } from '../../lib/assistantData'
 
 const CHART_TYPES = ['i-mr', 'xbar-r', 'xbar-s'] as const
@@ -24,6 +30,33 @@ export default function SPC() {
   const { t } = useTranslation()
   const { importResult, spec } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
+
+  const pendingCtx = consumeNodeContext()
+  const consumedRef = useRef(false)
+  const [sourcedFromNode, setSourcedFromNode] = useState<{
+    nodeId: string
+    displayName: string
+    dataSourceIds?: string[]
+  } | null>(null)
+
+  useEffect(() => {
+    if (consumedRef.current) return
+    consumedRef.current = true
+    if (pendingCtx) {
+      ;(async () => {
+        const node = await findNodeById(pendingCtx.nodeId)
+        if (!node) return
+        setSourcedFromNode({
+          nodeId: pendingCtx.nodeId,
+          displayName: node.display_name,
+          dataSourceIds: pendingCtx.dataSourceIds,
+        })
+        if (dataSourceLoaded(pendingCtx.dataSourceIds, importResult?.dataset_id) && pendingCtx.field) {
+          setColumn(pendingCtx.field)
+        }
+      })()
+    }
+  }, [])
 
   const [chartType, setChartType] = useState<ChartType>('i-mr')
   const [column, setColumn] = useState<string | undefined>(spec?.outputField)
@@ -195,6 +228,22 @@ export default function SPC() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Card title={t('spc.title')}>
+        {sourcedFromNode && (
+          <Space wrap style={{ marginBottom: 12 }}>
+            <Tag color="blue" icon={<ApartmentOutlined />}>
+              {t('spc.sourceFromNode', { name: sourcedFromNode.displayName })}
+            </Tag>
+          </Space>
+        )}
+        {sourcedFromNode &&
+          !dataSourceLoaded(sourcedFromNode.dataSourceIds, importResult?.dataset_id) && (
+            <Alert
+              type="warning"
+              message={t('spc.dataSourceNotLoaded')}
+              showIcon
+              style={{ marginBottom: 12 }}
+            />
+          )}
         <Space wrap style={{ marginBottom: 12 }}>
           <Form.Item label={t('spc.chartType')} style={{ margin: 0 }}>
             <Select

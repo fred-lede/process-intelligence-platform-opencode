@@ -556,7 +556,12 @@
     "capacityAcceptable": "Aceptable (1.0~1.33)",
     "capacityPoor": "Deficiente (<1.0)",
     "selectColumnHint": "Selecciona una columna de salida y haz clic en Analizar.",
-    "noDataHint": "Por favor importa datos primero."
+    "noDataHint": "Por favor importa datos primero.",
+    "sourceFromNode": "Desde nodo: {name}",
+    "dataSourceNotLoaded": "Datos de origen no cargados. Importa el conjunto de datos para analizar.",
+    "filterByNode": "Filtrar por nodo",
+    "nodeFilterCleared": "Filtro de nodo borrado",
+    "sameSourceHint": "(misma fuente que el nodo)"
   },
   "timeSeries": {
     "title": "Características de Serie de Tiempo",
