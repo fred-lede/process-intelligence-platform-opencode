@@ -72,6 +72,7 @@ export default function Exploration() {
   const [grrMeasurementCol, setGrrMeasurementCol] = useState<string | undefined>()
   const [grrPartCol, setGrrPartCol] = useState<string | undefined>()
   const [grrOperatorCol, setGrrOperatorCol] = useState<string | undefined>()
+  const [activeTab, setActiveTab] = useState('distribution')
 
   const numericColumns = useMemo(() => {
     if (!importResult) return []
@@ -705,8 +706,11 @@ export default function Exploration() {
           setNodeFilterColumn(undefined)
           setNodeFilterValue(undefined)
         }}
+        filterable={activeTab === 'distribution' || activeTab === 'trend'}
       />
       <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
         items={[
           { key: 'distribution', label: t('exploration.distributionTab'), children: distributionTab },
           { key: 'trend', label: t('exploration.trendTab'), children: trendTab },

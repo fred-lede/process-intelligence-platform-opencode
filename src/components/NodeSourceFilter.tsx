@@ -13,6 +13,7 @@ interface NodeSourceFilterProps {
   setFilterValue: (v: string | undefined) => void
   clearFilter: () => void
   valuePlaceholder?: string
+  filterable?: boolean
 }
 
 export default function NodeSourceFilter({
@@ -26,6 +27,7 @@ export default function NodeSourceFilter({
   setFilterValue,
   clearFilter,
   valuePlaceholder,
+  filterable = true,
 }: NodeSourceFilterProps) {
   const { t } = useTranslation()
   if (!sourcedFromNode) return null
@@ -36,7 +38,7 @@ export default function NodeSourceFilter({
         <Tag color="blue" icon={<ApartmentOutlined />}>
           {t(`${section}.sourceFromNode`, { name: sourcedFromNode.displayName })}
         </Tag>
-        {dataLoaded && (
+        {dataLoaded && filterable && (
           <>
             <Form.Item label={t(`${section}.filterByNode`)} style={{ margin: 0 }}>
               <Select

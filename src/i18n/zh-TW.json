@@ -563,7 +563,7 @@
     "capacityPoor": "不足 (<1.0)",
     "selectColumnHint": "選擇輸出欄位並按分析按鈕。",
     "noDataHint": "請先匯入資料。",
-    "sourceFromNode": "來源節點：{name}",
+    "sourceFromNode": "來源節點：{{name}}",
     "dataSourceNotLoaded": "來源資料尚未載入，請先匯入資料集。",
     "filterByNode": "依節點篩選",
     "nodeFilterCleared": "節點篩選已清除",
