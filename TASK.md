@@ -1,6 +1,13 @@
 # TASK.md
 
 ## Completed
+### Task 3: EWMA/CUSUM — 收尾 docs + 最終驗證 + push
+- **Status**: DONE
+- **Docs**：PROGRESS.md 新增 2026-09-05 EWMA/CUSUM 條目；TASK.md 底部保留 Task 1/2 紀錄；README.md Phase 8 補 EWMA/CUSUM 支援一行
+- **驗證**：`pytest tests/ -q` → **322 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 11.39s`
+- **Push**：`git push` ✅
+- **Files changed** — `PROGRESS.md`, `TASK.md`, `README.md`
+
 ### SPC 管制線圖例 + MC σ 精度/guard 修復（commit 1d2cb57）
 - **Status**: DONE
 - **SPC 圖例**：移除所有管制線 `showlegend: false`（UCL/LCL/CL/MR UCL+CL/R UCL+CL/S UCL+CL 共 12 處）→ 圖例可見橘虛=UCL/LCL、綠虛=CL、紫實=MR/R/S、紅實=LSL/USL；違規點仍 `showlegend:false` 不佔圖例
@@ -191,6 +198,12 @@
 - **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_monte_carlo.py`, `src/lib/engine.ts`, `src/features/monte-carlo/MonteCarlo.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`（未提交 `engine/.coverage`/icons）
 
 <!-- NEXT_ITEM_ANCHOR -->
+
+### Task 2: Frontend — EWMA and CUSUM UI and rendering
+- **Status**: DONE
+- **實作**：`engine.ts` `SPCAnalysisResult` 新增 `z_values`/`c_plus`/`c_minus`/`ewma_lambda`/`ewma_L`/`cusum_k`/`cusum_H`/`ucl`/`lcl`/`cl` optional fields；`analyzeSPC` params 加 `ewma_lambda`/`ewma_L`/`cusum_k`/`cusum_H` + `chart_type` 型別擴充至 `| 'ewma' | 'cusum'`；`SPC.tsx` `CHART_TYPES` 加 `'ewma'`/`'cusum'`；新增 4 個 state（`ewmaLambda`/`ewmaL`/`cusumK`/`cusumH`）；chart type Select 加兩選項；subgroup size 後加條件參數控制列（EWMA λ/L、CUSUM k/H）；`handleAnalyze` 透傳參數；`buildPlotData` 加 `ewma` 分支（Z(t) 線 + UCL/LCL/CL + 違規點）與 `cusum` 分支（C⁺/C⁻ 雙線 + H limit + 違規點）；yaxis title 依 chart_type 動態變（Value/Z(t)/CUSUM/X-bar）；i18n 三語 spc 各 +11 keys（共 44 keys）
+- **驗證**：三語 parity `ok count: 44`；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.51s`（chunk 警示為既有）
+- **Files changed（commit 673ecf0）** — `src/lib/engine.ts`, `src/features/spc/SPC.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
 
 ### 2.0 AI 模型擴充 — 收尾 docs + 最終驗證 + push
 - **Status**: DONE
@@ -696,3 +709,10 @@
 - [ ] follow-up：修正 spc.sourceFromNode 三語單括號 `{name}` → `{{name}}`
 - [ ] follow-up：GRR / 時間序列套用節點篩選
 - [ ] 全任務九完成，可進行總體驗收 / 文件更新
+
+### Task 1 — Engine: EWMA and CUSUM control charts (TDD)
+- **Status**: DONE
+- **實作**：`spc.py` 新增 `compute_ewma()`（EWMA 統計量 + 常數控制界限 + 違規偵測）與 `compute_cusum()`（兩邊 CUSUM 統計量 + 違規偵測）；`main.py` `_handle_spc_analyze` 加入 `ewma`/`cusum` 分支（支援 `ewma_lambda`/`ewma_L`/`cusum_k`/`cusum_H` 參數）
+- **測試**：新增 6 支測試（`test_compute_ewma_basic`/`test_compute_ewma_violations`/`test_compute_cusum_basic`/`test_compute_cusum_violations`/`test_compute_ewma_empty_raises`/`test_compute_cusum_empty_raises`）；全引擎 **322 passed, 1 skipped**（baseline 316 + 6）
+- **驗證**：`pytest tests/ -q` → 322 passed, 1 skipped
+- **Files changed** — `engine/src/process_intelligence_engine/spc.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_spc.py`

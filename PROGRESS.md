@@ -583,6 +583,13 @@
 - **Commits**：`cd7788e, 7db24b8, e0f85dd, 570d01c, b535cd0, 26f3b89, 74e44f4, c22c283, a15e04c, 9e3d2b9, b7f3100, 878f821, 8160797, 4ab2313, c76aff4, 62ce296, 909bf76` + Task 10 (`feat(engine)` zero-row guard / `fix(spc)` numeric guard / `docs`)
 - **Known follow-ups**：time-series / GRR 不套用節點 filter（前端 `filterable=false` 隱藏 + 引擎通道未接）
 
+## 2026-09-05 — SPC EWMA/CUSUM 控制圖
+
+- [x] **引擎（commit `a2d0f03`）**：`spc.py` 新增 `compute_ewma()`（EWMA 統計量 + 常數控制界限 + 違規偵測）與 `compute_cusum()`（兩邊 CUSUM 統計量 + 違規偵測）；`main.py` `_handle_spc_analyze` 加入 `ewma`/`cusum` 分支（支援 `ewma_lambda`/`ewma_L`/`cusum_k`/`cusum_H` 參數）
+- [x] **前端（commit `673ecf0`）**：`engine.ts` `SPCAnalysisResult` 新增 `z_values`/`c_plus`/`c_minus`/`ewma_lambda`/`ewma_L`/`cusum_k`/`cusum_H`/`ucl`/`lcl`/`cl` optional fields；`analyzeSPC` params 加 lambda/L/k/H；`SPC.tsx` CHART_TYPES 加 `'ewma'`/`'cusum'`；子群組大小後加條件參數控制列；`buildPlotData` 加 ewma（Z(t) 線 + UCL/LCL/CL + 違規點）與 cusum（C⁺/C⁻ 雙線 + H limit + 違規點）分支；i18n 三語 spc 各 +11 keys（共 44 keys）
+- [x] **修正欄位名稱（commit `36cb950`）**
+- **驗證**：全引擎 **322 passed, 1 skipped**；`npx tsc --noEmit` clean；`npm run build` 成功
+
 ## 2026-09-05 — SPC 規格線（LSL/USL reference lines）
 
 - [x] **位置圖加規格線、離散圖不加**：SPC.tsx 新增 `addSpecLines(ref?)`—只加在縱軸單位＝量測值的圖：i-mr **Individuals** 直畫（legend：`LSL`/`USL`）、xbar-r / xbar-s **X-bar** 標記 `LSL (ref)`/`USL (ref)`（參考線語意）——紅實線（`#f5222d`，user 反映黑線不佳後改）與 UCL/LCL 橘 dash 明顯區別、縱跨首尾 x；**MR / R / S 離散圖不加**（依 user 批准的逐張判定）。`spec.lsl`/`spec.usl` 各側獨立，僅畫已提供的側；純前端、無引擎/i18n 變更。驗證：`npx tsc --noEmit` clean、`npm run build` 成功。README Phase 8 補「規格線」一列。commits `8c67ec7` / `2b9709c`
