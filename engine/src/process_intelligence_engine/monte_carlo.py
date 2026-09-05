@@ -176,8 +176,9 @@ def predict_output(
         log_lambda = intercept
         for x in input_names:
             log_lambda += float(coefficients.get(x, 0.0)) * inputs[x]
-        lambda_val = math.exp(log_lambda)
-        # mean time-to-failure = lambda * Gamma(1 + 1/k)
+        # Guard against overflow; cap log_lambda to ±700 (np.exp(709) ≈ max float)
+        log_lambda = max(min(log_lambda, 700.0), -700.0)
+        lambda_val = float(np.exp(log_lambda))
         from scipy.special import gamma
         mean_ttf = lambda_val * gamma(1.0 + 1.0 / k)
         return float(mean_ttf)
