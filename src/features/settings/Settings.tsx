@@ -30,6 +30,7 @@ export default function Settings() {
   const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null)
 
   const [aiForm] = Form.useForm()
+  const [modelForm] = Form.useForm()
   const [loginForm] = Form.useForm()
   const [registerForm] = Form.useForm()
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -101,6 +102,7 @@ export default function Settings() {
       if (result.config) {
         setAiConfig(result.config)
         aiForm.setFieldsValue(result.config)
+        modelForm.setFieldsValue(result.config)
       }
     } catch {
       if (retryCount < 5) {
@@ -390,9 +392,9 @@ export default function Settings() {
 
         <Card title={<><ExperimentOutlined /> {t('settings.modelSettings')}</>}>
           <Form
+            form={modelForm}
             layout="vertical"
             style={{ maxWidth: 400 }}
-            initialValues={{ lightgbm_device: aiConfig.lightgbm_device ?? 'auto' }}
             onValuesChange={(_, values) => setAiConfig(prev => ({ ...prev, ...values }))}
           >
             <Form.Item name="lightgbm_device" label={t('settings.lightgbmDevice')}>
