@@ -314,8 +314,8 @@
         "residualHybrid": "DOE lineal + Bosque Aleatorio en residuos. Objetivo: continuo. Combina interpretabilidad y precisión.",
         "logisticRegression": "Modelo de clasificación binaria. Objetivo: binario (solo 0/1 o dos categorías). Predice probabilidad de clase.",
         "weibullRegression": "Modelo de confiabilidad / tiempo hasta falla. Objetivo: continuo estrictamente positivo. Estima forma k y escala λ.",
-        "xgboost": " Árboles de boosting por gradiente (regresión). Objetivo: continuo. Rápido y preciso; soporta selección automática de características.",
-        "lightgbm": " Árboles de boosting por gradiente (regresión). Objetivo: continuo. Alto rendimiento con crecimiento por hojas; soporta selección automática de características."
+        "xgboost": "Árboles de boosting por gradiente (regresión). Objetivo: continuo. Rápido y preciso; soporta selección automática de características.",
+        "lightgbm": "Árboles de boosting por gradiente (regresión). Objetivo: continuo. Alto rendimiento con crecimiento por hojas; soporta selección automática de características."
       }
     },
     "target": {
