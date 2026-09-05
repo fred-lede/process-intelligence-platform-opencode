@@ -252,10 +252,18 @@ export default function ModelCenter() {
       title: t('modelCenter.column.status'), dataIndex: 'status', key: 'status', width: 160,
       render: (status: ModelStatus) => <Tag color={STATUS_COLORS[status]}>{status}</Tag>,
     },
-    { title: 'R²', dataIndex: ['metrics', 'r2'], key: 'r2', width: 100, render: (v: number) => v?.toFixed(4) },
-    { title: 'RMSE', dataIndex: ['metrics', 'rmse'], key: 'rmse', width: 100, render: (v: number) => v?.toFixed(4) },
-    { title: 'MAE', dataIndex: ['metrics', 'mae'], key: 'mae', width: 100, render: (v: number) => v?.toFixed(4) },
-    { title: 'Adj R²', dataIndex: ['metrics', 'adj_r2'], key: 'adj_r2', width: 100, render: (v: number) => v?.toFixed(4) },
+    {
+      title: t('modelCenter.column.equation'), dataIndex: 'equation', key: 'equation', width: 260,
+      render: (eq: string) => (
+        <Typography.Text code style={{ fontSize: 11 }}>{eq || '—'}</Typography.Text>
+      ),
+    },
+    { title: 'R²', dataIndex: ['metrics', 'r2'], key: 'r2', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
+    { title: 'RMSE', dataIndex: ['metrics', 'rmse'], key: 'rmse', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
+    { title: 'AUC', dataIndex: ['metrics', 'auc'], key: 'auc', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
+    { title: t('modelCenter.column.accuracy'), dataIndex: ['metrics', 'accuracy'], key: 'accuracy', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
+    { title: t('modelCenter.column.shape_k'), dataIndex: ['metrics', 'shape_k'], key: 'shape_k', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
+    { title: t('modelCenter.column.aic'), dataIndex: ['metrics', 'aic'], key: 'aic', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
     {
       title: t('modelCenter.column.actions'), key: 'actions', width: 200,
       render: (_, record) => {

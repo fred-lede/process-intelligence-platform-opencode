@@ -328,7 +328,13 @@
       "type": "類型",
       "version": "版本",
       "status": "狀態",
-      "actions": "操作"
+      "actions": "操作",
+      "equation": "方程式",
+      "auc": "AUC",
+      "accuracy": "準確率",
+      "recall": "召回率",
+      "shape_k": "Shape k",
+      "aic": "AIC"
     },
     "confirmTransition": "確認切換至 {{status}}？",
     "transitionSuccess": "模型已切換至 {{status}}",

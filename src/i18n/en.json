@@ -328,7 +328,13 @@
       "type": "Type",
       "version": "Ver",
       "status": "Status",
-      "actions": "Actions"
+      "actions": "Actions",
+      "equation": "Equation",
+      "auc": "AUC",
+      "accuracy": "Accuracy",
+      "recall": "Recall",
+      "shape_k": "Shape k",
+      "aic": "AIC"
     },
     "confirmTransition": "Confirm transition to {{status}}?",
     "transitionSuccess": "Model transitioned to {{status}}",
