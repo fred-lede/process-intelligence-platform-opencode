@@ -306,14 +306,14 @@
       "xgboost": "XGBoost",
       "lightgbm": "LightGBM",
       "desc": {
-        "doeLinear": "Linear model with main effects only. Target: continuous. Requires ≥3 inputs.",
-        "doeQuadratic": "Linear + interaction + squared terms. Target: continuous. Requires ≥2 inputs.",
-        "randomForest": "Ensemble of decision trees (regression). Target: continuous. Handles non-linear relationships.",
-        "residualHybrid": "DOE linear + Random Forest on residuals. Target: continuous. Combines interpretability & accuracy.",
-        "logisticRegression": "Binary classification model. Target: binary (0/1 or two categories only). Predicts probability of class.",
-        "weibullRegression": "Reliability / time-to-failure model. Target: strictly positive continuous. Estimates shape k & scale λ.",
-        "xgboost": "Gradient boosting trees (regression). Target: continuous. Fast & accurate; supports auto feature selection.",
-        "lightgbm": "Gradient boosting trees (regression). Target: continuous. High performance with leaf-wise growth; supports auto feature selection."
+        "doeLinear": "Linear model with main effects only. Target: continuous. Requires ≥3 inputs.\n\nApplicable scenarios: Quick baseline model; screening experiments with few factors; when interpretability matters more than accuracy; DOE Phase 1 analysis.",
+        "doeQuadratic": "Linear + interaction + squared terms. Target: continuous. Requires ≥2 inputs.\n\nApplicable scenarios: Response surface optimization; capturing curvature in factor effects; when interactions between inputs are expected; DOE Phase 2 analysis.",
+        "randomForest": "Ensemble of decision trees (regression). Target: continuous. Handles non-linear relationships.\n\nApplicable scenarios: Complex non-linear processes; many input features; when feature importance ranking is needed; robust to outliers and noise; no distribution assumptions required.",
+        "residualHybrid": "DOE linear + Random Forest on residuals. Target: continuous. Combines interpretability & accuracy.\n\nApplicable scenarios: Processes with both linear trends and complex non-linear residuals; when you need both interpretability (DOE part) and accuracy (RF residual part); best of both worlds.",
+        "logisticRegression": "Binary classification model. Target: binary (0/1 or two categories only). Predicts probability of class.\n\nApplicable scenarios: Pass/fail prediction; NG/OK classification; quality control decision making; when you need probability scores not just yes/no; interpreting feature impact on defect probability.",
+        "weibullRegression": "Reliability / time-to-failure model. Target: strictly positive continuous. Estimates shape k & scale λ.\n\nApplicable scenarios: Product lifetime analysis; wear-out / failure time prediction; reliability engineering; when output represents time, duration, or lifespan; maintenance scheduling optimization.",
+        "xgboost": "Gradient boosting trees (regression). Target: continuous. Fast & accurate; supports auto feature selection.\n\nApplicable scenarios: High-dimensional data with many features; when prediction accuracy is the top priority; feature selection built-in; faster training than random forest; industrial process optimization.",
+        "lightgbm": "Gradient boosting trees (regression). Target: continuous. High performance with leaf-wise growth; supports auto feature selection.\n\nApplicable scenarios: Large datasets (100k+ rows); GPU-accelerated training; when training speed matters; leaf-wise tree growth captures complex patterns; preferred over XGBoost for very large data."
       }
     },
     "target": {
