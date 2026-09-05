@@ -9,7 +9,7 @@ import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
 import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult } from '../../lib/engine'
-import { computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation } from '../../lib/engine'
+import { computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, type DoeStatisticsResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -74,6 +74,8 @@ export default function ModelCenter() {
   const [cvFolds, setCvFolds] = useState(5)
   const [fullValidation, setFullValidation] = useState<FullValidationResult | null>(null)
   const [fullValidationLoading, setFullValidationLoading] = useState(false)
+  const [doeStats, setDoeStats] = useState<DoeStatisticsResult | null>(null)
+  const [doeStatsLoading, setDoeStatsLoading] = useState(false)
   const [nEstimators, setNEstimators] = useState(200)
   const [maxDepth, setMaxDepth] = useState(10)
   const [minSamplesLeaf, setMinSamplesLeaf] = useState(3)
@@ -83,9 +85,9 @@ export default function ModelCenter() {
   useEffect(() => {
     setContext(
       'modelCenter',
-      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation }),
+      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats }),
     )
-  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, setContext])
+  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, setContext])
 
   const datasetId = importResult?.dataset_id
   const inputOptions = fields
@@ -168,6 +170,21 @@ export default function ModelCenter() {
       messageApi.error('Failed to compute interactions')
     } finally {
       setInteractionsLoading(false)
+    }
+  }
+
+  const handleComputeDOEStatistics = async () => {
+    if (!models.length) return
+    const modelId = models[models.length - 1].model_id
+    if (!datasetId) return
+    setDoeStatsLoading(true)
+    try {
+      const result = await computeDOEStatistics({ model_id: modelId, dataset_id: datasetId })
+      setDoeStats(result.statistics)
+    } catch {
+      setDoeStats(null)
+    } finally {
+      setDoeStatsLoading(false)
     }
   }
 
@@ -680,6 +697,81 @@ export default function ModelCenter() {
               </Space>
             ) : (
               <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
+            )}
+          </Space>
+        </Card>
+
+        <Card title={t('modelCenter.doeStatisticsTitle')} size="small">
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Button
+              type="primary"
+              loading={doeStatsLoading}
+              onClick={handleComputeDOEStatistics}
+              disabled={models.length === 0 || !datasetId}
+              size="small"
+            >
+              {doeStatsLoading ? t('modelCenter.computing') : t('modelCenter.computeDOEStatistics')}
+            </Button>
+            {doeStats ? (
+              <Space direction="vertical" style={{ width: '100%' }} size="small">
+                {doeStats.anova ? (
+                  <>
+                    <div>
+                      <strong>{t('modelCenter.doeR2')}:</strong>
+                      <span style={{ marginLeft: 8 }}>R²={doeStats.r2?.toFixed(4)}</span>
+                      <span style={{ marginLeft: 8 }}>AdjR²={doeStats.adj_r2?.toFixed(4)}</span>
+                    </div>
+                    <div>
+                      <strong>{t('modelCenter.doeAnova')}:</strong>
+                      <span style={{ marginLeft: 8 }}>F={doeStats.anova.f_stat.toFixed(2)}</span>
+                      <span style={{ marginLeft: 8 }}>p={doeStats.anova.p_value.toFixed(6)}</span>
+                      <Tag color={doeStats.anova.significant ? 'success' : 'error'} style={{ marginLeft: 8 }}>
+                        {doeStats.anova.significant
+                          ? `${t('modelCenter.doeSignificant')} (p<0.05)`
+                          : `${t('modelCenter.doeNotSignificant')} (p≥0.05)`}
+                      </Tag>
+                    </div>
+                    <div>
+                      <strong>{t('modelCenter.doeSigTerms')}:</strong>
+                      <span style={{ marginLeft: 8 }}>{doeStats.sig_count}/{doeStats.total_terms} {t('modelCenter.doeTermsSignificant')}</span>
+                    </div>
+                    <Alert
+                      type={doeStats.anova.significant ? 'success' : 'warning'}
+                      message={doeStats.interpretation}
+                      showIcon
+                      style={{ marginTop: 4 }}
+                    />
+                    <Table
+                      size="small"
+                      dataSource={doeStats.coefficients}
+                      pagination={false}
+                      scroll={{ x: 600 }}
+                      columns={[
+                        { title: t('modelCenter.doeColumn'), dataIndex: 'name', key: 'name', width: 150 },
+                        { title: 'Coef', dataIndex: 'coef', key: 'coef', width: 80, render: (v: number) => v?.toFixed(4) },
+                        { title: 'SE', dataIndex: 'std_err', key: 'std_err', width: 80, render: (v: number) => v?.toFixed(6) },
+                        { title: 't', dataIndex: 't_stat', key: 't_stat', width: 60, render: (v: number) => v?.toFixed(2) },
+                        { title: 'p', dataIndex: 'p_value', key: 'p_value', width: 80, render: (v: number) => v?.toFixed(6) },
+                        {
+                          title: t('modelCenter.doeCI'), dataIndex: 'ci_lower', key: 'ci', width: 180,
+                          render: (_: unknown, row: { ci_lower: number; ci_upper: number }) =>
+                            `${row.ci_lower.toFixed(4)} ~ ${row.ci_upper.toFixed(4)}`,
+                        },
+                        {
+                          title: t('modelCenter.doeSig'), dataIndex: 'significant', key: 'significant', width: 70,
+                          render: (v: boolean) => v
+                            ? <Tag color="success">✓</Tag>
+                            : <Tag color="default">—</Tag>,
+                        },
+                      ]}
+                    />
+                  </>
+                ) : (
+                  <Alert type="info" showIcon message={doeStats.note || t('modelCenter.doeNotAvailable')} />
+                )}
+              </Space>
+            ) : (
+              <Alert type="info" showIcon message={t('modelCenter.doeNoResult')} />
             )}
           </Space>
         </Card>

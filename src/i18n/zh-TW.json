@@ -389,7 +389,19 @@
     "minSamplesLeaf": "最小葉節點樣本數",
     "learningRate": "學習率",
     "featureSelected": "自動選取 {{count}} 個特徵",
-    "featureImportance": "特徵重要性"
+    "featureImportance": "特徵重要性",
+    "doeStatisticsTitle": "DOE 統計推論",
+    "computeDOEStatistics": "計算統計量",
+    "doeR2": "R² / 調整 R²",
+    "doeAnova": "ANOVA F 檢定",
+    "doeSigTerms": "顯著項目",
+    "doeTermsSignificant": "個項目顯著",
+    "doeSignificant": "顯著",
+    "doeNotSignificant": "不顯著",
+    "doeCI": "95% 信心區間",
+    "doeSig": "顯著",
+    "doeNotAvailable": "ANOVA 統計僅適用於 DOE 線性/二次模型。",
+    "doeNoResult": "點擊「計算統計量」來進行 ANOVA 與係數 p 值分析。"
   },
   "validationLab": {
     "modelSelect": "選擇模型",

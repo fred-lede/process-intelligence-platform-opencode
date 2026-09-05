@@ -12,6 +12,7 @@ import type {
   FullValidationResult,
   ModelInfo,
   ExperimentRecord,
+  DoeStatisticsResult,
 } from './engine'
 import type { FieldAssignment, SpecConfiguration } from '../stores/dataPipelineStore'
 
@@ -87,6 +88,7 @@ export function buildModelCenterContext(opts: {
   extrapResult: ExtrapolationResult | null
   validationResult: ValidationResult | null
   fullValidation: FullValidationResult | null
+  doeStats: DoeStatisticsResult | null
 }): string {
   const parts: string[] = []
   const interactions = opts.interactions
@@ -118,6 +120,18 @@ export function buildModelCenterContext(opts: {
         `Residual normality: ${opts.validationResult.normality_test.is_normal ? 'normal' : 'not normal'}. ` +
         `Credibility composite=${opts.validationResult.credibility.composite}/100, level=${opts.validationResult.credibility.level}.`,
     )
+  }
+  if (opts.doeStats) {
+    if (opts.doeStats.anova) {
+      const a = opts.doeStats.anova
+      parts.push(
+        `DOE statistics (n=${opts.doeStats.n_obs}): R²=${num(opts.doeStats.r2, 4)}, adjR²=${num(opts.doeStats.adj_r2, 4)}. ` +
+          `ANOVA F=${num(a.f_stat, 2)}, p=${num(a.p_value, 6)} [${a.significant ? 'significant' : 'not significant'}]. ` +
+          `${opts.doeStats.sig_count}/${opts.doeStats.total_terms} terms significant (p<0.05).`,
+      )
+    } else if (opts.doeStats.note) {
+      parts.push(`DOE stats: ${opts.doeStats.note}`)
+    }
   }
   if (opts.fullValidation && opts.fullValidation.models.length) {
     const ranking = opts.fullValidation.models

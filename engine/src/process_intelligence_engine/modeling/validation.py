@@ -1,6 +1,7 @@
 """Cross-validation and residual analysis for model validation."""
 from __future__ import annotations
 
+import math
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -377,4 +378,151 @@ def compute_credibility(
             if composite >= 0.20
             else "not_recommended"
         ),
+    }
+
+
+def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
+    """Compute ANOVA F-test and coefficient t-tests for DOE linear/quadratic models.
+
+    Uses OLS inference with proper standard errors, confidence intervals,
+    and p-values. For tree-based models, returns empty stats.
+    """
+    from sklearn.linear_model import LinearRegression
+
+    model_type = fit.model_type
+
+    if model_type not in ("doe_linear", "doe_quadratic"):
+        return {
+            "model_type": model_type,
+            "n_obs": 0,
+            "n_predictors": 0,
+            "r2": None,
+            "adj_r2": None,
+            "anova": None,
+            "coefficients": [],
+            "interpretation": "",
+            "note": "ANOVA and p-values are available only for DOE linear/quadratic models.",
+        }
+
+    degree = 2 if model_type == "doe_quadratic" else 1
+    X = _build_design_matrix(df, fit.inputs, degree=degree)
+    y = df[fit.target].to_numpy(dtype=float)
+    n = len(y)
+    p = X.shape[1]
+
+    # Fit OLS on full data
+    model = fit.model
+    if model is not None and hasattr(model, "predict"):
+        X_np = X.to_numpy(dtype=float)
+        y_pred = model.predict(X_np)
+    else:
+        # Refit on full data
+        model = LinearRegression().fit(X.to_numpy(dtype=float), y)
+        y_pred = model.predict(X.to_numpy(dtype=float))
+
+    residuals = y - y_pred
+    ss_res = float(np.sum(residuals ** 2))
+    ss_tot = float(np.sum((y - np.mean(y)) ** 2))
+    ss_reg = ss_tot - ss_res
+
+    df_reg = p - 1
+    df_res = n - p
+
+    if df_res <= 0:
+        return {
+            "model_type": model_type,
+            "n_obs": n,
+            "n_predictors": p - 1,
+            "r2": None,
+            "adj_r2": None,
+            "anova": None,
+            "coefficients": [],
+            "interpretation": "Insufficient degrees of freedom for inference.",
+            "note": f"n={n}, p={p} — need n > p for coefficient inference.",
+        }
+
+    mse = ss_res / df_res
+    ms_reg = ss_reg / df_reg
+    f_stat = float(ms_reg / mse) if mse > 0 else 0.0
+    f_p_value = float(1.0 - stats.f.cdf(f_stat, df_reg, df_res))
+
+    # Standard errors via (X'X)^{-1} * MSE
+    XtX = X.T @ X
+    try:
+        XtX_inv = np.linalg.inv(XtX)
+    except np.linalg.LinAlgError:
+        XtX_inv = np.linalg.pinv(XtX)
+
+    se = np.sqrt(np.diag(XtX_inv) * mse)
+
+    # Collect coefficients (intercept first, then predictors)
+    coef_vals = model.coef_.tolist() if hasattr(model, "coef_") else [0.0] * (p - 1)
+    intercept_val = float(model.intercept_) if hasattr(model, "intercept_") else 0.0
+    all_coefs = [intercept_val] + coef_vals
+    col_names = X.columns.tolist()
+
+    coeff_rows = []
+    for i in range(p):
+        name = col_names[i]
+        coef = all_coefs[i]
+        std_err = float(se[i]) if i < len(se) else 0.0
+        t_stat = float(coef / std_err) if std_err > 1e-12 else 0.0
+        p_val = float(2.0 * (1.0 - stats.t.cdf(abs(t_stat), df_res)))
+        ci_half = float(stats.t.ppf(0.975, df_res) * std_err) if std_err > 1e-12 else 0.0
+        coeff_rows.append({
+            "name": name,
+            "coef": round(coef, 6),
+            "std_err": round(std_err, 6),
+            "t_stat": round(t_stat, 4),
+            "p_value": round(p_val, 6),
+            "ci_lower": round(coef - ci_half, 6),
+            "ci_upper": round(coef + ci_half, 6),
+            "significant": p_val < 0.05,
+        })
+
+    r2 = float(1.0 - ss_res / ss_tot) if ss_tot > 0 else 0.0
+    adj_r2 = float(1.0 - (1.0 - r2) * (n - 1) / max(n - p, 1))
+    sig_count = sum(1 for c in coeff_rows[1:] if c["significant"])
+
+    if f_p_value < 0.001:
+        model_sig_label = "highly_significant"
+    elif f_p_value < 0.01:
+        model_sig_label = "significant"
+    elif f_p_value < 0.05:
+        model_sig_label = "marginally_significant"
+    else:
+        model_sig_label = "not_significant"
+
+    # Interpretation
+    total_terms = p - 1
+    sig_ratio = sig_count / max(total_terms, 1)
+    if r2 >= 0.9 and f_p_value < 0.001 and sig_ratio >= 0.7:
+        interpretation = "Excellent fit: model is highly significant with strong explanatory power."
+    elif r2 >= 0.7 and f_p_value < 0.05 and sig_ratio >= 0.5:
+        interpretation = "Good fit: model is statistically significant with reasonable predictive power."
+    elif r2 >= 0.5 and f_p_value < 0.10:
+        interpretation = "Moderate fit: model shows some significance but may need refinement."
+    elif f_p_value >= 0.05 and r2 < 0.5:
+        interpretation = "Poor fit: model lacks statistical significance. Consider redesigning experiments or adding factors."
+    else:
+        interpretation = "Marginal fit: review individual coefficients and consider model simplification."
+
+    return {
+        "model_type": model_type,
+        "n_obs": n,
+        "n_predictors": p - 1,
+        "r2": round(r2, 6),
+        "adj_r2": round(adj_r2, 6),
+        "anova": {
+            "f_stat": round(f_stat, 4),
+            "p_value": round(f_p_value, 6),
+            "significant": f_p_value < 0.05,
+            "df_reg": df_reg,
+            "df_res": df_res,
+            "label": model_sig_label,
+        },
+        "coefficients": coeff_rows,
+        "sig_count": sig_count,
+        "total_terms": total_terms,
+        "interpretation": interpretation,
     }

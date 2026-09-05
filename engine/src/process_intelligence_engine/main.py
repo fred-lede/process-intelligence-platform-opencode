@@ -42,7 +42,7 @@ from process_intelligence_engine.project.manifest import ProjectEngine, _PROCESS
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
-from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments, compute_credibility
+from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments, compute_credibility, compute_doe_statistics
 from process_intelligence_engine.modeling.model_selection import compare_models
 from process_intelligence_engine.modeling.experiment_recommendation import recommend_experiments as recommend_experiments_full
 from process_intelligence_engine.modeling.fitters import (
@@ -607,6 +607,16 @@ def _handle_validation_analyze(params: dict) -> dict:
         "recommendations": recommendations,
         "credibility": credibility,
     }
+
+
+def _handle_stats_compute(params: dict) -> dict:
+    """Compute ANOVA and coefficient p-values for DOE models."""
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    fit = MODEL_REGISTRY.get(model_id)
+    df = REGISTRY.get(dataset_id)
+    result = compute_doe_statistics(fit, df)
+    return {"success": True, "statistics": result}
 
 
 def _handle_validation_full(params: dict) -> dict:
@@ -1442,6 +1452,8 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "modeling/validation/analyze":
         return _handle_validation_analyze(params)
+    if method == "modeling/stats":
+        return _handle_stats_compute(params)
 
     if method == "modeling/validation/full":
         return _handle_validation_full(params)

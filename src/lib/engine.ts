@@ -288,6 +288,50 @@ export interface ModelMetrics {
   adj_r2: number
 }
 
+export interface DoeCoefficientStat {
+  name: string
+  coef: number
+  std_err: number
+  t_stat: number
+  p_value: number
+  ci_lower: number
+  ci_upper: number
+  significant: boolean
+}
+
+export interface DoeAnovaResult {
+  f_stat: number
+  p_value: number
+  significant: boolean
+  df_reg: number
+  df_res: number
+  label: 'highly_significant' | 'significant' | 'marginally_significant' | 'not_significant'
+}
+
+export interface DoeStatisticsResult {
+  model_type: string
+  n_obs: number
+  n_predictors: number
+  r2: number | null
+  adj_r2: number | null
+  anova: DoeAnovaResult | null
+  coefficients: DoeCoefficientStat[]
+  sig_count: number
+  total_terms: number
+  interpretation: string
+  note?: string
+}
+
+export interface DoeStatisticsParams {
+  model_id: string
+  dataset_id: string
+}
+
+export interface DoeStatisticsApiResponse {
+  success: boolean
+  statistics: DoeStatisticsResult
+}
+
 export interface ModelFitDTO {
   model_id: string
   model_type: ModelType
@@ -329,6 +373,12 @@ export async function transitionModel(
   status: ModelStatus,
 ): Promise<ModelFitDTO> {
   return engineCall<ModelFitDTO>('modeling/transition', { model_id, status })
+}
+
+export async function computeDOEStatistics(
+  params: DoeStatisticsParams,
+): Promise<DoeStatisticsApiResponse> {
+  return engineCall<DoeStatisticsApiResponse>('modeling/stats', params as unknown as Record<string, unknown>)
 }
 
 // --- Phase 3b: DOE Design Library ----------------------------------------

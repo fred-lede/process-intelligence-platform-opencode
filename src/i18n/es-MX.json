@@ -391,7 +391,19 @@
     "minSamplesLeaf": "Mín. muestras por hoja",
     "learningRate": "Tasa de aprendizaje",
     "featureSelected": "Seleccionados {{count}} características",
-    "featureImportance": "Importancia de características"
+    "featureImportance": "Importancia de características",
+    "doeStatisticsTitle": "Inferencia Estadística DOE",
+    "computeDOEStatistics": "Calcular Estadísticas",
+    "doeR2": "R² / AdjR²",
+    "doeAnova": "Prueba F ANOVA",
+    "doeSigTerms": "Términos Significativos",
+    "doeTermsSignificant": "términos significativos",
+    "doeSignificant": "Sig.",
+    "doeNotSignificant": "No Sig.",
+    "doeCI": "IC 95%",
+    "doeSig": "Sig.",
+    "doeNotAvailable": "Las estadísticas ANOVA están disponibles solo para modelos DOE lineales/cuadráticos.",
+    "doeNoResult": "Haz clic en 'Calcular Estadísticas' para realizar el análisis ANOVA y de p-valores de coeficientes."
   },
   "validationLab": {
     "modelSelect": "Seleccionar modelo",

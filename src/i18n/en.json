@@ -389,7 +389,19 @@
     "minSamplesLeaf": "Min Samples Leaf",
     "learningRate": "Learning Rate",
     "featureSelected": "Auto-selected {{count}} features",
-    "featureImportance": "Feature Importance"
+    "featureImportance": "Feature Importance",
+    "doeStatisticsTitle": "DOE Statistical Inference",
+    "computeDOEStatistics": "Compute Statistics",
+    "doeR2": "R² / AdjR²",
+    "doeAnova": "ANOVA F-test",
+    "doeSigTerms": "Significant Terms",
+    "doeTermsSignificant": "terms significant",
+    "doeSignificant": "Sig.",
+    "doeNotSignificant": "Not Sig.",
+    "doeCI": "95% CI",
+    "doeSig": "Sig.",
+    "doeNotAvailable": "ANOVA statistics available for DOE linear/quadratic models only.",
+    "doeNoResult": "Click 'Compute Statistics' to perform ANOVA and coefficient p-value analysis."
   },
   "validationLab": {
     "modelSelect": "Select Model",
