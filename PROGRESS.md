@@ -560,3 +560,20 @@
 - [x] **專案儲存擴展 Tier 1（存異常情境/控制界限/analysis package）**：依 user 建議做第一層——把「使用者決策」狀態收進 `.piproj.json`。**格式 v1→v2**：`ProjectFile` 新增 `anomalyScenarios`（AnomalyScenario[]）、`controlLimits`（ControlLimitsMap）、`analysisPackage`；`buildProjectFile` 加 3 個可選參數（缺省空）。**Rust 端無涉**（純前端）。store 新增 `restoreAnalysis` bulk action——在 `setSpec`（會清空 controlLimits/anomalies/package）之後呼叫還原，`anomalyScenariosConfirmed` 由「所有 scenario 皆 user_confirmed」derive。`ProjectOverview.tsx`：save 帶入 3 state；open 還原（v1 檔案 null fallback 向後相容）。**不存**：模型結果/SPC/蒙地卡羅/預測輸出/報告/審核紀錄（留給 spec §11c project manifest 系統）。驗證：tsc --noEmit clean、npm run build 成功。
 
 - [x] **es-MX 翻譯補齊（rebase 至 en 結構）**：檢查 README 的 es-MX 宣告時發現翻譯嚴重落後——**missing 168 keys**（`dataImport`/`project`/`processDefine`/`modelCenter`/`settings`/`monteCarlo`/`nav` 等多個 section 停在舊 schema）+ **stale 184 keys**（es 仍含 en 已移除的舊 key）。用 Node script 以 en.json 為 source of truth rebase：preserve 既有 541 筆西文、新增 168 筆翻譯（含 interpolation 變數一致）、移除 184 筆 stale。驗證：三語全 **709 keys**、0 missing、0 stale、JSON valid、{{var}} 無失配、tsc clean、build 成功。README「541 keys 完整翻譯」→「709 keys 三語 key set 完全一致」。
+
+## 2026-09-05 — 製程流程 × 下游分析整合（FAI，10 tasks complete）
+
+- [x] **Task 1（引擎，TDD）**：`ProjectManifest.association_keys` + `ProjectEngine.set_association_keys()`；test_manifest_nodes **8 passed**；全引擎 **287 passed, 1 skipped**。commit `cd7788e`
+- [x] **Task 2（引擎，TDD）**：`project/flow-graph` 支援 `set_association_keys`；全引擎 **288 passed, 1 skipped**。commit `7db24b8`
+- [x] **Task 3（engine.ts）**：`FlowGraph.association_keys` 型別 + `setAssociationKeys()`；tsc clean。commit `e0f85dd`
+- [x] **Task 4（跳轉基礎設施）**：`processFlowNavStore`（pending/navigate/consume）+ `processFlowContext.ts`（`consumeNodeContext`/`findNodeById`/`dataSourceLoaded`）。commit `570d01c`
+- [x] **Task 5（ProcessFlow UI）**：關聯鍵編輯區（`Select mode="tags"`）+ 節點屬性面板跳轉按鈕（SPC/MC/Exploration）＋i18n 三語 8 keys；命名更正 `jumpToSpc`（plan 筆誤 `jumpToSqc`）。commit `b535cd0`
+- [x] **Task 6（App 訂閱）**：`useProcessFlowNavStore` pendingTarget → `setActiveTab`（同 tab guard 防迴圈）。commit `26f3b89`
+- [x] **Task 7/7b（SPC，引擎 filter TDD + 前端）**：`spc/analyze` 加入 `filter_column`/`filter_value`（df-level mask）；SPC.tsx 消費跳轉上下文（StrictMode-safe）+ 來源 Tag + 節點篩選控制列。**deviation**：plan Step 4 前端 row-filter 不可行（無 data-source/column Select flow）→ user 核准改為引擎端 filter 關鍵參數透傳（數值不高估）。commit `74e44f4` / `c22c283` / `a15e04c`。**HIGH bug 修復（9e3d2b9）**：`consumeNodeContext()` 原在 render phase → dev StrictMode double-render 清空 pending → 移入 mount effect。commits `74e44f4 → b7f3100`
+- [x] **Task 8（MC）**：`monte_carlo/run` 引擎 filter（3 新測試）+ MonteCarlo.tsx 消費上下文＋篩選控制；三語 +4 keys。commits `878f821` / `8160797`
+- [x] **Task 9（Exploration + 共用 component）**：`data/distribution`/`data/series` 引擎 filter（6 新測試，handler 名為 `_handle_distribution`/`_handle_series`）+ Exploration 消費上下文；抽取共用 `NodeSourceFilter.tsx`（`filterable?: boolean`，time-series/GRR 不顯示 filter 控制）。commits `4ab2313` / `c76aff4` / `62ce296`
+- [x] **Task 9.5 code review（909bf76）**：SPC `{name}` 單括號插值修正 + Exploration 篩選控制限定 distribution/trend tabs
+- [x] **Task 10 hardening（引擎 zero-row guard + SPC numeric guard）**：`_apply_row_filter` helper 統一 4 handler inline mask + `raise ValueError("No rows match filter")`（4 新測試 RED→GREEN）；SPC 只對 numeric 欄位 `setColumn(pendingCtx.field)`。全引擎 **304 passed, 1 skipped**
+- **驗證**：全引擎 `304 passed, 1 skipped`（baseline 287 + 17 新 test）；`npx tsc --noEmit` clean；`npm run build` 成功；三語 `processFlow`/`spc`/`monteCarlo`/`exploration` key-set parity `ok`
+- **Commits**：`cd7788e, 7db24b8, e0f85dd, 570d01c, b535cd0, 26f3b89, 74e44f4, c22c283, a15e04c, 9e3d2b9, b7f3100, 878f821, 8160797, 4ab2313, c76aff4, 62ce296, 909bf76` + Task 10 (`feat(engine)` zero-row guard / `fix(spc)` numeric guard / `docs`)
+- **Known follow-ups**：time-series / GRR 不套用節點 filter（前端 `filterable=false` 隱藏 + 引擎通道未接）

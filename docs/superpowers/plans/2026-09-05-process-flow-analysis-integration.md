@@ -1004,3 +1004,17 @@ git push origin main
 **Placeholder 掃描：** 無 TBD/TODO。Task 8 有一處「需確認 MC 輸出欄位 state 名稱」的實作細節語氣——已改為具體說明：MC 跳轉只顯示來源 Tag 並（若可行）設 `spec.outputField`，不做强迫改欄位，避免侵入 MC 既有模型選擇邏輯。（執行時若發現 MC 有既有「輸出欄位」下拉，直接對應套用即可。）
 
 **型別一致性：** `ProcessNodeContext`（nodeId/displayName/field/dataSourceIds）、`navigate(targetTab, context)`、`consume()`、`findNodeById`、`dataSourceLoaded` 於 Task 4 定義，Task 5-9 一致引用。`FlowGraph.association_keys` 於 Task 1(引擎)/3(型別)/5(UI)一致。`setAssociationKeys(keys) → { association_keys }` 各步一致。
+
+---
+
+## Execution Notes (post-hoc)
+
+執行期間與計畫的實作偏差記錄（10/10 tasks 完成，commits `cd7788e → 909bf76` + Task 10 hardening `feat(engine)` / `fix(spc)` / `docs`）：
+
+- **(a) Task 7 Step 4 不可行 → user 核准的引擎端 filter 實作（替代 no-op 前端下拉）**：SPC 沒有 plan 假設的「Data source Select / setImportResult / {x,y} 組裝」流程，`ImportResult` 只有 stats + raw_preview（無全量 rows）、`ProcessNodeContext` 不帶 key/value → 任何前端 row-filter 都是空控。user 核准改為引擎端 `filter_column`/`filter_value`（df-level mask）＋前端參數透傳。關聯鍵 `association_keys[0]` 作為節點預設 filter column。
+- **(b) dev StrictMode consume-in-render bug + fix（commit 9e3d2b9）**：Task 7 原在 render phase 呼叫 `consumeNodeContext()`（破壞性清空 pending），dev StrictMode double-render 且採用第二次 → 跳轉失效。修法：移入 mount effect（`consumedRef` 守衛 double-effect）。
+- **(c) Task 8/9 以相同 filter pattern 延伸**：引擎 `filter_column`/`filter_value` mixin 依序套用到 MC（monte_carlo/run，873f821 之前 878f821）與 Exploration（data/distribution + data/series，4ab2313），各走 TDD（紅→綠），全引擎逐次 291→294→300 passed。
+- **(d) 共用 NodeSourceFilter 於第三消費端抽取（commit c76aff4）**：SPC + MC 重複的「來源 Tag + 未載入 Alert + 篩選控制」三塊 JSX 在 Exploration 成為第三份時抽取為 `src/components/NodeSourceFilter.tsx`（含 `filterable?: boolean`，false 時僅顯示 Tag/Alert 隱藏篩選控制——time-series/GRR tab 不套用 filter）。
+- **(e) `jumpToSpc` 命名更正**：plan 兩處「Twice兩個這個」`jumpToSqc` 筆誤 → 一律 `jumpToSpc`（i18n key + handler 名）。
+- **(f) 節點篩選適用範圍**：SPC analyze、MC run、Exploration distribution+series（trend 同 series 通道）；**time-series / GRR 不套用 filter**（Explore 前端 `filterable` 與引擎通道皆未接）——follow-up 項目。
+- **(g) Task 10 hardening 補充**：`_apply_row_filter` helper 統一 4 handler 的 inline mask（replaced with single `df = _apply_row_filter(df, params)`），並新增 zero-row 守衛 `ValueError("No rows match filter")`（4 handler TDD RED→GREEN）；SPC mount effect 僅在 `column_stats[field].numeric` 時 `setColumn(pendingCtx.field)`（inline numeric set，避開 stale `numericColumns` closure）。

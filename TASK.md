@@ -1,6 +1,36 @@
 # TASK.md
 
 ## Completed
+### Task 10（final）— 引擎 zero-row filter 守衛 + SPC numeric guard + docs sweep + 最終驗證 + push
+- **Status**: DONE
+- **Part A（引擎，TDD）**：`main.py` 新增 module-level `_apply_row_filter(df, params)` helper（unknown column → KeyError、缺 filter_value → ValueError、`astype(str) == str(filter_value)` mask、**mask 後空 → `ValueError("No rows match filter")`**），取代 4 handler（`_handle_spc_analyze`/`_handle_monte_carlo_run`/`_handle_distribution`/`_handle_series`）重複 inline mask block 為單行 `df = _apply_row_filter(df, params)`；error 訊息字串與既有測試完全一致。新增 4 測試（spc/mc/distribution/series 各一，filter 值匹配 0 列 → ValueError match="No rows match filter"）——RED 4 failed → GREEN；full suite **304 passed, 1 skipped**（baseline 300 + 4）
+- **Part B（前端）**：`SPC.tsx` mount effect `setColumn(pendingCtx.field)` 加 numeric guard——inline 依 `importResult?.stats.column_stats` 建 numeric set（不依賴 stale `numericColumns` state），非 numeric 保持 `column` 原樣（`spec?.outputField` default）；`t()(npx tsc`) 全 clean、build 成功
+- **Part C（docs）**：plan 檔 append「Execution Notes (post-hoc)」段落（7 items）；PROGRESS.md append 2026-09-05 FAI entry；**新建 HANDOFF.md**（里程碑 handoff）；README 功能總覽補 FAI 一行（ProcessFlow association-keys + jump + per-node filter）
+- **Part D（最終驗證）**：引擎 **304 passed, 1 skipped**；`npx tsc --noEmit` clean；`npm run build` 成功（chunk 警示為既有）；三語 `processFlow`/`spc`/`monteCarlo`/`exploration` parity `ok`；`git status` 僅含預期檔案（未含 `engine/.coverage`/icons）
+- **Part E（commits + push）**：`feat(engine): consistent row filter helper + zero-row guard` → `fix(spc): numeric guard on jump field` → `docs: plan execution notes, progress, handoff` → `git push`
+- **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_spc.py`, `engine/tests/test_main_monte_carlo.py`, `engine/tests/test_main_handlers.py`, `src/features/spc/SPC.tsx`, `docs/superpowers/plans/2026-09-05-process-flow-analysis-integration.md`, `PROGRESS.md`, `HANDOFF.md`(new), `README.md`, `TASK.md`（未提交 `engine/.coverage`/icons）
+
+### Code review fixes — SPC source tag interpolation + exploration filter scoping
+- **Status**: DONE
+- **Fix 1**：`spc.sourceFromNode` 三語單括號 `{name}` → `{{name}}`（en/zh-TW/es-MX，既已確認其他 key 僅探索/MC 用既有 `{{name}}`，spc 為唯一缺口）
+- **Fix 2**：`NodeSourceFilter.tsx` 新增 optional `filterable?: boolean`（default true）；`false` 時保留 source Tag + dataSourceNotLoaded Alert、隱藏 filter 控制（column Select / value Input / clear Button）。`Exploration.tsx` 新增 `activeTab` state + 受控 `<Tabs activeKey/onChange>`，傳 `filterable={activeTab === 'distribution' || activeTab === 'trend'}` → TimeSeries/GRR 頁不再顯示會誤導的篩選控制（distribution/trend 確實套用 filter，TS/GRR 不套用）
+- **驗證**：`npx tsc --noEmit` EXIT 0；三語 spc(33)/monteCarlo(30)/exploration(30) parity `ok`、無單括號 `{name}` 殘留；`npm run build` 成功
+- **Files changed** — `src/components/NodeSourceFilter.tsx`、`src/features/exploration/Exploration.tsx`、`src/i18n/en.json`、`src/i18n/zh-TW.json`、`src/i18n/es-MX.json`（未提交 `engine/.coverage`/icons）
+
+### Task 9 — Exploration 跳轉上下文消費 + 節點篩選 + 共用 NodeSourceFilter + i18n（3 commits）
+- **Status**: DONE_WITH_CONCERNS（見 Concerns：節點篩選僅套用 distribution/trend；SPC 既有 `{name}` 插值缺口保留）
+- **Commit 4ab2313 `feat(engine): exploration filter_column + filter_value (TDD)`**：`_handle_distribution`（`data/distribution`）與 `_handle_series`（`data/series`）加入與 spc/analyze・monte_carlo/run 相同的 mask block（optional `filter_column`/`filter_value`；unknown column → KeyError；缺 `filter_value` → ValueError；`df[df[col].astype(str) == str(value)]`）。**handler 名稱與 plan 假設不同**（實際為 `_handle_distribution`/`_handle_series`，非 `_handle_explore_*`）——deviation 註記。6 新測試（test_main_handlers.py）：distribution/series 各 happy-path（group A only，counts=30 / values<100）+ missing value + unknown column；RED 確認 6 fails → GREEN 後 full suite **300 passed, 1 skipped**
+- **Commit c76aff4 `refactor(ui): shared NodeSourceFilter component`**：新 `src/components/NodeSourceFilter.tsx`（section prop + Tag/Alert/filter 三區塊，`t()` 依 `section` 命名空間），SPC.tsx/MonteCarlo.tsx 移除重複 JSX 改用之（state/handleAnalyze/handleRun filter passing 保留，`ApartmentOutlined` imports 移除）；behavior 不變，**visible layout 小 reflow**（filter controls 自主控制列移至 Tag 列，見 Concerns）
+- **Commit 62ce296 `feat(exploration): consume jump context + node filter`**：engine.ts `fitDistribution`/`getColumnSeries` 加 optional `filters`；Exploration.tsx StrictMode-safe mount effect 消費 ctx（numeric guard 才 `setColumn`/`setTrendColumn`；`association_keys[0]` 存在於 dataset columns 才 `setNodeFilterColumn`）；NodeSourceFilter 置於 no-importResult 早退分支與主 Card；`loadFits`/`loadTrend` 透傳 filter（both set 才傳）；i18n 三語 exploration 新增 4 keys
+- **驗證**：full engine suite 300 passed 1 skipped、`npx tsc --noEmit` clean、`npm run build` 成功（chunk 警示為既有）、三語 spc/monteCarlo/exploration key-set parity 全 `ok`
+- **Files changed** — 見三個 commit（`engine/.coverage`/icons 未提交）
+### SPC StrictMode consume bug fix + filter_value test gap
+- **Status**: DONE
+- **HIGH bug fix（commit 9e3d2b9）**：`SPC.tsx:34` 原在 render phase 呼叫 `consumeNodeContext()`（`processFlowNavStore.consume` 破壞性清空 pending），dev StrictMode double-invoke render 且採用第二次結果 → render #1（被丟棄）已清空 store，committed render #2 讀到 undefined → dev 下 ProcessFlow 跳轉到 SPC 失效（production 正常）。修法：`consumeNodeContext()` 移入 mount effect 內（`consumedRef.current = true` 之前、`pendingCtx` 判斷之前）；`consumedRef` 正確守衛 double-invoked effect（第一次 effect run 消費、第二次 early-return）；不新增 cleanup
+- **test gap（commit b7f3100）**：`test_main_spc.py` 新增 `test_spc_analyze_with_filter_missing_value`（`filter_column` 設定但無 `filter_value` → ValueError）mirror 既有 filter 測試（共用 `_import_csv_for_spc_filter`）
+- **驗證**：`pytest tests/test_main_spc.py -q` 12 passed；full suite **291 passed, 1 skipped**；`npx tsc --noEmit` clean
+- **Files changed** — `src/features/spc/SPC.tsx`, `engine/tests/test_main_spc.py`（未提交 `engine/.coverage`/icons）
+
 ### Approval tab — Task 2: Frontend engine.ts approval + report API types and functions
 - **Status**: DONE
 - `ReportRecord` interface + `listReports()` added after `generateReport()` (line ~495)
@@ -81,7 +111,83 @@
 - README 更新：es-MX「541 keys」→「709 keys 三語 key set 完全一致」
 - **Files changed** — `src/i18n/es-MX.json`, `README.md`
 
+### Process Flow 下游分析整合 — Task 4: 跳轉 store + 共用 helper（commit 570d01c）
+- **Status**: DONE
+- `src/stores/processFlowNavStore.ts` — 一次性「跳轉」請求 store（`pending { targetTab, context }` + `navigate()`/`consume()`）
+- `src/lib/processFlowContext.ts` — 共用 helper：`consumeNodeContext()`（讀取+清除 store）、`findNodeById()`（載入 flow graph 找節點）、`dataSourceLoaded()`（dataSourceIds 含目前資料集；空=loaded/ok）
+- 驗證：`npx tsc --noEmit` clean（目前未使用，供 Task 5-9 接線）
+- **Files changed** — `src/stores/processFlowNavStore.ts`, `src/lib/processFlowContext.ts`
+
+### Process Flow 下游分析整合 — Task 5: 關聯鍵 UI + 跳轉按鈕（commit b535cd0)
+- **Status**: DONE
+- `ProcessFlow.tsx`：(1) 空選面板由 Alert 改為關聯鍵編輯區（`Select mode="tags"` → `setAssociationKeys()` → 回寫 `graph.association_keys`）；(2) `machine_mapping` Select 後新增跳轉區——`out_quality_outputs` 非空顯示 SPC + Monte-Carlo 按鈕、`in_control_parameters` 非空顯示 Exploration 按鈕，`gotoAnalysisTab()` handler 彙整 dataSourceIds（output+input data sources）與 field 後呼叫 `useProcessFlowNavStore.navigate()`；(3) import 補 `setAssociationKeys`、`useProcessFlowNavStore`、`LineChartOutlined/RobotOutlined/BarChartOutlined`。`Alert` 仍用於 diagram-empty 故保留 import
+- 命名更正：plan 中的 key 筆誤 `jumpToSqc` → 一律用 `jumpToSpc`
+- i18n 三語 `processFlow` 各新增 8 keys（`associationKeys*` 4 支 + `jumpToAnalysis/jumpToSpc/jumpToMonteCarlo/jumpToExploration`）
+- 驗證：`npx tsc --noEmit` clean、`npm run build` clean（chunk 警示為既有）、三語 key set 一致（`ok`）
+- **Code review (b535cd0)**：APPROVE。無 Critical/Important；Minor——(1) `selectNode`/`selectNodeDesc` i18n key 成孤兒（原 Alert 唯一使用點被取代）；(2) 關聯鍵 `Select mode="tags"` 未設 `tokenSeparators`，貼上逗號分隔多鍵會成單一 tag（與 placeholder 例示不符）；(3) 失敗路徑不 rollback（與既有 `saveMapping` 一致之既有模式）；(4) `.length` guard 未沿襲檔內 `|| []` 防禦慣例（後端 to_dict 恆有欄位，實際安全）；(5) output+input dataSourceIds 可行重複
+- **Files changed** — `src/features/process-flow/ProcessFlow.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
+
+### Process Flow 下游分析整合 — Task 8: MonteCarlo 消費跳轉上下文 + 依節點篩選 + i18n（commit 878f821 + 8160797）
+- **Status**: DONE
+- **Part A（引擎，TDD）**：`_handle_monte_carlo_run`（main.py 原本 ~1098，現加帶位移）於 `df = REGISTRY.get(did)` 後加選用 `filter_column`/`filter_value`（mirror spc/analyze main.py:1041-1048：未知欄 → KeyError、設 filter_column 缺 filter_value → ValueError、`df = df[df[filter_column].astype(str) == str(filter_value)]`），mask 後的 df 直接續跑 `run_monte_carlo`（`df[col]` 抽樣取自 mask 子集 → 語意正確）。新增 3 tests 於 `test_main_monte_carlo.py`：filter 後 histogram counts sum == n_simulations 且 `output_mean` 顯著低於未過濾（A 群 x1~90-110 vs 未過濾加 B 群 ~190-210，mean 分離）、filter_column 無 filter_value → ValueError、未知 filter column → KeyError。紅→綠；full suite **294 passed, 1 skipped**（baseline 291 + 3）。commit `878f821`
+- **Part B（engine.ts）**：`MonteCarloParams` 加 `filter_column?`/`filter_value?`（`analyzeMonteCarlo` 透傳）
+- **Part C（MonteCarlo.tsx）**：consumedRef guard 的 mount effect 內消費 `consumeNodeContext()`（StrictMode-safe，mirror SPC.tsx）——`findNodeById` 成功後 `setSourcedFromNode`；source 已載入時 `getFlowGraph()` 讀 `association_keys[0]` 設預設 filter column（MC 無 output-field 控制，不做 field 消費；`importResult.columns` 提供欄位 Select options）；Card 頂部來源 Tag（`monteCarlo.sourceFromNode`）+ 未載入時 `Alert warning`（`dataSourceNotLoaded`）；已載入時顯示篩選控制列（欄位 Select + 值 Input + 清除 Button，placeholder `filterByNode`/`nodeFilterCleared`）；`handleRun` 僅當 `nodeFilterColumn && nodeFilterValue` 兩者皆設時帶 `filter_column`/`filter_value`
+- **Part D（i18n）**：三語 `monteCarlo` 各 +4 keys（sourceFromNode/dataSourceNotLoaded/filterByNode/nodeFilterCleared）；parity check `ok`
+- **驗證**：引擎 294 passed 1 skipped；`npx tsc --noEmit` clean；`npm run build` 成功（chunk 警示為既有）；i18n parity `ok`
+- **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_monte_carlo.py`, `src/lib/engine.ts`, `src/features/monte-carlo/MonteCarlo.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`（未提交 `engine/.coverage`/icons）
+
 <!-- NEXT_ITEM_ANCHOR -->
+
+### Code review — SPC node-filter/context-integration line（Tasks 7+7b+StrictMode fix，commits 74e44f4..b7f3100）
+- **Status**: DONE — **APPROVE**（無 Critical；2 Important 皆 edge-case UX，建議 follow-up）
+- **獨立驗證**：full engine **291 passed, 1 skipped**；`test_main_spc.py` 12 passed；`npx tsc --noEmit` clean；每 commit 單一邏輯變更；i18n 5 新 key 全被 SPC.tsx 引用（250/258/267/279/287/297）、三語 parity
+- **Mount effect/StrictMode 正確性確認**：`consumedRef` 在 await 前同步 set → double-effect 第二次 early-return；`consume()` 為一次性破壞性（store 置 null pending），async closures（findNodeById/getFlowGraph/setState）確定只跑一次；`setColumn` 僅在 `dataSourceLoaded` 為 true 時執行（56-69）；`dataSourceLoaded` 空/undefined dataSourceIds → true（OK）語義正確；React 18 已移除 unmounted setState warning，無需 cancelled flag
+- **Important #1**：SPC.tsx:57-59 `pendingCtx.field` 未過濾 numeric（plan Step 2 的 `numericColumns.includes` fallback 被捨棄）——非數值 quality output tag → Analyze 時 engine `np.asarray(..., dtype=float)` ValueError 以生硬訊息呈現
+- **Important #2**：main.py:1048 `astype(str) == str(value)` 對數值欄猥瑣（50.0 vs "50" → 0 列 → spc.py:110-111 "values must not be empty"）；filter 預設為 association key（通常類別）故中標率低，但數值欄自由文字無防護
+- **Minor**：effect deps `[]` 讀 `importResult` → jump-before-import 時資料載入後不會自動補選；無資料時 dataSourceNotLoaded + noDataHint 雙 Alert 重複；happy path 兩次 `getFlowGraph()` IPC；engine `filter_value` 僅檢查 None 不檢查 ""；`NodeContextResult`（processFlowContext.ts:4，Task 4 既有）export 未用；測試未涵蓋 empty-match 與 "" filter_value
+- **Files reviewed** — `src/features/spc/SPC.tsx`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_spc.py`, `src/lib/engine.ts`, `src/lib/processFlowContext.ts`, i18n×3
+
+### Process Flow 下游分析整合 — Task 6: App.tsx 訂閱跳轉 store 切換 tab（commit 26f3b89）
+- **Status**: DONE
+- `App.tsx`：react import 合併為 `import { useEffect, useState } from 'react'`；新增 `useProcessFlowNavStore` import；`activeTab` 之後加 `pendingTarget = useProcessFlowNavStore((s) => s.pending?.targetTab)` + `useEffect`（pendingTarget 非空且不同於 activeTab 時 `setActiveTab(pendingTarget)`，同 tab guard 防迴圈；pending 由消費者 `consume()` 清除，App 不清）
+- 驗證：`npx tsc --noEmit` clean、`npm run build` 成功（chunk 警示為既有）
+- **Files changed** — `src/App.tsx`
+- **Code review (26f3b89)**：APPROVE。無 Critical。Guard/loop 驗證正確；deps 完整；無 scope creep。Important（跨 task，非本 commit 缺陷）：dev StrictMode 會 double-invoke mount effect → Tasks 7-9 的 `consume()` 第二次回 undefined 而清掉 sourceTag（production 不受影響），需在 Tasks 7-9 以 ref/「僅 set 不清」守衛。資訊：跳轉 force-switch 屬 plan 一次性語意、窗口為 sub-frame 級，非人為可觸發；Task 7-9 落地前 pending 未消費會短暫劫持 tab 切換（plan 順序 artifacts）
+
+### Process Flow 下游分析整合 — Task 7b: SPC 節點篩選（引擎 filter TDD + 前端 wire + UI，commit c22c283 + a15e04c）
+- **Status**: DONE
+- **Part A（引擎，TDD）**：`_handle_spc_analyze` 於 `df = REGISTRY.get(...)` 後加選用 `filter_column`/`filter_value`（`filter_column` 不在 df.columns → `KeyError`；有 `filter_column` 無 `filter_value` → `ValueError`；`astype(str) == str(filter_value)` df-level mask 後既有邏輯續跑）。新增 2 tests（`test_spc_analyze_with_filter` — work_order A/B 兩群，filter 後 `x_values` 全 <100、`x_mean`≈50、len==30；`test_spc_analyze_with_filter_unknown_column` — KeyError）。紅→綠→(無需 refactor)；測試放 `test_main_spc.py`（spc/analyze 既有測試所在，非 plan 預期的 test_main_handlers.py）。commit `c22c283`
+- **Part B（engine.ts）**：`analyzeSPC` params 型別加 `filter_column?`/`filter_value?`（透傳，由呼叫端決定是否帶入）
+- **Part C（SPC.tsx）**：新 state `nodeFilterColumn`/`nodeFilterValue`；mount effect 內 `findNodeById` 後另 `getFlowGraph()` 讀 `association_keys[0]`，若存在於 `importResult.stats.column_stats` 設為預設 filter column；控制列（`sourcedFromNode` 且 source 已載入時顯示）——欄位 Select（options=全部 dataset columns，placeholder `spc.filterByNode`）+ 值 Input（placeholder `spc.sameSourceHint`，無 filter column 時 disabled）+ 清除 Button（`spc.nodeFilterCleared`）；`handleAnalyze` 在 `nodeFilterColumn && nodeFilterValue` 兩者皆設時才帶 `filter_column`+`filter_value`（**column_stats 無 distinct values 欄位**，故依 plan 允許用 Input）。無新 i18n key（`filterByNode`/`nodeFilterCleared`/`sameSourceHint` 三語 Task 7 已預置）。commit `a15e04c`
+- **驗證**：2 新測試 pass → 全引擎 **290 passed, 1 skipped**（baseline 288+2，無回歸）；`npx tsc --noEmit` clean；`npm run build` 成功（chunk 警示為既有）；三語 spc key set parity `ok`
+- **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_spc.py`, `src/lib/engine.ts`, `src/features/spc/SPC.tsx`
+
+### Process Flow 下游分析整合 — Task 7: SPC 消費跳轉上下文 + 節點篩選 + i18n（commit 74e44f4）
+- **Status**: DONE_WITH_CONCERNS（節點篩選 UI 未落地，見下）
+- `SPC.tsx`：consumedRef guard 的 mount effect 消費 `consumeNodeContext()`（StrictMode-safe，**有意的 plan 偏離**——省略 `cancelled` cleanup，因其在 dev StrictMode 的 synthetic unmount 會把非同步 `findNodeById` 結果取消導致 sourceTag 遺失）；`findNodeById` 成功後一律 `setSourcedFromNode`（含 dataSourceIds，供 JSX render-time 重算 `dataSourceLoaded`），source 已載入且有 node 輸出欄位時 `setColumn(field)` 自動選欄（真正的「consumeField」＝SPC 既有的 `setColumn`，plan 誤以為存在 wrapper 函式）；Card 頂部加來源 Tag（`ApartmentOutlined` + `spc.sourceFromNode`, {name}插值）+ 未載入時 `Alert warning`（`spc.dataSourceNotLoaded`）
+- **節點篩選（Step 4）未落地，NOTE**：SPC.tsx 現檔無「Data source Select/setImportResult/setSpec/{x,y} 組裝」、`spc/analyze` 後端無 row-filter 參數（`_handle_spc_analyze` 對整個 dataset 分析）、`ImportResult` 僅有 stats+raw_preview（無全量 rows）、`ProcessNodeContext` 無 key column/value（`ProcessFlow.gotoAnalysisTab` 只帶 nodeId/displayName/field/dataSourceIds）→ 任何前端 row filter 都是無效空控，故不 shipping no-op Select。建議（待 user 允）後端 `spc/analyze` 加選用 `filter_column`/`filter_value`（df-level mask ~4 行）+ `analyzeSPC` 參數透傳後再接 UI；i18n 的 `filterByNode`/`nodeFilterCleared`/`sameSourceHint` 三鍵已預置（三語齊全）留待該功能
+- 驗證：三語 spc key set parity `ok`（各 32 keys）、`npx tsc --noEmit` clean、`npm run build` clean（chunk 警示為既有）
+- **Files changed** — `src/features/spc/SPC.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
+- **Code review (74e44f4 + c22c283 + a15e04c)**：❌ Task 7 NOT APPROVED（HIGH）+ Task 7b APPROVE（MINOR）。獨立驗證：引擎 290 passed 1 skipped、test_main_spc.py 11 passed（9 既有 + 2 新）、test_main_handlers.py 無任何 spc 測試（測試選檔正確）、tsc clean、三語 spc 各 33 keys parity ok、5 新 key 齊全且 {name} 插值一致、三 commit 僅含聲明檔案、`_handle_spc_analyze` filter 邏輯（main.py:1041-1048）與 spec 逐行相符。**HIGH**：SPC.tsx:34 在 **render phase** 呼叫 `consumeNodeContext()`（processFlowNavStore.consume 具破壞性清空 pending），而 dev StrictMode（main.tsx:20）double-invoke function body 並採用第二次結果（react-dom.development.js:19617-19629 `updateFunctionComponent` second `renderWithHooks` 覆蓋 `nextChildren`）→ render #1（被丟棄）已清空 store，committed render #2 讀到 undefined → mount effect（SPC.tsx:47）no-op → dev 下 source Tag/setColumn/篩選預設/dataSourceNotLoaded 全部失效；production 正常。`consumedRef` 只防 double-effect，防不了 double-render。修法：把 `consumeNodeContext()` 移入 effect 內（consumedRef 之前）。**MINOR**：`filter_column` 無 `filter_value` 的 ValueError 分支（main.py:1046-1047）無測試（只測 happy path + KeyError）；red→green 過程無法由單一 commit 事後驗證
+- **Status**: DONE
+- `engine.ts` `FlowGraph` 新增 `association_keys: string[]`；`getFlowGraph()` 後新增 `setAssociationKeys(keys)` → `engineCall({ set_association_keys: keys })` 走 `project/flow-graph` IPC
+- `ProcessFlow.tsx` line 115 `useState<FlowGraph>({ nodes: [], edges: [], association_keys: [] })`（Task 5 UI 前唯一允許的 touch）
+- 驗證：`npx tsc --noEmit` clean
+- **Files changed** — `src/lib/engine.ts`, `src/features/process-flow/ProcessFlow.tsx`
+
+### Process Flow 下游分析整合 — Task 1: ProjectManifest.association_keys + set_association_keys（commit cd7788e）
+- **Status**: DONE
+- `manifest.py` `ProjectManifest` 新增 `association_keys: list[str]` 欄位（`settings` 後，`to_dict`/`from_dict` 經 `asdict`/`__dataclass_fields__` 自動序列化）
+- `ProjectEngine` 新增 `set_association_keys(keys)` —— 過濾空字串/strip 後儲存並回傳
+- `get_flow_graph()` return 加 `association_keys: list(manifest.association_keys)`
+- **Tests**：`test_manifest_nodes.py` 新增 3 個（default empty / persists / survives reload）；test_manifest_nodes **8 passed**；full suite **287 passed, 1 skipped**（baseline 284 + 3 new）
+- **Files changed** — `engine/src/process_intelligence_engine/project/manifest.py`, `engine/tests/test_manifest_nodes.py`
+
+### Process Flow 下游分析整合 — Task 2: project/flow-graph IPC 支援 association_keys
+- **Status**: DONE
+- `_handle_project_flow_graph(params)` 改為：`params` 有 `set_association_keys` 時呼叫 `PROJECT_ENGINE.set_association_keys(keys)` 回傳 `{"association_keys": [...]}`；否則維持 `get_flow_graph()`（其 return 已含 `association_keys`）
+- **Tests**：`test_main_handlers.py` 新增 `test_handle_flow_graph_set_association_keys`（set 後回傳 + 再次查詢持久化）；full suite **288 passed, 1 skipped**
+- **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_handlers.py`
 
 - Monte Carlo 計算引擎核心 (`monte_carlo.py`) — sample_from_distribution, apply_anomalies, predict_output, run_monte_carlo
 - 14 tests covering normal/gamma/lognormal/histogram sampling, linear/quadratic prediction, anomaly injection, full simulation with/without bounds
@@ -451,3 +557,46 @@
 - **User 確認**：三階段深度整合（Step1 跨節點關聯鍵 barcode/序號/批次；Step2 節點資料面板→可點擊跳到對應分析 tab 帶入欄位/規格；Step3 下游 tab 依節點篩選入口）。規格深度（製程群組/目錄映射/資料流指標）留後續。
 - **探索發現**：ProcessFlow.tsx 已是完整 SVG 編輯器（817 行：拖曳/縮放/minimap/自動佈局/連線/資料來源與機台對映）。薄弱處 = 與分析 tab 斷連（SPC/MonteCarlo 只用 store 的 importResult+spec，不動用節點映射）。App.tsx 用 `useState activeTab` 管理切換（需 navigation store 才能帶 payload）。引擎 ProcessNode 無 association_keys 欄位。
 - **待辦**：提方案→設計文件→commit→user 審核→writing-plans
+
+### Task 1 引擎 — ProjectManifest.association_keys + set_association_keys (REVIEWED)
+- **審核結果**：✅ Spec 完全符合（commit cd7788e）
+  - `association_keys: list[str] = field(default_factory=list)` 位於 `settings` 後（manifest.py:149）
+  - `set_association_keys(keys) -> dict[str, Any]`：`_ensure_project()` + `_load()` → `[str(k).strip() for k in keys if str(k).strip()]` → `_save()` → 回傳 dict（manifest.py:449-454）
+  - `get_flow_graph()` 回傳含 `association_keys`（manifest.py:530）
+  - 3 個測試齊備（test_manifest_nodes.py:53-74），全部通過
+  - 全 suite 287 passed / 1 skipped 確認無迴歸
+  - commit 僅含 2 個檔案（manifest.py +10/-1、test_manifest_nodes.py +23）無異動其他程式
+  - 小備註：reload 測試含一行中文註解 `# 重載 manifest 物件`（test:70），非功能性偏差
+
+### Task 5 ProcessFlow — 關聯鍵 UI + 跳轉按鈕 + i18n (REVIEWED)
+- **Status**: DONE（commit b535cd0）
+- **審核結果**：✅ Spec 完全符合
+  - imports：`setAssociationKeys`（engine）、`useProcessFlowNavStore`（nav store）、`LineChartOutlined`/`RobotOutlined`/`BarChartOutlined` 齊備
+  - `useState<FlowGraph>` 初始 `association_keys: []`（ProcessFlow.tsx:120）
+  - null-branch 空選單面板 → `<Select mode="tags">` 綁定 `graph.association_keys`，onChange `setAssociationKeys(keys)` → 更新 graph + `associationKeysSaved` success，catch `saveError`（:840-855；此分支原 `<Alert>` 已移除）
+  - 跳轉區於 machine_mapping 後、connectTo 前：標題 `jumpToAnalysis`；`out_quality_outputs.length>0` 時顯示 SPC(`jumpToSpc`)/MonteCarlo(`jumpToMonteCarlo`)，`in_control_parameters.length>0` 時顯示 Exploration(`jumpToExploration`)（:766-796）
+  - 共用 handler `gotoAnalysisTab(tab,node)`：dataSourceIds = output+input 兩來源串接；field = exploration→第一個 in_control_parameters、否則第一個 out_quality_outputs；呼叫 nav store `navigate(tab,{nodeId,displayName,field,dataSourceIds})`（:406-424）
+  - 全檔使用 `jumpToSpc`，無 `jumpToSqc`
+  - i18n：8 支新 key（associationKeys/Desc/Placeholder/Saved + jumpToAnalysis/Spc/MonteCarlo/Exploration）三語 en/zh-TW/es-MX 齊備、翻譯各語言適切、key set 一致（parity check `ok`）
+  - 驗證：`npx tsc --noEmit` EXIT 0 clean；i18n parity `ok`
+  - commit b535cd0 恰好 4 檔（ProcessFlow.tsx + 3 JSON）+102/-6、訊息 `feat(process-flow): association keys UI + jump buttons`
+  - 小備註：`Alert` import 保留仍使用（:517 noNodes）；`selectNode`/`selectNodeDesc` JSON key 現無人引用但屬既有，task 未要求移除→保留
+
+### Task 9 Exploration — 消費跳轉情境 + 節點篩選 + i18n + 共用元件 (REVIEWED)
+- **Status**: DONE（3 commits: 4ab2313 / c76aff4 / 62ce296）
+- **審核結果**：✅ Spec 完全符合
+  - Engine: `_handle_distribution`/`_handle_series` 加 filter_column/filter_value（mask `df[df[col].astype(str)==str(val)]`、未知欄 KeyError、缺值 ValueError）；6 測試（happy-path group A / missing value / unknown column）全過
+  - engine.ts: fitDistribution/getColumnSeries 加 filters，僅兩者皆設時帶入
+  - NodeSourceFilter.tsx 共用元件（section/sourcedFromNode/dataLoaded/columns/filterColumn/setFilterColumn/filterValue/setFilterValue/clearFilter/valuePlaceholder），內部 useTranslation `${section}.*`；SPC/MC 重構行為保留、ApartmentOutlined 死 import 移除、自家 filter state 保留並傳入 analyze
+  - Exploration.tsx: 在 effect 內 consume（consumedRef 在 await 前同步設 true，StrictMode-safe）；`field && numericColumns.includes(field)` 才自動選欄；預設篩選欄 = association_keys[0]（需存在於資料集欄位）；loadFits/loadTrend 僅兩者皆設才傳 filter；時間序列/GRR 未篩選（spec 明載後續）
+  - i18n: 4 支新 key ×3 語（exploration 段，`{{name}}` 正確插值）；spc/monteCarlo 沿用既有 key；cross-locale + 三段共用 key parity OK
+  - 驗證：pytest 300 passed / 1 skipped；tsc clean；vite build 成功；commit 範圍三檔皆精確
+  - 備註（皆已核實非本次引入）：
+    1. **spc.sourceFromNode 用單括號 `{name}`**（en/es-MX/zh-TW 三語皆然，74e44f4 Task 7 引入）→ i18next 只吃 `{{name}}`，SPC Tag 會字面顯示 `{name}`；本次未修（依 spec 邊界），建議後續 follow-up 一語改寫
+    2. SPC/MC 篩選控制自主要 controls Space 移出至 NodeSourceFilter 自有 Space → 僅視覺分組變動，行為一致
+    3. Exploration mount effect 閉包捕捉首次 render 的 numericColumns（[] deps）→ 若跳轉時資料集尚未載入則不會自動選欄，與 SPC 同為既有模式，非阻塞
+
+### 待辦 / 下一步
+- [ ] follow-up：修正 spc.sourceFromNode 三語單括號 `{name}` → `{{name}}`
+- [ ] follow-up：GRR / 時間序列套用節點篩選
+- [ ] 全任務九完成，可進行總體驗收 / 文件更新

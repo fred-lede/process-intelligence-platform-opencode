@@ -252,6 +252,7 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 - **雲端去識別化上傳**: SHA-256 雜湊遮蔽 + 高斯噪音 + 強制確認 Modal
 - **專案檔案系統**: `project_manifest.json` + 9 個目錄結構 + 製程群組/節點管理
 - **製程流程圖**: SVG 可交互編輯器 + 拓撲排序佈局 + 環狀檢測
+- **製程流程 × 下游分析整合**: 跨節點關聯鍵（`association_keys`）+ 節點「跳到分析」按鈕（SPC / Monte-Carlo / Exploration）+ 依節點行篩選（`filter_column`/`filter_value`，SPC / MC / 分布 / 序列）
 
 ### 多語言 ✅
 
