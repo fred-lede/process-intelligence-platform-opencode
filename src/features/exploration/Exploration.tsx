@@ -11,6 +11,7 @@ import {
   getTimeSeriesFeatures,
   analyzeGRR,
   getFlowGraph,
+  analyzeSPC,
   type DistributionFitResult,
   type ColumnSeries,
   type TimeSeriesFeatures,
@@ -46,7 +47,7 @@ const FIT_COLORS = ['#1677ff', '#722ed1', '#fa8c16']
 
 export default function Exploration() {
   const { t } = useTranslation()
-  const { importResult, fields, spec } = useDataPipelineStore()
+  const { importResult, fields, spec, controlLimits } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
   const consumedRef = useRef(false)
   const [sourcedFromNode, setSourcedFromNode] = useState<{
@@ -61,6 +62,7 @@ export default function Exploration() {
   const [loading, setLoading] = useState(false)
   const [fits, setFits] = useState<DistributionFitResult[] | null>(null)
   const [series, setSeries] = useState<ColumnSeries | null>(null)
+  const [trendCtrl, setTrendCtrl] = useState<{ ucl?: number; lcl?: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tsFeatures, setTsFeatures] = useState<TimeSeriesFeatures | null>(null)
   const [tsLoading, setTsLoading] = useState(false)
@@ -174,8 +176,15 @@ export default function Exploration() {
     setLoading(true)
     setError(null)
     try {
-      const result = await getColumnSeries(importResult.dataset_id, trendColumn, filterArgs)
-      setSeries(result)
+      const [seriesRes, spcRes] = await Promise.all([
+        getColumnSeries(importResult.dataset_id, trendColumn, filterArgs),
+        analyzeSPC({ dataset_id: importResult.dataset_id, column: trendColumn, control_limits: controlLimits[trendColumn] ?? undefined }),
+      ])
+      setSeries(seriesRes)
+      if (spcRes.control_limits) {
+        const cl = spcRes.control_limits
+        setTrendCtrl({ ucl: cl.i_ucl ?? cl.x_ucl, lcl: cl.i_lcl ?? cl.x_lcl })
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -370,6 +379,22 @@ export default function Exploration() {
                 line: { width: 1.5 },
                 marker: { size: 4 },
               },
+              ...(trendCtrl?.ucl != null ? [{
+                x: scatterData.x,
+                y: scatterData.x.map(() => trendCtrl.ucl!),
+                type: 'scatter' as const,
+                mode: 'lines',
+                name: 'UCL',
+                line: { dash: 'dash' as const, color: '#fa8c16' },
+              }] : []),
+              ...(trendCtrl?.lcl != null ? [{
+                x: scatterData.x,
+                y: scatterData.x.map(() => trendCtrl.lcl!),
+                type: 'scatter' as const,
+                mode: 'lines',
+                name: 'LCL',
+                line: { dash: 'dash' as const, color: '#fa8c16' },
+              }] : []),
               ...(spec && trendColumn === spec.outputField
                 ? [spec.lsl, spec.usl]
                     .filter((v): v is number => v != null)
