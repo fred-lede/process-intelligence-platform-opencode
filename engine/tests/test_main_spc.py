@@ -151,6 +151,18 @@ def test_spc_analyze_with_filter_unknown_column(tmp_path):
         })
 
 
+def test_spc_analyze_with_filter_no_rows_match(tmp_path):
+    did = _import_csv_for_spc_filter(tmp_path)
+    with pytest.raises(ValueError, match="No rows match filter"):
+        handle_request("spc/analyze", {
+            "dataset_id": did,
+            "column": "output",
+            "chart_type": "i-mr",
+            "filter_column": "work_order",
+            "filter_value": "Z",
+        })
+
+
 def test_spc_capability_only(tmp_path):
     did = _import_csv_for_spc(tmp_path)
     result = handle_request("spc/capability", {

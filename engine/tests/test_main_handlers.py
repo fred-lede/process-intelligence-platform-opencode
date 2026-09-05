@@ -200,6 +200,28 @@ def test_handle_series_with_filter_unknown_column(tmp_path):
         })
 
 
+def test_handle_distribution_with_filter_no_rows_match(tmp_path):
+    did = _import_csv_for_explore_filter(tmp_path)
+    with pytest.raises(ValueError, match="No rows match filter"):
+        handle_request("data/distribution", {
+            "dataset_id": did,
+            "column": "value",
+            "filter_column": "work_order",
+            "filter_value": "Z",
+        })
+
+
+def test_handle_series_with_filter_no_rows_match(tmp_path):
+    did = _import_csv_for_explore_filter(tmp_path)
+    with pytest.raises(ValueError, match="No rows match filter"):
+        handle_request("data/series", {
+            "dataset_id": did,
+            "column": "value",
+            "filter_column": "work_order",
+            "filter_value": "Z",
+        })
+
+
 def test_handle_quality_json_serializable(tmp_path):
     csv_text = "\n".join(
         [

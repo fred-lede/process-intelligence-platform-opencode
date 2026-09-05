@@ -188,3 +188,19 @@ def test_monte_carlo_run_with_filter_unknown_column(tmp_path):
             "filter_column": "nonexistent",
             "filter_value": "A",
         })
+
+
+def test_monte_carlo_run_with_filter_no_rows_match(tmp_path):
+    did = _import_csv_for_mc_filter(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+    with pytest.raises(ValueError, match="No rows match filter"):
+        handle_request("monte_carlo/run", {
+            "dataset_id": did,
+            "model_id": model_id,
+            "n_simulations": 100,
+            "seed": 42,
+            "enable_anomalies": False,
+            "filter_column": "work_order",
+            "filter_value": "Z",
+        })

@@ -392,19 +392,26 @@ def _df_from_rows(params: dict) -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
+def _apply_row_filter(df, params):
+    filter_column = params.get("filter_column")
+    filter_value = params.get("filter_value")
+    if filter_column:
+        if filter_column not in df.columns:
+            raise KeyError(f"Unknown filter column: {filter_column}")
+        if filter_value is None:
+            raise ValueError("filter_value is required when filter_column is set")
+        df = df[df[filter_column].astype(str) == str(filter_value)]
+        if df.empty:
+            raise ValueError("No rows match filter")
+    return df
+
+
 def _handle_distribution(params: dict) -> dict:
     """Fit distributions for a registered dataset column."""
     if params.get("dataset_id"):
         df = REGISTRY.get(params["dataset_id"])
         column = params["column"]
-        filter_column = params.get("filter_column")
-        filter_value = params.get("filter_value")
-        if filter_column:
-            if filter_column not in df.columns:
-                raise KeyError(f"Unknown filter column: {filter_column}")
-            if filter_value is None:
-                raise ValueError("filter_value is required when filter_column is set")
-            df = df[df[filter_column].astype(str) == str(filter_value)]
+        df = _apply_row_filter(df, params)
         values = df[column].tolist()
     else:
         values = params.get("values", [])
@@ -442,14 +449,7 @@ def _handle_series(params: dict) -> dict:
     if column not in df.columns:
         raise KeyError(f"Unknown column: {column}")
 
-    filter_column = params.get("filter_column")
-    filter_value = params.get("filter_value")
-    if filter_column:
-        if filter_column not in df.columns:
-            raise KeyError(f"Unknown filter column: {filter_column}")
-        if filter_value is None:
-            raise ValueError("filter_value is required when filter_column is set")
-        df = df[df[filter_column].astype(str) == str(filter_value)]
+    df = _apply_row_filter(df, params)
 
     series = df[column]
     relaxed = pd.api.types.is_numeric_dtype(series)
@@ -1055,14 +1055,7 @@ def _handle_settings_test(params: dict) -> dict:
 def _handle_spc_analyze(params: dict) -> dict:
     """Analyze SPC control chart for a column."""
     df = REGISTRY.get(params["dataset_id"])
-    filter_column = params.get("filter_column")
-    filter_value = params.get("filter_value")
-    if filter_column:
-        if filter_column not in df.columns:
-            raise KeyError(f"Unknown filter column: {filter_column}")
-        if filter_value is None:
-            raise ValueError("filter_value is required when filter_column is set")
-        df = df[df[filter_column].astype(str) == str(filter_value)]
+    df = _apply_row_filter(df, params)
     column = params["column"]
     if column not in df.columns:
         raise KeyError(f"Unknown column: {column}")
@@ -1117,14 +1110,7 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     did = params["dataset_id"]
     model_id = params["model_id"]
     df = REGISTRY.get(did)
-    filter_column = params.get("filter_column")
-    filter_value = params.get("filter_value")
-    if filter_column:
-        if filter_column not in df.columns:
-            raise KeyError(f"Unknown filter column: {filter_column}")
-        if filter_value is None:
-            raise ValueError("filter_value is required when filter_column is set")
-        df = df[df[filter_column].astype(str) == str(filter_value)]
+    df = _apply_row_filter(df, params)
     fit = MODEL_REGISTRY.get(model_id)
 
     if fit.model_type not in ("doe_linear", "doe_quadratic"):
