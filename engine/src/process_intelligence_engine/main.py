@@ -1100,6 +1100,14 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     did = params["dataset_id"]
     model_id = params["model_id"]
     df = REGISTRY.get(did)
+    filter_column = params.get("filter_column")
+    filter_value = params.get("filter_value")
+    if filter_column:
+        if filter_column not in df.columns:
+            raise KeyError(f"Unknown filter column: {filter_column}")
+        if filter_value is None:
+            raise ValueError("filter_value is required when filter_column is set")
+        df = df[df[filter_column].astype(str) == str(filter_value)]
     fit = MODEL_REGISTRY.get(model_id)
 
     if fit.model_type not in ("doe_linear", "doe_quadratic"):

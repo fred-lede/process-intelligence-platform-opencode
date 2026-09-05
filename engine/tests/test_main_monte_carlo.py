@@ -120,3 +120,71 @@ def test_monte_carlo_run_unknown_dataset_raises():
             "seed": 42,
             "enable_anomalies": False,
         })
+
+
+def _import_csv_for_mc_filter(tmp_path):
+    import numpy as np
+    rng = np.random.default_rng(7)
+    rows = ["work_order,x1,x2,y"]
+    for i in range(80):
+        group = "A" if i < 40 else "B"
+        x1 = rng.uniform(90, 110) if group == "A" else rng.uniform(190, 210)
+        x2 = rng.uniform(45, 55)
+        y = 10 + 2 * x1 - 1.5 * x2 + rng.normal(0, 1)
+        rows.append(f"{group},{x1:.4f},{x2:.4f},{y:.4f}")
+    path = tmp_path / "mc_filter.csv"
+    path.write_text("\n".join(rows), encoding="utf-8")
+    return handle_request("data/import", {"file_path": str(path)})["dataset_id"]
+
+
+def test_monte_carlo_run_with_filter(tmp_path):
+    did = _import_csv_for_mc_filter(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+
+    params = {
+        "dataset_id": did,
+        "model_id": model_id,
+        "n_simulations": 500,
+        "seed": 42,
+        "enable_anomalies": False,
+    }
+    unfiltered = handle_request("monte_carlo/run", dict(params))["result"]
+    filtered = handle_request("monte_carlo/run", dict(
+        params, filter_column="work_order", filter_value="A"
+    ))["result"]
+
+    assert sum(filtered["histogram"]["counts"]) == 500
+    assert filtered["output_mean"] < 185
+    assert unfiltered["output_mean"] > 185
+
+
+def test_monte_carlo_run_with_filter_missing_value(tmp_path):
+    did = _import_csv_for_mc_filter(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+    with pytest.raises(ValueError):
+        handle_request("monte_carlo/run", {
+            "dataset_id": did,
+            "model_id": model_id,
+            "n_simulations": 100,
+            "seed": 42,
+            "enable_anomalies": False,
+            "filter_column": "work_order",
+        })
+
+
+def test_monte_carlo_run_with_filter_unknown_column(tmp_path):
+    did = _import_csv_for_mc_filter(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+    with pytest.raises(KeyError):
+        handle_request("monte_carlo/run", {
+            "dataset_id": did,
+            "model_id": model_id,
+            "n_simulations": 100,
+            "seed": 42,
+            "enable_anomalies": False,
+            "filter_column": "nonexistent",
+            "filter_value": "A",
+        })
