@@ -5,6 +5,7 @@ from typing import Literal, Optional
 
 
 ProviderType = Literal['ollama', 'openai', 'azure', 'custom']
+LightGBMDevice = Literal['auto', 'cpu', 'gpu']
 
 
 @dataclass
@@ -15,6 +16,7 @@ class AIProviderConfig:
     api_key: str = ''
     model: str = 'gemma4:e2b-mlx'
     enabled: bool = True
+    lightgbm_device: LightGBMDevice = 'auto'
 
 
 class SettingsManager:

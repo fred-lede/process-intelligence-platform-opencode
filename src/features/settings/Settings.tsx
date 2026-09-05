@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message, InputNumber, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons'
+import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined, ExperimentOutlined } from '@ant-design/icons'
 import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing, previewCloudUpload, confirmCloudUpload, listCloudUploadRecords, getDataAssets, detectFields, type UploadPreview, type UploadRecord, type DataAsset, type DetectedField } from '../../lib/engine'
 import { useAIStore } from '../../stores/aiStore'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
@@ -384,6 +384,23 @@ export default function Settings() {
                 style={{ marginTop: 16 }}
               />
             )}
+          </Form>
+        </Card>
+
+        <Card title={<><ExperimentOutlined /> {t('settings.modelSettings')}</>}>
+          <Form layout="vertical" style={{ maxWidth: 400 }}>
+            <Form.Item label={t('settings.lightgbmDevice')} name="lightgbm_device">
+              <Select
+                options={[
+                  { value: 'auto', label: t('settings.lightgbmDeviceAuto') },
+                  { value: 'cpu', label: t('settings.lightgbmDeviceCpu') },
+                  { value: 'gpu', label: t('settings.lightgbmDeviceGpu') },
+                ]}
+              />
+            </Form.Item>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t('settings.lightgbmDeviceNote')}
+            </Typography.Text>
           </Form>
         </Card>
       </Space>

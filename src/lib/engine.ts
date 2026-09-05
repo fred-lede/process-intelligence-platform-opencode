@@ -634,6 +634,7 @@ export interface AIProviderConfig {
   api_key: string
   model: string
   enabled: boolean
+  lightgbm_device?: 'auto' | 'cpu' | 'gpu'
 }
 
 export interface SettingsGetResult {

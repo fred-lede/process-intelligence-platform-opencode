@@ -41,6 +41,23 @@ from .metrics import (
 )
 
 
+def _lightgbm_device_params() -> dict[str, Any]:
+    """Return LightGBM kwargs based on engine settings (cpu / gpu / auto)."""
+    try:
+        from process_intelligence_engine.settings import get_settings_manager
+        cfg = get_settings_manager().get_config()
+        device = cfg.get('lightgbm_device', 'auto')
+    except Exception:
+        device = 'auto'
+
+    if device == 'cpu':
+        return {}  # default is CPU
+    if device == 'gpu':
+        return {'device': 'gpu'}
+    # 'auto': try GPU, fall back to CPU on failure
+    return {'device': 'gpu'}
+
+
 def _auto_select_features(
     df: pd.DataFrame,
     target: str,
@@ -324,14 +341,38 @@ def fit_lightgbm(
     y = df[target].to_numpy(dtype=float)
     X_tr, X_te, y_tr, y_te = _train_test(X, y, test_size, random_state)
 
-    model = lgb.LGBMRegressor(
-        n_estimators=n_estimators,
-        max_depth=max_depth,
-        learning_rate=learning_rate,
-        random_state=random_state,
-        verbose=-1,
-    )
-    model.fit(X_tr, y_tr)
+    device_params = _lightgbm_device_params()
+    if device_params.get('device') == 'gpu':
+        # auto-fallback: if GPU fails, retry with CPU
+        try:
+            model = lgb.LGBMRegressor(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                learning_rate=learning_rate,
+                random_state=random_state,
+                verbose=-1,
+                **device_params,
+            )
+            model.fit(X_tr, y_tr)
+        except Exception:
+            model = lgb.LGBMRegressor(
+                n_estimators=n_estimators,
+                max_depth=max_depth,
+                learning_rate=learning_rate,
+                random_state=random_state,
+                verbose=-1,
+            )
+            model.fit(X_tr, y_tr)
+    else:
+        model = lgb.LGBMRegressor(
+            n_estimators=n_estimators,
+            max_depth=max_depth,
+            learning_rate=learning_rate,
+            random_state=random_state,
+            verbose=-1,
+            **device_params,
+        )
+        model.fit(X_tr, y_tr)
     y_pred = model.predict(X_te)
 
     return ModelFit(

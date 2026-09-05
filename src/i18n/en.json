@@ -498,6 +498,12 @@
     "testConnection": "Test Connection",
     "connectionSuccess": "Connection successful",
     "connectionFailed": "Connection failed",
+    "modelSettings": "Model Settings",
+    "lightgbmDevice": "LightGBM Device",
+    "lightgbmDeviceAuto": "Auto (try GPU, fallback CPU)",
+    "lightgbmDeviceCpu": "CPU",
+    "lightgbmDeviceGpu": "GPU (NVIDIA CUDA required)",
+    "lightgbmDeviceNote": "GPU requires NVIDIA CUDA + LightGBM compiled with -DUSE_GPU=1. Apple MPS is not supported.",
     "refreshModels": "Refresh Models",
     "enabled": "Enabled",
     "disabled": "Disabled"
