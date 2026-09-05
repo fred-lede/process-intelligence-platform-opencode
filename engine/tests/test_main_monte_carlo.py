@@ -204,3 +204,43 @@ def test_monte_carlo_run_with_filter_no_rows_match(tmp_path):
             "filter_column": "work_order",
             "filter_value": "Z",
         })
+
+
+def test_monte_carlo_run_capability_pp_ppk(tmp_path):
+    did = _import_csv_for_mc(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+
+    result = handle_request("monte_carlo/run", {
+        "dataset_id": did,
+        "model_id": model_id,
+        "n_simulations": 500,
+        "seed": 42,
+        "enable_anomalies": False,
+        "lsl": 50.0,
+        "usl": 200.0,
+    })
+    cap = result["result"]["capability"]
+    mean = result["result"]["output_mean"]
+    std = result["result"]["output_std"]
+    assert cap["pp"] == pytest.approx((200.0 - 50.0) / (6 * std), rel=1e-5)
+    assert cap["ppk"] == pytest.approx(
+        min((200.0 - mean) / (3 * std), (mean - 50.0) / (3 * std)), rel=1e-5
+    )
+    assert cap["sigma_overall"] == pytest.approx(std, rel=1e-5)
+
+
+def test_monte_carlo_run_capability_none_without_spec(tmp_path):
+    did = _import_csv_for_mc(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+
+    result = handle_request("monte_carlo/run", {
+        "dataset_id": did,
+        "model_id": model_id,
+        "n_simulations": 500,
+        "seed": 42,
+        "enable_anomalies": False,
+    })
+    cap = result["result"]["capability"]
+    assert cap["pp"] is None and cap["ppk"] is None

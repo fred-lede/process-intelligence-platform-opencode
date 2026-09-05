@@ -10,6 +10,7 @@ import pandas as pd
 from scipy import stats
 
 from .copula import compute_joint_probabilities, CopulaResult
+from .spc import compute_capability
 
 
 def sample_from_distribution(
@@ -387,6 +388,7 @@ def run_monte_carlo(
         "anomaly_rankings": anomaly_rankings,
         "multi_anomaly_ng": multi_anomaly_ng,
         "violations": violations,
+        "capability": compute_capability(output_values, lsl=lsl, usl=usl, subgroup_size=1),
         "output_values": output_values.tolist(),
         "copula": copula_result.to_dict() if copula_result else None,
     }
