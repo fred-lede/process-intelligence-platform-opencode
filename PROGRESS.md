@@ -1,5 +1,10 @@
 # PROGRESS.md
 
+## 2026-09-05 — Task 2: XGBoost + LightGBM fitters（SPEC COMPLIANT）
+- **實作**：`fitters.py` 加 `fit_xgboost`/`fit_lightgbm`（auto-select + hyperparams + availability guard）；`main.py` `MODEL_FITTERS` 註冊；`pyproject.toml` 加 `lightgbm>=4.0.0`；3 支新測試
+- **修正**：`_handle_modeling_fit` 原僅對 `random_forest` 透傳 hyperparams，擴為 tree models 共用（`n_estimators`/`max_depth`/`min_samples_leaf`/`learning_rate`/`auto_select_features`/`importance_threshold`/`max_features`/`test_size`/`random_state`）
+- **驗證**：`test_fitters.py` 12 passed；全引擎 **314 passed, 1 skipped**（baseline 308 + 3 新）
+
 ## 2026-09-02 — Phase 0 基礎建設完成
 
 ### 完成內容
@@ -595,3 +600,34 @@
 - [x] **前端（commit `27eb722`）**：MonteCarlo 頁新增「預測能力指數（模擬）」card——Pp/Ppk antd `Statistic` + σ overall 註記，色彩閾值 ≥1.33 綠 / ≥1.0 橘 / <1.0 紅（mirror SPC `capacityColor`）；AI 助手 context 新增 `Predicted capability (simulation)` 一行；i18n 三語 `monteCarlo` +4 keys（30→34）
 - [x] **驗證**：引擎 **306 passed, 1 skipped**（2 新測試 RED→GREEN）；`npx tsc --noEmit` clean；`npm run build` 成功；三語 i18n parity `ok`；spec reviewer APPROVE（capColor 閾值/hex 與 SPC 完全一致、`capability?: SPCCapability | null` 防禦型別 + 雙重 null-guard、rel tolerance 實測 justified）
 - **Commits**：`bb1b019`（feat(engine): monte carlo predicted capability via compute_capability）/ `27eb722`（feat(monte-carlo): predicted capability card, AI context, i18n）
+
+## 2026-09-05 — Task 1: Engine — Auto feature selection + RF hyperparameter exposure
+
+- [x] **引擎（commit `cb49b49`）**：`fitters.py` 新增 `_auto_select_features` helper（快速 RF rank + threshold filtering，預設 threshold=0.01, max_features=5）；`fit_random_forest` 加 `auto_select_features`/`importance_threshold`/`max_features` 參數 + 改預設 `n_estimators=200, min_samples_leaf=3`；`ModelFit` 加 `selected_inputs` field + `to_dto()` 輸出；`main.py` `_handle_modeling_fit` 僅對 `random_forest` 透傳 RF hyperparams（其他 fitter 不受影響）
+- [x] **測試（新增 2）**：`test_fit_random_forest_auto_select_features`（noise 被過濾，剩 ≤2 個 features）；`test_fit_random_forest_hyperparameters`（n_estimators=50, max_depth=5 → R² > 0.5）
+- [x] **驗證**：引擎 **308 passed, 1 skipped**（baseline 306 + 2 新測試）；無回歸
+- **Files changed**：`engine/src/process_intelligence_engine/modeling/fitters.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_fitters.py`
+
+## 2026-09-05 — 2.0 AI 模型擴充（Random Forest 完善 + XGBoost / LightGBM）
+
+### 完成內容
+
+- [x] **引擎 — `_auto_select_features` helper**（commit `cb49b49`）：
+  - `fitters.py` 新增 `_auto_select_features(df, target, max_features=5, importance_threshold=0.01)`（快速 RF rank + threshold filtering）
+  - `fit_random_forest` 暴露超參數：`n_estimators=200, max_depth=None, min_samples_leaf=3, auto_select_features, importance_threshold, max_features`
+  - `ModelFit` 加 `selected_inputs` field + `to_dto()` 輸出
+  - `main.py` `_handle_modeling_fit` 僅對 `random_forest` 透傳 RF hyperparams
+- [x] **引擎 — XGBoost / LightGBM fitters**（commit `2073d53`）：
+  - `fit_xgboost` / `fit_lightgbm`（共用 `_auto_select_features` + 相同 hyperparameter 介面）
+  - `MODEL_FITTERS` 註冊 `"xgboost"` / `"lightgbm"`
+  - `pyproject.toml` 加 `lightgbm>=4.0.0`（`xgboost` 早已存在）
+  - `c94e11e`：補 empty-input guard（`if not selected_inputs: raise ValueError`）mirror RF
+- [x] **SHAP 支援 XGBoost / LightGBM**（commit `7404acf`）：
+  - `shap_explainer.py` 型別分派改 `fit.model_type in ("random_forest", "xgboost", "lightgbm")` 共用 `_compute_shap_tree`
+- [x] **前端 — Tree Model Settings 卡片**（commit `f0d4979` / `2b71112`）：
+  - `engine.ts` `ModelFitDTO` 加 `selected_inputs?`；`fitModel` params 加 7 個 hyperparameter
+  - `ModelCenter.tsx`：Switch + InputNumbers（RF/XGBoost/LightGBM 顯示；minSamplesLeaf 僅 RF）；auto-select 後更新 selectedInputs + 通知
+- [x] **i18n**：`modelCenter` 新增 8 keys × 3 語（treeModelAdvanced / autoFeatureSelect / nEstimators / maxDepth / minSamplesLeaf / learningRate / featureSelected / featureImportance）
+- [x] **測試**：新增 8 支（RF auto-select、hyperparameters、edge case、XGBoost/LightGBM fit、SHAP）
+- [x] **驗證**：引擎 **316 passed, 1 skipped**（baseline 304 + 12 新）；`npx tsc --noEmit` clean；`npm run build` 成功
+- **Commits**：`cb49b49` / `2073d53` / `c94e11e` / `f0d4979` / `2b71112` / `7404acf`

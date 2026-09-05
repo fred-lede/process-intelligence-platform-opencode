@@ -192,6 +192,48 @@
 
 <!-- NEXT_ITEM_ANCHOR -->
 
+### 2.0 AI 模型擴充 — 收尾 docs + 最終驗證 + push（commit pending）
+- **Status**: DONE
+- **引擎**：`_auto_select_features` helper + RF hyperparameter exposure（`cb49b49`）；XGBoost/LightGBM fitters（`2073d53`）；empty-input guard（`c94e11e`）；SHAP 支援 XGBoost/LightGBM（`7404acf`）
+- **前端**：Tree Model Settings 卡片 + hyperparameter state + i18n 8 keys × 3 語（`f0d4979` / `2b71112`）
+- **驗證**：引擎 **316 passed, 1 skipped**（baseline 304 + 12 新）；`npx tsc --noEmit` clean；`npm run build` 成功
+- **Commits**：`cb49b49` / `2073d53` / `c94e11e` / `f0d4979` / `2b71112` / `7404acf`
+
+### Task 4 — SHAP support for XGBoost and LightGBM（commit 7404acf）
+- **Status**: DONE
+- **實作**：`shap_explainer.py` 型別分派改 `fit.model_type in ("random_forest", "xgboost", "lightgbm")` 共用 `_compute_shap_tree`；`test_shap_explainer.py` 新增 `test_shap_xgboost`/`test_shap_lightgbm` 各 4 斷言
+- **驗證**：`test_shap_explainer.py` **5 passed**；全引擎 **316 passed, 1 skipped**（baseline 314 + 2 新）；commit `7404acf feat(shap): add xgboost and lightgbm support`
+- **Files changed** — `engine/src/process_intelligence_engine/modeling/shap_explainer.py`, `engine/tests/test_shap_explainer.py`
+
+### Task 3 — Tree model settings UI + i18n（commit f0d4979）
+- **Status**: DONE
+- **實作**：`engine.ts` `ModelFitDTO` 新增 `selected_inputs?`；`fitModel` params 加 `n_estimators`/`max_depth`/`min_samples_leaf`/`learning_rate`/`auto_select_features`/`importance_threshold`/`max_features`；`ModelCenter.tsx` 加 `Switch`+`InputNumber` import、5 個 hyperparameter state、`handleFit` 對 tree 模型傳入超參數並處理 auto-select 回傳的 `selected_inputs`、新增 Tree Model Settings Card（RF/XGB/LGBM 顯示、auto-select off 時顯示 estimators/depth/learning_rate/min_samples_leaf）；i18n 三語 `modelCenter` 各 +8 keys（treeModelAdvanced/autoFeatureSelect/nEstimators/maxDepth/minSamplesLeaf/learningRate/featureSelected/featureImportance）
+- **驗證**：三語 parity `ok count: 60`；`npx tsc --noEmit` clean；`npm run build` `✓ built in 10.51s`
+- **Files changed** — `src/lib/engine.ts`, `src/features/model-center/ModelCenter.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
+
+### Task 2: Engine — XGBoost and LightGBM fitters ✅
+- **Status**: DONE — **SPEC COMPLIANT** — Code Review: **NEEDS CHANGES** (1 Important)
+- **實作**：`fitters.py` 新增 `XGBOOST_AVAILABLE`/`LIGHTGBM_AVAILABLE` 檢查 + `fit_xgboost`/`fit_lightgbm`（共用 RF 的 auto-select/hyperparameter 介面）；`main.py` `MODEL_FITTERS` 新增 `"xgboost"`/`"lightgbm"` 兩筆；`pyproject.toml` 加 `lightgbm>=4.0.0`（`xgboost` 早已存在）；`test_fitters.py` 新增 3 支測試
+- **驗證**：`test_fitters.py` **12 passed**；全引擎 **314 passed, 1 skipped**（baseline 308 + 3 新）
+- **Files changed** — `engine/src/process_intelligence_engine/modeling/fitters.py`, `engine/src/process_intelligence_engine/main.py`, `engine/pyproject.toml`, `engine/tests/test_fitters.py`
+- **Code review note**：Important — XGBoost/LightGBM 缺少 RF 的 post-auto-select guard（`if not selected_inputs: raise ValueError`），當所有 feature importance 低於 threshold 時會 crash。需補 guard + mirror test
+
+### Code review — XGBoost + LightGBM fitters (Task 2, commit 2073d53)
+- **Status**: **NEEDS CHANGES**（1 Important；0 Critical；3 Minor non-blocking）
+- **審查範圍**：`git diff cb49b49..2073d53`（5 files, +152/−0）
+- **Pattern 一致性**：XGBoost/LightGBM 共用 RF 的 `_auto_select_features` + `importance_threshold`/`max_features` 介面，`ModelFit` 欄位一致，`ImportError` 缺庫訊息格式一致
+- **Important #1 — Missing post-auto-select guard**：RF fitter（fitters.py:213-214）在 `_auto_select_features` 後有 `if not selected_inputs: raise ValueError("at least one input is required")` 守衛；XGBoost（fitters.py:260-264）與 LightGBM（fitters.py:313-317）**均缺少此守衛**。當所有 feature importance 均低於 `importance_threshold` 時，`selected_inputs` 為空 list → `df[[]]` 後續操作會 crash 或產生不可預期的 metrics
+- **Minor 1**：`test_main_modeling.py` 新增 2 個 IPC 層測試（hyperparameters + auto_select for RF）屬 Task 1 補完，放 Task 2 commit 略雜，可獨立 commit
+- **Minor 2**：無 `test_fit_xgboost_all_features_below_threshold` / `test_fit_lightgbm_all_features_below_threshold` mirror RF 的 guard test（若補 guard 則需補）
+- **Minor 3**：無 `test_fit_*_missing_library` 測試（ImportError 路徑，依賴環境有安裝故無法在 CI 內測試；可接受）
+- **Positive**：pyproject.toml 依賴聲明正確；`main.py` `MODEL_FITTERS` 註冊無誤；hyperparameter 透傳與 RF 一致；`to_dto()` 序列化無變更；全引擎 314 passed 無回歸
+
+### Task 1 — Engine: Auto feature selection + RF hyperparameter exposure (commit cb49b49)
+- **Status**: DONE
+- **實作**：`fitters.py` 新增 `_auto_select_features` helper（快速 RF rank + threshold filtering）；`fit_random_forest` 加 `auto_select_features`/`importance_threshold`/`max_features` 參數 + 改預設 `n_estimators=200, min_samples_leaf=3`；`ModelFit` 加 `selected_inputs` field + `to_dto()` 支援；`main.py` `_handle_modeling_fit` 僅對 `random_forest` 透傳 RF hyperparams，其餘 fitter 不受影響
+- **測試**：新增 `test_fit_random_forest_auto_select_features`（noise 被過濾）、`test_fit_random_forest_hyperparameters`（n_estimators=50, max_depth=5）——engine **308 passed, 1 skipped**（baseline 306 + 2）
+- **Files changed** — `engine/src/process_intelligence_engine/modeling/fitters.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_fitters.py`
+
 ### Code review — SPC node-filter/context-integration line（Tasks 7+7b+StrictMode fix，commits 74e44f4..b7f3100）
 - **Status**: DONE — **APPROVE**（無 Critical；2 Important 皆 edge-case UX，建議 follow-up）
 - **獨立驗證**：full engine **291 passed, 1 skipped**；`test_main_spc.py` 12 passed；`npx tsc --noEmit` clean；每 commit 單一邏輯變更；i18n 5 新 key 全被 SPC.tsx 引用（250/258/267/279/287/297）、三語 parity

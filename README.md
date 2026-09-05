@@ -161,7 +161,7 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 
 - **模型比較指標**: RMSE, MSE, MAE, R², Adjusted R²
 - **DOE 模型配適**: 線性 + 二次（含 intercept、平方項、交互項）
-- **隨機樹回歸**: sklearn RandomForestRegressor
+- **樹模型（Random Forest / XGBoost / LightGBM）**: 超參數調控（n_estimators, max_depth, min_samples_leaf, learning_rate）+ 自動特徵選取（`_auto_select_features`，基於 feature_importances_ rank + threshold filtering）
 - **殘差混合模型**: Y = f_DOE(X) + r_RF(X)（DOE 擷取趨勢 + AI 殘差補償）
 - **不可變版本登錄**: 狀態機 draft → pending_validation → validated → approved；單調遞增版本、永不覆寫
 - **IPC handlers**: `modeling/fit`、`modeling/list`、`modeling/transition`
@@ -171,9 +171,10 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 
 - **模型中心頁面**: 模型配適表單 + 模型列表 + 比較表
 - **模型比較增強**: 勾選多模型並排對比、高亮最佳指標
+- **樹模型設定卡片**: RF/XGBoost/LightGBM 顯示超參數 Switch + InputNumbers（RF 獨有 min_samples_leaf）；自動特徵選取後更新 selectedInputs 並顯示通知
 - **DOE 設計庫**: Full Factorial / Fractional Factorial / CCD / Box-Behnken / D-optimal / Taguchi (L4/L8/L9/L16)
 - **交互作用分析**: 二因素交互作用偵測 + 熱圖視覺化
-- **SHAP 可解釋性**: 特徵重要性圖 + SHAP 摘要圖
+- **SHAP 可解釋性**: 特徵重要性圖 + SHAP 摘要圖（支援 RF / XGBoost / LightGBM）
 - **外插風險評分**: 預測超出訓練範圍時警告
 - **交叉驗證 + 殘差分析**: k-fold CV、殘差分佈統計、Normality Test、Durbin-Watson
 
@@ -262,13 +263,15 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 - **繁體中文**（zh-TW）
 - **Español (México)**（es-MX）— 709 keys 完整翻譯（三語 key set 完全一致）
 
-### 模型類型（6 種）
+### 模型類型（8 種）
 
 | 類型 | 說明 | 適用場景 |
 |---|---|---|
 | `doe_linear` | 線性 DOE | 主要效應分析 |
 | `doe_quadratic` | 二次 DOE | 曲率 + 交互作用 |
-| `random_forest` | 隨機森林回歸 | 非線性殘差補償 |
+| `random_forest` | 隨機森林回歸 | 非線性殘差補償 + 自動特徵選取 |
+| `xgboost` | XGBoost 回歸 | 高維非線性預測 |
+| `lightgbm` | LightGBM 回歸 | 高效大資料訓練 |
 | `residual_hybrid` | 混合模型 | Y = f_DOE(X) + r_RF(X) |
 | `logistic_regression` | Logistic 迴歸 | 二元 NG/OK 預測 |
 | `weibull_regression` | Weibull 迴歸 | 可靠度 / 壽命分析 |
