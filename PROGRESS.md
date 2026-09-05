@@ -664,6 +664,15 @@
 - **驗證**：引擎 **330 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.07s`
 - **Commits**：`b09aaa3`（SVG + HTML）/ `fbd5b3b`（auto analysis）/ `fe66be0`（frontend + i18n）
 
+## 2026-09-05 — v0.3.0 統計異常偵測
+
+- [x] **引擎（commit `8c8ece4`）**：`spc.py` 新增 `detect_outliers()`（IQR + Z-score 雙閾值，返回 outlier_indices/n_outliers/method/outlier_stats）與 `detect_change_points()`（CUSUM statistic，返回 change_points/n_change_points/cusum_max_plus/cusum_max_minus）；`main.py` `_handle_spc_analyze` 匯入並調用，結果嵌入返回 dict（outlier_indices/change_points/outlier_stats）
+- [x] **測試**：6 支新測試（IQR/zscore/empty-raises/constant/no-shift/basic shift）全綠；全引擎 **345 passed, 1 skipped**（baseline 339 + 6）
+- [x] **前端（commit `6d0c55c`）**：`engine.ts` `SPCAnalysisResult` 新增 3 個選用欄位 `outlier_indices?`/`change_points?`/`outlier_stats?`；`SPC.tsx` `buildPlotData` 於 i-mr 與 xbar 兩分支的 violations block 之後，各加繪製 outlier（藍色圓點 `#1677ff`）與 change point（綠色三角形 `#52c41a`）的 markers trace
+- [x] **i18n +6 keys ×3 語**：spc 段新增 `outliers/changes/title` 等（en/zh-TW/es-MX 各 +6）
+- **驗證**：引擎 **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` 成功；三語 parity `ok`
+- **Commits**：`8c8ece4`（engine）/ `6d0c55c`（frontend）
+
 ## 2026-09-05 — SPC 批量分析 + 優化建議（multi-column + suggestions）
 
 - [x] **引擎（commits `9af8153` / `641bd13` / `19f6549`）**：`spc.py` 新增 `compute_spc_suggestions()`（檢查 Cpk<1.0 error / Cpk<1.33 warning、Rule 4 shift、Rule 5 trend、EWMA/CUSUM small shift）；`main.py` 新增 `_handle_spc_batch_analyze`（`spc/batch_analyze` IPC，支援 i-mr/ewma/cusum 多欄批量分析並附 suggestions）；3 個 fixup commit 修正 indentation / chart_type consistency / xbar error / EWMA test

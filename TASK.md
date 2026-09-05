@@ -1,6 +1,13 @@
 # TASK.md
 
 ## Completed
+### #3 v0.3.0 統計異常偵測收尾
+- **Status**: DONE
+- **Docs**：PROGRESS.md 新增 2026-09-05 v0.3.0 統計異常偵測條目；TASK.md 新增 Task 3 紀錄；README.md Phase 8 補 outlier/change point detection
+- **驗證**：`pytest tests/ -q` → **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` 成功
+- **Push**：待執行
+- **Files changed** — `PROGRESS.md`, `TASK.md`, `README.md`
+
 ### #1 engine/.coverage 停止追蹤
 - **Status**: DONE
 - **問題**：`.gitignore` 已有 `engine/.coverage` 行，但檔案早被 git 追蹤（`git ls-files` 有紀錄）
@@ -218,6 +225,21 @@
 - **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_monte_carlo.py`, `src/lib/engine.ts`, `src/features/monte-carlo/MonteCarlo.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`（未提交 `engine/.coverage`/icons）
 
 <!-- NEXT_ITEM_ANCHOR -->
+
+### Task 2: Frontend — Render outliers and change points in SPC charts
+- **Status**: DONE
+- **實作**：`engine.ts` `SPCAnalysisResult` 新增 3 個選用欄位 `outlier_indices?`/`change_points?`/`outlier_stats?`；`SPC.tsx` `buildPlotData` 於 i-mr 與 xbar 兩分支的 violations block 之後，各加繪製 outlier（藍色圓點 `#1677ff`）與 change point（綠色三角形 `#52c41a`）的 markers trace；i18n 三語 spc 區段各 +6 keys
+- **驗證**：`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.21s`
+- **Commit**：`6d0c55c feat(spc): render outliers and change points in charts`
+- **Files changed** — `src/lib/engine.ts`, `src/features/spc/SPC.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`
+
+### Task 1: Engine — Outlier and Change Point Detection (TDD)
+- **Status**: DONE
+- **實作**：`spc.py` 新增 `detect_outliers()`（IQR + Z-score，返回 outlier_indices/n_outliers/method/stats）與 `detect_change_points()`（CUSUM statistic，返回 change_points/n_change_points/cusum_max_plus/minus）；`main.py` `_handle_spc_analyze` 匯入並調用，結果嵌入返回 dict（outlier_indices/change_points/outlier_stats）
+- **測試**：6 支新測試（IQR/zscore/empty-raises/constant/no-shift/basic shift）全綠
+- **驗證**：`pytest tests/test_spc.py -q` **32 passed**；`pytest tests/ -q` **345 passed, 1 skipped**（baseline 339 + 6，無回歸）
+- **Commit**：待 commit（見上）
+- **Files changed** — `engine/src/process_intelligence_engine/spc.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_spc.py`
 
 ### Task 3: Frontend + i18n for SPC report enhancement
 - **Status**: DONE
