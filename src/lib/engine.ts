@@ -707,6 +707,16 @@ export interface SPCAnalysisResult {
   control_limits: SPCCtrlLimits
   violations: SPCViolation[]
   capability: SPCCapability | null
+  z_values?: number[]
+  c_plus?: number[]
+  c_minus?: number[]
+  ewma_lambda?: number
+  ewma_L?: number
+  cusum_k?: number
+  cusum_H?: number
+  ucl?: number
+  lcl?: number
+  cl?: number
 }
 
 export interface SPCCapabilityResult {
@@ -731,10 +741,14 @@ function flattenControlLimits(res: SPCAnalysisResult): SPCAnalysisResult {
 export async function analyzeSPC(params: {
   dataset_id: string
   column: string
-  chart_type?: 'i-mr' | 'xbar-r' | 'xbar-s'
+  chart_type?: 'i-mr' | 'xbar-r' | 'xbar-s' | 'ewma' | 'cusum'
   subgroup_size?: number
   lsl?: number
   usl?: number
+  ewma_lambda?: number
+  ewma_L?: number
+  cusum_k?: number
+  cusum_H?: number
   filter_column?: string
   filter_value?: string
 }): Promise<SPCAnalysisResult> {

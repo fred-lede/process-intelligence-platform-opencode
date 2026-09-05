@@ -579,7 +579,18 @@
     "dataSourceNotLoaded": "Source data not loaded. Import the dataset to analyze.",
     "filterByNode": "Filter by node",
     "nodeFilterCleared": "Node filter cleared",
-    "sameSourceHint": "(same source as node)"
+    "sameSourceHint": "(same source as node)",
+    "ewma": "EWMA",
+    "cusum": "CUSUM",
+    "ewmaLambda": "EWMA λ",
+    "ewmaL": "EWMA L",
+    "cusumK": "CUSUM k",
+    "cusumH": "CUSUM H",
+    "ewmaViolations": "EWMA Violations",
+    "cusumViolations": "CUSUM Violations",
+    "ewmaZValue": "EWMA Z(t)",
+    "cusumCP": "CUSUM C⁺",
+    "cusumCM": "CUSUM C⁻"
   },
   "timeSeries": {
     "title": "Time Series Features",

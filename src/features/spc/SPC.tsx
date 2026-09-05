@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Select, Space, Button, Alert, Form, Input, Typography, Table, Tag } from 'antd'
+import { Card, Select, Space, Button, Alert, Form, Input, InputNumber, Typography, Table, Tag } from 'antd'
 import Plot from 'react-plotly.js'
 import NodeSourceFilter from '../../components/NodeSourceFilter'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
@@ -13,7 +13,7 @@ import {
 } from '../../lib/processFlowContext'
 import { buildSpcContext } from '../../lib/assistantData'
 
-const CHART_TYPES = ['i-mr', 'xbar-r', 'xbar-s'] as const
+const CHART_TYPES = ['i-mr', 'xbar-r', 'xbar-s', 'ewma', 'cusum'] as const
 type ChartType = typeof CHART_TYPES[number]
 
 const WE_RULE_NAMES: Record<number, string> = {
@@ -79,6 +79,10 @@ export default function SPC() {
   const [chartType, setChartType] = useState<ChartType>('i-mr')
   const [column, setColumn] = useState<string | undefined>(spec?.outputField)
   const [subgroupSize, setSubgroupSize] = useState<number>(5)
+  const [ewmaLambda, setEwmaLambda] = useState(0.2)
+  const [ewmaL, setEwmaL] = useState(3)
+  const [cusumK, setCusumK] = useState(0.5)
+  const [cusumH, setCusumH] = useState(5)
   const [result, setResult] = useState<SPCAnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -109,6 +113,10 @@ export default function SPC() {
         subgroup_size: chartType === 'i-mr' ? 1 : subgroupSize,
         lsl: spec?.lsl ?? undefined,
         usl: spec?.usl ?? undefined,
+        ewma_lambda: chartType === 'ewma' ? ewmaLambda : undefined,
+        ewma_L: chartType === 'ewma' ? ewmaL : undefined,
+        cusum_k: chartType === 'cusum' ? cusumK : undefined,
+        cusum_H: chartType === 'cusum' ? cusumH : undefined,
         ...(nodeFilterColumn && nodeFilterValue
           ? { filter_column: nodeFilterColumn, filter_value: nodeFilterValue }
           : {}),
@@ -198,6 +206,69 @@ export default function SPC() {
             mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' } })
         }
       }
+    } else if (result.chart_type === 'ewma') {
+      const z = result.z_values ?? []
+      const x = result.x_values?.map((_, i) => i) ?? []
+      data.push({
+        x, y: z, mode: 'lines+markers',
+        name: t('spc.ewmaZValue'), line: { color: '#1677ff' }, marker: { size: 4 },
+      })
+      if (result.ucl != null && x.length > 0) {
+        data.push({
+          x: [x[0], x[x.length - 1]], y: [result.ucl, result.ucl],
+          mode: 'lines', name: 'UCL',
+          line: { color: '#fa8c16', dash: 'dash' }, showlegend: false,
+        })
+      }
+      if (result.lcl != null && x.length > 0) {
+        data.push({
+          x: [x[0], x[x.length - 1]], y: [result.lcl, result.lcl],
+          mode: 'lines', name: 'LCL',
+          line: { color: '#fa8c16', dash: 'dash' }, showlegend: false,
+        })
+      }
+      if (result.cl != null && x.length > 0) {
+        data.push({
+          x: [x[0], x[x.length - 1]], y: [result.cl, result.cl],
+          mode: 'lines', name: 'CL',
+          line: { color: '#52c41a', dash: 'dash' }, showlegend: false,
+        })
+      }
+      const violZ = (result.violations ?? []).map(v => z[v.point_idx] ?? 0)
+      const violX = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
+      if (violZ.length > 0) {
+        data.push({
+          x: violX, y: violZ, mode: 'markers', name: t('spc.ewmaViolations'),
+          marker: { color: '#ff4d4f', size: 8, symbol: 'x' }, showlegend: false,
+        })
+      }
+    } else if (result.chart_type === 'cusum') {
+      const c_plus = result.c_plus ?? []
+      const c_minus = result.c_minus ?? []
+      const x = result.x_values?.map((_, i) => i) ?? []
+      data.push({
+        x, y: c_plus, mode: 'lines+markers',
+        name: t('spc.cusumCP'), line: { color: '#1677ff' }, marker: { size: 4 },
+      })
+      data.push({
+        x, y: c_minus, mode: 'lines+markers',
+        name: t('spc.cusumCM'), line: { color: '#722ed1' }, marker: { size: 4 },
+      })
+      if (result.cusum_H != null && x.length > 0) {
+        data.push({
+          x: [x[0], x[x.length - 1]], y: [result.cusum_H, result.cusum_H],
+          mode: 'lines', name: 'H (limit)',
+          line: { color: '#fa8c16', dash: 'dash' }, showlegend: false,
+        })
+      }
+      const violX_cusum = (result.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
+      if (violX_cusum.length > 0) {
+        data.push({
+          x: violX_cusum, y: violX_cusum.map(() => result.cusum_H ?? 5),
+          mode: 'markers', name: t('spc.cusumViolations'),
+          marker: { color: '#ff4d4f', size: 8, symbol: 'x' }, showlegend: false,
+        })
+      }
     } else {
       const x = result.xbar_values?.map((_, i) => i) ?? []
       data.push({
@@ -265,7 +336,7 @@ export default function SPC() {
     showlegend: true,
     legend: { orientation: 'h', y: -0.15 },
     xaxis: { title: { text: 'Point Index' } },
-    yaxis: { title: { text: result?.chart_type === 'i-mr' ? 'Value' : 'X-bar' } },
+    yaxis: { title: { text: result?.chart_type === 'i-mr' ? 'Value' : result?.chart_type === 'ewma' ? 'Z(t)' : result?.chart_type === 'cusum' ? 'CUSUM' : 'X-bar' } },
   }
   plotLayout.yaxis2 = { overlaying: 'y', side: 'right', showgrid: false }
 
@@ -306,6 +377,8 @@ export default function SPC() {
                 { value: 'i-mr', label: t('spc.iMr') },
                 { value: 'xbar-r', label: t('spc.xbarR') },
                 { value: 'xbar-s', label: t('spc.xbarS') },
+                { value: 'ewma', label: t('spc.ewma') },
+                { value: 'cusum', label: t('spc.cusum') },
               ]}
               style={{ width: 280 }}
             />
@@ -331,6 +404,46 @@ export default function SPC() {
                 style={{ width: 80 }}
               />
             </Form.Item>
+          )}
+          {chartType === 'ewma' && (
+            <>
+              <Form.Item label={t('spc.ewmaLambda')} style={{ margin: 0 }}>
+                <InputNumber
+                  min={0.05} max={0.5} step={0.05}
+                  value={ewmaLambda}
+                  onChange={(v) => setEwmaLambda(v || 0.2)}
+                  style={{ width: 80 }}
+                />
+              </Form.Item>
+              <Form.Item label={t('spc.ewmaL')} style={{ margin: 0 }}>
+                <InputNumber
+                  min={2} max={4} step={0.5}
+                  value={ewmaL}
+                  onChange={(v) => setEwmaL(v || 3)}
+                  style={{ width: 80 }}
+                />
+              </Form.Item>
+            </>
+          )}
+          {chartType === 'cusum' && (
+            <>
+              <Form.Item label={t('spc.cusumK')} style={{ margin: 0 }}>
+                <InputNumber
+                  min={0.1} max={1} step={0.1}
+                  value={cusumK}
+                  onChange={(v) => setCusumK(v || 0.5)}
+                  style={{ width: 80 }}
+                />
+              </Form.Item>
+              <Form.Item label={t('spc.cusumH')} style={{ margin: 0 }}>
+                <InputNumber
+                  min={3} max={6} step={0.5}
+                  value={cusumH}
+                  onChange={(v) => setCusumH(v || 5)}
+                  style={{ width: 80 }}
+                />
+              </Form.Item>
+            </>
           )}
           <Button type="primary" onClick={handleAnalyze} loading={loading} disabled={!hasData || !column}>
             {t('spc.analyze')}

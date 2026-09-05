@@ -579,7 +579,18 @@
     "dataSourceNotLoaded": "來源資料尚未載入，請先匯入資料集。",
     "filterByNode": "依節點篩選",
     "nodeFilterCleared": "節點篩選已清除",
-    "sameSourceHint": "（與節點同源）"
+    "sameSourceHint": "（與節點同源）",
+    "ewma": "EWMA",
+    "cusum": "CUSUM",
+    "ewmaLambda": "EWMA λ",
+    "ewmaL": "EWMA L",
+    "cusumK": "CUSUM k",
+    "cusumH": "CUSUM H",
+    "ewmaViolations": "EWMA 違規",
+    "cusumViolations": "CUSUM 違規",
+    "ewmaZValue": "EWMA Z(t)",
+    "cusumCP": "CUSUM C⁺",
+    "cusumCM": "CUSUM C⁻"
   },
   "timeSeries": {
     "title": "時間序列特徵",

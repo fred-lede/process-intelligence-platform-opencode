@@ -581,7 +581,18 @@
     "dataSourceNotLoaded": "Datos de origen no cargados. Importa el conjunto de datos para analizar.",
     "filterByNode": "Filtrar por nodo",
     "nodeFilterCleared": "Filtro de nodo borrado",
-    "sameSourceHint": "(misma fuente que el nodo)"
+    "sameSourceHint": "(misma fuente que el nodo)",
+    "ewma": "EWMA",
+    "cusum": "CUSUM",
+    "ewmaLambda": "EWMA λ",
+    "ewmaL": "EWMA L",
+    "cusumK": "CUSUM k",
+    "cusumH": "CUSUM H",
+    "ewmaViolations": "Violaciones EWMA",
+    "cusumViolations": "Violaciones CUSUM",
+    "ewmaZValue": "EWMA Z(t)",
+    "cusumCP": "CUSUM C⁺",
+    "cusumCM": "CUSUM C⁻"
   },
   "timeSeries": {
     "title": "Características de Serie de Tiempo",
