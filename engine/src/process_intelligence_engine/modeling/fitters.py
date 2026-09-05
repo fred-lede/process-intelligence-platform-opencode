@@ -418,7 +418,6 @@ def fit_logistic_regression(
     if not inputs:
         raise ValueError("at least one input is required")
     y = df[target].astype(float)
-    # Support both binary (0/1) and label-encoded (OK/NG) targets
     unique_vals = y.unique()
     if set(unique_vals).issubset({0.0, 1.0}):
         pass  # already binary
@@ -426,6 +425,11 @@ def fit_logistic_regression(
         # Encode: first unique value -> 0, second -> 1
         label_map = {v: i for i, v in enumerate(unique_vals)}
         y = y.map(label_map).astype(float)
+    else:
+        raise ValueError(
+            f"Logistic regression requires a binary target (2 distinct values). "
+            f"Column '{target}' has {len(unique_vals)} unique values: {list(unique_vals[:5])}"
+        )
     X = df[inputs].to_numpy(dtype=float)
     X_tr, X_te, y_tr, y_te = _train_test(X, y, test_size, random_state)
     lr = LogisticRegression(random_state=random_state, max_iter=1000)
