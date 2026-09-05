@@ -168,16 +168,31 @@ export async function fitDistribution(
   dataset_id: string,
   column: string,
   topN = 3,
+  filters?: { filter_column?: string; filter_value?: string },
 ): Promise<{ fits: DistributionFitResult[] }> {
-  return engineCall('data/distribution', { dataset_id, column, top_n: topN })
+  return engineCall('data/distribution', {
+    dataset_id,
+    column,
+    top_n: topN,
+    ...(filters?.filter_column && filters.filter_value
+      ? { filter_column: filters.filter_column, filter_value: filters.filter_value }
+      : {}),
+  })
 }
 
 /** Fetch a column's raw values from the registered dataset (for charts). */
 export async function getColumnSeries(
   dataset_id: string,
   column: string,
+  filters?: { filter_column?: string; filter_value?: string },
 ): Promise<ColumnSeries> {
-  return engineCall<ColumnSeries>('data/series', { dataset_id, column })
+  return engineCall<ColumnSeries>('data/series', {
+    dataset_id,
+    column,
+    ...(filters?.filter_column && filters.filter_value
+      ? { filter_column: filters.filter_column, filter_value: filters.filter_value }
+      : {}),
+  })
 }
 
 // --- Phase 2: Anomaly scenarios & analysis package ------------------------

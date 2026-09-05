@@ -284,7 +284,11 @@
     "fitName": "Distribución",
     "params": "Parámetros ajustados",
     "noFit": "Selecciona una columna y ejecuta el ajuste.",
-    "noTrend": "Selecciona una columna y dibuja la tendencia."
+    "noTrend": "Selecciona una columna y dibuja la tendencia.",
+    "sourceFromNode": "Desde nodo: {{name}}",
+    "dataSourceNotLoaded": "Datos de origen no cargados. Importa el conjunto de datos para explorar.",
+    "filterByNode": "Filtrar por nodo",
+    "nodeFilterCleared": "Limpiar filtro de nodo"
   },
   "modelCenter": {
     "title": "Centro de Modelos",

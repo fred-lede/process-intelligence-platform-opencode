@@ -282,7 +282,11 @@
     "fitName": "分布",
     "params": "配適參數",
     "noFit": "請選擇欄位並執行配適。",
-    "noTrend": "請選擇欄位並繪製趨勢。"
+    "noTrend": "請選擇欄位並繪製趨勢。",
+    "sourceFromNode": "來源節點：{{name}}",
+    "dataSourceNotLoaded": "來源資料尚未載入，請先匯入資料集。",
+    "filterByNode": "依節點篩選",
+    "nodeFilterCleared": "清除節點篩選"
   },
   "modelCenter": {
     "title": "模型中心",

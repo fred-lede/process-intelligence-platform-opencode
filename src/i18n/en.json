@@ -282,7 +282,11 @@
     "fitName": "Distribution",
     "params": "Fitted params",
     "noFit": "Select a column and run the fit.",
-    "noTrend": "Select a column and draw the trend."
+    "noTrend": "Select a column and draw the trend.",
+    "sourceFromNode": "From node: {{name}}",
+    "dataSourceNotLoaded": "Source data not loaded. Import the dataset to explore.",
+    "filterByNode": "Filter by node",
+    "nodeFilterCleared": "Clear node filter"
   },
   "modelCenter": {
     "title": "Model Center",

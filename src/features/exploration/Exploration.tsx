@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Spin, Empty, Tabs, Typography, Table, InputNumber, Form, Row, Col, Statistic, Tag } from 'antd'
 import Plot from 'react-plotly.js'
 import { LineChartOutlined, BarChartOutlined, AreaChartOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import NodeSourceFilter from '../../components/NodeSourceFilter'
 import {
   fitDistribution,
   getColumnSeries,
   getTimeSeriesFeatures,
   analyzeGRR,
+  getFlowGraph,
   type DistributionFitResult,
   type ColumnSeries,
   type TimeSeriesFeatures,
@@ -16,6 +18,11 @@ import {
 } from '../../lib/engine'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
+import {
+  consumeNodeContext,
+  dataSourceLoaded,
+  findNodeById,
+} from '../../lib/processFlowContext'
 import { buildExplorationContext } from '../../lib/assistantData'
 
 function densityBars(fit: DistributionFitResult) {
@@ -41,6 +48,14 @@ export default function Exploration() {
   const { t } = useTranslation()
   const { importResult, fields, spec } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
+  const consumedRef = useRef(false)
+  const [sourcedFromNode, setSourcedFromNode] = useState<{
+    nodeId: string
+    displayName: string
+    dataSourceIds?: string[]
+  } | null>(null)
+  const [nodeFilterColumn, setNodeFilterColumn] = useState<string | undefined>(undefined)
+  const [nodeFilterValue, setNodeFilterValue] = useState<string | undefined>(undefined)
   const [column, setColumn] = useState<string | undefined>(spec?.outputField)
   const [trendColumn, setTrendColumn] = useState<string | undefined>(spec?.outputField)
   const [loading, setLoading] = useState(false)
@@ -65,6 +80,38 @@ export default function Exploration() {
       .filter(([, s]) => s.numeric)
       .map(([name]) => name)
   }, [importResult])
+
+  useEffect(() => {
+    if (consumedRef.current) return
+    consumedRef.current = true
+    const pendingCtx = consumeNodeContext()
+    if (pendingCtx) {
+      ;(async () => {
+        const node = await findNodeById(pendingCtx.nodeId)
+        if (!node) return
+        setSourcedFromNode({
+          nodeId: pendingCtx.nodeId,
+          displayName: node.display_name,
+          dataSourceIds: pendingCtx.dataSourceIds,
+        })
+        if (dataSourceLoaded(pendingCtx.dataSourceIds, importResult?.dataset_id)) {
+          if (pendingCtx.field && numericColumns.includes(pendingCtx.field)) {
+            setColumn(pendingCtx.field)
+            setTrendColumn(pendingCtx.field)
+          }
+          try {
+            const graph = await getFlowGraph()
+            const key = graph.association_keys[0]
+            if (key && (importResult?.columns ?? []).includes(key)) {
+              setNodeFilterColumn(key)
+            }
+          } catch {
+            // ignore — filter default is optional
+          }
+        }
+      })()
+    }
+  }, [])
 
   const timestampColumns = useMemo(() => {
     const fromRoles = fields
@@ -102,12 +149,17 @@ export default function Exploration() {
     setContext('exploration', buildExplorationContext({ fits, series, tsFeatures, grrResult }))
   }, [fits, series, tsFeatures, grrResult, setContext])
 
+  const filterArgs =
+    nodeFilterColumn && nodeFilterValue
+      ? { filter_column: nodeFilterColumn, filter_value: nodeFilterValue }
+      : {}
+
   const loadFits = async () => {
     if (!importResult || !column) return
     setLoading(true)
     setError(null)
     try {
-      const result = await fitDistribution(importResult.dataset_id, column)
+      const result = await fitDistribution(importResult.dataset_id, column, 3, filterArgs)
       setFits(result.fits)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -121,7 +173,7 @@ export default function Exploration() {
     setLoading(true)
     setError(null)
     try {
-      const result = await getColumnSeries(importResult.dataset_id, trendColumn)
+      const result = await getColumnSeries(importResult.dataset_id, trendColumn, filterArgs)
       setSeries(result)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -177,6 +229,20 @@ export default function Exploration() {
   if (!importResult) {
     return (
       <Card title={t('exploration.title')}>
+        <NodeSourceFilter
+          section="exploration"
+          sourcedFromNode={sourcedFromNode}
+          dataLoaded={false}
+          columns={[]}
+          filterColumn={nodeFilterColumn}
+          setFilterColumn={setNodeFilterColumn}
+          filterValue={nodeFilterValue}
+          setFilterValue={setNodeFilterValue}
+          clearFilter={() => {
+            setNodeFilterColumn(undefined)
+            setNodeFilterValue(undefined)
+          }}
+        />
         <Empty description={t('exploration.noData')} />
       </Card>
     )
@@ -626,6 +692,20 @@ export default function Exploration() {
 
   return (
     <Card title={t('exploration.title')}>
+      <NodeSourceFilter
+        section="exploration"
+        sourcedFromNode={sourcedFromNode}
+        dataLoaded={dataSourceLoaded(sourcedFromNode?.dataSourceIds, importResult?.dataset_id)}
+        columns={importResult?.columns ?? []}
+        filterColumn={nodeFilterColumn}
+        setFilterColumn={setNodeFilterColumn}
+        filterValue={nodeFilterValue}
+        setFilterValue={setNodeFilterValue}
+        clearFilter={() => {
+          setNodeFilterColumn(undefined)
+          setNodeFilterValue(undefined)
+        }}
+      />
       <Tabs
         items={[
           { key: 'distribution', label: t('exploration.distributionTab'), children: distributionTab },
