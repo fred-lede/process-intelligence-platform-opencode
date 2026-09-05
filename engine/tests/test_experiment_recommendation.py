@@ -57,4 +57,4 @@ def test_recommend_experiments_has_settings():
     for rec in result["recommendations"]:
         assert "settings" in rec
         assert isinstance(rec["settings"], list)
-        assert "reason" in rec
+        assert "key" in rec

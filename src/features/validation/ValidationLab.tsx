@@ -416,7 +416,13 @@ export default function ValidationLab() {
                   message={
                     <span>
                       <Tag color={PRIORITY_COLORS[rec.priority]}>{rec.priority}</Tag>
-                      {rec.type}: {rec.reason}
+                      {t(`modelCenter.${rec.key}` as any, {
+                        factorA: rec.factors?.[0] ?? '',
+                        factorB: rec.factors?.[1] ?? '',
+                        strength: rec.strength?.toFixed(2) ?? '',
+                        skewness: rec.skewness?.toFixed(2) ?? '',
+                        corr: rec.corr?.toFixed(2) ?? '',
+                      })}
                     </span>
                   }
                   showIcon

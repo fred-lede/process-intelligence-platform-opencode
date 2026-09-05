@@ -73,7 +73,7 @@ def test_recommend_experiments_returns_list():
     assert len(result) > 0
     for rec in result:
         assert "type" in rec
-        assert "reason" in rec
+        assert "key" in rec
 
 
 def test_recommend_experiments_detects_interaction():
