@@ -1,6 +1,12 @@
 # TASK.md
 
 ## Completed
+### i-mr 補畫 MR 子圖（user 要求）
+- **Status**: DONE
+- **實作**：`SPC.tsx` i-mr 分支 violations 後新增 MR 子圖——紫 `#722ed1` lines+markers、`yaxis='y2'`、x 對齊 `i+1`；MR UCL（橘 dash）+ MR CL（綠 dash）條件式畫入（mirror R/S）；`plotLayout.yaxis2` 改為一律建立（移除非 i-mr 限制）。README 已宣稱 I-MR 故無需改
+- **驗證**：`npx tsc --noEmit` clean；`npm run build` 成功
+- **Files changed** — `src/features/spc/SPC.tsx`, `PROGRESS.md`, `TASK.md`
+
 ### SPC UCL/LCL 從未顯示 bug 修復（扁平 vs 巢狀 control_limits）
 - **Status**: DONE
 - **根因**：引擎 `compute_i_mr`/`compute_xbar_r`/`compute_xbar_s` 回傳巢狀 `control_limits`（`{'x': {ucl/lcl/cl}, 'mr'(或 r/s): {...}}`，spc.py:145/211/283），前端 `SPCCtrlLimits` 型別與 SPC.tsx/assistantData.ts 讀扁平 key（`x_ucl`/`i_ucl`/`i_center`…）→ 執行時全部 `undefined` → `cl.x_ucl != null` 恆 false → **UCL/LCL/CL 三條線自 Phase 8 起從未畫出**；AI context 同源「UCL=null」污染（assistantData.ts:149 `!== null` 對 undefined 為 true）

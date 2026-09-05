@@ -182,6 +182,22 @@ export default function SPC() {
         data.push({ x: violX, y: violY, mode: 'markers', name: 'Violations',
           marker: { color: '#ff4d4f', size: 10, symbol: 'x' }, showlegend: false })
       }
+      if (result.mr_values) {
+        const mrX = result.mr_values.map((_, i) => i + 1)
+        data.push({
+          x: mrX, y: result.mr_values, mode: 'lines+markers', name: 'MR',
+          line: { color: '#722ed1' }, marker: { size: 6 },
+          yaxis: 'y2',
+        })
+        if (cl.mr_ucl != null && mrX.length > 0) {
+          data.push({ x: [mrX[0], mrX[mrX.length - 1]], y: [cl.mr_ucl, cl.mr_ucl],
+            mode: 'lines', yaxis: 'y2', line: { color: '#fa8c16', dash: 'dash' }, showlegend: false })
+        }
+        if (cl.mr_center != null && mrX.length > 0) {
+          data.push({ x: [mrX[0], mrX[mrX.length - 1]], y: [cl.mr_center, cl.mr_center],
+            mode: 'lines', yaxis: 'y2', line: { color: '#52c41a', dash: 'dash' }, showlegend: false })
+        }
+      }
     } else {
       const x = result.xbar_values?.map((_, i) => i) ?? []
       data.push({
@@ -251,9 +267,7 @@ export default function SPC() {
     xaxis: { title: { text: 'Point Index' } },
     yaxis: { title: { text: result?.chart_type === 'i-mr' ? 'Value' : 'X-bar' } },
   }
-  if (result?.chart_type !== 'i-mr') {
-    plotLayout.yaxis2 = { overlaying: 'y', side: 'right', showgrid: false }
-  }
+  plotLayout.yaxis2 = { overlaying: 'y', side: 'right', showgrid: false }
 
   const violColumns: any[] = [
     { title: t('spc.rule'), dataIndex: 'rule', key: 'rule', width: 140,
