@@ -688,6 +688,28 @@
 - [x] **Weibull 迴歸修复（commits `cf96409` / `ce7fdd5`）**：
   - 修正 intercept/feature 索引錯位（`result.x[:-1]` → `result.x[:-2]`）
   - 恢復 `np.mean` 遺漏
+- [x] **模型說明文字（commits `02321f0` / `ab78f98`）**：
+  - 模型類型選單右側顯示說明文字（含目標欄位限制、輸入限制）
+  - 模型說明 i18n key 使用 camelCase 映射表（`MODEL_DESC_KEY`）
+  - 修複說明顯示原始 key 字串問題（snake_case → camelCase 映射）
+- [x] **模型中心擴展 — XGBoost / LightGBM（commit `abc83b9` / `48b5170`）**：
+  - `ModelType` 新增 `xgboost` / `lightgbm`
+  - MODEL_TYPES 與 MODEL_DESC_KEY 各加 2 筆
+  - 三語 i18n 名稱與說明文字
+- [x] **LightGBM 設定（commit `c9e872f`）**：
+  - 系統設定新增「LightGBM Device」下拉選單（auto / cpu / gpu）
+  - `AIProviderConfig` 新增 `lightgbm_device` 欄位
+  - `fit_lightgbm` 讀取設定決定 device；`auto` 時先試 GPU，失敗自動退回 CPU
+- [x] **互動預測適配（commit `3ea6f08`）**：
+  - Logistic 模型：顯示 P(NG) 機率（%）+ 類別 Tag（OK/NG + 低/高風險）
+  - Weibull 模型：顯示 Mean TTF + 壽命 Tag（長/短）
+  - 其他模型維持原有行為（數值 + LSL/USL 判定）
+- [x] **LightGBM GPU 編譯指南（commit `7d4c780`）**：
+  - README 新增「LightGBM GPU 支援（選配）」章節
+  - 含前置條件、macOS/Linux 編譯步驟、Windows 編譯步驟、驗證腳本、常見錯誤
+  - 明確說明 Apple MPS 不支援
+- [x] **i18n**
+  - 恢復 `np.mean` 遺漏
 - [x] **蒙地卡羅支援所有 8 模型（commits `fdef99c` / `cd1746e` / `3fed87a`）**：
   - `predict_output` 新增 logistic/weibull 預測；`run_monte_carlo` 新增 `model` 參數
   - Weibull `math.exp` overflow 防護（`log_lambda` clamp ±700）

@@ -4,15 +4,18 @@
 ### #4 v0.3.0 模型中心擴充、預測與蒙地卡羅支援全部 8 模型
 - **Status**: DONE
 - **內容**：
-  - 模型中心：說明文字、Equation 欄位、model-appropriate metrics（AUC/accuracy/shape_k/AIC）、i18n 補全
+  - 模型中心：說明文字（含適用場景）、Equation 欄位、model-appropriate metrics（AUC/accuracy/shape_k/AIC）、i18n 補全
+  - XGBoost / LightGBM 加入模型選單（8 選 8）
   - Logistic 迴歸：支援字串二元目標（OK/NG）、前端連續目標預先檢查
   - Weibull 迴歸：修正 intercept 索引 bug
   - 蒙地卡羅：支援全部 8 種模型（tree models 用 `fit.model.predict()`）
-  - 互動預測（What-if）：支援全部 8 種模型
+  - 互動預測（What-if）：支援全部 8 種模型，輸出卡依模型類型適配（logistic → P(NG)+類別，weibull → mean TTF）
+  - 系統設定：LightGBM Device 下拉選單（auto/cpu/gpu），auto 時 GPU 失敗自動退回 CPU
+  - LightGBM GPU 編譯指南（README 新增，含 Windows/Linux 步驟）
   - 版本同步：engine `__version__` + API ping/health 回傳 0.3.0
 - **驗證**：`pytest tests/ -q` → **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in ~11s`
-- **Push**：`git push` ✅（commits `02321f0` ~ `3fed87a`，共 21 筆）
-- **Files changed** — `engine/src/process_intelligence_engine/{spc.py,main.py,prediction.py,monte_carlo.py,modeling/fitters.py} `、`src/features/{model-center/ModelCenter.tsx,prediction/Prediction.tsx,spc/SPC.tsx,exploration/Exploration.tsx}`、`src/lib/engine.ts`、`src/i18n/{en,zh-TW,es-MX}.json`、`src/components/layout/Sidebar.tsx`、`src-tauri/{tauri.conf.json,Cargo.toml}`、`PROGRESS.md`、`README.md`、`TASK.md`
+- **Push**：`git push` ✅（commits `02321f0` ~ `3ea6f08`，共 29 筆）
+- **Files changed** — `engine/src/process_intelligence_engine/{spc.py,main.py,prediction.py,monte_carlo.py,modeling/fitters.py,settings/__init__.py}`、`src/features/{model-center/ModelCenter.tsx,prediction/Prediction.tsx,settings/Settings.tsx,spc/SPC.tsx,exploration/Exploration.tsx}`、`src/lib/engine.ts`、`src/i18n/{en,zh-TW,es-MX}.json`、`src/components/layout/Sidebar.tsx`、`src-tauri/{tauri.conf.json,Cargo.toml}`、`PROGRESS.md`、`README.md`（含 LightGBM GPU 編譯指南）、`TASK.md`
 
 ### #3 v0.3.0 統計異常偵測收尾
 - **Status**: DONE

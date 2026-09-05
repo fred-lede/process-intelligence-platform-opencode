@@ -416,15 +416,25 @@ data/test_dataset.csv
 - 支援全部 8 種模型：doe_linear / doe_quadratic / random_forest / xgboost / lightgbm / residual_hybrid / logistic_regression / weibull_regression
 - Tree models 使用 `fit.model.predict()` 直接預測；logistic 輸出 P(NG)；weibull 輸出 mean TTF
 
-**i18n**
-- processDefine 段新增 `lcl`/`ucl` 翻譯（en/zh-TW/es-MX）
-- spc 段新增 `outliers`/`changePoints` 等 6 keys ×3 語
-- modelCenter column 段新增 `equation/AUC/accuracy/shape_k/AIC` keys ×3 語
-- modelCenter modelType.desc 段新增 6 種模型說明文字 ×3 語
+**互動預測（What-if）擴充**
+- `prediction/predict` 支援全部 8 種模型（tree models 使用 `fit.model.predict()`）
+- Logistic 模型：顯示 P(NG) 機率 + 類別 Tag（OK/NG + 低/高風險）
+- Weibull 模型：顯示 mean TTF + 壽命 Tag（長/短）
+- 修正 compact coefficient key normalize（`x1x2` → `x1_x_x2`）
 
-**版本**
-- 引擎 `__version__` 與 API 回傳版本同步至 0.3.0
-- 前端 About 對話框顯示 v0.3.0
+**系統設定 — LightGBM 裝置**
+- 設定頁新增「LightGBM Device」下拉選單（auto / cpu / gpu）
+- `auto` 預設：先試 GPU，LightGBM 未編譯 GPU 時自動退回 CPU
+- README 新增「LightGBM GPU 支援（選配）」章節（含 Windows/Linux 編譯指南）
+
+**Logistic 迴歸修復**
+- 支援字串二元目標（OK/NG）：`pd.to_numeric(errors='coerce')` fallback → label encode
+- 前端預先檢查：`unique_count > 10` 時跳出 warning，不發請求
+- 目標欄位選單：logistic 模式下顯示所有二元欄位（numeric 或文字）
+
+**Weibull 迴歸修復**
+- 修正 intercept/feature 索引錯位（`result.x[:-1]` → `result.x[:-2]`）
+- 恢復 `np.mean` 遺漏
 
 ---
 
