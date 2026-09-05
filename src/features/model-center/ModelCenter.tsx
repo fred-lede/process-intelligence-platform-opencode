@@ -83,7 +83,7 @@ export default function ModelCenter() {
     .map((f) => ({ label: f.originalName, value: f.originalName }))
   const binaryTargetOptions = importResult
     ? Object.entries(importResult.stats.column_stats)
-        .filter(([, s]) => s.numeric && s.unique_count <= 10)
+        .filter(([, s]) => (s.numeric && s.unique_count <= 10) || s.unique_count === 2)
         .map(([name]) => ({ label: name, value: name }))
     : []
   const targetOptions = modelType === 'logistic_regression'
