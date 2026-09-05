@@ -533,21 +533,15 @@ def _handle_modeling_fit(params: dict) -> dict:
 
     # Extract hyperparameters (pass-through for tree models)
     hyperparams: dict = {}
-    if model_type == "random_forest":
-        hyperparams = {
-            "n_estimators": params.get("n_estimators"),
-            "max_depth": params.get("max_depth"),
-            "min_samples_leaf": params.get("min_samples_leaf"),
-            "auto_select_features": params.get("auto_select_features", False),
-            "importance_threshold": params.get("importance_threshold", 0.01),
-            "max_features": params.get("max_features", 5),
-        }
-        hyperparams = {k: v for k, v in hyperparams.items() if v is not None}
-    else:
-        # Pass common params that all fitters accept
-        for key in ("test_size", "random_state"):
-            if key in params:
-                hyperparams[key] = params[key]
+    for key in ("n_estimators", "max_depth", "min_samples_leaf", "learning_rate",
+                "auto_select_features", "importance_threshold", "max_features"):
+        if key in params:
+            hyperparams[key] = params[key]
+    # Also pass common params
+    for key in ("test_size", "random_state"):
+        if key in params:
+            hyperparams[key] = params[key]
+    hyperparams = {k: v for k, v in hyperparams.items() if v is not None}
 
     fit = fitter(df, target=target, inputs=inputs, **hyperparams)
     MODEL_REGISTRY.register(fit)
