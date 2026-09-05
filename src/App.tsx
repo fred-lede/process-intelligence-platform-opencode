@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useProcessFlowNavStore } from './stores/processFlowNavStore'
 import { Layout } from 'antd'
 import Sidebar from './components/layout/Sidebar'
 import AssistantPanel from './components/layout/AssistantPanel'
@@ -24,6 +25,14 @@ const { Content } = Layout
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('project')
+
+  const pendingTarget = useProcessFlowNavStore((s) => s.pending?.targetTab)
+
+  useEffect(() => {
+    if (pendingTarget && pendingTarget !== activeTab) {
+      setActiveTab(pendingTarget)
+    }
+  }, [pendingTarget, activeTab])
 
   const renderTab = () => {
     if (activeTab === 'project') return <ProjectOverview />
