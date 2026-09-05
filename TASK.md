@@ -7,7 +7,7 @@
 - **Part B（前端）**：`SPC.tsx` mount effect `setColumn(pendingCtx.field)` 加 numeric guard——inline 依 `importResult?.stats.column_stats` 建 numeric set（不依賴 stale `numericColumns` state），非 numeric 保持 `column` 原樣（`spec?.outputField` default）；`t()(npx tsc`) 全 clean、build 成功
 - **Part C（docs）**：plan 檔 append「Execution Notes (post-hoc)」段落（7 items）；PROGRESS.md append 2026-09-05 FAI entry；**新建 HANDOFF.md**（里程碑 handoff）；README 功能總覽補 FAI 一行（ProcessFlow association-keys + jump + per-node filter）
 - **Part D（最終驗證）**：引擎 **304 passed, 1 skipped**；`npx tsc --noEmit` clean；`npm run build` 成功（chunk 警示為既有）；三語 `processFlow`/`spc`/`monteCarlo`/`exploration` parity `ok`；`git status` 僅含預期檔案（未含 `engine/.coverage`/icons）
-- **Part E（commits + push）**：`feat(engine): consistent row filter helper + zero-row guard` → `fix(spc): numeric guard on jump field` → `docs: plan execution notes, progress, handoff` → `git push`
+- **Part E（commits + push）**：`eb134ba feat(engine): consistent row filter helper + zero-row guard` → `cf858ad fix(spc): numeric guard on jump field` → `9449b26 docs: plan execution notes, progress, handoff` → `git push` `6049214..9449b26 main` ✅（未提交 `engine/.coverage`/icons）
 - **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_spc.py`, `engine/tests/test_main_monte_carlo.py`, `engine/tests/test_main_handlers.py`, `src/features/spc/SPC.tsx`, `docs/superpowers/plans/2026-09-05-process-flow-analysis-integration.md`, `PROGRESS.md`, `HANDOFF.md`(new), `README.md`, `TASK.md`（未提交 `engine/.coverage`/icons）
 
 ### Code review fixes — SPC source tag interpolation + exploration filter scoping
