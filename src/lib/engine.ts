@@ -1372,6 +1372,7 @@ export interface FlowNode extends ProcessNode {}
 export interface FlowGraph {
   nodes: FlowNode[]
   edges: FlowEdge[]
+  association_keys: string[]
 }
 
 export interface FlowValidation {
@@ -1384,6 +1385,12 @@ export interface FlowValidation {
 
 export async function getFlowGraph(): Promise<FlowGraph> {
   return engineCall<FlowGraph>('project/flow-graph', {})
+}
+
+export async function setAssociationKeys(keys: string[]): Promise<{ association_keys: string[] }> {
+  return engineCall<{ association_keys: string[] }>('project/flow-graph', {
+    set_association_keys: keys,
+  } as unknown as Record<string, unknown>)
 }
 
 export async function validateFlowGraph(): Promise<FlowValidation> {

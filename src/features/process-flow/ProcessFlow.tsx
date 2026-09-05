@@ -112,7 +112,7 @@ export function computeLayout(nodes: FlowNode[], edges: FlowEdge[]) {
 export default function ProcessFlow() {
   const { t } = useTranslation()
   const [messageApi, contextHolder] = message.useMessage()
-  const [graph, setGraph] = useState<FlowGraph>({ nodes: [], edges: [] })
+  const [graph, setGraph] = useState<FlowGraph>({ nodes: [], edges: [], association_keys: [] })
   const [validation, setValidation] = useState<FlowValidation | null>(null)
   const [loading, setLoading] = useState(false)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
