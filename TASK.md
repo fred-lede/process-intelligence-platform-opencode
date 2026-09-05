@@ -11,11 +11,11 @@
   - 蒙地卡羅：支援全部 8 種模型（tree models 用 `fit.model.predict()`）
   - 互動預測（What-if）：支援全部 8 種模型，輸出卡依模型類型適配（logistic → P(NG)+類別，weibull → mean TTF）
   - 系統設定：LightGBM Device 下拉選單（auto/cpu/gpu），auto 時 GPU 失敗自動退回 CPU
-  - LightGBM GPU 編譯指南（README 新增，含 Windows/Linux 步驟）
+  - DOE 統計推論：ANOVA F 檢定 + 係數 t 檢定 + p 值 + 95% 信心區間，附判讀說明（工業標準：p<0.05 顯著）
   - 版本同步：engine `__version__` + API ping/health 回傳 0.3.0
 - **驗證**：`pytest tests/ -q` → **345 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in ~11s`
-- **Push**：`git push` ✅（commits `02321f0` ~ `3ea6f08`，共 29 筆）
-- **Files changed** — `engine/src/process_intelligence_engine/{spc.py,main.py,prediction.py,monte_carlo.py,modeling/fitters.py,settings/__init__.py}`、`src/features/{model-center/ModelCenter.tsx,prediction/Prediction.tsx,settings/Settings.tsx,spc/SPC.tsx,exploration/Exploration.tsx}`、`src/lib/engine.ts`、`src/i18n/{en,zh-TW,es-MX}.json`、`src/components/layout/Sidebar.tsx`、`src-tauri/{tauri.conf.json,Cargo.toml}`、`PROGRESS.md`、`README.md`（含 LightGBM GPU 編譯指南）、`TASK.md`
+- **Push**：`git push` ✅（commits `02321f0` ~ `52de052`，共 32 筆）
+- **Files changed** — `engine/src/process_intelligence_engine/{spc.py,main.py,prediction.py,monte_carlo.py,modeling/fitters.py,modeling/validation.py,settings/__init__.py}`、`src/features/{model-center/ModelCenter.tsx,prediction/Prediction.tsx,settings/Settings.tsx,spc/SPC.tsx,exploration/Exploration.tsx}`、`src/lib/{engine.ts,assistantData.ts}`、`src/i18n/{en,zh-TW,es-MX}.json`、`src/components/layout/Sidebar.tsx`、`src-tauri/{tauri.conf.json,Cargo.toml}`、`data/test_dataset.csv`、`data/test_dataset_README.md`、`PROGRESS.md`、`README.md`（含 LightGBM GPU 編譯指南）、`TASK.md`
 
 ### #3 v0.3.0 統計異常偵測收尾
 - **Status**: DONE
