@@ -187,3 +187,18 @@ def test_spc_capability_no_limits(tmp_path):
     assert result["success"]
     assert result["capability"]["cp"] is None
     assert result["capability"]["cpk"] is None
+
+
+def test_spc_batch_analyze(tmp_path):
+    """Test batch analyze endpoint."""
+    did = _import_csv_for_spc(tmp_path)
+
+    result = handle_request("spc/batch_analyze", {
+        "dataset_id": did,
+        "columns": ["output"],
+        "chart_type": "i-mr",
+    })
+    assert "results" in result
+    assert "output" in result["results"]
+    assert "suggestions" in result["results"]["output"]
+    json.dumps(result)  # verify serializable

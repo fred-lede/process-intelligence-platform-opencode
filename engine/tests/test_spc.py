@@ -11,6 +11,7 @@ from process_intelligence_engine.spc import (
     compute_i_mr,
     compute_xbar_r,
     compute_xbar_s,
+    compute_spc_suggestions,
     detect_we_violations,
 )
 
@@ -239,3 +240,43 @@ def test_compute_cusum_empty_raises():
     """Test CUSUM raises on empty input."""
     with pytest.raises(ValueError, match="values must not be empty"):
         compute_cusum([])
+
+
+def test_compute_spc_suggestions_low_capability():
+    """Test suggestions for low Cpk."""
+    rng = np.random.default_rng(42)
+    # Create data with high variation
+    values = [10.0 + rng.normal(0, 2.0) for _ in range(100)]
+    result = compute_i_mr(values, lsl=5.0, usl=15.0)
+    suggestions = compute_spc_suggestions(result)
+
+    # Should have low capability suggestion
+    assert len(suggestions) > 0
+    cap_types = [s["type"] for s in suggestions]
+    assert "low_capability" in cap_types or "marginal_capability" in cap_types
+
+
+def test_compute_spc_suggestions_shift():
+    """Test suggestions for shift detection."""
+    # Create data with clear shift (8+ consecutive points on one side of mean)
+    rng = np.random.default_rng(42)
+    base = 10.0 + rng.normal(0, 0.5)
+    values = [base] * 20 + [base + 3.0] * 30 + [base] * 20
+    result = compute_i_mr(values)
+    suggestions = compute_spc_suggestions(result)
+
+    # Should detect shift (Rule 4 = 8_consecutive_same_side)
+    shift_suggestions = [s for s in suggestions if s["type"] == "shift_detected"]
+    assert len(shift_suggestions) > 0
+
+
+def test_compute_spc_suggestions_stable():
+    """Test no suggestions for stable process."""
+    # Use constant values to guarantee no rule violations
+    values = [10.0] * 50
+    result = compute_i_mr(values)
+    suggestions = compute_spc_suggestions(result)
+
+    # Should have no error-level suggestions
+    error_suggestions = [s for s in suggestions if s["severity"] == "error"]
+    assert len(error_suggestions) == 0

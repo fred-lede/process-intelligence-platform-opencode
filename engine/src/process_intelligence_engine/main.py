@@ -72,6 +72,7 @@ from process_intelligence_engine.spc import (
     compute_capability,
     compute_ewma,
     compute_cusum,
+    compute_spc_suggestions,
 )
 from process_intelligence_engine.monte_carlo import run_monte_carlo
 from process_intelligence_engine.prediction import predict_single, get_input_ranges
@@ -1125,6 +1126,50 @@ def _handle_spc_analyze(params: dict) -> dict:
     return {"success": True, **result}
 
 
+def _handle_spc_batch_analyze(params: dict) -> dict:
+    """Analyze multiple columns and return results with suggestions."""
+    df = REGISTRY.get(params["dataset_id"])
+    columns = params.get("columns", [])
+    chart_type = params.get("chart_type", "i-mr")
+    lsl = params.get("lsl")
+    usl = params.get("usl")
+
+    results = {}
+    for col in columns:
+        if col not in df.columns:
+            continue
+        values = df[col].dropna().tolist()
+        if not values:
+            continue
+
+        if chart_type == "i-mr":
+            result = compute_i_mr(values, lsl=lsl, usl=usl)
+        elif chart_type == "ewma":
+            result = compute_ewma(
+                values,
+                lambda_param=params.get("ewma_lambda", 0.2),
+                L=params.get("ewma_L", 3.0),
+                lsl=lsl,
+                usl=usl,
+            )
+        elif chart_type == "cusum":
+            result = compute_cusum(
+                values,
+                k=params.get("cusum_k", 0.5),
+                H=params.get("cusum_H", 5.0),
+                lsl=lsl,
+                usl=usl,
+            )
+        else:
+            # For xbar-r, xbar-s, skip (require subgroups)
+            continue
+
+        result["suggestions"] = compute_spc_suggestions(result)
+        results[col] = result
+
+    return {"results": results, "columns": list(results.keys())}
+
+
 def _handle_spc_capability(params: dict) -> dict:
     """Compute process capability for a column."""
     df = REGISTRY.get(params["dataset_id"])
@@ -1328,6 +1373,8 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "spc/analyze":
         return _handle_spc_analyze(params)
+    if method == "spc/batch_analyze":
+        return _handle_spc_batch_analyze(params)
     if method == "spc/capability":
         return _handle_spc_capability(params)
 

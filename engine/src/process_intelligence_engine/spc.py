@@ -563,3 +563,55 @@ def detect_we_violations(
                 alt_run = 0
 
     return violations
+
+
+def compute_spc_suggestions(result: dict) -> list[dict]:
+    """Generate improvement suggestions based on SPC analysis."""
+    suggestions = []
+
+    # Capability check
+    cap = result.get("capability")
+    if cap and cap.get("cpk") is not None:
+        if cap["cpk"] < 1.0:
+            suggestions.append({
+                "severity": "error",
+                "type": "low_capability",
+                "message": f"製程能力不足 (Cpk={cap['cpk']:.2f} < 1.0)，建議減少變異或調整目標",
+            })
+        elif cap["cpk"] < 1.33:
+            suggestions.append({
+                "severity": "warning",
+                "type": "marginal_capability",
+                "message": f"製程能力邊緣 (Cpk={cap['cpk']:.2f})，建議監控並準備改善方案",
+            })
+
+    # Rule violations
+    violations = result.get("violations", [])
+    rule_4 = [v for v in violations if v.get("rule") == "8_consecutive_same_side"]
+    rule_5 = [v for v in violations if v.get("rule") == "6_consecutive_trend"]
+
+    if rule_4:
+        suggestions.append({
+            "severity": "error",
+            "type": "shift_detected",
+            "message": f"偵測到製程偏移（Rule 4: {len(rule_4)} 次），建議檢查原料或機台參數",
+        })
+
+    if rule_5:
+        suggestions.append({
+            "severity": "warning",
+            "type": "trend_detected",
+            "message": f"偵測到趨勢（Rule 5: {len(rule_5)} 次），建議檢查工具磨損或溫度漂移",
+        })
+
+    # EWMA/CUSUM specific
+    if result.get("chart_type") in ("ewma", "cusum"):
+        ewma_v = [v for v in violations if v.get("rule") == 1]
+        if ewma_v:
+            suggestions.append({
+                "severity": "warning",
+                "type": "small_shift",
+                "message": f"EWMA/CUSUM 檢測到小漂移（{len(ewma_v)} 次），建議即時調整",
+            })
+
+    return suggestions
