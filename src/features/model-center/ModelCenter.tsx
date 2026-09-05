@@ -689,7 +689,15 @@ export default function ModelCenter() {
                       key={i}
                       style={{ marginTop: 4 }}
                       type={rec.type === 'interaction' ? 'warning' : 'info'}
-                      message={`${rec.type}: ${rec.reason}`}
+                      message={t(rec.type === 'interaction'
+                        ? 'modelCenter.recInteraction'
+                        : rec.type === 'transformation'
+                        ? (rec.method === 'log' ? 'modelCenter.recTransformationRightSkewed' : 'modelCenter.recTransformationLeftSkewed')
+                        : rec.type === 'range_expansion'
+                        ? 'modelCenter.recRangeExpansion'
+                        : 'modelCenter.recNewFactor',
+                        { factorA: rec.factors?.[0] ?? '', factorB: rec.factors?.[1] ?? '', strength: rec.strength?.toFixed(2) ?? '', skewness: rec.skewness?.toFixed(2) ?? '', corr: rec.corr?.toFixed(2) ?? '' }
+                      )}
                       showIcon
                     />
                   ))}
@@ -818,7 +826,7 @@ export default function ModelCenter() {
                   <strong>{t('modelCenter.residualDiagnostics')}:</strong>
                   <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
                     DW: {fullValidation.residual_analysis.durbin_watson.statistic.toFixed(3)}
-                    {' '}({fullValidation.residual_analysis.durbin_watson.interpretation})
+                    {' '}({t(`modelCenter.dw${fullValidation.residual_analysis.durbin_watson.interpretation.charAt(0).toUpperCase() + fullValidation.residual_analysis.durbin_watson.interpretation.slice(1)}`)})
                   </div>
                 </div>
                 <div>
