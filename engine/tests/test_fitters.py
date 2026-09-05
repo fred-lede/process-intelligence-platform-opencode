@@ -105,3 +105,17 @@ def test_fit_random_forest_hyperparameters():
     fit = fit_random_forest(df, target="y", inputs=["x1", "x2"], n_estimators=50, max_depth=5)
     assert fit.model is not None
     assert fit.metrics["r2"] > 0.5
+
+
+def test_fit_random_forest_all_features_below_threshold():
+    """Test that ValueError is raised when all features are filtered out."""
+    rng = np.random.default_rng(42)
+    n = 200
+    noise1 = rng.uniform(0, 1, n)
+    noise2 = rng.uniform(0, 1, n)
+    y = rng.normal(0, 1, n)  # no signal from inputs
+    df = pd.DataFrame({"noise1": noise1, "noise2": noise2, "y": y})
+    
+    # With very high threshold, all features should be filtered
+    with pytest.raises(ValueError, match="at least one input"):
+        fit_random_forest(df, target="y", inputs=["noise1", "noise2"], auto_select_features=True, importance_threshold=0.9)
