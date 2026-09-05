@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Spin, Empty, Tabs, Typography, Table, InputNumber, Form, Row, Col, Statistic, Tag } from 'antd'
-import Plot from 'react-plotly.js'
+import Plot from '../../components/PlotChart'
 import { LineChartOutlined, BarChartOutlined, AreaChartOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import NodeSourceFilter from '../../components/NodeSourceFilter'

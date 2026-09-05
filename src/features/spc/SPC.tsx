@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Form, Input, InputNumber, Typography, Table, Tag } from 'antd'
-import Plot from 'react-plotly.js'
+import Plot from '../../components/PlotChart'
 import NodeSourceFilter from '../../components/NodeSourceFilter'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'

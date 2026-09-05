@@ -6,6 +6,18 @@ const host = process.env.TAURI_DEV_HOST
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  build: {
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-antd': ['antd'],
+          'vendor-plotly': ['react-plotly.js'],
+        },
+      },
+    },
+  },
   server: {
     port: 1420,
     strictPort: true,
