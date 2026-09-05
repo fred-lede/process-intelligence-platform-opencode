@@ -411,6 +411,16 @@ export default function Settings() {
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               {t('settings.lightgbmDeviceNote')}
             </Typography.Text>
+            <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
+              <Button
+                type="primary"
+                size="small"
+                onClick={handleSaveAIConfig}
+                loading={savingAI}
+              >
+                {t('settings.save')}
+              </Button>
+            </Form.Item>
           </Form>
         </Card>
       </Space>
