@@ -397,6 +397,14 @@ def _handle_distribution(params: dict) -> dict:
     if params.get("dataset_id"):
         df = REGISTRY.get(params["dataset_id"])
         column = params["column"]
+        filter_column = params.get("filter_column")
+        filter_value = params.get("filter_value")
+        if filter_column:
+            if filter_column not in df.columns:
+                raise KeyError(f"Unknown filter column: {filter_column}")
+            if filter_value is None:
+                raise ValueError("filter_value is required when filter_column is set")
+            df = df[df[filter_column].astype(str) == str(filter_value)]
         values = df[column].tolist()
     else:
         values = params.get("values", [])
@@ -433,6 +441,15 @@ def _handle_series(params: dict) -> dict:
     column = params["column"]
     if column not in df.columns:
         raise KeyError(f"Unknown column: {column}")
+
+    filter_column = params.get("filter_column")
+    filter_value = params.get("filter_value")
+    if filter_column:
+        if filter_column not in df.columns:
+            raise KeyError(f"Unknown filter column: {filter_column}")
+        if filter_value is None:
+            raise ValueError("filter_value is required when filter_column is set")
+        df = df[df[filter_column].astype(str) == str(filter_value)]
 
     series = df[column]
     relaxed = pd.api.types.is_numeric_dtype(series)

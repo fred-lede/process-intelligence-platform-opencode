@@ -115,6 +115,91 @@ def test_handle_distribution_values_payload_still_supported():
     assert result["fits"][0]["name"]
 
 
+def _import_csv_for_explore_filter(tmp_path):
+    import numpy as np
+    rng = np.random.default_rng(11)
+    rows = ["work_order,value"]
+    for i in range(60):
+        group = "A" if i < 30 else "B"
+        base = 50.0 if group == "A" else 150.0
+        val = base + rng.normal(0, 1.5)
+        rows.append(f"{group},{val:.2f}")
+    path = tmp_path / "explore_filter.csv"
+    path.write_text("\n".join(rows), encoding="utf-8")
+    return handle_request("data/import", {"file_path": str(path)})["dataset_id"]
+
+
+def test_handle_distribution_with_filter(tmp_path):
+    did = _import_csv_for_explore_filter(tmp_path)
+    result = handle_request("data/distribution", {
+        "dataset_id": did,
+        "column": "value",
+        "filter_column": "work_order",
+        "filter_value": "A",
+    })
+    fits = result["fits"]
+    assert len(fits) >= 1
+    for f in fits:
+        assert sum(f["histogram"]["counts"]) == 30
+    # Group A values cluster near 50 (group B near 150).
+    assert max(fits[0]["histogram"]["edges"]) < 100
+
+
+def test_handle_series_with_filter(tmp_path):
+    did = _import_csv_for_explore_filter(tmp_path)
+    result = handle_request("data/series", {
+        "dataset_id": did,
+        "column": "value",
+        "filter_column": "work_order",
+        "filter_value": "A",
+    })
+    assert result["numeric"] is True
+    assert len(result["values"]) == 30
+    assert all(v < 100 for v in result["values"])
+
+
+def test_handle_distribution_with_filter_missing_value(tmp_path):
+    did = _import_csv_for_explore_filter(tmp_path)
+    with pytest.raises(ValueError):
+        handle_request("data/distribution", {
+            "dataset_id": did,
+            "column": "value",
+            "filter_column": "work_order",
+        })
+
+
+def test_handle_series_with_filter_missing_value(tmp_path):
+    did = _import_csv_for_explore_filter(tmp_path)
+    with pytest.raises(ValueError):
+        handle_request("data/series", {
+            "dataset_id": did,
+            "column": "value",
+            "filter_column": "work_order",
+        })
+
+
+def test_handle_distribution_with_filter_unknown_column(tmp_path):
+    did = _import_csv_for_explore_filter(tmp_path)
+    with pytest.raises(KeyError):
+        handle_request("data/distribution", {
+            "dataset_id": did,
+            "column": "value",
+            "filter_column": "nonexistent",
+            "filter_value": "A",
+        })
+
+
+def test_handle_series_with_filter_unknown_column(tmp_path):
+    did = _import_csv_for_explore_filter(tmp_path)
+    with pytest.raises(KeyError):
+        handle_request("data/series", {
+            "dataset_id": did,
+            "column": "value",
+            "filter_column": "nonexistent",
+            "filter_value": "A",
+        })
+
+
 def test_handle_quality_json_serializable(tmp_path):
     csv_text = "\n".join(
         [
