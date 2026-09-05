@@ -1,6 +1,13 @@
 # TASK.md
 
 ## Completed
+### SPC 管制線圖例 + MC σ 精度/guard 修復（commit 1d2cb57）
+- **Status**: DONE
+- **SPC 圖例**：移除所有管制線 `showlegend: false`（UCL/LCL/CL/MR UCL+CL/R UCL+CL/S UCL+CL 共 12 處）→ 圖例可見橘虛=UCL/LCL、綠虛=CL、紫實=MR/R/S、紅實=LSL/USL；違規點仍 `showlegend:false` 不佔圖例
+- **MC σ 精度**：`.toFixed(3)` → `.toFixed(2)` 與 Pp/Ppk `precision={2}` 對齊
+- **MC guard**：`assistantData.ts` context guard 補 `sigma_overall != null` 與 UI 卡對稱（UI 卡 earlier 已由 implementer 加上）
+- **Files changed** — `src/features/spc/SPC.tsx`, `src/features/monte-carlo/MonteCarlo.tsx`, `src/lib/assistantData.ts`
+
 ### Task 3 — 收尾 docs + 最終驗證 + push（MC predicted capability）
 - **Status**: DONE
 - **引擎（commit `bb1b019`）**：`run_monte_carlo` 回傳新增 `capability`（reuse `spc.compute_capability`，`subgroup_size=1` → σ within = overall σ → pp/ppk 整體 σ 語意；spec LSL+USL 未同時設定時 pp/ppk None）；2 新測試 → engine **306 passed, 1 skipped**
