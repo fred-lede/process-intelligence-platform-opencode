@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, InputNumber } from 'antd'
+import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, InputNumber, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from '../../components/PlotChart'
