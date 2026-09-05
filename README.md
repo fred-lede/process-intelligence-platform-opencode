@@ -109,6 +109,71 @@ cd engine && .venv/bin/pytest -q
 cd src-tauri && cargo test engine::tests::pings_live_engine
 ```
 
+### LightGBM GPU 支援（選配）
+
+LightGBM 的 GPU 訓練為**選配功能**，預設使用 CPU。若需啟用 GPU 加速，請確認以下條件後重新編譯：
+
+**前置條件：**
+- NVIDIA 顯示卡（不支援 Apple MPS / Metal）
+- CUDA Toolkit 11.x 或 12.x（與 LightGBM 版本相容）
+- cuBLAS、CUDNN
+- CMake 3.16+
+- 系統有 GPU 驅動程式
+
+**編譯步驟：**
+
+```bash
+# 1. 取得 LightGBM 原始碼（版本需與 requirements.txt 一致）
+git clone --recursive https://github.com/microsoft/LightGBM.git
+cd LightGBM
+
+# 2. 建立 build 目錄
+mkdir build && cd build
+
+# 3. CMake 開啟 GPU 支援
+cmake .. -DUSE_GPU=1 \
+  -DOpenCL_LIBRARY=/usr/local/cuda/lib64/libOpenCL.so \
+  -DOpenCL_INCLUDE_DIR=/usr/local/cuda/include
+
+# 4. 編譯
+make -j$(nproc)
+
+# 5. 安裝到專案 venv
+cd ../python-package
+python setup.py install
+```
+
+**Windows：**
+```powershell
+# 確保 CUDA 已安裝，然後：
+git clone --recursive https://github.com/microsoft/LightGBM.git
+cd LightGBM
+mkdir build && cd build
+cmake .. -G "Visual Studio 17 2022" -A x64 -DUSE_GPU=1 -DCMAKE_BUILD_TYPE=Release
+cmake --build . --config Release
+cd ..\python-package
+pip install .
+```
+
+**驗證 GPU 是否可用：**
+```python
+import lightgbm as lgb
+import numpy as np
+X = np.random.randn(100, 4)
+y = np.random.randn(100)
+train = lgb.Dataset(X, label=y)
+params = {'device': 'gpu', 'verbose': -1}
+model = lgb.train(params, train, num_boost_round=10)
+print('GPU OK')
+```
+
+**常見錯誤：**
+- `GPU Tree Learner was not enabled in this build` → pip 版未編譯 GPU，需從原始碼編譯
+- `Unknown device type mps` → Apple Silicon 不支援，只能用 CPU
+- `CUDA error` → CUDA 版本與 LightGBM 不相容，檢查 CUDA Toolkit 版本
+
+**建議：** 一般用途使用預設 CPU 即可。GPU 加速在資料量超過 10 萬行且 CPU 訓練時間明顯不足時才值得部署。
+
 ## 專案結構
 
 ```
