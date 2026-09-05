@@ -471,14 +471,20 @@ def fit_logistic_regression(
 def _weibull_nll(params: np.ndarray, X: np.ndarray, t: np.ndarray) -> float:
     """Negative log-likelihood for Weibull regression.
 
-    log(λ) = X @ β,  shape = k
+    log(λ) = X @ β + β₀, where β = params[:-2], β₀ = params[-2], log(k) = params[-1].
     NLL = Σ [ log(k) - k*log(λ) + (k-1)*log(t) - (t/λ)^k ]
     """
-    beta = params[:-1]
+    beta = params[:-2]
+    intercept = params[-2]
     log_k = params[-1]
-    k = np.exp(log_k)
-    log_lambda = X @ beta
+    log_lambda = X @ beta + intercept
     lambda_val = np.exp(log_lambda)
+    return float(_weibull_nll_no_intercept(lambda_val, t, params))
+
+
+def _weibull_nll_no_intercept(lambda_val: np.ndarray, t: np.ndarray, params: np.ndarray) -> float:
+    """Shared NLL computation from lambda_val."""
+    k = np.exp(params[-1])
     if np.any(lambda_val <= 0) or k <= 0:
         return 1e15
     nll = np.sum(
@@ -523,10 +529,12 @@ def fit_weibull_regression(
         method="Nelder-Mead",
         options={"maxiter": 5000, "xatol": 1e-8, "fatol": 1e-8},
     )
-    beta = result.x[:-1]
+    beta_features = result.x[:-2]  # β₁…βₙ
+    intercept = result.x[-2]       # β₀
     log_k = result.x[-1]
     k = float(np.exp(log_k))
-    lambda_te = np.exp(X_te @ beta)
+    log_lambda_te = X_te @ beta_features + intercept
+    lambda_te = np.exp(log_lambda_te)
     # Reliability at test times
     r_te = np.exp(-(t_te / lambda_te) ** k)
     # AIC
@@ -534,9 +542,9 @@ def fit_weibull_regression(
     # Median time-to-failure for test set
     median_ttf = float(lambda_te * (np.log(2) ** (1.0 / k)))
     coefficients = {
-        inputs[i]: float(beta[i]) for i in range(n_features)
+        inputs[i]: float(beta_features[i]) for i in range(n_features)
     }
-    coefficients["_intercept"] = float(beta[0])
+    coefficients["_intercept"] = float(intercept)
     coefficients["_weibull_shape"] = k
     return ModelFit(
         model_type="weibull_regression",
@@ -550,11 +558,11 @@ def fit_weibull_regression(
         },
         coefficients=coefficients,
         equation=(
-            f"Weibull(shape={k:.3f}), log(λ) = {beta[0]:.4g} + "
-            + " + ".join(f"{beta[i+1]:+.4g}*{inputs[i]}" for i in range(n_features))
+            f"Weibull(shape={k:.3f}), log(λ) = {intercept:.4g} + "
+            + " + ".join(f"{beta_features[i]:+.4g}*{inputs[i]}" for i in range(n_features))
         ),
         n_train=len(t_tr),
         n_test=len(t_te),
         created_at=_now(),
-        model={"beta": beta, "k": k, "inputs": inputs},
+        model={"beta": beta_features, "intercept": intercept, "k": k, "inputs": inputs},
     )
