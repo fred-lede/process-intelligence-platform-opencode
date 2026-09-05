@@ -31,7 +31,6 @@ export default function SPC() {
   const { importResult, spec } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
 
-  const pendingCtx = consumeNodeContext()
   const consumedRef = useRef(false)
   const [sourcedFromNode, setSourcedFromNode] = useState<{
     nodeId: string
@@ -44,6 +43,7 @@ export default function SPC() {
   useEffect(() => {
     if (consumedRef.current) return
     consumedRef.current = true
+    const pendingCtx = consumeNodeContext()
     if (pendingCtx) {
       ;(async () => {
         const node = await findNodeById(pendingCtx.nodeId)
