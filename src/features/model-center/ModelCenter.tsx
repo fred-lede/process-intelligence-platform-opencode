@@ -106,7 +106,9 @@ export default function ModelCenter() {
       params.n_estimators = nEstimators
       params.max_depth = maxDepth
       params.min_samples_leaf = modelType === 'random_forest' ? minSamplesLeaf : undefined
-      params.learning_rate = learningRate
+      if (modelType !== 'random_forest') {
+        params.learning_rate = learningRate
+      }
       params.auto_select_features = autoSelectFeatures
     }
     const result = await fit(params)
