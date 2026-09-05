@@ -708,6 +708,13 @@
   - README 新增「LightGBM GPU 支援（選配）」章節
   - 含前置條件、macOS/Linux 編譯步驟、Windows 編譯步驟、驗證腳本、常見錯誤
   - 明確說明 Apple MPS 不支援
+- [x] **DOE 統計推論（commit `52de052`）**：
+  - `validation.py` 新增 `compute_doe_statistics()`：ANOVA F 檢定 + 係數 t 檢定 + p 值 + 95% 信心區間
+  - 引擎端 `modeling/stats` IPC 端點
+  - 前端「DOE 統計推論」Card：顯著性表格 + 判讀說明
+  - 判讀規則（工業標準）：p<0.001 極顯著 / p<0.01 顯著 / p<0.05 邊際顯著 / p≥0.05 不顯著
+  - 輔助評語：R² × 顯著項比例 → Excellent/Good/Moderate/Poor fit
+  - i18n 12 keys ×3 語
 - [x] **i18n**
   - 恢復 `np.mean` 遺漏
 - [x] **蒙地卡羅支援所有 8 模型（commits `fdef99c` / `cd1746e` / `3fed87a`）**：
