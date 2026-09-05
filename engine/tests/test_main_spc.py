@@ -99,6 +99,47 @@ def test_spc_analyze_unknown_chart_type_raises(tmp_path):
         })
 
 
+def _import_csv_for_spc_filter(tmp_path):
+    import numpy as np
+    rng = np.random.default_rng(7)
+    rows = ["work_order,output"]
+    for i in range(60):
+        group = "A" if i < 30 else "B"
+        base = 50.0 if group == "A" else 150.0
+        out = base + rng.normal(0, 1.5)
+        rows.append(f"{group},{out:.2f}")
+    path = tmp_path / "spc_filter.csv"
+    path.write_text("\n".join(rows), encoding="utf-8")
+    return handle_request("data/import", {"file_path": str(path)})["dataset_id"]
+
+
+def test_spc_analyze_with_filter(tmp_path):
+    did = _import_csv_for_spc_filter(tmp_path)
+    result = handle_request("spc/analyze", {
+        "dataset_id": did,
+        "column": "output",
+        "chart_type": "i-mr",
+        "filter_column": "work_order",
+        "filter_value": "A",
+    })
+    assert result["success"]
+    assert len(result["x_values"]) == 30
+    assert all(v < 100 for v in result["x_values"])
+    assert abs(result["subgroup_stats"]["x_mean"] - 50.0) < 1.5
+
+
+def test_spc_analyze_with_filter_unknown_column(tmp_path):
+    did = _import_csv_for_spc_filter(tmp_path)
+    with pytest.raises(KeyError):
+        handle_request("spc/analyze", {
+            "dataset_id": did,
+            "column": "output",
+            "chart_type": "i-mr",
+            "filter_column": "nonexistent",
+            "filter_value": "A",
+        })
+
+
 def test_spc_capability_only(tmp_path):
     did = _import_csv_for_spc(tmp_path)
     result = handle_request("spc/capability", {

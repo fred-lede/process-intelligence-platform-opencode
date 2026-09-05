@@ -1038,6 +1038,14 @@ def _handle_settings_test(params: dict) -> dict:
 def _handle_spc_analyze(params: dict) -> dict:
     """Analyze SPC control chart for a column."""
     df = REGISTRY.get(params["dataset_id"])
+    filter_column = params.get("filter_column")
+    filter_value = params.get("filter_value")
+    if filter_column:
+        if filter_column not in df.columns:
+            raise KeyError(f"Unknown filter column: {filter_column}")
+        if filter_value is None:
+            raise ValueError("filter_value is required when filter_column is set")
+        df = df[df[filter_column].astype(str) == str(filter_value)]
     column = params["column"]
     if column not in df.columns:
         raise KeyError(f"Unknown column: {column}")
