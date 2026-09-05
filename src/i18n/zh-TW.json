@@ -359,7 +359,15 @@
     "bestModel": "最佳模型",
     "residualDiagnostics": "殘差診斷",
     "experimentRecommendations": "實驗建議",
-    "fullValidationError": "無法執行完整驗證"
+    "fullValidationError": "無法執行完整驗證",
+    "treeModelAdvanced": "樹模型設定",
+    "autoFeatureSelect": "自動特徵選取",
+    "nEstimators": "樹棵數",
+    "maxDepth": "最大深度",
+    "minSamplesLeaf": "最小葉節點樣本數",
+    "learningRate": "學習率",
+    "featureSelected": "自動選取 {{count}} 個特徵",
+    "featureImportance": "特徵重要性"
   },
   "validationLab": {
     "modelSelect": "選擇模型",

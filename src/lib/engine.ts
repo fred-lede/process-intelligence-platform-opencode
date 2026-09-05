@@ -291,6 +291,7 @@ export interface ModelFitDTO {
   model_type: ModelType
   target: string
   inputs: string[]
+  selected_inputs?: string[]
   status: ModelStatus
   created_at: string
   version: number
@@ -306,6 +307,13 @@ export async function fitModel(params: {
   model_type: ModelType
   target: string
   inputs: string[]
+  n_estimators?: number
+  max_depth?: number
+  min_samples_leaf?: number
+  learning_rate?: number
+  auto_select_features?: boolean
+  importance_threshold?: number
+  max_features?: number
 }): Promise<ModelFitDTO> {
   return engineCall<ModelFitDTO>('modeling/fit', params as unknown as Record<string, unknown>)
 }

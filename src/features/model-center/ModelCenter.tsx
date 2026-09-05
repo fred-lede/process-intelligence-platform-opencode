@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm } from 'antd'
+import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, InputNumber } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
@@ -61,6 +61,11 @@ export default function ModelCenter() {
   const [cvFolds, setCvFolds] = useState(5)
   const [fullValidation, setFullValidation] = useState<FullValidationResult | null>(null)
   const [fullValidationLoading, setFullValidationLoading] = useState(false)
+  const [nEstimators, setNEstimators] = useState(200)
+  const [maxDepth, setMaxDepth] = useState(10)
+  const [minSamplesLeaf, setMinSamplesLeaf] = useState(3)
+  const [learningRate, setLearningRate] = useState(0.1)
+  const [autoSelectFeatures, setAutoSelectFeatures] = useState(false)
 
   useEffect(() => {
     setContext(
@@ -81,8 +86,24 @@ export default function ModelCenter() {
 
   const handleFit = async () => {
     if (!datasetId || !target || selectedInputs.length === 0) return
-    const result = await fit({ dataset_id: datasetId, model_type: modelType, target, inputs: selectedInputs })
+    const params: any = {
+      dataset_id: datasetId,
+      model_type: modelType,
+      target,
+      inputs: selectedInputs,
+    }
+    if (['random_forest', 'xgboost', 'lightgbm'].includes(modelType)) {
+      params.n_estimators = nEstimators
+      params.max_depth = maxDepth
+      params.min_samples_leaf = modelType === 'random_forest' ? minSamplesLeaf : undefined
+      params.learning_rate = learningRate
+      params.auto_select_features = autoSelectFeatures
+    }
+    const result = await fit(params)
     if (result) {
+      if (result.selected_inputs && result.selected_inputs.length < selectedInputs.length) {
+        setSelectedInputs(result.selected_inputs)
+      }
       messageApi.success(t('modelCenter.fitSuccess'))
     }
   }
@@ -251,6 +272,67 @@ export default function ModelCenter() {
                 placeholder={t('modelCenter.inputs.placeholder')}
               />
             </div>
+            {['random_forest', 'xgboost', 'lightgbm'].includes(modelType) && (
+              <Card title={t('modelCenter.treeModelAdvanced')} size="small">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <div>
+                    <Switch
+                      checked={autoSelectFeatures}
+                      onChange={setAutoSelectFeatures}
+                      checkedChildren={t('modelCenter.autoFeatureSelect')}
+                      unCheckedChildren={t('modelCenter.autoFeatureSelect')}
+                    />
+                  </div>
+                  {!autoSelectFeatures && (
+                    <>
+                      <div>
+                        <label>{t('modelCenter.nEstimators')}</label>
+                        <InputNumber
+                          min={50}
+                          max={500}
+                          value={nEstimators}
+                          onChange={(v) => setNEstimators(v || 200)}
+                          style={{ marginLeft: 8, width: 100 }}
+                        />
+                      </div>
+                      <div>
+                        <label>{t('modelCenter.maxDepth')}</label>
+                        <InputNumber
+                          min={1}
+                          max={20}
+                          value={maxDepth}
+                          onChange={(v) => setMaxDepth(v || 10)}
+                          style={{ marginLeft: 8, width: 100 }}
+                        />
+                      </div>
+                      <div>
+                        <label>{t('modelCenter.learningRate')}</label>
+                        <InputNumber
+                          min={0.01}
+                          max={1}
+                          step={0.01}
+                          value={learningRate}
+                          onChange={(v) => setLearningRate(v || 0.1)}
+                          style={{ marginLeft: 8, width: 100 }}
+                        />
+                      </div>
+                      {modelType === 'random_forest' && (
+                        <div>
+                          <label>{t('modelCenter.minSamplesLeaf')}</label>
+                          <InputNumber
+                            min={1}
+                            max={10}
+                            value={minSamplesLeaf}
+                            onChange={(v) => setMinSamplesLeaf(v || 3)}
+                            style={{ marginLeft: 8, width: 100 }}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </Space>
+              </Card>
+            )}
             <Button type="primary" loading={fitting} onClick={handleFit} disabled={!datasetId || !target || selectedInputs.length === 0}>
               {t('modelCenter.fitButton')}
             </Button>

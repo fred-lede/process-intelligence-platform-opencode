@@ -359,7 +359,15 @@
     "bestModel": "Best Model",
     "residualDiagnostics": "Residual Diagnostics",
     "experimentRecommendations": "Experiment Recommendations",
-    "fullValidationError": "Failed to run full validation"
+    "fullValidationError": "Failed to run full validation",
+    "treeModelAdvanced": "Tree Model Settings",
+    "autoFeatureSelect": "Auto feature selection",
+    "nEstimators": "Estimators",
+    "maxDepth": "Max Depth",
+    "minSamplesLeaf": "Min Samples Leaf",
+    "learningRate": "Learning Rate",
+    "featureSelected": "Auto-selected {{count}} features",
+    "featureImportance": "Feature Importance"
   },
   "validationLab": {
     "modelSelect": "Select Model",

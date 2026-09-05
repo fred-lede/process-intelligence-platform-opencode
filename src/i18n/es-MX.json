@@ -361,7 +361,15 @@
     "interactionsTitle": "Análisis de Interacciones",
     "computeInteractions": "Calcular Interacciones",
     "computing": "Calculando...",
-    "interactionStrength": "Fortaleza de Interacción"
+    "interactionStrength": "Fortaleza de Interacción",
+    "treeModelAdvanced": "Configuración de modelo árbol",
+    "autoFeatureSelect": "Selección automática de características",
+    "nEstimators": "Estimadores",
+    "maxDepth": "Profundidad máxima",
+    "minSamplesLeaf": "Mín. muestras por hoja",
+    "learningRate": "Tasa de aprendizaje",
+    "featureSelected": "Seleccionados {{count}} características",
+    "featureImportance": "Importancia de características"
   },
   "validationLab": {
     "modelSelect": "Seleccionar modelo",
