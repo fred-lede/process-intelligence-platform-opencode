@@ -324,6 +324,50 @@ data/test_dataset.csv
 
 包含 82 筆資料，4 個輸入變數 (temperature, pressure, time, humidity) + 1 個輸出變數 (yield)，適合測試完整分析流程。
 
+## 版本紀錄
+
+### v0.2.0（2026-09-05）
+
+**SPC 深化**
+- EWMA / CUSUM 控制圖（檢測小漂移）
+- 規格線 LSL/USL 參考線於位置圖
+- 多欄位能力比較表格
+- 多機台 SPC 比較（跨 dataset）
+- 優化建議（Cpk 不足 / 偏移偵測 / 趨勢偵測）
+- 報告匯出包含 I-MR 控制圖 SVG
+- 修復 UCL/LCL/CL 從未顯示 bug（control_limits 巢狀 vs 扁平）
+- 修復 i-mr 未渲染 MR 子圖
+
+**蒙地卡羅**
+- 預測能力指數 Pp/Ppk（simulation-based）
+- NG 機率風險分級
+
+**AI 模型擴充**
+- XGBoost / LightGBM 回歸模型
+- Random Forest 自動特徵選取
+- 超參數 UI 控制
+
+**AI 助手**
+- SPC / MC / Exploration 領域知識增強
+- 能力指數解讀指南
+- Western Electric 7 規則說明
+
+**效能優化**
+- Plotly lazy-load（主 chunk 5.8 MB → 347 kB）
+- Vendor chunk 拆分（react / antd / plotly）
+
+**技術債**
+- `.coverage` 加入 gitignore
+- Tauri icons 追蹤
+- filter_value 空字串防護
+
+---
+
+### v0.1.0（2026-09-02）
+
+- 初始版本：Data Import、Process Definition、Exploration、Model Center、Validation、Monte Carlo、SPC、Reports
+- 三語支援（en / zh-TW / es-MX）
+
 ## 開發者
 
 - **作者**: Fred Wang
