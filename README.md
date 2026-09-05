@@ -436,6 +436,17 @@ data/test_dataset.csv
 - 修正 intercept/feature 索引錯位（`result.x[:-1]` → `result.x[:-2]`）
 - 恢復 `np.mean` 遺漏
 
+**i18n**
+- processDefine 段新增 `lcl`/`ucl` 翻譯（en/zh-TW/es-MX）
+- spc 段新增 `outliers`/`changePoints` 等 6 keys ×3 語
+- modelCenter column 段新增 `equation/AUC/accuracy/shape_k/AIC` keys ×3 語
+- modelCenter modelType.desc 段新增 8 種模型說明文字（含適用場景）×3 語
+- prediction 段新增 `predictedProbability`/`predictedMeanTTF`/`ng`/`ok`/`highRisk`/`lowRisk` ×3 語
+
+**版本**
+- 引擎 `__version__` 與 API 回傳版本同步至 0.3.0
+- 前端 About 對話框顯示 v0.3.0
+
 ---
 
 ### v0.2.0（2026-09-05）
