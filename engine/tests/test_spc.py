@@ -189,8 +189,8 @@ def test_compute_ewma_basic():
     assert result["ucl"] is not None
     assert result["cl"] is not None
     assert result["lcl"] is not None
-    assert result["lambda"] == 0.2
-    assert result["L"] == 3.0
+    assert result["ewma_lambda"] == 0.2
+    assert result["ewma_L"] == 3.0
 
 
 def test_compute_ewma_violations():
@@ -215,8 +215,8 @@ def test_compute_cusum_basic():
     assert result["chart_type"] == "cusum"
     assert len(result["c_plus"]) == len(values)
     assert len(result["c_minus"]) == len(values)
-    assert result["k"] == 0.5
-    assert result["H"] == 5.0
+    assert result["cusum_k"] == 0.5
+    assert result["cusum_H"] == 5.0
 
 
 def test_compute_cusum_violations():

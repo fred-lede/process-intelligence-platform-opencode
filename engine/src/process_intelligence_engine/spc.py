@@ -198,8 +198,8 @@ def compute_ewma(
         "ucl": ucl,
         "lcl": lcl,
         "cl": round(x_bar, 6),
-        "lambda": lambda_param,
-        "L": L,
+        "ewma_lambda": lambda_param,
+        "ewma_L": L,
         "violations": violations,
     }
 
@@ -245,8 +245,8 @@ def compute_cusum(
         "x_values": [round(float(v), 6) for v in arr],
         "c_plus": c_plus,
         "c_minus": c_minus,
-        "k": k,
-        "H": H,
+        "cusum_k": k,
+        "cusum_H": H,
         "violations": violations,
     }
 
