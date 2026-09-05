@@ -396,3 +396,10 @@ def test_handle_report_list_returns_registry(tmp_path):
     result = handle_request("report/list", {})
     assert result["reports"]
     assert result["reports"][0]["project_name"] == "Proj X"
+
+
+def test_handle_flow_graph_set_association_keys():
+    result = handle_request("project/flow-graph", {"set_association_keys": ["barcode", "batch_no"]})
+    assert result["association_keys"] == ["barcode", "batch_no"]
+    again = handle_request("project/flow-graph", {})
+    assert again["association_keys"] == ["barcode", "batch_no"]

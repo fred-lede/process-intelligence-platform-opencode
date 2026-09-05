@@ -1764,6 +1764,9 @@ def _handle_project_dataset_update(params: dict) -> dict:
 
 
 def _handle_project_flow_graph(params: dict) -> dict:
+    keys = params.get("set_association_keys")
+    if keys is not None:
+        return PROJECT_ENGINE.set_association_keys(keys)
     return PROJECT_ENGINE.get_flow_graph()
 
 
