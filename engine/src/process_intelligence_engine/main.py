@@ -75,7 +75,7 @@ from process_intelligence_engine.spc import (
     compute_spc_suggestions,
 )
 from process_intelligence_engine.monte_carlo import run_monte_carlo
-from process_intelligence_engine.prediction import predict_single, get_input_ranges
+from process_intelligence_engine.prediction import predict_single, get_input_ranges, SUPPORTED_MODELS
 from process_intelligence_engine.settings import get_settings_manager
 from process_intelligence_engine.features.time_series import (
     compute_time_features,
@@ -1318,8 +1318,8 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     df = _apply_row_filter(df, params)
     fit = MODEL_REGISTRY.get(model_id)
 
-    if fit.model_type not in ("doe_linear", "doe_quadratic", "logistic_regression", "weibull_regression"):
-        raise ValueError(f"Monte Carlo only supports doe_linear, doe_quadratic, logistic_regression, and weibull_regression models, got {fit.model_type}")
+    if fit.model_type not in SUPPORTED_MODELS:
+        raise ValueError(f"Monte Carlo does not support model type {fit.model_type!r}")
 
     n_simulations = params.get("n_simulations", 10000)
     seed = params.get("seed", 42)
@@ -1340,6 +1340,7 @@ def _handle_monte_carlo_run(params: dict) -> dict:
         anomalies=anomalies,
         lsl=lsl,
         usl=usl,
+        model=fit.model,
     )
     return {"success": True, "result": result}
 
@@ -1350,7 +1351,7 @@ def _handle_prediction_predict(params: dict) -> dict:
     fit = MODEL_REGISTRY.get(model_id)
 
     input_values = params.get("input_values", {})
-    predicted = predict_single(fit.model_type, fit.coefficients or {}, input_values)
+    predicted = predict_single(fit.model_type, fit.coefficients or {}, input_values, model=fit.model)
 
     return {
         "success": True,

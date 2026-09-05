@@ -7,7 +7,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-SUPPORTED_MODELS = {"doe_linear", "doe_quadratic", "logistic_regression", "weibull_regression"}
+SUPPORTED_MODELS = {
+    "doe_linear", "doe_quadratic",
+    "logistic_regression", "weibull_regression",
+    "random_forest", "xgboost", "lightgbm",
+    "residual_hybrid",
+}
 
 _COEFF_RENAMES = {
     "x1x2": "x1_x_x2",
@@ -16,21 +21,22 @@ _COEFF_RENAMES = {
 }
 
 
-def predict_single(model_type: str, coefficients: dict[str, float], inputs: dict[str, float]) -> float:
-    """Predict output using model coefficients.
+def predict_single(
+    model_type: str,
+    coefficients: dict[str, float],
+    inputs: dict[str, float],
+    model: Any = None,
+) -> float:
+    """Predict output using model coefficients or the trained model object.
 
     Args:
-        model_type: one of "doe_linear", "doe_quadratic", "logistic_regression", "weibull_regression"
-        coefficients: dict with keys like "_intercept", "x1", "x2",
-                      "x1_x_x2", "x1_x_x1" (also accepts compact "x1x2", "x1x1")
-                      For logistic: plain coefficients; For weibull: "_weibull_shape" key
+        model_type: one of all supported model types
+        coefficients: dict of model coefficients
         inputs: dict mapping factor names to their values
+        model: optional trained sklearn model object (used for tree models / residual_hybrid)
 
     Returns:
-        Predicted output value (probability for logistic, mean TTF for weibull)
-
-    Raises:
-        ValueError: if model_type is not supported
+        Predicted output value
     """
     if model_type not in SUPPORTED_MODELS:
         raise ValueError(
@@ -38,7 +44,17 @@ def predict_single(model_type: str, coefficients: dict[str, float], inputs: dict
             f"Expected one of {sorted(SUPPORTED_MODELS)}."
         )
 
-    # Normalize coefficient keys (compact → spaced form)
+    # Use trained model object when available (tree models, residual_hybrid)
+    if model is not None:
+        try:
+            import numpy as np
+            input_array = np.array([[float(inputs.get(col, 0.0)) for col in sorted(inputs.keys())]])
+            pred = model.predict(input_array)
+            return float(pred[0])
+        except Exception:
+            pass  # fall back to coefficient-based prediction
+
+    # --- Coefficient-based prediction (DOE, logistic, weibull) ---
     normed: dict[str, float] = {}
     for k, v in coefficients.items():
         normed[_COEFF_RENAMES.get(k, k)] = v

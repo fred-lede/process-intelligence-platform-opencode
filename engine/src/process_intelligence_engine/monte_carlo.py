@@ -130,12 +130,22 @@ def predict_output(
     model_type: str,
     coefficients: dict[str, float],
     inputs: dict[str, float],
+    model: Any = None,
 ) -> float:
-    """Predict output using model coefficients.
+    """Predict output using model coefficients or trained model object.
 
-    Supports ``"doe_linear"``, ``"doe_quadratic"``, ``"logistic_regression"``,
-    and ``"weibull_regression"``.
+    Supports all model types: doe_linear, doe_quadratic, logistic_regression,
+    weibull_regression, random_forest, xgboost, lightgbm, residual_hybrid.
     """
+    # Use trained model object when available (tree models)
+    if model is not None:
+        try:
+            input_array = np.array([[float(inputs.get(col, 0.0)) for col in sorted(inputs.keys())]])
+            pred = model.predict(input_array)
+            return float(pred[0])
+        except Exception:
+            pass
+
     input_names = sorted(inputs.keys())
 
     if model_type == "doe_linear":
@@ -167,7 +177,6 @@ def predict_output(
         logit = float(coefficients.get("_intercept", 0.0))
         for x in input_names:
             logit += float(coefficients.get(x, 0.0)) * inputs[x]
-        # sigmoid → predicted P(NG) in [0, 1]
         return 1.0 / (1.0 + math.exp(-logit))
 
     if model_type == "weibull_regression":
@@ -176,12 +185,10 @@ def predict_output(
         log_lambda = intercept
         for x in input_names:
             log_lambda += float(coefficients.get(x, 0.0)) * inputs[x]
-        # Guard against overflow; cap log_lambda to ±700 (np.exp(709) ≈ max float)
         log_lambda = max(min(log_lambda, 700.0), -700.0)
         lambda_val = float(np.exp(log_lambda))
         from scipy.special import gamma
-        mean_ttf = lambda_val * gamma(1.0 + 1.0 / k)
-        return float(mean_ttf)
+        return float(lambda_val * gamma(1.0 + 1.0 / k))
 
     raise ValueError(f"Unknown model_type: {model_type}")
 
@@ -228,6 +235,7 @@ def run_monte_carlo(
     anomalies: list[dict[str, Any]] | None = None,
     lsl: float | None = None,
     usl: float | None = None,
+    model: Any = None,
 ) -> dict[str, Any]:
     """Run a full Monte Carlo simulation.
 
@@ -303,7 +311,7 @@ def run_monte_carlo(
 
     # Predict outputs
     output_values = np.array([
-        predict_output(model_type, coefficients, {col: sampled_inputs[col][i] for col in input_columns})
+        predict_output(model_type, coefficients, {col: sampled_inputs[col][i] for col in input_columns}, model=model)
         for i in range(n_simulations)
     ], dtype=float)
 
@@ -357,7 +365,7 @@ def run_monte_carlo(
                 predict_output(model_type, coefficients, {
                     col: (modified_arr if col == target else sampled_inputs[col])[i]
                     for col in input_columns
-                })
+                }, model=model)
                 for i in range(n_simulations)
             ])
             shift_ng = int(np.sum(shifted_outputs < lsl))
@@ -377,7 +385,7 @@ def run_monte_carlo(
             if target in multi_inputs:
                 multi_inputs[target] = apply_anomalies(multi_inputs[target], [anomaly], rng)
         multi_outputs = np.array([
-            predict_output(model_type, coefficients, {col: multi_inputs[col][i] for col in input_columns})
+            predict_output(model_type, coefficients, {col: multi_inputs[col][i] for col in input_columns}, model=model)
             for i in range(n_simulations)
         ], dtype=float)
         if lsl is not None:

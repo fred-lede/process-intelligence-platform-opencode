@@ -393,18 +393,19 @@ def fit_residual_hybrid(
         if name == "1":
             continue
         coefficients[name] = float(c)
-    coefficients["_intercept"] = float(doe.intercept_)
-    return ModelFit(
-        model_type="residual_hybrid",
-        target=target,
-        inputs=list(inputs),
-        metrics=_compute_all_metrics(y_test, y_pred, n_predictors),
-        coefficients=coefficients,
-        equation="Y = f_DOE(X) + r_RF(X)",
-        n_train=len(train_idx),
-        n_test=len(test_idx),
-        created_at=_now(),
-    )
+        coefficients["_intercept"] = float(doe.intercept_)
+        return ModelFit(
+            model_type="residual_hybrid",
+            target=target,
+            inputs=list(inputs),
+            metrics=_compute_all_metrics(y_test, y_pred, n_predictors),
+            coefficients=coefficients,
+            equation="Y = f_DOE(X) + r_RF(X)",
+            n_train=len(train_idx),
+            n_test=len(test_idx),
+            created_at=_now(),
+            model=rf,
+        )
 
 
 def fit_logistic_regression(
