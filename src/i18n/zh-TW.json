@@ -223,6 +223,8 @@
     "auto3sigma": "自動 3σ",
     "lclPlaceholder": "LCL",
     "uclPlaceholder": "UCL",
+    "lcl": "下控管限（LCL）",
+    "ucl": "上控管限（UCL）",
     "anomalyTitle": "異常情境偵測",
     "anomalyHint": "依規格界限、管制界限與工程模板偵測異常，未確認項目以醒目提示。",
     "runDetection": "執行偵測",

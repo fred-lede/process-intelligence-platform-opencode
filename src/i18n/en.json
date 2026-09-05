@@ -223,6 +223,8 @@
     "auto3sigma": "Auto 3σ",
     "lclPlaceholder": "LCL",
     "uclPlaceholder": "UCL",
+    "lcl": "LCL",
+    "ucl": "UCL",
     "anomalyTitle": "Anomaly Scenarios",
     "anomalyHint": "Detect anomalies against spec limits, control limits and engineering templates. Unconfirmed items are highlighted.",
     "runDetection": "Run Detection",
