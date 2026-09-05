@@ -39,7 +39,9 @@ def predict_single(model_type: str, coefficients: dict[str, float], inputs: dict
         )
 
     # Normalize coefficient keys (compact → spaced form)
-    normed = {**_COEFF_RENAMES, **coefficients}
+    normed: dict[str, float] = {}
+    for k, v in coefficients.items():
+        normed[_COEFF_RENAMES.get(k, k)] = v
 
     if model_type in ("doe_linear", "doe_quadratic"):
         result = float(normed.get("_intercept", 0.0))
