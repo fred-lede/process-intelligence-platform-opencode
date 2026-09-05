@@ -304,7 +304,15 @@
       "randomForest": "Bosque Aleatorio",
       "residualHybrid": "Híbrido de Residuos",
       "logisticRegression": "Regresión Logística",
-      "weibullRegression": "Regresión Weibull"
+      "weibullRegression": "Regresión Weibull",
+      "desc": {
+        "doeLinear": "Modelo lineal solo con efectos principales. Objetivo: continuo. Requiere ≥3 entradas.",
+        "doeQuadratic": "Lineal + interacciones + términos cuadrados. Objetivo: continuo. Requiere ≥2 entradas.",
+        "randomForest": "Conjunto de árboles de decisión (regresión). Objetivo: continuo. Maneja relaciones no lineales.",
+        "residualHybrid": "DOE lineal + Bosque Aleatorio en residuos. Objetivo: continuo. Combina interpretabilidad y precisión.",
+        "logisticRegression": "Modelo de clasificación binaria. Objetivo: binario (solo 0/1 o dos categorías). Predice probabilidad de clase.",
+        "weibullRegression": "Modelo de confiabilidad / tiempo hasta falla. Objetivo: continuo estrictamente positivo. Estima forma k y escala λ."
+      }
     },
     "target": {
       "label": "Variable objetivo (salida)",

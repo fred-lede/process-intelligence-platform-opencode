@@ -302,7 +302,15 @@
       "randomForest": "隨機樹",
       "residualHybrid": "殘差混合",
       "logisticRegression": "Logistic 迴歸",
-      "weibullRegression": "Weibull 迴歸"
+      "weibullRegression": "Weibull 迴歸",
+      "desc": {
+        "doeLinear": "純主效應線性模型。目標：連續變數。至少需要 3 個輸入欄位。",
+        "doeQuadratic": "線性 + 交互作用 + 平方項。目標：連續變數。至少需要 2 個輸入欄位。",
+        "randomForest": "決策樹集成（迴歸）。目標：連續變數。可處理非線性關係。",
+        "residualHybrid": "DOE 線性 + 殘差隨機樹。目標：連續變數。兼顧可解釋性與預測精度。",
+        "logisticRegression": "二元分類模型。目標：二元（僅 0/1 或兩個類別）。輸出類別機率。",
+        "weibullRegression": "可靠性 / 失效時間模型。目標：嚴格大於零的連續變數。估計 shape k 與 scale λ。"
+      }
     },
     "target": {
       "label": "目標欄位（輸出）",

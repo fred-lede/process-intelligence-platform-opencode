@@ -270,6 +270,9 @@ export default function ModelCenter() {
                 onChange={setModelType}
                 options={MODEL_TYPES.map((m) => ({ value: m.value, label: t(m.labelKey) }))}
               />
+              <Typography.Text type="secondary" style={{ marginLeft: 12, fontSize: 12 }}>
+                {t(`modelCenter.modelType.desc.${modelType}`)}
+              </Typography.Text>
             </div>
             <div>
               <label>{t('modelCenter.target.label')}</label>

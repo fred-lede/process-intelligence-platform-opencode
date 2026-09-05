@@ -302,7 +302,15 @@
       "randomForest": "Random Forest",
       "residualHybrid": "Residual Hybrid",
       "logisticRegression": "Logistic Regression",
-      "weibullRegression": "Weibull Regression"
+      "weibullRegression": "Weibull Regression",
+      "desc": {
+        "doeLinear": "Linear model with main effects only. Target: continuous. Requires ≥3 inputs.",
+        "doeQuadratic": "Linear + interaction + squared terms. Target: continuous. Requires ≥2 inputs.",
+        "randomForest": "Ensemble of decision trees (regression). Target: continuous. Handles non-linear relationships.",
+        "residualHybrid": "DOE linear + Random Forest on residuals. Target: continuous. Combines interpretability & accuracy.",
+        "logisticRegression": "Binary classification model. Target: binary (0/1 or two categories only). Predicts probability of class.",
+        "weibullRegression": "Reliability / time-to-failure model. Target: strictly positive continuous. Estimates shape k & scale λ."
+      }
     },
     "target": {
       "label": "Target (Output)",
