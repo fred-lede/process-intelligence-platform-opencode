@@ -774,6 +774,7 @@ export async function analyzeSPC(params: {
   cusum_H?: number
   filter_column?: string
   filter_value?: string
+  control_limits?: { lcl: number | null; ucl: number | null }
 }): Promise<SPCAnalysisResult> {
   const res = await engineCall<SPCAnalysisResult>('spc/analyze', params)
   return flattenControlLimits(res)

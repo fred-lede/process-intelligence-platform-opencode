@@ -1116,6 +1116,7 @@ def _handle_spc_analyze(params: dict) -> dict:
     subgroup_size = params.get("subgroup_size", 1)
     lsl = params.get("lsl")
     usl = params.get("usl")
+    manual_limits = (params.get("control_limits") or {}).get(column)
 
     def _chunk_subgroups(vals: list, size: int) -> list[list]:
         return [
@@ -1155,6 +1156,17 @@ def _handle_spc_analyze(params: dict) -> dict:
         raise ValueError(f"Unknown chart_type: {chart_type}")
 
     result["chart_type"] = chart_type
+
+    # Apply manual control limits override when provided for this column
+    if manual_limits:
+        if "ucl" in manual_limits and manual_limits["ucl"] is not None:
+            if "control_limits" in result and "x" in result["control_limits"]:
+                result["control_limits"]["x"]["ucl"] = float(manual_limits["ucl"])
+            result["ucl"] = float(manual_limits["ucl"])
+        if "lcl" in manual_limits and manual_limits["lcl"] is not None:
+            if "control_limits" in result and "x" in result["control_limits"]:
+                result["control_limits"]["x"]["lcl"] = float(manual_limits["lcl"])
+            result["lcl"] = float(manual_limits["lcl"])
 
     # Detect outliers and change points
     from process_intelligence_engine.spc import detect_outliers, detect_change_points

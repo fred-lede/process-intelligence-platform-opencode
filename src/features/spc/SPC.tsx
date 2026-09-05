@@ -28,7 +28,7 @@ const WE_RULE_NAMES: Record<number, string> = {
 
 export default function SPC() {
   const { t } = useTranslation()
-  const { importResult, spec } = useDataPipelineStore()
+  const { importResult, spec, controlLimits } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
 
   const consumedRef = useRef(false)
@@ -138,6 +138,7 @@ export default function SPC() {
         ewma_L: chartType === 'ewma' ? ewmaL : undefined,
         cusum_k: chartType === 'cusum' ? cusumK : undefined,
         cusum_H: chartType === 'cusum' ? cusumH : undefined,
+        control_limits: controlLimits[column] ?? undefined,
         ...(nodeFilterColumn && nodeFilterValue
           ? { filter_column: nodeFilterColumn, filter_value: nodeFilterValue }
           : {}),
