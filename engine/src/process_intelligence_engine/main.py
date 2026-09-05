@@ -1158,6 +1158,52 @@ def _handle_spc_analyze(params: dict) -> dict:
     return {"success": True, **result}
 
 
+def _handle_spc_multi_dataset_analyze(params: dict) -> dict:
+    """Analyze SPC across multiple datasets and return comparison results."""
+    entries = params.get("entries", [])
+    chart_type = params.get("chart_type", "i-mr")
+    lsl = params.get("lsl")
+    usl = params.get("usl")
+
+    results = []
+    for entry in entries:
+        did = entry.get("dataset_id")
+        col = entry.get("column")
+        if not did or not col:
+            continue
+        try:
+            df = REGISTRY.get(did)
+        except KeyError:
+            continue
+        if df is None or col not in df.columns:
+            continue
+        values = df[col].dropna().tolist()
+        if len(values) < 5:
+            continue
+        try:
+            if chart_type == "i-mr":
+                r = compute_i_mr(values, lsl=lsl, usl=usl)
+                r["chart_type"] = chart_type
+            elif chart_type == "ewma":
+                r = compute_ewma(values, lambda_param=params.get("ewma_lambda", 0.2), L=params.get("ewma_L", 3.0), lsl=lsl, usl=usl)
+            elif chart_type == "cusum":
+                r = compute_cusum(values, k=params.get("cusum_k", 0.5), H=params.get("cusum_H", 5.0), lsl=lsl, usl=usl)
+            else:
+                continue
+            r["suggestions"] = compute_spc_suggestions(r)
+            results.append({
+                "dataset_id": did,
+                "column": col,
+                "source_file": REGISTRY.meta(did).get("file_path", ""),
+                "n_points": len(values),
+                "result": r,
+            })
+        except Exception:
+            pass
+
+    return {"results": results, "count": len(results)}
+
+
 def _handle_spc_batch_analyze(params: dict) -> dict:
     """Analyze multiple columns and return results with suggestions."""
     df = REGISTRY.get(params["dataset_id"])
@@ -1434,6 +1480,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "spc/analyze":
         return _handle_spc_analyze(params)
+    if method == "spc/multi_dataset_analyze":
+        return _handle_spc_multi_dataset_analyze(params)
+
     if method == "spc/batch_analyze":
         return _handle_spc_batch_analyze(params)
     if method == "spc/capability":

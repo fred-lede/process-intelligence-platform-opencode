@@ -801,6 +801,28 @@ export async function analyzeSPCBatch(params: {
   return engineCall<SPCBatchResult>('spc/batch_analyze', params as unknown as Record<string, unknown>)
 }
 
+export interface MultiDatasetSPCEntry {
+  dataset_id: string
+  column: string
+  source_file?: string
+  n_points?: number
+  result: SPCAnalysisResult
+}
+
+export interface MultiDatasetSPCResult {
+  results: MultiDatasetSPCEntry[]
+  count: number
+}
+
+export async function analyzeSPCMultiDataset(params: {
+  entries: Array<{ dataset_id: string; column: string }>
+  chart_type?: string
+  lsl?: number
+  usl?: number
+}): Promise<MultiDatasetSPCResult> {
+  return engineCall<MultiDatasetSPCResult>('spc/multi_dataset_analyze', params as unknown as Record<string, unknown>)
+}
+
 // --- Phase 9: Monte Carlo Simulation ----------------------------------------
 
 export interface MonteCarloHistogram {

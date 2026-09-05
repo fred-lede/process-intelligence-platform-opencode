@@ -189,6 +189,41 @@ def test_spc_capability_no_limits(tmp_path):
     assert result["capability"]["cpk"] is None
 
 
+def test_spc_multi_dataset_analyze(tmp_path):
+    """Test multi-dataset SPC analysis returns results for each dataset."""
+    did1 = _import_csv_for_spc(tmp_path)
+    did2 = _import_csv_for_spc(tmp_path)
+    result = handle_request("spc/multi_dataset_analyze", {
+        "entries": [
+            {"dataset_id": did1, "column": "output"},
+            {"dataset_id": did2, "column": "output"},
+        ],
+        "chart_type": "i-mr",
+    })
+    assert result["count"] == 2
+    assert len(result["results"]) == 2
+    for r in result["results"]:
+        assert r["column"] == "output"
+        assert r["result"]["chart_type"] == "i-mr"
+        assert "suggestions" in r["result"]
+    json.dumps(result)
+
+
+def test_spc_multi_dataset_empty_entries():
+    result = handle_request("spc/multi_dataset_analyze", {"entries": []})
+    assert result["count"] == 0
+    assert result["results"] == []
+
+
+def test_spc_multi_dataset_invalid_dataset():
+    result = handle_request("spc/multi_dataset_analyze", {
+        "entries": [
+            {"dataset_id": "nonexistent", "column": "output"},
+        ],
+    })
+    assert result["count"] == 0
+
+
 def test_spc_batch_analyze(tmp_path):
     """Test batch analyze endpoint."""
     did = _import_csv_for_spc(tmp_path)

@@ -5,7 +5,7 @@ import Plot from 'react-plotly.js'
 import NodeSourceFilter from '../../components/NodeSourceFilter'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { analyzeSPC, analyzeSPCBatch, getFlowGraph, type SPCAnalysisResult, type SPCBatchResult } from '../../lib/engine'
+import { analyzeSPC, analyzeSPCBatch, analyzeSPCMultiDataset, getFlowGraph, getDataAssets, type SPCAnalysisResult, type SPCBatchResult, type MultiDatasetSPCResult } from '../../lib/engine'
 import {
   consumeNodeContext,
   dataSourceLoaded,
@@ -88,8 +88,16 @@ export default function SPC() {
   const [error, setError] = useState<string | null>(null)
   const [numericColumns, setNumericColumns] = useState<string[]>([])
   const [batchMode, setBatchMode] = useState(false)
+  const [multiDatasetMode, setMultiDatasetMode] = useState(false)
   const [selectedColumns, setSelectedColumns] = useState<string[]>([])
   const [batchResult, setBatchResult] = useState<SPCBatchResult | null>(null)
+  const [datasetEntries, setDatasetEntries] = useState<Array<{ dataset_id: string; column: string }>>([])
+  const [multiResult, setMultiResult] = useState<MultiDatasetSPCResult | null>(null)
+  const [datasetAssets, setDatasetAssets] = useState<Array<{ dataset_id: string; file_path: string; row_count: number; column_count: number }>>([])
+
+  useEffect(() => {
+    getDataAssets().then(r => setDatasetAssets(r.datasets ?? [])).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!importResult) return
@@ -135,6 +143,25 @@ export default function SPC() {
           : {}),
       })
       setResult(res)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMultiDatasetAnalyze = async () => {
+    if (datasetEntries.length === 0) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await analyzeSPCMultiDataset({
+        entries: datasetEntries,
+        chart_type: chartType,
+        lsl: spec?.lsl ?? undefined,
+        usl: spec?.usl ?? undefined,
+      })
+      setMultiResult(res)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -488,6 +515,9 @@ export default function SPC() {
           <Button onClick={() => setBatchMode(!batchMode)}>
             {batchMode ? t('spc.singleAnalysis') : t('spc.batchAnalyze')}
           </Button>
+          <Button onClick={() => setMultiDatasetMode(!multiDatasetMode)}>
+            {t('spc.multiDatasetCompare')}
+          </Button>
         </Space>
         {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 12 }} />}
         {batchMode && (
@@ -628,6 +658,83 @@ export default function SPC() {
             </Card>
           ))}
         </>
+      )}
+
+      {multiDatasetMode && (
+        <Card title={t('spc.multiDatasetCompare')} size="small">
+          <Alert type="info" showIcon message={t('spc.multiDatasetCompareHint')} style={{ marginBottom: 12 }} />
+          <Space direction="vertical" style={{ width: '100%' }} size="small">
+            {datasetAssets.map(asset => (
+              <Space key={asset.dataset_id} style={{ width: '100%' }} wrap>
+                <Typography.Text style={{ width: 200, overflow: 'hidden', textOverflow: 'ellipsis' }} title={asset.file_path}>
+                  {asset.file_path.split('/').pop() ?? asset.dataset_id.slice(0, 8)}
+                </Typography.Text>
+                <Select
+                  style={{ width: 200 }}
+                  value={datasetEntries.find(e => e.dataset_id === asset.dataset_id)?.column}
+                  onChange={(col) => {
+                    const existing = datasetEntries.find(e => e.dataset_id === asset.dataset_id)
+                    if (existing) {
+                      setDatasetEntries(datasetEntries.map(e => e.dataset_id === asset.dataset_id ? { ...e, column: col } : e))
+                    } else if (col) {
+                      setDatasetEntries([...datasetEntries, { dataset_id: asset.dataset_id, column: col }])
+                    }
+                  }}
+                  options={numericColumns.map(name => ({ value: name, label: name }))}
+                  placeholder={t('spc.outputColumn')}
+                  allowClear
+                />
+              </Space>
+            ))}
+            <Button type="primary" onClick={handleMultiDatasetAnalyze} loading={loading} disabled={datasetEntries.length === 0}>
+              {t('spc.analyze')}
+            </Button>
+          </Space>
+          {multiResult && multiResult.results.length > 0 && (
+            <>
+              <Card title={t('spc.compareColumns')} size="small" style={{ marginTop: 12 }}>
+                <Table
+                  dataSource={multiResult.results.map(r => ({
+                    key: r.dataset_id,
+                    dataset: r.source_file?.split('/').pop() ?? r.dataset_id.slice(0, 8),
+                    column: r.column,
+                    n_points: r.n_points,
+                    cp: r.result.capability?.cp,
+                    cpk: r.result.capability?.cpk,
+                    pp: r.result.capability?.pp,
+                    ppk: r.result.capability?.ppk,
+                    violations: r.result.violations?.length ?? 0,
+                  }))}
+                  columns={[
+                    { title: t('spc.datasetColumn'), dataIndex: 'dataset', key: 'dataset' },
+                    { title: t('spc.column'), dataIndex: 'column', key: 'column' },
+                    { title: t('spc.nPoints'), dataIndex: 'n_points', key: 'n_points' },
+                    { title: 'Cp', dataIndex: 'cp', key: 'cp',
+                      render: (v: number) => <Tag color={capacityColor(v)}>{v?.toFixed(2) ?? 'N/A'}</Tag> },
+                    { title: 'Cpk', dataIndex: 'cpk', key: 'cpk',
+                      render: (v: number) => <Tag color={capacityColor(v)}>{v?.toFixed(2) ?? 'N/A'}</Tag> },
+                    { title: 'Pp', dataIndex: 'pp', key: 'pp',
+                      render: (v: number) => <Tag color={capacityColor(v)}>{v?.toFixed(2) ?? 'N/A'}</Tag> },
+                    { title: 'Ppk', dataIndex: 'ppk', key: 'ppk',
+                      render: (v: number) => <Tag color={capacityColor(v)}>{v?.toFixed(2) ?? 'N/A'}</Tag> },
+                    { title: t('spc.violations'), dataIndex: 'violations', key: 'violations' },
+                  ]}
+                  pagination={false}
+                />
+              </Card>
+              {multiResult.results.map(r => (
+                <Card key={r.dataset_id} title={`${r.source_file?.split('/').pop() ?? r.dataset_id} — ${r.column}`} size="small">
+                  <Plot
+                    data={buildPlotData(r.result)}
+                    layout={buildPlotLayout(r.result.chart_type)}
+                    config={{ responsive: true, displayModeBar: false }}
+                    style={{ width: '100%' }}
+                  />
+                </Card>
+              ))}
+            </>
+          )}
+        </Card>
       )}
 
       {!result && importResult && (
