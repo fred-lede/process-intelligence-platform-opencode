@@ -490,7 +490,11 @@
     "totalSimulations": "Total Simulations",
     "multiAnomalyNG": "Multi-Anomaly NG",
     "selectModelFirst": "Please select a model and click Run Simulation.",
-    "noData": "Please import data first."
+    "noData": "Please import data first.",
+    "sourceFromNode": "From node: {{name}}",
+    "dataSourceNotLoaded": "Source data not loaded. Import the dataset to run the simulation.",
+    "filterByNode": "Filter by node",
+    "nodeFilterCleared": "Clear node filter"
   },
   "prediction": {
     "title": "Interactive Prediction (What-if)",

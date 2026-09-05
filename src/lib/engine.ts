@@ -784,6 +784,8 @@ export interface MonteCarloParams {
   }>
   lsl?: number
   usl?: number
+  filter_column?: string
+  filter_value?: string
 }
 
 export async function analyzeMonteCarlo(params: MonteCarloParams): Promise<MonteCarloAnalysisResult> {

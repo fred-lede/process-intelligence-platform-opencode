@@ -492,7 +492,11 @@
     "outputDistribution": "Distribución de Salida",
     "percentiles": "Percentiles",
     "p1": "P1",
-    "p5": "P5"
+    "p5": "P5",
+    "sourceFromNode": "Desde nodo: {{name}}",
+    "dataSourceNotLoaded": "Datos de origen no cargados. Importa el conjunto de datos para ejecutar la simulación.",
+    "filterByNode": "Filtrar por nodo",
+    "nodeFilterCleared": "Limpiar filtro de nodo"
   },
   "prediction": {
     "title": "Predicción Interactiva (What-if)",
