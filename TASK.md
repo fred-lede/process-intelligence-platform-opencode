@@ -31,7 +31,7 @@
 - **Status**: DONE
 - **Docs**：PROGRESS.md 新增 2026-09-05 SPC 報告匯出增強條目；TASK.md 新增 Task 4 紀錄；README.md Phase 5 補 SPC 控制圖
 - **驗證**：`pytest tests/ -q` → **330 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.07s`
-- **Push**：待執行
+- **Push**：`git push` ✅
 - **Files changed** — `PROGRESS.md`, `TASK.md`, `README.md`
 
 ### Task 3: SPC enhancement — 收尾 docs + 最終驗證 + push
