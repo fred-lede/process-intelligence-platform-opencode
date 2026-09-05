@@ -1,5 +1,13 @@
 # PROGRESS.md
 
+## 2026-09-05 — Assistant guide 領域知識強化（SPC / Monte Carlo / Exploration）
+- **實作**：`assistantGuide.ts` 三頁 entry 擴充領域知識
+  - **SPC**：chart type selection（I-MR / X-bar+R / X-bar+S / EWMA / CUSUM）、Cp/Cpk 閾值解讀（≥1.67 優秀 / ≥1.33 合格 / <1.33 需改善）、Western Electric 7 rules 逐條說明、優化建議解讀
+  - **Monte Carlo**：模擬機制說明（抽樣 + 預測 + NG 計算）、NG 機率閾值（<1% 綠 / 1-5% 黃 / >5% 紅）、百分位數解讀、預測能力指數（Pp/Ppk）、異常風險排名解讀
+  - **Exploration**：分布 tab（直方圖 / 形狀 / 異常值）、趨勢 tab（漂移 / 階躍偵測）、時間序列特徵（lag / rolling / drift / 連續超標）、GRR 解讀閾值（<10% 優秀 / 10-30% 可接受 / >30% 需改善）
+- **驗證**：`npx tsc --noEmit` EXIT 0
+- **Commit**：`8b37832`
+
 ## 2026-09-05 — Task 2: XGBoost + LightGBM fitters（SPEC COMPLIANT）
 - **實作**：`fitters.py` 加 `fit_xgboost`/`fit_lightgbm`（auto-select + hyperparams + availability guard）；`main.py` `MODEL_FITTERS` 註冊；`pyproject.toml` 加 `lightgbm>=4.0.0`；3 支新測試
 - **修正**：`_handle_modeling_fit` 原僅對 `random_forest` 透傳 hyperparams，擴為 tree models 共用（`n_estimators`/`max_depth`/`min_samples_leaf`/`learning_rate`/`auto_select_features`/`importance_threshold`/`max_features`/`test_size`/`random_state`）
