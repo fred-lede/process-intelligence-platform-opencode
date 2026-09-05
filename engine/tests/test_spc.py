@@ -295,3 +295,59 @@ def test_compute_spc_suggestions_ewma_small_shift():
     small_shift_suggestions = [s for s in suggestions if s["type"] == "small_shift"]
     # May or may not have depending on data; just verify no crash
     assert isinstance(suggestions, list)
+
+
+def test_detect_outliers_iqr():
+    """Test IQR outlier detection."""
+    from process_intelligence_engine.spc import detect_outliers
+    values = [10.0] * 50 + [25.0, 26.0, 27.0]  # 3 outliers
+    result = detect_outliers(values, method="iqr")
+    assert result["method"] == "iqr"
+    assert result["n_outliers"] == 3
+    assert all(i >= 50 for i in result["outlier_indices"])
+    assert "stats" in result
+    assert result["stats"]["q1"] is not None
+
+
+def test_detect_outliers_zscore():
+    """Test Z-score outlier detection."""
+    from process_intelligence_engine.spc import detect_outliers
+    values = [0.0] * 100 + [10.0]  # 1 outlier (z ≈ 10)
+    result = detect_outliers(values, method="zscore", zscore_threshold=3.0)
+    assert result["method"] == "zscore"
+    assert result["n_outliers"] >= 1
+    assert len(result["outlier_indices"]) > 0
+
+
+def test_detect_outliers_empty_raises():
+    """Test empty input raises ValueError."""
+    from process_intelligence_engine.spc import detect_outliers
+    with pytest.raises(ValueError, match="values must not be empty"):
+        detect_outliers([])
+
+
+def test_detect_outliers_constant():
+    """Test constant values returns no outliers."""
+    from process_intelligence_engine.spc import detect_outliers
+    result = detect_outliers([5.0] * 10, method="iqr")
+    assert result["n_outliers"] == 0
+    assert result["outlier_indices"] == []
+
+
+def test_detect_change_points_basic():
+    """Test CUSUM change point detection."""
+    from process_intelligence_engine.spc import detect_change_points
+    values = [0.0] * 50 + [5.0] * 50  # shift at index 50
+    result = detect_change_points(values, method="cusum", k=0.5, H=5.0)
+    assert result["method"] == "cusum"
+    assert result["n_change_points"] > 0
+    # Change point should be near the shift
+    assert any(abs(cp - 50) < 10 for cp in result["change_points"])
+
+
+def test_detect_change_points_no_shift():
+    """Test no change points for constant data."""
+    from process_intelligence_engine.spc import detect_change_points
+    result = detect_change_points([10.0] * 100, method="cusum")
+    assert result["n_change_points"] == 0
+    assert result["change_points"] == []

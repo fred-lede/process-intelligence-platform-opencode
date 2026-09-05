@@ -1155,6 +1155,15 @@ def _handle_spc_analyze(params: dict) -> dict:
         raise ValueError(f"Unknown chart_type: {chart_type}")
 
     result["chart_type"] = chart_type
+
+    # Detect outliers and change points
+    from process_intelligence_engine.spc import detect_outliers, detect_change_points
+    outlier_result = detect_outliers(values)
+    change_point_result = detect_change_points(values)
+    result["outlier_indices"] = outlier_result["outlier_indices"]
+    result["change_points"] = change_point_result["change_points"]
+    result["outlier_stats"] = outlier_result["stats"]
+
     return {"success": True, **result}
 
 

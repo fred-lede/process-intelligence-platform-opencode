@@ -615,3 +615,88 @@ def compute_spc_suggestions(result: dict) -> list[dict]:
             })
 
     return suggestions
+
+
+def detect_outliers(
+    values: list[float] | np.ndarray,
+    method: str = "iqr",
+    iqr_factor: float = 1.5,
+    zscore_threshold: float = 3.0,
+) -> dict[str, Any]:
+    """Detect statistical outliers using IQR or Z-score method."""
+    arr = np.asarray(values, dtype=float)
+    if arr.size == 0:
+        raise ValueError("values must not be empty")
+
+    if method == "iqr":
+        q1 = float(np.percentile(arr, 25))
+        q3 = float(np.percentile(arr, 75))
+        iqr = q3 - q1
+        lower = q1 - iqr_factor * iqr
+        upper = q3 + iqr_factor * iqr
+        outlier_mask = (arr < lower) | (arr > upper)
+    elif method == "zscore":
+        mean = float(np.mean(arr))
+        std = float(np.std(arr, ddof=1)) if arr.size > 1 else 0.0
+        if std == 0:
+            return {"outlier_indices": [], "n_outliers": 0, "method": method, "stats": {}}
+        zscores = np.abs((arr - mean) / std)
+        outlier_mask = zscores > zscore_threshold
+    else:
+        raise ValueError(f"Unknown method: {method}")
+
+    outlier_indices = np.where(outlier_mask)[0].tolist()
+    stats: dict[str, Any] = {
+        "mean": round(float(np.mean(arr)), 6),
+        "std": round(float(np.std(arr, ddof=1)), 6) if arr.size > 1 else 0.0,
+    }
+    if method == "iqr":
+        stats.update({
+            "q1": round(q1, 6),
+            "q3": round(q3, 6),
+            "iqr": round(iqr, 6),
+            "lower_fence": round(lower, 6),
+            "upper_fence": round(upper, 6),
+        })
+
+    return {
+        "outlier_indices": outlier_indices,
+        "n_outliers": len(outlier_indices),
+        "method": method,
+        "stats": stats,
+    }
+
+
+def detect_change_points(
+    values: list[float] | np.ndarray,
+    method: str = "cusum",
+    k: float = 0.5,
+    H: float = 5.0,
+) -> dict[str, Any]:
+    """Detect change points using CUSUM statistic."""
+    arr = np.asarray(values, dtype=float)
+    if arr.size < 10:
+        return {"change_points": [], "n_change_points": 0, "method": method}
+
+    mean = float(np.mean(arr))
+    std = float(np.std(arr, ddof=1)) if arr.size > 1 else 0.0
+    if std == 0:
+        return {"change_points": [], "n_change_points": 0, "method": method}
+
+    c_plus = [0.0]
+    c_minus = [0.0]
+    change_points = []
+
+    for i, x in enumerate(arr[1:], start=1):
+        c_plus.append(round(max(0, c_plus[-1] + (x - mean) / std - k), 6))
+        c_minus.append(round(max(0, c_minus[-1] - (x - mean) / std - k), 6))
+        if c_plus[-1] > H or c_minus[-1] > H:
+            change_points.append(i)
+
+    return {
+        "change_points": change_points,
+        "n_change_points": len(change_points),
+        "method": method,
+        "cusum_max_plus": round(c_plus[-1], 6),
+        "cusum_max_minus": round(c_minus[-1], 6),
+    }
