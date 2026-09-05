@@ -1165,12 +1165,6 @@ def _handle_spc_batch_analyze(params: dict) -> dict:
             raise ValueError(f"Batch mode does not support chart_type={chart_type!r} (requires subgrouping)")
         else:
             raise ValueError(f"Unknown chart_type: {chart_type!r}")
-                lsl=lsl,
-                usl=usl,
-            )
-        else:
-            # For xbar-r, xbar-s, skip (require subgroups)
-            continue
 
         result["suggestions"] = compute_spc_suggestions(result)
         results[col] = result
