@@ -1144,6 +1144,7 @@ def _handle_spc_batch_analyze(params: dict) -> dict:
 
         if chart_type == "i-mr":
             result = compute_i_mr(values, lsl=lsl, usl=usl)
+            result["chart_type"] = chart_type
         elif chart_type == "ewma":
             result = compute_ewma(
                 values,
@@ -1157,6 +1158,13 @@ def _handle_spc_batch_analyze(params: dict) -> dict:
                 values,
                 k=params.get("cusum_k", 0.5),
                 H=params.get("cusum_H", 5.0),
+                lsl=lsl,
+                usl=usl,
+            )
+        elif chart_type in ("xbar-r", "xbar-s"):
+            raise ValueError(f"Batch mode does not support chart_type={chart_type!r} (requires subgrouping)")
+        else:
+            raise ValueError(f"Unknown chart_type: {chart_type!r}")
                 lsl=lsl,
                 usl=usl,
             )

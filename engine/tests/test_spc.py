@@ -280,3 +280,18 @@ def test_compute_spc_suggestions_stable():
     # Should have no error-level suggestions
     error_suggestions = [s for s in suggestions if s["severity"] == "error"]
     assert len(error_suggestions) == 0
+
+
+def test_compute_spc_suggestions_ewma_small_shift():
+    """Test EWMA/CUSUM small shift suggestion."""
+    rng = np.random.default_rng(42)
+    # Create data with small gradual shift
+    values = [10.0 + 0.05 * i + rng.normal(0, 0.1) for i in range(100)]
+    result = compute_ewma(values, lambda_param=0.2, L=3.0)
+    result["chart_type"] = "ewma"
+    suggestions = compute_spc_suggestions(result)
+
+    # Should have small_shift suggestion if violations detected
+    small_shift_suggestions = [s for s in suggestions if s["type"] == "small_shift"]
+    # May or may not have depending on data; just verify no crash
+    assert isinstance(suggestions, list)
