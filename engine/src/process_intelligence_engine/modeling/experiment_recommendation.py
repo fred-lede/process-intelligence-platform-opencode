@@ -80,6 +80,7 @@ def recommend_experiments(
             "type": "replicate",
             "priority": "low",
             "factors": [],
+            "settings": [],
             "key": "recReplicate",
         })
 
@@ -89,6 +90,7 @@ def recommend_experiments(
             "type": "new_factor",
             "priority": "low",
             "factors": [],
+            "settings": [],
             "key": "recNewFactor",
         })
 
