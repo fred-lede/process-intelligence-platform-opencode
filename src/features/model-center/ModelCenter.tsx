@@ -81,6 +81,16 @@ export default function ModelCenter() {
   const outputOptions = fields
     .filter((f) => f.role === 'output')
     .map((f) => ({ label: f.originalName, value: f.originalName }))
+  const binaryTargetOptions = importResult
+    ? Object.entries(importResult.stats.column_stats)
+        .filter(([, s]) => s.numeric && s.unique_count <= 10)
+        .map(([name]) => ({ label: name, value: name }))
+    : []
+  const targetOptions = modelType === 'logistic_regression'
+    ? binaryTargetOptions.length > 0
+      ? binaryTargetOptions
+      : outputOptions
+    : outputOptions
 
   useEffect(() => { loadModels() }, [])
 
@@ -280,7 +290,7 @@ export default function ModelCenter() {
                 style={{ width: 240, marginLeft: 8 }}
                 value={target}
                 onChange={setTarget}
-                options={outputOptions}
+                options={targetOptions}
                 placeholder={t('modelCenter.target.placeholder')}
               />
             </div>
