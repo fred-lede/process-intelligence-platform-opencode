@@ -262,6 +262,8 @@ def fit_xgboost(
         selected_inputs = _auto_select_features(
             df, target, inputs, importance_threshold, max_features
         )
+    if not selected_inputs:
+        raise ValueError("at least one input is required")
 
     X = df[selected_inputs].to_numpy(dtype=float)
     y = df[target].to_numpy(dtype=float)
@@ -315,6 +317,8 @@ def fit_lightgbm(
         selected_inputs = _auto_select_features(
             df, target, inputs, importance_threshold, max_features
         )
+    if not selected_inputs:
+        raise ValueError("at least one input is required")
 
     X = df[selected_inputs].to_numpy(dtype=float)
     y = df[target].to_numpy(dtype=float)
