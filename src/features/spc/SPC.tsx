@@ -150,7 +150,7 @@ export default function SPC() {
         data.push({
           x: [xs[0], xs[xs.length - 1]], y: [v, v],
           mode: 'lines', name: ref ? `${name} (ref)` : name,
-          line: { color: '#000000', width: 1.5 },
+          line: { color: '#f5222d', width: 1.5 },
         })
       }
       push(spec?.lsl ?? null, 'LSL')
