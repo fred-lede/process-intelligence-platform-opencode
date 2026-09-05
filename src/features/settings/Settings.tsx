@@ -216,11 +216,11 @@ export default function Settings() {
     setSavingAI(true)
     try {
       // Filter out masked keys before saving — never persist a masked value back
-      const savePayload = { ...aiConfig }
-      if (/^\w{3}\.\.\./.test(savePayload.api_key)) {
+      const savePayload: Record<string, unknown> = { ...aiConfig }
+      if (/^\w{3}\.\.\./.test(String(savePayload.api_key ?? ''))) {
         delete savePayload.api_key
       }
-      const result = await updateSettings(savePayload)
+      const result = await updateSettings(savePayload as Parameters<typeof updateSettings>[0])
       console.log('[Settings] Save result:', result)
       if (result.success) {
         setAiConfig(result.config)
