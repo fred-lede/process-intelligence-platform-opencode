@@ -540,7 +540,7 @@ def fit_weibull_regression(
     # AIC
     aic = float(2 * (n_features + 1) - 2 * result.fun)
     # Median time-to-failure for test set
-    median_ttf = float(lambda_te * (np.log(2) ** (1.0 / k)))
+    median_ttf = float(np.mean(lambda_te * (np.log(2) ** (1.0 / k))))
     coefficients = {
         inputs[i]: float(beta_features[i]) for i in range(n_features)
     }
