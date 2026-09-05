@@ -222,6 +222,7 @@ cd src-tauri && cargo test engine::tests::pings_live_engine
 - **異常整合**: 指定異常 + 自然發生風險模式
 - **聯合機率**: 支援獨立假設 + Copula 相關矩陣模式
 - **NG 機率**: 輸出分布 + 百分位數（P1/P5/P50/P95/P99）
+- **預測能力指數**: 模擬結果呈現 Pp / Ppk（simulation-based，引擎 compute_capability 同源）
 - **風險排名**: 異常貢獻度排序 + 交互作用熱圖
 
 ### Phase 10 — 互動預測 (What-if) ✅

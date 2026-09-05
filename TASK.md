@@ -1,6 +1,33 @@
 # TASK.md
 
 ## Completed
+### Task 3 — 收尾 docs + 最終驗證 + push（MC predicted capability）
+- **Status**: DONE
+- **引擎（commit `bb1b019`）**：`run_monte_carlo` 回傳新增 `capability`（reuse `spc.compute_capability`，`subgroup_size=1` → σ within = overall σ → pp/ppk 整體 σ 語意；spec LSL+USL 未同時設定時 pp/ppk None）；2 新測試 → engine **306 passed, 1 skipped**
+- **前端（commit `27eb722`）**：MonteCarlo 頁「預測能力指數（模擬）」card（Pp/Ppk antd Statistic + σ overall，≥1.33 綠 / ≥1.0 橘 / <1.0 紅 mirror SPC）；AI context `Predicted capability (simulation)` 一行；i18n 三語 +4 keys
+- **驗證**：`npx tsc --noEmit` EXIT 0、`npm run build` 成功、三語 parity `ok`、`git status` 僅含預期 docs（未含 `engine/.coverage`/icons）
+- **Files changed** — `engine/src/process_intelligence_engine/monte_carlo.py`, `engine/tests/test_main_monte_carlo.py`, `src/lib/engine.ts`, `src/features/monte-carlo/MonteCarlo.tsx`, `src/lib/assistantData.ts`, `src/i18n/*.json`（×3）, `PROGRESS.md`, `README.md`, `TASK.md`（docs commit）
+
+### Code review — MC predicted capability 前端（Task 2, commit 27eb722）
+- **Status**: DONE — **APPROVE**（無 Critical/Important；3 Minor 皆 polish，不 blocking）
+- **審查範圍**：`git diff bb1b019..27eb722`（6 files, +52/−4）——MonteCarlo.tsx card+capColor、engine.ts capability field、assistantData.ts context line、i18n 三語 4 keys
+- **驗證重點**：`capColor`（MonteCarlo.tsx:121）+Photo與 SPC `capacityColor`（SPC.tsx:124-129）閾值與 hex 完全一致（≥1.33 綠/≥1.0 橘/<1.0 紅）；card 布局沿用 `Card size="small"`+`Row gutter={16}`+Col 6/6/12；AI context line 格式與 `buildSpcContext`/既有 MC lines 一致（num()、label:value.）；i18n 4 keys 全被引用、僅 3 語系檔案、無孤兒 key；`Statistic` import 有使用；`capability?: SPCCapability | null` 防禦型別（後端可能未填）搭配 UI/context 雙重 null-guard，安全
+- **Minor（non-blocking）**：(1) UI guard 要求 `pp/ppk/sigma_overall` 三值皆非空，但 context guard 只檢查 pp/ppk——sigma_overall=null 時 UI 藏卡而 context 輸出 `sigma_overall=N/A`（num() 已防，無害，建議對齊）；(2) `sigma_overall.toFixed(3)` vs Statistic `precision={2}` 與兄弟 cell `.toFixed(2)` 精度不一致（可能刻意）；(3) 新 card 用 left-aligned `Statistic` vs 上方 centered `Typography.Title` cells（接近 SPC Process Capability card 表達，可接受）
+- **Files reviewed** — commit `27eb722`（src/lib/engine.ts, src/features/monte-carlo/MonteCarlo.tsx, src/lib/assistantData.ts, src/i18n/{en,zh-TW,es-MX}.json）
+
+### Task 2 — MC predicted capability 前端（card + AI context + i18n）
+- **Status**: DONE
+- **實作**：`engine.ts` `MonteCarloResult` 新增 `capability?: SPCCapability | null`；`MonteCarlo.tsx` 加入 `Statistic` import、`capColor` helper（≥1.33 綠 / ≥1.0 橘 / <1.0 紅）、percentiles 與 outputDistribution 間插入 Predicted Capability card（Pp/Ppk Statistic + σ overall，guard 多含 `sigma_overall != null`——plan snippet 遺漏致 tsc 出錯，已延伸條件）；`assistantData.ts` `buildMonteCarloContext` 於 anomaly block 後補 predicted capability 一行；三語 i18n 新增 4 keys（monteCarlo 由 30→34）
+- **驗證**：三語 parity `ok count: 34`；`npx tsc --noEmit` EXIT 0（初版 1 error TS18047 sigma_overall nullable → guard 修復）；`npm run build` `✓ built in 10.78s`（chunk 警示既存）
+- **Files changed（commit 27eb722）** — `src/lib/engine.ts`, `src/features/monte-carlo/MonteCarlo.tsx`, `src/lib/assistantData.ts`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`（未 commit `engine/.coverage`/icons；TASK.md 於此紀錄）
+
+### Code review (2nd independent pass) — MC predicted capability (Task 1 of plan 2026-09-05-monte-carlo-predicted-capability, commit bb1b019)
+- **Status**: DONE — **APPROVE**（1st entry: spec compliant；2nd pass 獨立驗證確認，無 Critical/Important）
+- **Verified**：diff = 2 files, +43 lines（1 import + 1 dict entry + 2 tests）；`test_main_monte_carlo.py` **11 passed**；`compute_capability` with `subgroup_size=1` → `sigma_within = overall_std`（spc.py:54-57）→ pp/ppk 用 overall σ，語意正確；無 circular import（spc.py 僅 import stdlib+numpy，monte_carlo→spc 單向）；**rel tolerance 實測 justified**——rounding 6dp 造成的 relative error 僅 ~1e-8（pp）/ ~6e-9（sigma）/ ~1e-7（ppk），遠低於 rel=1e-5（約 1000× margin）
+- **Minor（non-blocking）**：(1) `capability.mean`/`sigma_overall` 被 6dp round 而 `output_mean`/`output_std` 為全精度，同畫面並排可能顯示不一致（實測 134.53323 vs 134.5332300402011）；(2) `compute_capability` 內部重算 mean/std（重複既有 output_mean/output_std，成本可忽略）；(3) one-sided spec（只有 lsl 或只有 usl）→ pp/ppk 靜默 None（spc.py:72,80 既有行為，非本 commit 引入）無測試涵蓋；(4) n_simulations=0 時 compute_capability raise ValueError——但 `_compute_boxplot` 在改動前對 empty 已會 raise，非新失敗模式（n=1 有 guard，overall_std=0 → pp/ppk None，safe）
+- **備註**：`engine/.coverage`（unstaged）與 `src-tauri/icons/`（untracked）未入 commit
+- **Files reviewed** — `engine/tests/test_main_monte_carlo.py`, `engine/src/process_intelligence_engine/monte_carlo.py`, `engine/src/process_intelligence_engine/spc.py`, commit `bb1b019`
+
 ### i-mr 補畫 MR 子圖（user 要求）
 - **Status**: DONE
 - **實作**：`SPC.tsx` i-mr 分支 violations 後新增 MR 子圖——紫 `#722ed1` lines+markers、`yaxis='y2'`、x 對齊 `i+1`；MR UCL（橘 dash）+ MR CL（綠 dash）條件式畫入（mirror R/S）；`plotLayout.yaxis2` 改為一律建立（移除非 i-mr 限制）。README 已宣稱 I-MR 故無需改

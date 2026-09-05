@@ -588,3 +588,10 @@
 - [x] **修法**：`engine.ts` `analyzeSPC` 內新增 `flattenControlLimits(res)`——依 `chart_type` 把巢狀 group（`x`→i-mr 時 `i_*`、否則 `x_*`；`mr`/`r`/`s`→對應 prefix）攤平為 `*_ucl/*_lcl/*_center`，`chart_type` 一併帶上；單一 choke point，SPC.tsx 與 assistantData.ts 同時修好。無引擎/i18n/測試變更。
 - [x] **side note**：i-mr 目前**只畫 Individuals 圖**（`yaxis2` 僅在非 i-mr 建立，SPC.tsx:254-256），MR 落點資料有計算但未 render——獨立於本次的既有範圍缺口，待 user 決定是否補。
 - [x] **補 i-mr MR 子圖（user 要求）**：SPC.tsx i-mr 分支於 violations 後新增 MR 子圖——紫色 `#722ed1` lines+markers、`yaxis:'y2'`、x 對齊 `i+1`（mr[k] 對應點 k vs k-1 間距）；MR UCL（橘 dash）+ MR CL（綠 dash）條件式畫入（mirror R/S）；`plotLayout.yaxis2` 改為**一律建立**（不再限定非 i-mr）。驗證：`npx tsc --noEmit` clean、`npm run build` 成功。README Phase 8「控制圖」一列提及 i-mr 含 MR 子圖（I-MR 原本就如此宣稱，實作到位）。
+
+## 2026-09-05 — 蒙地卡羅預測能力指數（Pp/Ppk, simulation-based）
+
+- [x] **引擎（commit `bb1b019`）**：`run_monte_carlo` 回傳新增 `capability`——reuse `spc.compute_capability`，`subgroup_size=1` → σ within = overall σ → pp/ppk 為**整體 σ 語意**（simulation-based predicted capability）；spec 未**同時**設定 LSL+USL 時 pp/ppk 回傳 None（`compute_capability` 既有行為）；新增 2 測試（`test_main_monte_carlo.py` 11 passed）
+- [x] **前端（commit `27eb722`）**：MonteCarlo 頁新增「預測能力指數（模擬）」card——Pp/Ppk antd `Statistic` + σ overall 註記，色彩閾值 ≥1.33 綠 / ≥1.0 橘 / <1.0 紅（mirror SPC `capacityColor`）；AI 助手 context 新增 `Predicted capability (simulation)` 一行；i18n 三語 `monteCarlo` +4 keys（30→34）
+- [x] **驗證**：引擎 **306 passed, 1 skipped**（2 新測試 RED→GREEN）；`npx tsc --noEmit` clean；`npm run build` 成功；三語 i18n parity `ok`；spec reviewer APPROVE（capColor 閾值/hex 與 SPC 完全一致、`capability?: SPCCapability | null` 防禦型別 + 雙重 null-guard、rel tolerance 實測 justified）
+- **Commits**：`bb1b019`（feat(engine): monte carlo predicted capability via compute_capability）/ `27eb722`（feat(monte-carlo): predicted capability card, AI context, i18n）
