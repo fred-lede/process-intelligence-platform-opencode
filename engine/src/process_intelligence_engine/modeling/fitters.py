@@ -28,6 +28,24 @@ from .metrics import (
     adjusted_r2,
 )
 
+
+def _auto_select_features(
+    df: pd.DataFrame,
+    target: str,
+    candidate_inputs: list[str],
+    importance_threshold: float = 0.01,
+    max_features: int = 5,
+) -> list[str]:
+    """Train a quick RF to rank features, return top-K with importance >= threshold."""
+    X = df[candidate_inputs].to_numpy(dtype=float)
+    y = df[target].to_numpy(dtype=float)
+    rf = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=1)
+    rf.fit(X, y)
+    importances = rf.feature_importances_
+    ranked = sorted(zip(candidate_inputs, importances), key=lambda x: -x[1])
+    selected = [name for name, imp in ranked if imp >= importance_threshold]
+    return selected[:max_features]
+
 MODEL_TYPES = {
     "doe_linear": "doe_linear",
     "doe_quadratic": "doe_quadratic",
@@ -58,6 +76,7 @@ class ModelFit:
     version: int = 1
     direction: str | None = None
     model: Any = None
+    selected_inputs: list[str] | None = None
 
     def to_dto(self) -> dict:
         return {
@@ -65,6 +84,7 @@ class ModelFit:
             "model_type": self.model_type,
             "target": self.target,
             "inputs": list(self.inputs),
+            "selected_inputs": list(self.selected_inputs) if self.selected_inputs is not None else list(self.inputs),
             "status": self.status,
             "created_at": self.created_at,
             "version": self.version,
@@ -166,13 +186,21 @@ def fit_random_forest(
     inputs: list[str],
     test_size: float = 0.3,
     random_state: int | None = None,
-    n_estimators: int = 100,
+    n_estimators: int = 200,
     max_depth: int | None = 10,
-    min_samples_leaf: int = 5,
+    min_samples_leaf: int = 3,
+    auto_select_features: bool = False,
+    importance_threshold: float = 0.01,
+    max_features: int = 5,
 ) -> ModelFit:
-    if not inputs:
+    selected_inputs = inputs
+    if auto_select_features and len(inputs) > 1:
+        selected_inputs = _auto_select_features(
+            df, target, inputs, importance_threshold, max_features
+        )
+    if not selected_inputs:
         raise ValueError("at least one input is required")
-    X = df[inputs].to_numpy(dtype=float)
+    X = df[selected_inputs].to_numpy(dtype=float)
     y = df[target].to_numpy(dtype=float)
     X_tr, X_te, y_tr, y_te = _train_test(X, y, test_size, random_state)
     rf = RandomForestRegressor(
@@ -188,9 +216,10 @@ def fit_random_forest(
         model_type="random_forest",
         target=target,
         inputs=list(inputs),
-        metrics=_compute_all_metrics(y_te, y_pred, len(inputs)),
+        selected_inputs=list(selected_inputs),
+        metrics=_compute_all_metrics(y_te, y_pred, len(selected_inputs)),
         coefficients=None,
-        equation=f"RandomForest(y, {inputs})",
+        equation=f"RandomForest(y, {selected_inputs})",
         n_train=len(X_tr),
         n_test=len(X_te),
         created_at=_now(),

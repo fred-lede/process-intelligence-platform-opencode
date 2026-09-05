@@ -81,3 +81,27 @@ def test_fit_dto_is_json_serializable():
     fit = fit_doe_linear(df, target="y", inputs=["x1", "x2"])
     payload = json.dumps(fit.to_dto())
     assert payload
+
+
+def test_fit_random_forest_auto_select_features():
+    """Test auto feature selection returns fewer features when some are noise."""
+    rng = np.random.default_rng(42)
+    n = 200
+    x1 = rng.uniform(0, 1, n)
+    x2 = rng.uniform(0, 1, n)
+    noise = rng.uniform(0, 1, n)
+    y = 2.0 + 3.0 * x1 - 4.0 * x2 + rng.normal(0, 0.01, n)
+    df = pd.DataFrame({"x1": x1, "x2": x2, "noise": noise, "y": y})
+
+    fit = fit_random_forest(df, target="y", inputs=["x1", "x2", "noise"], auto_select_features=True)
+    assert fit.selected_inputs is not None
+    assert len(fit.selected_inputs) <= 2
+    assert "noise" not in fit.selected_inputs
+
+
+def test_fit_random_forest_hyperparameters():
+    """Test hyperparameter exposure."""
+    df = _simple_df(n=200)
+    fit = fit_random_forest(df, target="y", inputs=["x1", "x2"], n_estimators=50, max_depth=5)
+    assert fit.model is not None
+    assert fit.metrics["r2"] > 0.5

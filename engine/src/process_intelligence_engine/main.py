@@ -526,7 +526,26 @@ def _handle_modeling_fit(params: dict) -> dict:
     fitter = MODEL_FITTERS.get(model_type)
     if fitter is None:
         raise ValueError(f"Unknown model_type: {model_type}")
-    fit = fitter(df, target=target, inputs=inputs)
+
+    # Extract hyperparameters (pass-through for tree models)
+    hyperparams: dict = {}
+    if model_type == "random_forest":
+        hyperparams = {
+            "n_estimators": params.get("n_estimators"),
+            "max_depth": params.get("max_depth"),
+            "min_samples_leaf": params.get("min_samples_leaf"),
+            "auto_select_features": params.get("auto_select_features", False),
+            "importance_threshold": params.get("importance_threshold", 0.01),
+            "max_features": params.get("max_features", 5),
+        }
+        hyperparams = {k: v for k, v in hyperparams.items() if v is not None}
+    else:
+        # Pass common params that all fitters accept
+        for key in ("test_size", "random_state"):
+            if key in params:
+                hyperparams[key] = params[key]
+
+    fit = fitter(df, target=target, inputs=inputs, **hyperparams)
     MODEL_REGISTRY.register(fit)
     return fit.to_dto()
 
