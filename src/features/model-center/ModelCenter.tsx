@@ -86,7 +86,17 @@ export default function ModelCenter() {
 
   const handleFit = async () => {
     if (!datasetId || !target || selectedInputs.length === 0) return
-    const params: any = {
+    const params: {
+      dataset_id: string
+      model_type: ModelType
+      target: string
+      inputs: string[]
+      n_estimators?: number
+      max_depth?: number
+      min_samples_leaf?: number
+      learning_rate?: number
+      auto_select_features?: boolean
+    } = {
       dataset_id: datasetId,
       model_type: modelType,
       target,
@@ -103,6 +113,7 @@ export default function ModelCenter() {
     if (result) {
       if (result.selected_inputs && result.selected_inputs.length < selectedInputs.length) {
         setSelectedInputs(result.selected_inputs)
+        messageApi.info(t('modelCenter.featureSelected', { count: result.selected_inputs.length }))
       }
       messageApi.success(t('modelCenter.fitSuccess'))
     }
