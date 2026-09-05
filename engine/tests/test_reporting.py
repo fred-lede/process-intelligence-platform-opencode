@@ -145,3 +145,48 @@ def test_excel_report_has_multiple_sheets():
     generator = ExcelReportGenerator(data)
     excel_bytes = generator.generate()
     assert len(excel_bytes) > 0
+
+
+def test_control_chart_svg():
+    """Test I-MR control chart SVG generation."""
+    from process_intelligence_engine.reporting.charting import control_chart_svg
+    svg = control_chart_svg(
+        x_values=[10.0, 11.0, 9.0, 10.5, 11.2],
+        mr_values=[None, 1.0, 2.0, 1.5, 0.7],
+        x_ucl=12.0, x_lcl=8.0, x_cl=10.0,
+        mr_ucl=3.0, mr_cl=1.2,
+    )
+    assert "<svg" in svg
+    assert "I-MR" in svg
+    assert "UCL" in svg
+    assert "LCL" in svg
+
+
+def test_render_spc_section():
+    """Test SPC section rendering in HTML report."""
+    from process_intelligence_engine.reporting.html import HTMLReportGenerator
+    from process_intelligence_engine.reporting.models import ReportData
+    from datetime import datetime
+
+    data = ReportData(
+        project_name="Test",
+        operator="Test",
+        created_at=datetime.now(),
+        row_count=100,
+        column_count=3,
+        spc_results=[{
+            "column": "thickness",
+            "x_values": [10.0, 11.0, 9.0, 10.5],
+            "mr_values": [None, 1.0, 2.0, 1.5],
+            "x_ucl": 12.0, "x_lcl": 8.0, "x_mean": 10.0,
+            "mr_ucl": 3.0, "mr_mean": 1.2,
+            "violations": 0,
+            "capability": {"cp": 1.5, "cpk": 1.2, "pp": 1.4, "ppk": 1.1},
+            "suggestions": [{"severity": "warning", "type": "marginal", "message": "Test suggestion"}],
+        }],
+    )
+    gen = HTMLReportGenerator(data)
+    html = gen.generate()
+    assert "SPC: thickness" in html
+    assert "<svg" in html
+    assert "1.5" in html  # Cp value

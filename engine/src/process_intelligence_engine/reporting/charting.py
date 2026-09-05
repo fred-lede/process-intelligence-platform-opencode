@@ -210,3 +210,99 @@ def heatmap_svg(
         f'{title_svg}{"".join(cells)}'
         f'</svg>'
     )
+
+
+def control_chart_svg(
+    x_values: Sequence[float],
+    mr_values: Sequence[float | None],
+    x_ucl: float,
+    x_lcl: float,
+    x_cl: float,
+    mr_ucl: float,
+    mr_cl: float,
+    title: str = "I-MR Control Chart",
+) -> str:
+    """Render I-MR control chart as inline SVG for reports."""
+    n = len(x_values)
+    if n == 0:
+        return ""
+
+    # Compute y ranges
+    all_y = [v for v in x_values if v is not None] + [x_ucl, x_lcl, x_cl, mr_ucl, mr_cl]
+    y_min = min(all_y)
+    y_max = max(all_y)
+    y_pad = (y_max - y_min) * 0.1 or 1
+    y_min -= y_pad
+    y_max += y_pad
+
+    def sx(i: float) -> float:
+        return _PLOT_LEFT + (i / max(n - 1, 1)) * (_WIDTH - _PLOT_LEFT - _PLOT_RIGHT)
+
+    def sy_top(y: float) -> float:
+        return _PLOT_TOP + (1 - (y - y_min) / (y_max - y_min)) * 160
+
+    def sy_bottom(y: float) -> float:
+        return 220 + (1 - (y - y_min) / (y_max - y_min)) * 140
+
+    elems: list[str] = []
+
+    # Title
+    elems.append(f'<text x="320" y="10" text-anchor="middle" font-size="12" font-weight="bold">{_e(title)}</text>')
+
+    # Top chart border
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="180" x2="{_WIDTH - _PLOT_RIGHT}" y2="180" stroke="#ccc" stroke-width="0.5"/>')
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="20" x2="{_PLOT_LEFT}" y2="180" stroke="#ccc" stroke-width="0.5"/>')
+
+    # CL, UCL, LCL lines (top chart)
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="{sy_top(x_cl):.1f}" x2="{_WIDTH - _PLOT_RIGHT}" y2="{sy_top(x_cl):.1f}" stroke="#52c41a" stroke-width="1" stroke-dasharray="4,2"/>')
+    elems.append(f'<text x="{_WIDTH - _PLOT_RIGHT + 2}" y="{sy_top(x_cl):.1f}-3" font-size="8" fill="#52c41a">CL</text>')
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="{sy_top(x_ucl):.1f}" x2="{_WIDTH - _PLOT_RIGHT}" y2="{sy_top(x_ucl):.1f}" stroke="#fa8c16" stroke-width="1" stroke-dasharray="4,2"/>')
+    elems.append(f'<text x="{_WIDTH - _PLOT_RIGHT + 2}" y="{sy_top(x_ucl):.1f}-3" font-size="8" fill="#fa8c16">UCL</text>')
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="{sy_top(x_lcl):.1f}" x2="{_WIDTH - _PLOT_RIGHT}" y2="{sy_top(x_lcl):.1f}" stroke="#fa8c16" stroke-width="1" stroke-dasharray="4,2"/>')
+    elems.append(f'<text x="{_WIDTH - _PLOT_RIGHT + 2}" y="{sy_top(x_lcl):.1f}+8" font-size="8" fill="#fa8c16">LCL</text>')
+
+    # Data line + markers (top chart)
+    points = []
+    for i, v in enumerate(x_values):
+        if v is None:
+            continue
+        x = sx(float(i))
+        y = sy_top(v)
+        points.append(f"{x:.1f},{y:.1f}")
+    if len(points) > 1:
+        elems.append(f'<polyline points="{" ".join(points)}" fill="none" stroke="#1677ff" stroke-width="1.5"/>')
+    for i, v in enumerate(x_values):
+        if v is None:
+            continue
+        x = sx(float(i))
+        y = sy_top(v)
+        color = "#ff4d4f" if v > x_ucl or v < x_lcl else "#1677ff"
+        elems.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2" fill="{color}"/>')
+
+    # Bottom chart border
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="360" x2="{_WIDTH - _PLOT_RIGHT}" y2="360" stroke="#ccc" stroke-width="0.5"/>')
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="220" x2="{_PLOT_LEFT}" y2="360" stroke="#ccc" stroke-width="0.5"/>')
+
+    # MR chart lines
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="{sy_bottom(mr_cl):.1f}" x2="{_WIDTH - _PLOT_RIGHT}" y2="{sy_bottom(mr_cl):.1f}" stroke="#52c41a" stroke-width="1" stroke-dasharray="4,2"/>')
+    elems.append(f'<line x1="{_PLOT_LEFT}" y1="{sy_bottom(mr_ucl):.1f}" x2="{_WIDTH - _PLOT_RIGHT}" y2="{sy_bottom(mr_ucl):.1f}" stroke="#fa8c16" stroke-width="1" stroke-dasharray="4,2"/>')
+
+    mr_points = []
+    for i, v in enumerate(mr_values):
+        if v is None:
+            continue
+        x = sx(float(i))
+        y = sy_bottom(v)
+        mr_points.append(f"{x:.1f},{y:.1f}")
+    if len(mr_points) > 1:
+        elems.append(f'<polyline points="{" ".join(mr_points)}" fill="none" stroke="#722ed1" stroke-width="1.5"/>')
+    for i, v in enumerate(mr_values):
+        if v is None:
+            continue
+        x = sx(float(i))
+        y = sy_bottom(v)
+        color = "#ff4d4f" if v > mr_ucl else "#722ed1"
+        elems.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2" fill="{color}"/>')
+
+    svg = f'<svg viewBox="0 0 {_WIDTH} 400" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:640px;">{"".join(elems)}</svg>'
+    return svg

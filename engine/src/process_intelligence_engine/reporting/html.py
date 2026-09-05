@@ -6,7 +6,7 @@ from typing import Any
 
 from .base import ReportGenerator
 from .models import ReportData
-from .charting import histogram_svg, heatmap_svg
+from .charting import histogram_svg, heatmap_svg, control_chart_svg
 
 SEVERITY_BADGE = {
     "critical": "badge-danger",
@@ -280,6 +280,55 @@ class HTMLReportGenerator(ReportGenerator):
             body += "</table>"
         return self._section("蒙地卡羅風險分析", body)
 
+    def _render_spc(self) -> str:
+        spc_results = self.data.spc_results or []
+        if not spc_results:
+            return ""
+
+        parts = []
+        for r in spc_results:
+            body = f"<h3>{self._e(r.get('column', 'Unknown'))}</h3>"
+
+            # Control chart SVG
+            if r.get('x_values') and r.get('mr_values'):
+                svg = control_chart_svg(
+                    x_values=r['x_values'],
+                    mr_values=r['mr_values'],
+                    x_ucl=r.get('x_ucl', 0),
+                    x_lcl=r.get('x_lcl', 0),
+                    x_cl=r.get('x_mean', 0),
+                    mr_ucl=r.get('mr_ucl', 0),
+                    mr_cl=r.get('mr_mean', 0),
+                    title=f"{r.get('column', 'Column')} I-MR Chart",
+                )
+                body += f"<div style='margin:10px 0;'>{svg}</div>"
+
+            # Capability table
+            cap = r.get('capability') or {}
+            if cap:
+                body += "<table border='1' cellpadding='5' style='border-collapse:collapse;margin:10px 0;'>"
+                body += "<tr><th>Cp</th><th>Cpk</th><th>Pp</th><th>Ppk</th></tr>"
+                body += f"<tr><td>{self._fmt(cap.get('cp'))}</td><td>{self._fmt(cap.get('cpk'))}</td>"
+                body += f"<td>{self._fmt(cap.get('pp'))}</td><td>{self._fmt(cap.get('ppk'))}</td></tr>"
+                body += "</table>"
+
+            # Violations
+            violations = r.get('violations', 0)
+            body += f"<p><strong>Violations:</strong> {violations}</p>"
+
+            # Suggestions
+            suggestions = r.get('suggestions') or []
+            if suggestions:
+                body += "<h4>Optimization Suggestions</h4><ul>"
+                for s in suggestions:
+                    color = 'red' if s.get('severity') == 'error' else 'orange'
+                    body += f"<li style='color:{color}'>{self._e(s.get('message', ''))}</li>"
+                body += "</ul>"
+
+            parts.append(self._section(f"SPC: {r.get('column', 'Unknown')}", body))
+
+        return "\n".join(parts)
+
     def _render_credibility(self) -> str:
         c = self.data.credibility
         if not c:
@@ -341,6 +390,7 @@ class HTMLReportGenerator(ReportGenerator):
             self._render_best_model(),
             self._render_interactions(),
             self._render_monte_carlo(),
+            self._render_spc(),
             self._render_credibility(),
             self._render_recommendations(),
         ]

@@ -46,7 +46,10 @@ class ReportData:
     # Recommendations + proposed process window
     recommendations: list[dict] = field(default_factory=list)
     process_window: dict[str, Any] = field(default_factory=dict)
-    
+
+    # SPC analysis
+    spc_results: list[dict] = field(default_factory=list)
+
     # Metadata
     version: str = "1.0.0"
     language: str = "en"
