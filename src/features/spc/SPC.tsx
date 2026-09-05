@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Form, Input, Typography, Table, Tag } from 'antd'
-import { ApartmentOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
+import NodeSourceFilter from '../../components/NodeSourceFilter'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { analyzeSPC, getFlowGraph, type SPCAnalysisResult } from '../../lib/engine'
@@ -244,60 +244,22 @@ export default function SPC() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Card title={t('spc.title')}>
-        {sourcedFromNode && (
-          <Space wrap style={{ marginBottom: 12 }}>
-            <Tag color="blue" icon={<ApartmentOutlined />}>
-              {t('spc.sourceFromNode', { name: sourcedFromNode.displayName })}
-            </Tag>
-          </Space>
-        )}
-        {sourcedFromNode &&
-          !dataSourceLoaded(sourcedFromNode.dataSourceIds, importResult?.dataset_id) && (
-            <Alert
-              type="warning"
-              message={t('spc.dataSourceNotLoaded')}
-              showIcon
-              style={{ marginBottom: 12 }}
-            />
-          )}
+        <NodeSourceFilter
+          section="spc"
+          sourcedFromNode={sourcedFromNode}
+          dataLoaded={dataSourceLoaded(sourcedFromNode?.dataSourceIds, importResult?.dataset_id)}
+          columns={Object.keys(importResult?.stats.column_stats ?? {})}
+          filterColumn={nodeFilterColumn}
+          setFilterColumn={setNodeFilterColumn}
+          filterValue={nodeFilterValue}
+          setFilterValue={setNodeFilterValue}
+          clearFilter={() => {
+            setNodeFilterColumn(undefined)
+            setNodeFilterValue(undefined)
+          }}
+          valuePlaceholder={t('spc.sameSourceHint')}
+        />
         <Space wrap style={{ marginBottom: 12 }}>
-          {sourcedFromNode &&
-            dataSourceLoaded(sourcedFromNode.dataSourceIds, importResult?.dataset_id) && (
-              <>
-                <Form.Item label={t('spc.filterByNode')} style={{ margin: 0 }}>
-                  <Select
-                    value={nodeFilterColumn}
-                    onChange={val => {
-                      setNodeFilterColumn(val)
-                      setNodeFilterValue(undefined)
-                    }}
-                    options={Object.keys(importResult?.stats.column_stats ?? {}).map(name => ({
-                      value: name,
-                      label: name,
-                    }))}
-                    allowClear
-                    placeholder={t('spc.filterByNode')}
-                    style={{ width: 160 }}
-                  />
-                </Form.Item>
-                <Input
-                  value={nodeFilterValue}
-                  onChange={e => setNodeFilterValue(e.target.value)}
-                  disabled={!nodeFilterColumn}
-                  placeholder={t('spc.sameSourceHint')}
-                  style={{ width: 180 }}
-                />
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setNodeFilterColumn(undefined)
-                    setNodeFilterValue(undefined)
-                  }}
-                >
-                  {t('spc.nodeFilterCleared')}
-                </Button>
-              </>
-            )}
           <Form.Item label={t('spc.chartType')} style={{ margin: 0 }}>
             <Select
               value={chartType}

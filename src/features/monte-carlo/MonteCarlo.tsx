@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Select, Space, Button, Alert, Form, Input, Switch, Typography, Table, Tag, Row, Col } from 'antd'
-import { ApartmentOutlined } from '@ant-design/icons'
 import Plot from 'react-plotly.js'
+import NodeSourceFilter from '../../components/NodeSourceFilter'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { analyzeMonteCarlo, getFlowGraph, listModels, type MonteCarloResult } from '../../lib/engine'
@@ -121,56 +121,21 @@ export default function MonteCarlo() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <Card title={t('monteCarlo.title')}>
-        {sourcedFromNode && (
-          <Space wrap style={{ marginBottom: 12 }}>
-            <Tag color="blue" icon={<ApartmentOutlined />}>
-              {t('monteCarlo.sourceFromNode', { name: sourcedFromNode.displayName })}
-            </Tag>
-          </Space>
-        )}
-        {sourcedFromNode &&
-          !dataSourceLoaded(sourcedFromNode.dataSourceIds, importResult?.dataset_id) && (
-            <Alert
-              type="warning"
-              message={t('monteCarlo.dataSourceNotLoaded')}
-              showIcon
-              style={{ marginBottom: 12 }}
-            />
-          )}
+        <NodeSourceFilter
+          section="monteCarlo"
+          sourcedFromNode={sourcedFromNode}
+          dataLoaded={dataSourceLoaded(sourcedFromNode?.dataSourceIds, importResult?.dataset_id)}
+          columns={importResult?.columns ?? []}
+          filterColumn={nodeFilterColumn}
+          setFilterColumn={setNodeFilterColumn}
+          filterValue={nodeFilterValue}
+          setFilterValue={setNodeFilterValue}
+          clearFilter={() => {
+            setNodeFilterColumn(undefined)
+            setNodeFilterValue(undefined)
+          }}
+        />
         <Space wrap style={{ marginBottom: 12 }}>
-          {sourcedFromNode &&
-            dataSourceLoaded(sourcedFromNode.dataSourceIds, importResult?.dataset_id) && (
-              <>
-                <Form.Item label={t('monteCarlo.filterByNode')} style={{ margin: 0 }}>
-                  <Select
-                    value={nodeFilterColumn}
-                    onChange={val => {
-                      setNodeFilterColumn(val)
-                      setNodeFilterValue(undefined)
-                    }}
-                    options={(importResult?.columns ?? []).map(name => ({ value: name, label: name }))}
-                    allowClear
-                    placeholder={t('monteCarlo.filterByNode')}
-                    style={{ width: 160 }}
-                  />
-                </Form.Item>
-                <Input
-                  value={nodeFilterValue}
-                  onChange={e => setNodeFilterValue(e.target.value)}
-                  disabled={!nodeFilterColumn}
-                  style={{ width: 180 }}
-                />
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setNodeFilterColumn(undefined)
-                    setNodeFilterValue(undefined)
-                  }}
-                >
-                  {t('monteCarlo.nodeFilterCleared')}
-                </Button>
-              </>
-            )}
           <Form.Item label={t('monteCarlo.selectModel')} style={{ margin: 0 }}>
             <Select
               value={selectedModel}
