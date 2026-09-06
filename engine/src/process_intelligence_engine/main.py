@@ -163,8 +163,9 @@ REGISTRY = DatasetRegistry()
 MODEL_REGISTRY = ModelRegistry()
 AUTH_MANAGER = AuthManager()
 PROJECT_ENGINE = ProjectEngine()
-_VERSION_CHAIN = VersionChain("/tmp/default-project", "anonymous")
-GATE_MANAGER = GateManager()
+_PROJECT_ROOT = "/tmp/default-project"
+_VERSION_CHAIN = VersionChain(_PROJECT_ROOT, "anonymous")
+GATE_MANAGER = GateManager(project_root=_PROJECT_ROOT, project_id="default")
 
 
 class ExperimentRecord:
@@ -949,6 +950,34 @@ def _handle_report_generate(params: dict) -> dict:
     except Exception:
         pass
 
+    # Evidence chain data for report
+    chain_summary = _VERSION_CHAIN.get_chain_summary()
+    dataset_trace = {}
+    for entry in chain_summary:
+        if entry["entity_type"] == "dataset":
+            try:
+                dataset_trace = _VERSION_CHAIN.get_trace(entry["entity_id"])
+                break
+            except KeyError:
+                pass
+    chain_trace = {"steps": [
+        {"step": e["entity_type"], "entity_id": e["entity_id"],
+         "operator": e["created_by"], "timestamp": e["created_at"],
+         "status": e["evidence_status"]}
+        for e in chain_summary
+    ], "dataset": dataset_trace}
+    gate_summary = GATE_MANAGER.get_summary()
+    unconfirmed_items = [m for m, s in gate_summary.items() if s != "confirmed"]
+    report_claims: dict = {"claims": []}
+    for entry in chain_summary:
+        try:
+            entity_id = entry["entity_id"]
+            claims = _VERSION_CHAIN.get_claims(entity_id)
+            if claims:
+                report_claims["claims"].extend(claims)
+        except KeyError:
+            pass
+
     report_data = ReportData(
         project_name=project_name,
         operator=operator,
@@ -970,6 +999,12 @@ def _handle_report_generate(params: dict) -> dict:
         recommendations=recommendations,
         process_window=process_window,
         spc_results=spc_results,
+        chain_trace=chain_trace,
+        gate_summary=gate_summary,
+        approval_record=report_claims,
+        unconfirmed_items=unconfirmed_items,
+        extrapolation_summary={},
+        version_chain_summary=chain_summary,
     )
 
     REPORT_REGISTRY.register(

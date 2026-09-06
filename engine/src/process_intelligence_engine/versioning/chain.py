@@ -55,7 +55,12 @@ class ClaimRecord:
 
 
 class VersionChain:
-    """Central version chain manager with JSONL persistence."""
+    """Central version chain manager with JSONL persistence.
+
+    Entities, links and claims are append-only event log records.
+    _version_counters are persisted separately so app restarts preserve
+    monotonic sequence numbers.
+    """
 
     SCHEMA_VERSION = "1.0.0"
     PREFIX_MAP = {
@@ -84,6 +89,31 @@ class VersionChain:
     def _compute_hash(self, data: dict) -> str:
         raw = json.dumps(data, sort_keys=True, default=str).encode()
         return hashlib.sha256(raw).hexdigest()[:16]
+
+    def _entities_path(self) -> Path:
+        return self._project_root / "registry" / "version_chain.jsonl"
+
+    def _links_path(self) -> Path:
+        return self._project_root / "registry" / "links.jsonl"
+
+    def _claims_path(self) -> Path:
+        return self._project_root / "registry" / "claims.jsonl"
+
+    def _counters_path(self) -> Path:
+        return self._project_root / "registry" / "version_counters.json"
+
+    def _persist_counters(self) -> None:
+        path = self._counters_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(self._version_counters))
+
+    def _load_counters(self) -> None:
+        path = self._counters_path()
+        if path.exists():
+            try:
+                self._version_counters = json.loads(path.read_text())
+            except (json.JSONDecodeError, OSError):
+                self._version_counters = {}
 
     def register_entity(
         self,
@@ -117,6 +147,11 @@ class VersionChain:
                 evidence_status="unverified",
             )
             self._entities[entity_id] = record
+            path = self._entities_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "a") as f:
+                f.write(json.dumps(asdict(record), default=str) + "\n")
+            self._persist_counters()
             return entity_id
 
     def get_entity(self, entity_id: str) -> EntityRecord:
@@ -145,6 +180,10 @@ class VersionChain:
             created_at=datetime.now(timezone.utc).isoformat(),
         )
         self._links.append(link)
+        path = self._links_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a") as f:
+            f.write(json.dumps(asdict(link), default=str) + "\n")
 
     def add_claim(
         self,
@@ -169,6 +208,12 @@ class VersionChain:
             valid_range=None,
         )
         self._claims.setdefault(entity_id, []).append(claim)
+        path = self._claims_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a") as f:
+            record = asdict(claim)
+            record["entity_id"] = entity_id
+            f.write(json.dumps(record, default=str) + "\n")
         return claim_id
 
     def get_claims(self, entity_id: str) -> list[dict]:
@@ -218,11 +263,17 @@ class VersionChain:
         return result
 
     def save(self) -> None:
+        """Persist full in-memory state (used at shutdown or on-demand).
+
+        Replaces all JSONL files with the current in-memory snapshot.
+        Normal operation relies on append-only writes per mutation.
+        """
         self._project_root.mkdir(parents=True, exist_ok=True)
-        entities_path = self._project_root / "registry" / "version_chain.jsonl"
-        links_path = self._project_root / "registry" / "links.jsonl"
-        claims_path = self._project_root / "registry" / "claims.jsonl"
-        entities_path.parent.mkdir(parents=True, exist_ok=True)
+        entities_path = self._entities_path()
+        links_path = self._links_path()
+        claims_path = self._claims_path()
+        for path in (entities_path, links_path, claims_path):
+            path.parent.mkdir(parents=True, exist_ok=True)
         with open(entities_path, "w") as f:
             for e in self._entities.values():
                 f.write(json.dumps(asdict(e), default=str) + "\n")
@@ -235,11 +286,17 @@ class VersionChain:
                     record = asdict(c)
                     record["entity_id"] = eid
                     f.write(json.dumps(record, default=str) + "\n")
+        self._persist_counters()
 
     def load(self) -> None:
-        entities_path = self._project_root / "registry" / "version_chain.jsonl"
-        links_path = self._project_root / "registry" / "links.jsonl"
-        claims_path = self._project_root / "registry" / "claims.jsonl"
+        """Restore full in-memory state from JSONL files.
+
+        Recovers entities, links, claims and version counters so that
+        app restarts preserve monotonic version numbers.
+        """
+        entities_path = self._entities_path()
+        links_path = self._links_path()
+        claims_path = self._claims_path()
         if entities_path.exists():
             for line in entities_path.read_text().splitlines():
                 if line.strip():
@@ -255,3 +312,4 @@ class VersionChain:
                 if line.strip():
                     d = json.loads(line)
                     self._claims.setdefault(d["entity_id"], []).append(ClaimRecord(**d))
+        self._load_counters()

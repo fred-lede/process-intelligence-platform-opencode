@@ -52,6 +52,7 @@ class HTMLReportGenerator(ReportGenerator):
         ct = self.data.chain_trace or {}
         gs = self.data.gate_summary or {}
         unconfirmed = self.data.unconfirmed_items or []
+        claims = self.data.approval_record or {}
 
         body = '<div class="evidence-summary">'
         body += '<h3>Analysis Evidence Summary</h3>'
@@ -69,6 +70,24 @@ class HTMLReportGenerator(ReportGenerator):
             for item in unconfirmed[:5]:
                 body += f' <span class="badge badge-warning">{self._e(item)}</span>'
             body += '</p>'
+
+        # Claim records from version chain
+        claim_list = claims.get("claims", [])
+        if claim_list:
+            body += '<h4>Evidence Claims</h4><table>'
+            body += '<tr><th>Claim ID</th><th>Type</th><th>Source</th><th>Text</th><th>Confidence</th><th>Status</th></tr>'
+            for cl in claim_list:
+                badge = "success" if cl.get("evidence_status") == "statistically_supported" else "warning" if cl.get("evidence_status") == "experimentally_confirmed" else "info"
+                conf = self._pct(cl.get("confidence")) if cl.get("confidence") is not None else "N/A"
+                body += (
+                    f"<tr><td>{self._e(cl.get('claim_id', ''))}</td>"
+                    f"<td>{self._e(cl.get('claim_type', ''))}</td>"
+                    f"<td>{self._e(cl.get('origin_source', ''))}</td>"
+                    f"<td>{self._e(cl.get('text', '')[:120])}</td>"
+                    f"<td>{conf}</td>"
+                    f"<td><span class='badge badge-{badge}'>{self._e(cl.get('evidence_status', ''))}</span></td></tr>"
+                )
+            body += "</table>"
 
         body += '</div>'
         return body
@@ -398,10 +417,13 @@ class HTMLReportGenerator(ReportGenerator):
         return self._section("建議製程窗口與實驗建議", body)
 
     def _render_appendix_chain(self) -> str:
-        """Appendix A: Version chain trace table."""
+        """Appendix A: Version chain trace table with claims."""
         steps = (self.data.chain_trace or {}).get("steps", [])
-        if not steps:
+        claims_data = self.data.approval_record or {}
+        all_claims = claims_data.get("claims", [])
+        if not steps and not all_claims:
             return ""
+
         rows = []
         for step in steps:
             badge_cls = "success" if step.get("status") == "confirmed" else "warning" if step.get("status") == "pending_confirmation" else "info"
@@ -410,7 +432,20 @@ class HTMLReportGenerator(ReportGenerator):
                         f"<td>{self._e(step.get('operator'))}</td>"
                         f"<td>{self._e(step.get('timestamp'))}</td>"
                         f"<td><span class='badge badge-{badge_cls}'>{self._e(step.get('status') or 'unverified')}</span></td></tr>")
-        body = "<table><tr><th>Step</th><th>Entity ID</th><th>Operator</th><th>Time</th><th>Status</th></tr>" + "".join(rows) + "</table>"
+
+        if all_claims:
+            rows.append(f"<tr><td colspan='5'><strong>Evidence Claims</strong></td></tr>")
+            for cl in all_claims:
+                badge = "success" if cl.get("evidence_status") == "statistically_supported" else "warning" if cl.get("evidence_status") == "experimentally_confirmed" else "info"
+                rows.append(
+                    f"<tr><td>{self._e(cl.get('claim_type', ''))}</td>"
+                    f"<td>{self._e(cl.get('claim_id', ''))}</td>"
+                    f"<td>{self._e(cl.get('origin_source', ''))}</td>"
+                    f"<td>{self._e(cl.get('text', '')[:100])}</td>"
+                    f"<td><span class='badge badge-{badge}'>{self._e(cl.get('evidence_status', ''))}</span></td></tr>"
+                )
+
+        body = "<table><tr><th>Step / Type</th><th>Entity ID / Claim ID</th><th>Operator / Source</th><th>Time / Text</th><th>Status</th></tr>" + "".join(rows) + "</table>"
         return f"<h3>Appendix A: Version Chain Trace</h3>{body}"
 
     def _render_appendix_labels(self) -> str:

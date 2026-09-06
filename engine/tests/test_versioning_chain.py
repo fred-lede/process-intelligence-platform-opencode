@@ -122,3 +122,39 @@ def test_handle_data_import_registers_dataset():
     summary = _VERSION_CHAIN.get_chain_summary()
     assert any(e["entity_type"] == "dataset" for e in summary)
     assert result.get("chain_entity_id", "").startswith("ds-")
+
+
+def test_append_only_writes_preserve_previous_records():
+    """Each mutation appends; reload must see all previously saved records."""
+    tmp = tempfile.mkdtemp()
+    chain = VersionChain(tmp, "user1")
+    id1 = chain.register_entity("dataset", "proj", {"a": 1}, "user1")
+    id2 = chain.register_entity("model", "proj", {"b": 2}, "user1")
+    chain.add_link(id1, id2, "uses_dataset", "unverified", "user1")
+    chain.save()  # full state saved
+
+    chain2 = VersionChain(tmp, "user1")
+    chain2.load()
+    assert chain2.get_entity(id1).entity_type == "dataset"
+    assert chain2.get_entity(id2).entity_type == "model"
+    assert len(chain2._links) == 1
+
+    # Append a new entity without save() — should still be visible in-memory
+    id3 = chain2.register_entity("report", "proj", {"c": 3}, "user1")
+    assert chain2.get_entity(id3).entity_type == "report"
+
+
+def test_counter_reload_preserves_monotonic_versions():
+    """After save+load, new entities continue version numbering."""
+    tmp = tempfile.mkdtemp()
+    chain = VersionChain(tmp, "user1")
+    id1 = chain.register_entity("dataset", "proj", {"a": 1}, "user1")
+    id2 = chain.register_entity("dataset", "proj", {"a": 2}, "user1")
+    assert chain.get_entity(id1).version == 1
+    assert chain.get_entity(id2).version == 2
+    chain.save()
+
+    chain2 = VersionChain(tmp, "user1")
+    chain2.load()
+    id3 = chain2.register_entity("dataset", "proj", {"a": 3}, "user1")
+    assert chain2.get_entity(id3).version == 3

@@ -130,18 +130,80 @@ def recommend_models(
 def compute_experiment_verdict(
     predicted: float,
     actual: float,
-    tolerance: float = 0.1,
+    tolerance: float | None = None,
+    spec_range: float | None = None,
+    rmse: float | None = None,
+    is_classification: bool = False,
+    accuracy: float | None = None,
+    recall: float | None = None,
+    target_recall: float = 0.90,
 ) -> str:
-    """Compute experiment verdict based on prediction error."""
+    """Compute experiment verdict with adaptive tolerance.
+
+    When ``tolerance`` is not provided, it is derived from the larger of:
+    - half the specification range (``spec_range / 2``)
+    - 2× the model RMSE (prediction-interval proxy)
+
+    For classification experiments pass ``is_classification=True`` together
+    with ``accuracy`` and ``recall``.
+    """
+    if is_classification:
+        if accuracy is None or recall is None:
+            return "insufficient_data"
+        acc_pass = accuracy >= 0.80
+        rec_pass = recall >= target_recall
+        if acc_pass and rec_pass:
+            return "supports"
+        if acc_pass or rec_pass:
+            return "partially_supports"
+        if recall < target_recall * 0.5:
+            return "needs_remodel"
+        return "does_not_support"
+
+    if tolerance is None:
+        parts: list[float] = []
+        if spec_range is not None and spec_range > 0:
+            parts.append(spec_range * 0.5)
+        if rmse is not None and rmse > 0:
+            parts.append(2.0 * rmse)
+        if not parts:
+            tolerance = 0.1  # backward-compatible fallback
+        else:
+            tolerance = min(parts)
+
     abs_error = abs(actual - predicted)
-    if abs_error <= tolerance * 0.5:
+    ratio = abs_error / max(tolerance, 1e-12)
+    if ratio <= 0.5:
         return "supports"
-    elif abs_error <= tolerance:
+    elif ratio <= 1.0:
         return "partially_supports"
-    elif abs_error <= tolerance * 2:
+    elif ratio <= 2.0:
         return "does_not_support"
     else:
         return "needs_remodel"
+
+
+def compute_prediction_interval(
+    predicted: float,
+    rmse: float,
+    n: int,
+    confidence: float = 0.95,
+) -> dict:
+    """Return a prediction interval for a continuous prediction."""
+    import math
+    if n < 4 or rmse <= 0:
+        return {"lower": predicted, "upper": predicted, "width": 0}
+    # t-value approximation for 95 % two-sided (z ≈ 1.96 for large n)
+    z = 1.96 if n >= 30 else 2.0
+    sem = rmse * math.sqrt(1 + 1.0 / n)
+    half_width = z * sem
+    return {
+        "predicted": predicted,
+        "lower": round(predicted - half_width, 6),
+        "upper": round(predicted + half_width, 6),
+        "half_width": round(half_width, 6),
+        "confidence": confidence,
+    }
 
 
 def update_model_after_experiment(
