@@ -47,6 +47,32 @@ class HTMLReportGenerator(ReportGenerator):
     def _section(self, title: str, body_html: str) -> str:
         return f"<h2>{self._e(title)}</h2>\n{body_html}"
 
+    def _render_evidence_summary(self) -> str:
+        """Render evidence chain summary at report top."""
+        ct = self.data.chain_trace or {}
+        gs = self.data.gate_summary or {}
+        unconfirmed = self.data.unconfirmed_items or []
+
+        body = '<div class="evidence-summary">'
+        body += '<h3>Analysis Evidence Summary</h3>'
+
+        ds = ct.get("dataset", {})
+        body += f"<p><strong>Dataset:</strong> {self._e(ds.get('entity_id', 'N/A'))} | "
+        body += f"Version: v{self._e(str(ds.get('version', 'N/A')))}</p>"
+
+        confirmed = sum(1 for v in gs.values() if v == 'confirmed')
+        total = len(gs)
+        body += f"<p><strong>Gates:</strong> {confirmed}/{total} confirmed</p>"
+
+        if unconfirmed:
+            body += '<p class="warning"><strong>Unconfirmed items:</strong>'
+            for item in unconfirmed[:5]:
+                body += f' <span class="badge badge-warning">{self._e(item)}</span>'
+            body += '</p>'
+
+        body += '</div>'
+        return body
+
     def _render_info(self) -> str:
         limits = (self.data.spec or {}).get("limits") or {}
         rows = [
@@ -371,6 +397,46 @@ class HTMLReportGenerator(ReportGenerator):
             return ""
         return self._section("建議製程窗口與實驗建議", body)
 
+    def _render_appendix_chain(self) -> str:
+        """Appendix A: Version chain trace table."""
+        steps = (self.data.chain_trace or {}).get("steps", [])
+        if not steps:
+            return ""
+        rows = []
+        for step in steps:
+            badge_cls = "success" if step.get("status") == "confirmed" else "warning" if step.get("status") == "pending_confirmation" else "info"
+            rows.append(f"<tr><td>{self._e(step.get('step'))}</td>"
+                        f"<td>{self._e(step.get('entity_id'))}</td>"
+                        f"<td>{self._e(step.get('operator'))}</td>"
+                        f"<td>{self._e(step.get('timestamp'))}</td>"
+                        f"<td><span class='badge badge-{badge_cls}'>{self._e(step.get('status') or 'unverified')}</span></td></tr>")
+        body = "<table><tr><th>Step</th><th>Entity ID</th><th>Operator</th><th>Time</th><th>Status</th></tr>" + "".join(rows) + "</table>"
+        return f"<h3>Appendix A: Version Chain Trace</h3>{body}"
+
+    def _render_appendix_labels(self) -> str:
+        """Appendix B: Source label legend."""
+        labels = self.data.source_labels or {
+            "ai_guess": "AI guess",
+            "stat_sig": "Statistically significant",
+            "eng_hypothesis": "Engineering hypothesis",
+            "exp_confirmed": "Experiment confirmed",
+            "unverified": "Unverified",
+        }
+        rows = [f"<tr><td><code>{self._e(k)}</code></td><td>{self._e(v)}</td></tr>" for k, v in labels.items()]
+        body = "<table><tr><th>Label Key</th><th>Meaning</th></tr>" + "".join(rows) + "</table>"
+        return f"<h3>Appendix B: Source Label Legend</h3>{body}"
+
+    def _render_appendix_extrapolation(self) -> str:
+        """Appendix C: Extrapolation warning statistics."""
+        ex = self.data.extrapolation_summary or {}
+        if not ex:
+            return ""
+        body = f"<p><strong>Out-of-range predictions:</strong> {self._pct(ex.get('out_of_range_ratio'))}</p>"
+        body += f"<p><strong>Max extrapolation risk score:</strong> {self._fmt(ex.get('max_risk_score'))}</p>"
+        if ex.get("recommendation"):
+            body += f"<p><strong>Recommendation:</strong> {self._e(ex['recommendation'])}</p>"
+        return f"<h3>Appendix C: Extrapolation Warnings</h3>{body}"
+
     def _render_footer(self) -> str:
         return (
             f"<div class='footer'>"
@@ -381,6 +447,7 @@ class HTMLReportGenerator(ReportGenerator):
 
     def _generate_html(self) -> str:
         sections = [
+            self._render_evidence_summary(),
             self._render_info(),
             self._render_fields(),
             self._render_quality(),
@@ -393,6 +460,9 @@ class HTMLReportGenerator(ReportGenerator):
             self._render_spc(),
             self._render_credibility(),
             self._render_recommendations(),
+            self._render_appendix_chain(),
+            self._render_appendix_labels(),
+            self._render_appendix_extrapolation(),
         ]
         html = f"""<!DOCTYPE html>
 <html lang="{self.data.language}">

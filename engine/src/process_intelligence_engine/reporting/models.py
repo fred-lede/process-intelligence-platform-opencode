@@ -50,6 +50,15 @@ class ReportData:
     # SPC analysis
     spc_results: list[dict] = field(default_factory=list)
 
+    # Evidence chain (v0.4.0)
+    chain_trace: dict = field(default_factory=dict)
+    source_labels: dict = field(default_factory=dict)
+    gate_summary: dict = field(default_factory=dict)
+    approval_record: dict | None = None
+    unconfirmed_items: list[str] = field(default_factory=list)
+    extrapolation_summary: dict = field(default_factory=dict)
+    version_chain_summary: list[dict] = field(default_factory=list)
+
     # Metadata
     version: str = "1.0.0"
     language: str = "en"
