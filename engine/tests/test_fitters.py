@@ -1,4 +1,8 @@
 """Tests for DOE / AI / hybrid model fitting."""
+import subprocess
+import sys
+import textwrap
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -11,6 +15,39 @@ from process_intelligence_engine.modeling.fitters import (
     fit_xgboost,
     fit_lightgbm,
 )
+
+
+def test_xgboost_dylib_failure_degrades_gracefully():
+    """A non-ImportError at optional-lib load time (e.g. XGBoostError from a
+    missing libomp dylib) must degrade fitters to XGBOOST_AVAILABLE=False,
+    not crash the whole engine module import."""
+    code = textwrap.dedent(
+        """
+        import builtins
+        real_import = builtins.__import__
+
+        def fake_import(name, *args, **kwargs):
+            if name.split(".")[0] == "xgboost":
+                raise RuntimeError("simulated XGBoostError: libxgboost.dylib could not be loaded")
+            return real_import(name, *args, **kwargs)
+
+        builtins.__import__ = fake_import
+        try:
+            from process_intelligence_engine.modeling import fitters
+        except Exception as exc:  # pragma: no cover - this is the failure being tested
+            print(f"CRASH: {type(exc).__name__}: {exc}")
+            raise SystemExit(1)
+        print("AVAILABLE:" + str(fitters.XGBOOST_AVAILABLE))
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, f"engine import crashed:\n{result.stdout}\n{result.stderr}"
+    assert "AVAILABLE:False" in result.stdout
 
 
 def _simple_df(n=100, seed=3):

@@ -23,13 +23,13 @@ from scipy.optimize import minimize
 try:
     import xgboost as xgb
     XGBOOST_AVAILABLE = True
-except ImportError:
+except Exception:
     XGBOOST_AVAILABLE = False
 
 try:
     import lightgbm as lgb
     LIGHTGBM_AVAILABLE = True
-except ImportError:
+except Exception:
     LIGHTGBM_AVAILABLE = False
 
 from .metrics import (
