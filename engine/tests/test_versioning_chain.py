@@ -108,3 +108,18 @@ def test_get_trace_returns_full_graph():
     assert trace["entity_id"] == sim
     assert len(trace["incoming_links"]) == 1
     assert trace["incoming_links"][0]["from_id"] == md
+
+
+def test_handle_data_import_registers_dataset():
+    """Verify data/import handler registers dataset in version chain."""
+    import tempfile
+    import pathlib
+    tmp = tempfile.mkdtemp()
+    csv = pathlib.Path(tmp) / "test.csv"
+    csv.write_text("x,y\n1,2\n3,4\n5,6\n")
+    from process_intelligence_engine.main import _VERSION_CHAIN, _handle_import
+    result = _handle_import({"file_path": str(csv)})
+    dataset_id = result["dataset_id"]
+    summary = _VERSION_CHAIN.get_chain_summary()
+    assert any(e["entity_type"] == "dataset" for e in summary)
+    assert result.get("chain_entity_id", "").startswith("ds-")

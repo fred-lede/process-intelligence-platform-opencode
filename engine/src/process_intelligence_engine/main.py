@@ -83,6 +83,7 @@ from process_intelligence_engine.features.time_series import (
 )
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
+from process_intelligence_engine.versioning.chain import VersionChain
 
 
 def _plain_types(value):
@@ -149,6 +150,7 @@ REGISTRY = DatasetRegistry()
 MODEL_REGISTRY = ModelRegistry()
 AUTH_MANAGER = AuthManager()
 PROJECT_ENGINE = ProjectEngine()
+_VERSION_CHAIN = VersionChain("/tmp/default-project", "anonymous")
 
 
 class ExperimentRecord:
@@ -268,10 +270,22 @@ def _handle_experiment_record(params: dict) -> dict:
         timestamp=datetime.datetime.utcnow().isoformat() + "Z",
     )
     EXPERIMENT_REGISTRY.record(record)
+    exp_chain_id = _VERSION_CHAIN.register_entity(
+        entity_type="experiment",
+        project_id="default",
+        metadata={
+            "model_id": model_id,
+            "dataset_id": params.get("dataset_id", ""),
+            "predicted_output": predicted_output,
+            "actual_output": actual_output,
+        },
+        created_by=operator,
+    )
     return {
         "experiment_id": experiment_id,
         "prediction_error": record.prediction_error,
         "result": result,
+        "chain_entity_id": exp_chain_id,
     }
 
 
@@ -322,6 +336,17 @@ def _handle_import(params: dict) -> dict:
     )
     dto = result.to_dto()
     dto["dataset_id"] = dataset_id
+    dataset_chain_id = _VERSION_CHAIN.register_entity(
+        entity_type="dataset",
+        project_id="default",
+        metadata={
+            "source_file": result.file_path,
+            "row_count": result.row_count,
+            "column_count": result.column_count,
+        },
+        created_by=params.get("operator", "anonymous"),
+    )
+    dto["chain_entity_id"] = dataset_chain_id
     return dto
 
 
@@ -548,7 +573,23 @@ def _handle_modeling_fit(params: dict) -> dict:
 
     fit = fitter(df, target=target, inputs=inputs, **hyperparams)
     MODEL_REGISTRY.register(fit)
-    return fit.to_dto()
+    model_chain_id = _VERSION_CHAIN.register_entity(
+        entity_type="model",
+        project_id="default",
+        metadata={
+            "model_type": model_type,
+            "dataset_id": params["dataset_id"],
+            "target": target,
+            "inputs": inputs,
+            "n_train": int(fit.n_train) if hasattr(fit, 'n_train') else 0,
+            "n_test": int(fit.n_test) if hasattr(fit, 'n_test') else 0,
+        },
+        created_by=params.get("operator", "anonymous"),
+    )
+    fit.chain_entity_id = model_chain_id
+    result_dict = fit.to_dto()
+    result_dict["chain_entity_id"] = model_chain_id
+    return result_dict
 
 
 def _handle_modeling_list(params: dict) -> dict:
@@ -893,19 +934,29 @@ def _handle_report_generate(params: dict) -> dict:
         operator=operator,
         output_format=output_format,
     )
+    rep_chain_id = _VERSION_CHAIN.register_entity(
+        entity_type="report",
+        project_id="default",
+        metadata={
+            "model_id": model_ids[0] if model_ids else "",
+            "dataset_id": dataset_id,
+            "format": output_format,
+        },
+        created_by=operator,
+    )
 
     if output_format == "html":
         generator = HTMLReportGenerator(report_data)
         result = generator.generate()
-        return {"format": "html", "content": result}
+        return {"format": "html", "content": result, "chain_entity_id": rep_chain_id}
     elif output_format == "pdf":
         generator = PDFReportGenerator(report_data)
         pdf_bytes = generator.generate()
-        return {"format": "pdf", "content_base64": pdf_bytes.hex()}
+        return {"format": "pdf", "content_base64": pdf_bytes.hex(), "chain_entity_id": rep_chain_id}
     elif output_format == "excel":
         generator = ExcelReportGenerator(report_data)
         result = generator.generate()
-        return {"format": "excel", "content_base64": result.hex()}
+        return {"format": "excel", "content_base64": result.hex(), "chain_entity_id": rep_chain_id}
     else:
         raise ValueError(f"Unsupported format: {output_format}")
 
@@ -1359,6 +1410,18 @@ def _handle_monte_carlo_run(params: dict) -> dict:
         usl=usl,
         model=fit.model,
     )
+    sim_chain_id = _VERSION_CHAIN.register_entity(
+        entity_type="simulation",
+        project_id="default",
+        metadata={
+            "model_id": model_id,
+            "dataset_id": did,
+            "n_simulations": n_simulations,
+            "seed": seed,
+        },
+        created_by=params.get("operator", "anonymous"),
+    )
+    result["chain_entity_id"] = sim_chain_id
     return {"success": True, "result": result}
 
 
@@ -1605,6 +1668,19 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_project_flow_graph(params)
     if method == "project/flow-validate":
         return _handle_project_flow_validate(params)
+
+    if method == "versioning/chain/summary":
+        return {"summary": _VERSION_CHAIN.get_chain_summary()}
+    if method == "versioning/chain/trace":
+        return _VERSION_CHAIN.get_trace(params["entity_id"])
+    if method == "versioning/chain/link":
+        _VERSION_CHAIN.add_link(
+            params["from_id"], params["to_id"],
+            params["relation"],
+            params.get("evidence_status", "unverified"),
+            params.get("created_by", _VERSION_CHAIN._operator),
+        )
+        return {"success": True}
 
     raise ValueError(f"Unknown method: {method}")
 
