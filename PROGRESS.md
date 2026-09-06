@@ -1,5 +1,18 @@
 # PROGRESS.md
 
+## 2026-09-06 — v0.4.0 可信分析鏈（Trustworthy Analysis Chain）
+
+- **實作**：從功能擴張轉向分析可信度、版本治理、實驗驗證與工程落地
+- **Phase A**：版本鏈基礎設施 — `VersionChain` 中央管理器（JSONL 持久化、UUID+前綴、跨實體關聯、ClaimRecord）
+- **Phase B**：分析階段閘門 — 模組級狀態機（not_started→pending_confirmation→confirmed）+ 專案級總覽
+- **Phase C**：報告證據包 — ReportData 擴充 7 個證據欄位 + HTML 報告新增證據摘要 + 3 個 appendix
+- **Phase D**：模型治理規則 — 適用性檢查（樣本數/類別失衡/共線性）、DOE vs AI 差異比較、選模推薦
+- **Phase E**：異常來源追蹤 — `register_anomaly_event` 登記到版本鏈
+- **Phase F**：驗證實驗閉環 — verdict 判定（supports/partially_supports/does_not_support/needs_remodel）、下次實驗建議
+- **前端**：TypeScript 類型 + API 包裝器 + 分析階段 Card + i18n 三語
+- **驗證**：引擎 **382 passed, 1 skipped**（baseline 345 + 37 新）；`npx tsc --noEmit` clean；`npm run build` ✓ built in 12s
+- **Commits**：`cb90146` → `44fb639`（共 10 筆）
+
 ## 2026-09-05 — Assistant guide 領域知識強化（SPC / Monte Carlo / Exploration）
 - **實作**：`assistantGuide.ts` 三頁 entry 擴充領域知識
   - **SPC**：chart type selection（I-MR / X-bar+R / X-bar+S / EWMA / CUSUM）、Cp/Cpk 閾值解讀（≥1.67 優秀 / ≥1.33 合格 / <1.33 需改善）、Western Electric 7 rules 逐條說明、優化建議解讀
