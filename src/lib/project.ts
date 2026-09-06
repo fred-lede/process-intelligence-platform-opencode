@@ -59,7 +59,12 @@ export async function saveProjectFile(data: ProjectFile): Promise<string | null>
   return target
 }
 
-export async function loadProjectFile(): Promise<ProjectFile | null> {
+export interface ProjectFileWithMeta extends ProjectFile {
+  /** The absolute path to the .piproj.json file that was loaded */
+  file_path: string
+}
+
+export async function loadProjectFile(): Promise<ProjectFileWithMeta | null> {
   const selected = await open({
     multiple: false,
     directory: false,
@@ -79,5 +84,5 @@ export async function loadProjectFile(): Promise<ProjectFile | null> {
       `Project version ${parsed.version} is newer than supported (${PROJECT_FORMAT_VERSION}).`,
     )
   }
-  return parsed
+  return { ...parsed, file_path: selected }
 }

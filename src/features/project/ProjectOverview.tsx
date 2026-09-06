@@ -8,7 +8,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { useEngineStatus } from '../../hooks/useEngineStatus'
-import { importDataFile, getGateSummary } from '../../lib/engine'
+import { importDataFile, getGateSummary, openProject } from '../../lib/engine'
 import { buildProjectFile, loadProjectFile, saveProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 
@@ -76,6 +76,10 @@ export default function ProjectOverview() {
       const data = await loadProjectFile()
       if (!data) return
 
+      // Reload engine state (gate manager + version chain) for this project
+      const projectRoot = data.file_path.split('/').slice(0, -1).join('/')
+      await openProject(projectRoot)
+
       // Re-import the source file so the engine dataset is registered again.
       const result = await importDataFile(data.import.file_path)
       setImportResult(result)
@@ -87,6 +91,9 @@ export default function ProjectOverview() {
         controlLimits: data.controlLimits ?? {},
         analysisPackage: data.analysisPackage ?? null,
       })
+      // Refresh gate summary after project open
+      const gateRes = await getGateSummary()
+      setGateSummary(gateRes.summary || {})
       messageApi.success(t('project.opened', { path: data.import.file_path }))
     } catch (err) {
       messageApi.error(err instanceof Error ? err.message : String(err))
