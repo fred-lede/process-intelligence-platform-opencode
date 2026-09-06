@@ -125,3 +125,101 @@ def recommend_models(
         recommendations.append("random_forest")
 
     return recommendations
+
+
+def compute_experiment_verdict(
+    predicted: float,
+    actual: float,
+    tolerance: float = 0.1,
+) -> str:
+    """Compute experiment verdict based on prediction error."""
+    abs_error = abs(actual - predicted)
+    if abs_error <= tolerance * 0.5:
+        return "supports"
+    elif abs_error <= tolerance:
+        return "partially_supports"
+    elif abs_error <= tolerance * 2:
+        return "does_not_support"
+    else:
+        return "needs_remodel"
+
+
+def update_model_after_experiment(
+    model_id: str,
+    verdict: str,
+    chain,
+) -> dict:
+    """Record experiment impact on model without auto-retiring."""
+    from process_intelligence_engine.main import MODEL_REGISTRY
+    try:
+        model = MODEL_REGISTRY.get(model_id)
+    except KeyError:
+        return {"error": f"Unknown model_id: {model_id}"}
+
+    if verdict in ("does_not_support", "needs_remodel"):
+        claim_id = chain.add_claim(
+            entity_id=model_id,
+            claim_type="experiment_impact",
+            text="Experiment result does not support current model, requires manual review",
+            source_entity_ids=[],
+            origin_source="user_override",
+            evidence_status="experimentally_confirmed",
+        )
+        return {
+            "model_id": model_id,
+            "verdict": verdict,
+            "action": "claim_created",
+            "claim_id": claim_id,
+            "message": "Model requires manual review before retirement",
+        }
+    return {"model_id": model_id, "verdict": verdict, "action": "none"}
+
+
+def recommend_next_experiment(
+    model_id: str,
+    df,
+    n_suggestions: int = 3,
+) -> list[dict]:
+    """Recommend next experiment conditions based on input ranges."""
+    from process_intelligence_engine.main import MODEL_REGISTRY
+    try:
+        model = MODEL_REGISTRY.get(model_id)
+    except KeyError:
+        return []
+
+    suggestions = []
+    inputs = getattr(model, 'inputs', [])
+    if not inputs or len(df) == 0:
+        return suggestions
+
+    # Get input ranges from data
+    input_stats = {}
+    for col in inputs:
+        if col in df.columns:
+            series = pd.to_numeric(df[col], errors='coerce').dropna()
+            if len(series) > 0:
+                input_stats[col] = {
+                    "low": float(series.min()),
+                    "high": float(series.max()),
+                    "mean": float(series.mean()),
+                }
+
+    if not input_stats:
+        return suggestions
+
+    # Suggest boundary and center points
+    for col, stats in input_stats.items():
+        suggestions.append({
+            "condition": {col: stats["low"]},
+            "rationale": "low_boundary",
+        })
+        suggestions.append({
+            "condition": {col: stats["high"]},
+            "rationale": "high_boundary",
+        })
+
+    # Always suggest center point
+    center = {col: (s["low"] + s["high"]) / 2 for col, s in input_stats.items()}
+    suggestions.append({"condition": center, "rationale": "center_point"})
+
+    return suggestions[:n_suggestions]

@@ -60,3 +60,44 @@ def test_recommend_models_binary():
     recs = recommend_models(n_samples=200, n_features=5, is_binary_target=True, has_nonlinearity=True, need_interpretability=True)
     assert "logistic_regression" in recs
     assert "xgboost" in recs
+
+
+def test_verdict_supports():
+    assert check_doeb_ai_discrepancy.__module__ == "process_intelligence_engine.modeling.governance"
+    from process_intelligence_engine.modeling.governance import compute_experiment_verdict
+    assert compute_experiment_verdict(5.0, 5.1, tolerance=0.5) == "supports"
+
+
+def test_verdict_does_not_support():
+    from process_intelligence_engine.modeling.governance import compute_experiment_verdict
+    assert compute_experiment_verdict(5.0, 6.0, tolerance=0.5) == "does_not_support"
+
+
+def test_verdict_needs_remodel():
+    from process_intelligence_engine.modeling.governance import compute_experiment_verdict
+    assert compute_experiment_verdict(5.0, 10.0, tolerance=0.5) == "needs_remodel"
+
+
+def test_verdict_partially_supports():
+    from process_intelligence_engine.modeling.governance import compute_experiment_verdict
+    assert compute_experiment_verdict(5.0, 5.3, tolerance=0.5) == "partially_supports"
+
+
+def test_recommend_next_experiment_returns_suggestions():
+    import pandas as pd
+    from process_intelligence_engine.modeling.governance import recommend_next_experiment
+    from process_intelligence_engine.main import MODEL_REGISTRY
+    import numpy as np
+
+    # Create a simple model fit to register
+    df = pd.DataFrame({"x": np.linspace(0, 10, 50), "y": np.linspace(0, 10, 50)})
+    from process_intelligence_engine.modeling.fitters import fit_doe_linear
+    fit = fit_doe_linear(df, target="y", inputs=["x"])
+    MODEL_REGISTRY.register(fit)
+    model_id = fit.model_id
+
+    suggestions = recommend_next_experiment(model_id, df, n_suggestions=3)
+    assert isinstance(suggestions, list)
+    assert len(suggestions) > 0
+    assert "condition" in suggestions[0]
+    assert "rationale" in suggestions[0]
