@@ -8,7 +8,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { useEngineStatus } from '../../hooks/useEngineStatus'
-import { importDataFile, getGateSummary, openProject } from '../../lib/engine'
+import { importDataFile, getGateSummary, openProject, resolveProjectRoot } from '../../lib/engine'
 import { buildProjectFile, loadProjectFile, saveProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 
@@ -76,9 +76,9 @@ export default function ProjectOverview() {
       const data = await loadProjectFile()
       if (!data) return
 
-      // Reload engine state (gate manager + version chain) for this project
-      const projectRoot = data.file_path.split('/').slice(0, -1).join('/')
-      await openProject(projectRoot)
+      // Resolve the actual project root by searching for project_manifest.json
+      const resolved = await resolveProjectRoot(data.file_path)
+      await openProject(resolved.project_root)
 
       // Re-import the source file so the engine dataset is registered again.
       const result = await importDataFile(data.import.file_path)

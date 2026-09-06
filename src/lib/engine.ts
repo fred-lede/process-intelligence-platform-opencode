@@ -1443,6 +1443,10 @@ export async function openProject(root: string): Promise<{ project_id: string; p
   return engineCall<{ project_id: string; project_name: string; project_root: string; datasets: number; process_groups: number }>('project/open', { root })
 }
 
+export async function resolveProjectRoot(file_path: string): Promise<{ project_root: string; project_id: string; project_name: string }> {
+  return engineCall<{ project_root: string; project_id: string; project_name: string }>('project/resolve-root', { file_path })
+}
+
 export async function updateProjectSettings(updates: Record<string, unknown>): Promise<Record<string, unknown>> {
   return engineCall<Record<string, unknown>>('project/settings', { updates })
 }
