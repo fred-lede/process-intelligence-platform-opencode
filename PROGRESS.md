@@ -736,3 +736,25 @@
 - [x] **前端（commit `678af29`）**：`engine.ts` 新增 `SPCSuggestion`/`SPCBatchResult` 型別 + `analyzeSPCBatch()`；`SPC.tsx` 加 `batchMode`/`selectedColumns`/`batchResult` state、批次切換按鈕、批次分析 UI、`handleBatchAnalyze`、`buildPlotData` 重構為接受 result 參數、`buildPlotLayout` 改為函數、比較表格 + 各欄圖表；`assistantData.ts` 補 suggestions 行；i18n 三語各 +7 keys（batchAnalyze/singleAnalysis/compareColumns/selectColumns/suggestions/noSuggestions/column）
 - [x] **驗證**：全引擎 **327 passed, 1 skipped**（baseline 322 + 5）；`npx tsc --noEmit` EXIT 0；`npm run build` `✓ built in 10.43s`；三語 parity `ok count: 51`
 - **Commits**：`9af8153` / `641bd13` / `19f6549` / `678af29`
+
+## 2026-09-06 — v0.4.0 Phase C: 報告證據包（Report Evidence Package）
+
+- [x] **`reporting/models.py` — ReportData 新增 7 個 evidence chain 欄位**：
+  - `chain_trace: dict`（版本鏈追溯，含 dataset + steps）
+  - `source_labels: dict`（來源標籤圖例）
+  - `gate_summary: dict`（閘門確認狀態）
+  - `approval_record: dict | None`（核准紀錄）
+  - `unconfirmed_items: list[str]`（未確認項目）
+  - `extrapolation_summary: dict`（外推風險統計）
+  - `version_chain_summary: list[dict]`（版本鏈摘要）
+  - 全部使用 `field(default_factory=...)` 確保向後相容（現有測試 355 passed 不受影響）
+- [x] **`reporting/html.py` — 新增 evidence summary + 三個 appendix 渲染**：
+  - `_render_evidence_summary()`：報告頂部顯示資料集版本、閘門確認率、未確認項目（badge）
+  - `_render_appendix_chain()`：Appendix A — 版本鏈追溯表格（Step/Entity ID/Operator/Time/Status badge）
+  - `_render_appendix_labels()`：Appendix B — 來源標籤圖例表格
+  - `_render_appendix_extrapolation()`：Appendix C — 外推警告統計（out-of-range ratio / risk score / recommendation）
+  - sections 列表第一項改為 `_render_evidence_summary()`，三 appendix 置於 recommendations 之後
+- [x] **測試**：新增 2 支（`test_evidence_chain_fields_accepted` / `test_html_report_with_evidence_sections`）
+- [x] **驗證**：引擎 **373 passed, 1 skipped**（baseline 355 + 18 新 + 2 新）；tsc/build clean（未觸及前端）
+- **Commit**：`e735b1e`
+- **Files changed** — `engine/src/process_intelligence_engine/reporting/models.py`, `engine/src/process_intelligence_engine/reporting/html.py`, `engine/tests/test_reporting.py`

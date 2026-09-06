@@ -905,5 +905,43 @@
     "zoomOut": "Alejar",
     "zoomReset": "Restablecer zoom",
     "zoomFit": "Ajustar a la vista"
+  },
+  "gates": {
+    "dataImport": "Importación de Datos",
+    "processDefine": "Definición de Proceso",
+    "modeling": "Centro de Modelos",
+    "spc": "Control SPC",
+    "monteCarlo": "Monte Carlo",
+    "prediction": "Predicción",
+    "validation": "Lab. de Validación",
+    "confirmed": "Confirmado",
+    "pending": "Pendiente",
+    "notStarted": "No Iniciado"
+  },
+  "project": {
+    "analysisPhaseTitle": "Estado de la Fase de Análisis",
+    "modulesConfirmed": "módulos confirmados"
+  },
+  "evidence": {
+    "chainTrace": "Traza de Cadena de Versión",
+    "sourceLabels": "Etiquetas de Origen",
+    "extrapolationWarning": "Advertencias de Extrapolación",
+    "evidenceSummary": "Resumen de Evidencia"
+  },
+  "governance": {
+    "checkApplicability": "Verificar Aplicabilidad del Modelo",
+    "recommendModels": "Recomendar Modelos",
+    "compareDoeVsAi": "Comparar DOE vs IA",
+    "smallSampleWarning": "Muestras insuficientes para modelos de árbol",
+    "classImbalanceWarning": "Desequilibrio de clases detectado",
+    "multicollinearityWarning": "Multicolinealidad detectada"
+  },
+  "experiment": {
+    "verdict": "Veredicto",
+    "supports": "Apoya el Modelo",
+    "partiallySupports": "Parcialmente Apoya",
+    "doesNotSupport": "No Apoya",
+    "needsRemodel": "Requiere Remodelación",
+    "nextSuggestions": "Sugerencias para Siguiente Experimento"
   }
 }

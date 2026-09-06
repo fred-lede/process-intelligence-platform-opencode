@@ -1581,3 +1581,223 @@ export async function setAssociationKeys(keys: string[]): Promise<{ association_
 export async function validateFlowGraph(): Promise<FlowValidation> {
   return engineCall<FlowValidation>('project/flow-validate', {})
 }
+
+// --- v0.4.0 Evidence Chain -----------------------------------------------
+
+export interface ChainEntitySummary {
+  entity_id: string
+  entity_type: string
+  project_id: string
+  version: number
+  evidence_status: string
+  created_at: string
+  created_by: string
+}
+
+export interface ChainTrace {
+  entity_id: string
+  entity_type: string
+  project_id: string
+  version: number
+  metadata: Record<string, unknown>
+  parent_ids: string[]
+  evidence_status: string
+  incoming_links: ChainLink[]
+  outgoing_links: ChainLink[]
+  claims: ChainClaim[]
+  created_at: string
+  created_by: string
+}
+
+export interface ChainLink {
+  from_id: string
+  to_id: string
+  relation: string
+  evidence_status: string
+  created_by: string
+  created_at: string
+}
+
+export interface ChainClaim {
+  claim_id: string
+  entity_id: string
+  claim_type: string
+  text: string
+  source_entity_ids: string[]
+  origin_source: string
+  evidence_status: string
+  confidence: number | null
+}
+
+export async function getChainSummary(): Promise<ChainEntitySummary[]> {
+  const result = await engineCall<{ summary: ChainEntitySummary[] }>('versioning/chain/summary', {})
+  return result.summary || []
+}
+
+export async function getChainTrace(entityId: string): Promise<ChainTrace> {
+  return engineCall<ChainTrace>('versioning/chain/trace', { entity_id: entityId })
+}
+
+export async function addChainLink(
+  fromId: string,
+  toId: string,
+  relation: string,
+  evidenceStatus = 'unverified',
+  createdBy = '',
+): Promise<{ success: boolean }> {
+  return engineCall<{ success: boolean }>('versioning/chain/link', {
+    from_id: fromId,
+    to_id: toId,
+    relation,
+    evidence_status: evidenceStatus,
+    created_by: createdBy,
+  })
+}
+
+// --- v0.4.0 Phase Gates --------------------------------------------------
+
+export async function getGateStatus(): Promise<Record<string, string>> {
+  const result = await engineCall<{ statuses: Record<string, string> }>('gates/status', {})
+  return result.statuses || {}
+}
+
+export async function confirmGate(
+  module: string,
+  entityId: string,
+  entityVersion: number,
+  confirmedBy: string,
+  comment = '',
+): Promise<{ new_status: string }> {
+  return engineCall<{ new_status: string }>('gates/confirm', {
+    module,
+    entity_id: entityId,
+    entity_version: entityVersion,
+    confirmed_by: confirmedBy,
+    comment,
+  })
+}
+
+export async function resetGate(module: string, reason = ''): Promise<{ new_status: string }> {
+  return engineCall<{ new_status: string }>('gates/reset', { module, reason })
+}
+
+export async function getGateSummary(): Promise<{
+  summary: Record<string, string>
+  all_confirmed: boolean
+  details: Record<string, unknown>
+}> {
+  return engineCall('gates/summary', { modules: [] })
+}
+
+// --- v0.4.0 Model Governance ---------------------------------------------
+
+export interface GovernanceCheckResult {
+  warnings: string[]
+  can_proceed: boolean
+}
+
+export interface ModelRecommendation {
+  recommendations: string[]
+}
+
+export interface DoeAiComparison {
+  needs_review: boolean
+  max_difference: number
+  mean_difference: number
+  recommendation: string
+}
+
+export async function checkModelApplicability(
+  datasetId: string,
+  target: string,
+  inputs: string[],
+  isBinary = false,
+): Promise<GovernanceCheckResult> {
+  return engineCall('modeling/governance/check', {
+    dataset_id: datasetId,
+    target,
+    inputs,
+    is_binary: isBinary,
+  })
+}
+
+export async function recommendModels(
+  nSamples: number,
+  nFeatures: number,
+  isBinaryTarget: boolean,
+  hasNonlinearity: boolean,
+  needInterpretability: boolean,
+): Promise<ModelRecommendation> {
+  return engineCall('modeling/governance/recommend', {
+    n_samples: nSamples,
+    n_features: nFeatures,
+    is_binary_target: isBinaryTarget,
+    has_nonlinearity: hasNonlinearity,
+    need_interpretability: needInterpretability,
+  })
+}
+
+export async function compareDoeVsAi(
+  doeR2: number,
+  aiR2: number,
+  aiPred: number[],
+  doePred: number[],
+  scale: number,
+): Promise<DoeAiComparison> {
+  return engineCall('modeling/governance/doe_ai_compare', {
+    doe_r2: doeR2,
+    ai_r2: aiR2,
+    ai_pred: aiPred,
+    doe_pred: doePred,
+    scale,
+  })
+}
+
+// --- v0.4.0 Experiment Verdict -------------------------------------------
+
+export interface ExperimentVerdictResult {
+  experiment_id: string
+  verdict: 'supports' | 'partially_supports' | 'does_not_support' | 'needs_remodel'
+  prediction_error: number
+}
+
+export interface NextExperimentSuggestion {
+  suggestions: Array<{
+    condition: Record<string, number>
+    rationale: string
+  }>
+}
+
+export async function recordExperimentWithVerdict(params: {
+  experiment_id: string
+  model_id: string
+  planned_inputs: Record<string, number>
+  actual_inputs: Record<string, number>
+  predicted_output: number
+  actual_output: number
+  tolerance: number
+  operator: string
+  notes?: string
+}): Promise<ExperimentVerdictResult> {
+  return engineCall('experiment/record_with_verdict', params as unknown as Record<string, unknown>)
+}
+
+export async function suggestNextExperiment(
+  modelId: string,
+  nSuggestions = 3,
+): Promise<NextExperimentSuggestion> {
+  return engineCall('experiment/suggest_next', { model_id: modelId, n_suggestions: nSuggestions })
+}
+
+// --- v0.4.0 Anomaly Source -----------------------------------------------
+
+export async function registerAnomalyEvent(params: {
+  dataset_id: string
+  anomaly_id: string
+  source: string
+  confidence: number
+  user_confirmed: boolean
+  operator: string
+}): Promise<{ entity_id: string }> {
+  return engineCall('analysis/anomaly/register', params as unknown as Record<string, unknown>)
+}

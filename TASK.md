@@ -1,6 +1,15 @@
 # TASK.md
 
 ## Completed
+### Task B1: Analysis Phase Gates — GateManager module
+- **Status**: DONE
+- **實作**：`engine/src/process_intelligence_engine/gates/` 新模組（`__init__.py` + `manager.py`）+ `engine/tests/test_gates.py`（8 支測試）
+- **`GateManager`**：thread-safe（`threading.Lock`），7 個分析階段模組（data_import / process_define / modeling / spc / monte_carlo / prediction / validation）
+- **狀態機**：`not_started → pending_confirmation → confirmed`，confirm 時若 entity_version 不同先置為 pending，reset 回 pending
+- **IPC 整合**：`main.py` 新增 4 個 handler（`gates/status`、`gates/confirm`、`gates/reset`、`gates/summary`）
+- **驗證**：`pytest tests/test_gates.py` → **8 passed**；全引擎 **352 passed, 1 skipped**（與 baseline 一致，無回歸）
+- **Files changed** — `engine/src/process_intelligence_engine/gates/{__init__.py,manager.py}`, `engine/tests/test_gates.py`, `engine/src/process_intelligence_engine/main.py`
+
 ### #4 v0.3.0 模型中心擴充、預測與蒙地卡羅支援全部 8 模型
 - **Status**: DONE
 - **內容**：
@@ -241,6 +250,23 @@
 - **Files changed** — `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_main_monte_carlo.py`, `src/lib/engine.ts`, `src/features/monte-carlo/MonteCarlo.tsx`, `src/i18n/en.json`, `src/i18n/zh-TW.json`, `src/i18n/es-MX.json`（未提交 `engine/.coverage`/icons）
 
 <!-- NEXT_ITEM_ANCHOR -->
+
+## In Progress
+
+## Pending
+
+### Task E1: Anomaly Source Tracking — register_anomaly_event
+- **Status**: DONE
+- **實作**：`anomalies.py` 新增 `register_anomaly_event()`（register entity + add_link to dataset in version chain）；`main.py` 加 import + `analysis/anomaly/register` IPC handler；`test_anomalies.py` 新增 `test_register_anomaly_event`；`test_main_handlers.py` 新增 `test_anomaly_register_in_chain`
+- **驗證**：`pytest tests/ -q` → **381 passed, 1 skipped**（baseline 373 + 8 新）；1 預存失敗 `test_verdict_does_not_support` 非本任務引入
+- **Commit**：`afc7b37` + `9e76042`
+- **Files changed** — `engine/src/process_intelligence_engine/analysis/anomalies.py`, `engine/src/process_intelligence_engine/main.py`, `engine/tests/test_anomalies.py`, `engine/tests/test_main_handlers.py`
+
+### Task D1: Model Governance Rules
+- **Status**: DONE
+- **實作**：`modeling/governance.py` 新增 3 個函式：`check_model_applicability`（sample size / class imbalance / constant column / VIF multicollinearity）、`check_doeb_ai_discrepancy`（normalized diff threshold）、`recommend_models`（rule-based model type recommendation）；`main.py` 加 import + 3 個 IPC handler（`modeling/governance/check`、`recommend`、`doe_ai_compare`）；`tests/test_governance.py` 8 支測試
+- **驗證**：`pytest tests/test_governance.py -q` **8 passed**；full suite **371 passed, 1 skipped**（baseline 355 + 8，pre-existing 13 test_reporting failures 未動）；commit message: `feat(governance): add model applicability checks and DOE/AI comparison`
+- **Files changed** — `engine/src/process_intelligence_engine/modeling/governance.py`(new)、`engine/tests/test_governance.py`(new)、`engine/src/process_intelligence_engine/main.py`
 
 ### Task 2: Frontend — Render outliers and change points in SPC charts
 - **Status**: DONE
@@ -843,6 +869,11 @@
   - **Phase A**: 版本鏈基礎設施（VersionChain 中央管理器）
   - **Phase B**: 分析階段閘門（未完成→待確認→已確認）
   - **Phase C**: 報告證據包（追溯性、來源標籤、核准紀錄）
+- **Phase C**: 報告證據包（追溯性、來源標籤、核准紀錄）
+  - [x] Task C1: ReportData 新增 7 個 evidence chain 欄位
+  - [x] Task C2: HTML 報告新增 evidence summary + 3 個 appendix（A/B/C）
+  - [x] 測試 2 支新增；引擎 373 passed, 1 skipped
+  - [x] commit e735b1e
   - **Phase D**: 模型治理規則（適用性檢查、DOE 退回規則、選模推薦）
   - **Phase E**: 異常來源追蹤（source/confidence/user_confirmed 完整標注）
   - **Phase F**: 驗證實驗閉環（verdict 判定、模型狀態自動更新、下次實驗建議）

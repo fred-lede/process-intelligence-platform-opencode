@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Typography, Card, Button, Space, Alert, Badge, Row, Col, message } from 'antd'
+import { Typography, Card, Button, Space, Alert, Badge, Row, Col, message, Divider, Tag } from 'antd'
 import {
   PlusOutlined,
   FolderOpenOutlined,
@@ -8,7 +8,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { useEngineStatus } from '../../hooks/useEngineStatus'
-import { importDataFile } from '../../lib/engine'
+import { importDataFile, getGateSummary } from '../../lib/engine'
 import { buildProjectFile, loadProjectFile, saveProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 
@@ -17,6 +17,7 @@ export default function ProjectOverview() {
   const { status, refresh } = useEngineStatus(5000)
   const [busy, setBusy] = useState(false)
   const [messageApi, contextHolder] = message.useMessage()
+  const [gateSummary, setGateSummary] = useState<Record<string, string>>({})
   const {
     importResult,
     fields,
@@ -32,6 +33,12 @@ export default function ProjectOverview() {
     restoreAnalysis,
     resetAll,
   } = useDataPipelineStore()
+
+  useEffect(() => {
+    getGateSummary().then((res) => {
+      setGateSummary(res.summary || {})
+    }).catch(console.error)
+  }, [])
 
   const handleNew = () => {
     resetAll()
@@ -149,6 +156,25 @@ export default function ProjectOverview() {
             {t('project.saveProject')}
           </Button>
         </Space>
+      </Card>
+
+      <Card title={t('project.analysisPhaseTitle')} size="small">
+        <Row gutter={[16, 16]}>
+          {Object.entries(gateSummary).map(([module, status]) => (
+            <Col key={module} span={8}>
+              <Space>
+                <span>{t(`gates.${module}`)}</span>
+                <Tag color={status === 'confirmed' ? 'green' : status === 'pending_confirmation' ? 'orange' : 'default'}>
+                  {status === 'confirmed' ? t('gates.confirmed') : status === 'pending_confirmation' ? t('gates.pending') : t('gates.notStarted')}
+                </Tag>
+              </Space>
+            </Col>
+          ))}
+        </Row>
+        <Divider />
+        <Typography.Text type="secondary">
+          {Object.values(gateSummary).filter(s => s === 'confirmed').length}/{Object.keys(gateSummary).length} {t('project.modulesConfirmed')}
+        </Typography.Text>
       </Card>
 
       <Card title={t('project.engineTitle')} size="small">

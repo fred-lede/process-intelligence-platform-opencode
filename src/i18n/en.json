@@ -909,5 +909,43 @@
     "zoomOut": "Zoom out",
     "zoomReset": "Reset zoom",
     "zoomFit": "Fit to view"
+  },
+  "gates": {
+    "dataImport": "Data Import",
+    "processDefine": "Process Definition",
+    "modeling": "Model Center",
+    "spc": "SPC Control",
+    "monteCarlo": "Monte Carlo",
+    "prediction": "Prediction",
+    "validation": "Validation Lab",
+    "confirmed": "Confirmed",
+    "pending": "Pending",
+    "notStarted": "Not Started"
+  },
+  "project": {
+    "analysisPhaseTitle": "Analysis Phase Status",
+    "modulesConfirmed": "modules confirmed"
+  },
+  "evidence": {
+    "chainTrace": "Version Chain Trace",
+    "sourceLabels": "Source Labels",
+    "extrapolationWarning": "Extrapolation Warnings",
+    "evidenceSummary": "Evidence Summary"
+  },
+  "governance": {
+    "checkApplicability": "Check Model Applicability",
+    "recommendModels": "Recommend Models",
+    "compareDoeVsAi": "Compare DOE vs AI",
+    "smallSampleWarning": "Insufficient samples for tree models",
+    "classImbalanceWarning": "Class imbalance detected",
+    "multicollinearityWarning": "Multicollinearity detected"
+  },
+  "experiment": {
+    "verdict": "Verdict",
+    "supports": "Supports Model",
+    "partiallySupports": "Partially Supports",
+    "doesNotSupport": "Does Not Support",
+    "needsRemodel": "Needs Remodeling",
+    "nextSuggestions": "Next Experiment Suggestions"
   }
 }

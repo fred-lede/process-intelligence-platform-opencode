@@ -909,5 +909,43 @@
     "zoomOut": "縮小",
     "zoomReset": "重設縮放",
     "zoomFit": "適合視窗"
+  },
+  "gates": {
+    "dataImport": "資料匯入",
+    "processDefine": "製程定義",
+    "modeling": "模型中心",
+    "spc": "SPC 管制圖",
+    "monteCarlo": "蒙地卡羅",
+    "prediction": "預測",
+    "validation": "驗證實驗室",
+    "confirmed": "已確認",
+    "pending": "待確認",
+    "notStarted": "未開始"
+  },
+  "project": {
+    "analysisPhaseTitle": "分析階段狀態",
+    "modulesConfirmed": "個模組已確認"
+  },
+  "evidence": {
+    "chainTrace": "版本鏈追溯",
+    "sourceLabels": "來源標籤",
+    "extrapolationWarning": "外推風險警告",
+    "evidenceSummary": "證據摘要"
+  },
+  "governance": {
+    "checkApplicability": "檢查模型適用性",
+    "recommendModels": "推薦模型",
+    "compareDoeVsAi": "DOE 與 AI 比較",
+    "smallSampleWarning": "樣本數不足，不適用於樹模型",
+    "classImbalanceWarning": "檢測到類別不平衡",
+    "multicollinearityWarning": "檢測到多共線性"
+  },
+  "experiment": {
+    "verdict": "裁決",
+    "supports": "支持模型",
+    "partiallySupports": "部分支持",
+    "doesNotSupport": "不支持",
+    "needsRemodel": "需重新建模",
+    "nextSuggestions": "下次實驗建議"
   }
 }
