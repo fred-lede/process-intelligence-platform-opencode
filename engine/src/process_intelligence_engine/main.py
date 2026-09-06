@@ -88,6 +88,14 @@ from process_intelligence_engine.features.time_series import (
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 from process_intelligence_engine.versioning.chain import VersionChain
+from process_intelligence_engine.modeling.governance import (
+    check_model_applicability,
+    check_doeb_ai_discrepancy,
+    recommend_models,
+    compute_experiment_verdict,
+    update_model_after_experiment,
+    recommend_next_experiment,
+)
 from process_intelligence_engine.gates.manager import GateManager
 
 
@@ -288,11 +296,41 @@ def _handle_experiment_record(params: dict) -> dict:
         created_by=operator,
     )
     return {
-        "experiment_id": experiment_id,
-        "prediction_error": record.prediction_error,
-        "result": result,
-        "chain_entity_id": exp_chain_id,
+         "experiment_id": experiment_id,
+         "prediction_error": record.prediction_error,
+         "result": result,
+         "chain_entity_id": exp_chain_id,
+     }
+
+
+def _handle_experiment_record_with_verdict(params: dict) -> dict:
+    """Record experiment with automatic verdict computation."""
+    predicted = float(params.get("predicted_output", 0))
+    actual = float(params.get("actual_output", 0))
+    tolerance = float(params.get("tolerance", 0.1))
+    verdict = compute_experiment_verdict(predicted, actual, tolerance)
+
+    exp_result = _handle_experiment_record(params)
+
+    return {
+        **exp_result,
+        "verdict": verdict,
+        "prediction_error": abs(actual - predicted),
     }
+
+
+def _handle_experiment_suggest_next(params: dict) -> dict:
+    """Recommend next experiment conditions."""
+    model_id = params["model_id"]
+    n_suggestions = params.get("n_suggestions", 3)
+    dataset_id = params.get("dataset_id")
+
+    df = None
+    if dataset_id:
+        df = REGISTRY.get(dataset_id)
+
+    suggestions = recommend_next_experiment(model_id, df, n_suggestions)
+    return {"suggestions": suggestions}
 
 
 def _handle_experiment_list(params: dict) -> dict:
@@ -1603,6 +1641,15 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_experiment_list(params)
     if method == "experiment/get":
         return _handle_experiment_get(params)
+    if method == "experiment/record_with_verdict":
+        return _handle_experiment_record_with_verdict(params)
+    if method == "experiment/suggest_next":
+        return _handle_experiment_suggest_next(params)
+    if method == "experiment/impact":
+        model_id = params["model_id"]
+        verdict = params.get("verdict", "supports")
+        result = update_model_after_experiment(model_id, verdict, _VERSION_CHAIN)
+        return result
 
     if method == "approval/submit":
         return _handle_approval_submit(params)
@@ -1743,6 +1790,7 @@ def handle_request(method: str, params: dict) -> dict:
             params.get("operator", "anonymous"),
         )
         result = {"entity_id": entity_id}
+        return result
 
     raise ValueError(f"Unknown method: {method}")
 

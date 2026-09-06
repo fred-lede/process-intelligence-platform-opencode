@@ -635,18 +635,61 @@ def test_version_chain_summary_after_import(tmp_path):
     assert "chain_entity_id" in result
 
 
+def test_experiment_record_with_verdict(tmp_path):
+    csv = tmp_path / "test.csv"
+    csv.write_text("x,y\n1,2\n3,4\n5,6\n7,8\n9,10\n")
+    import_result = handle_request("data/import", {"file_path": str(csv)})
+    dataset_id = import_result["dataset_id"]
+    fit_result = handle_request("modeling/fit", {
+        "dataset_id": dataset_id, "model_type": "doe_linear",
+        "target": "y", "inputs": ["x"],
+    })
+    model_id = fit_result["model_id"]
+    result = handle_request("experiment/record_with_verdict", {
+        "experiment_id": "exp-test-001",
+        "model_id": model_id,
+        "planned_inputs": {"x": 2.0},
+        "actual_inputs": {"x": 2.0},
+        "predicted_output": 4.0,
+        "actual_output": 4.1,
+        "tolerance": 0.5,
+        "operator": "fred",
+    })
+    assert "verdict" in result
+    assert result["verdict"] in ("supports", "partially_supports", "does_not_support", "needs_remodel")
+
+
+def test_experiment_suggest_next(tmp_path):
+    csv = tmp_path / "test.csv"
+    csv.write_text("x,y\n1,2\n3,4\n5,6\n7,8\n9,10\n")
+    import_result = handle_request("data/import", {"file_path": str(csv)})
+    dataset_id = import_result["dataset_id"]
+    fit_result = handle_request("modeling/fit", {
+        "dataset_id": dataset_id, "model_type": "doe_linear",
+        "target": "y", "inputs": ["x"],
+    })
+    model_id = fit_result["model_id"]
+    result = handle_request("experiment/suggest_next", {
+        "model_id": model_id,
+        "dataset_id": dataset_id,
+        "n_suggestions": 3,
+    })
+    assert "suggestions" in result
+    assert isinstance(result["suggestions"], list)
+
+
 def test_anomaly_register_in_chain(tmp_path):
     csv = tmp_path / "test.csv"
     csv.write_text("x,y\n1,2\n3,4\n5,6\n")
     result = handle_request("data/import", {"file_path": str(csv)})
     dataset_id = result["dataset_id"]
     from process_intelligence_engine.main import _VERSION_CHAIN
-    _VERSION_CHAIN.register_entity(
+    dataset_chain_id = _VERSION_CHAIN.register_entity(
         entity_type="dataset", project_id="default",
         metadata={"dataset_id": dataset_id}, created_by="anonymous",
     )
     exp = handle_request("analysis/anomaly/register", {
-        "dataset_id": dataset_id,
+        "dataset_id": dataset_chain_id,
         "anomaly_id": "ano-test",
         "source": "engineering_input",
         "confidence": 0.9,

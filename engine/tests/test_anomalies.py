@@ -221,12 +221,12 @@ def test_register_anomaly_event(tmp_path):
     from process_intelligence_engine.analysis.anomalies import register_anomaly_event
 
     chain = VersionChain(str(tmp_path), "testuser")
-    chain.register_entity(
+    dataset_entity_id = chain.register_entity(
         entity_type="dataset", project_id="ds-test",
         metadata={"id": "ds-test"}, created_by="testuser",
     )
     entity_id = register_anomaly_event(
-        chain, "ds-test", "ano-001",
+        chain, dataset_entity_id, "ano-001",
         "historical_observation", 0.85, True, "testuser",
     )
     assert entity_id.startswith("ano-")
