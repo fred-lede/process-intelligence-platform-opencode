@@ -112,8 +112,6 @@ def test_get_trace_returns_full_graph():
 
 def test_handle_data_import_registers_dataset():
     """Verify data/import handler registers dataset in version chain."""
-    import tempfile
-    import pathlib
     tmp = tempfile.mkdtemp()
     csv = pathlib.Path(tmp) / "test.csv"
     csv.write_text("x,y\n1,2\n3,4\n5,6\n")

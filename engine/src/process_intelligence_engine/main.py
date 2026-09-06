@@ -586,7 +586,6 @@ def _handle_modeling_fit(params: dict) -> dict:
         },
         created_by=params.get("operator", "anonymous"),
     )
-    fit.chain_entity_id = model_chain_id
     result_dict = fit.to_dto()
     result_dict["chain_entity_id"] = model_chain_id
     return result_dict
@@ -1678,7 +1677,7 @@ def handle_request(method: str, params: dict) -> dict:
             params["from_id"], params["to_id"],
             params["relation"],
             params.get("evidence_status", "unverified"),
-            params.get("created_by", _VERSION_CHAIN._operator),
+            params.get("created_by", params.get("operator", "anonymous")),
         )
         return {"success": True}
 
