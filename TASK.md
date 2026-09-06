@@ -877,5 +877,10 @@
   - **Phase D**: 模型治理規則（適用性檢查、DOE 退回規則、選模推薦）
   - **Phase E**: 異常來源追蹤（source/confidence/user_confirmed 完整標注）
   - **Phase F**: 驗證實驗閉環（verdict 判定、模型狀態自動更新、下次實驗建議）
+    - [x] F2: TypeScript types + API wrappers in engine.ts (ChainEntitySummary, ChainTrace, ChainLink, ChainClaim, GovernanceCheckResult, ModelRecommendation, DoeAiComparison, ExperimentVerdictResult, NextExperimentSuggestion + all API functions)
+    - [x] F3: Analysis Phase Card in ProjectOverview.tsx (gate summary display with Tag colors)
+    - [x] F4: i18n keys in en.json, zh-TW.json, es-MX.json (gates, project.analysisPhaseTitle, evidence, governance, experiment sections)
+    - **驗證**：`npx tsc --noEmit` clean + `npm run build` 成功（10.58s）、三語 JSON 有效
+    - **Commit**：`14f488e feat(frontend): add v0.4.0 evidence chain, gates, and governance UI`
 - **預估工時**: 13-19 天
 - **不納入**: AI 助手面板、MES 即時連線、影像深度學習、UI 美化
