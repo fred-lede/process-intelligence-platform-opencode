@@ -120,7 +120,8 @@
     "savedTo": "專案已儲存至 {{path}}",
     "opened": "已從 {{path}} 開啟專案",
     "saveNoData": "儲存前請先匯入資料。",
-    "newDone": "已開始新專案。"
+    "newDone": "已開始新專案。",
+    "analysisPhaseTitle": "分析階段狀態"
   },
   "dataImport": {
     "stepPick": "選擇檔案",

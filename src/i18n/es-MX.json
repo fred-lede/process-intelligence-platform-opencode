@@ -120,7 +120,8 @@
     "createNew": "Crear Nuevo Proyecto",
     "openExisting": "Abrir Proyecto Existente",
     "projectDescription": "Descripción",
-    "engineDescription": "El motor de análisis se encarga de la importación de datos, el ajuste de distribuciones, el modelado DOE, la simulación Monte Carlo y la generación de reportes."
+    "engineDescription": "El motor de análisis se encarga de la importación de datos, el ajuste de distribuciones, el modelado DOE, la simulación Monte Carlo y la generación de reportes.",
+    "analysisPhaseTitle": "Estado de la Fase de Análisis"
   },
   "dataImport": {
     "downloadTemplate": "Descargar plantilla CSV",
