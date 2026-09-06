@@ -910,5 +910,17 @@
     "zoomOut": "縮小",
     "zoomReset": "重設縮放",
     "zoomFit": "適合視窗"
+  },
+  "gates": {
+    "dataImport": "資料匯入",
+    "processDefine": "製程定義",
+    "modeling": "模型中心",
+    "spc": "SPC 製程控制",
+    "monteCarlo": "蒙地卡羅",
+    "prediction": "互動預測",
+    "validation": "驗證實驗室",
+    "confirmed": "已確認",
+    "pending": "待確認",
+    "notStarted": "未開始"
   }
 }

@@ -906,5 +906,17 @@
     "zoomOut": "Alejar",
     "zoomReset": "Restablecer zoom",
     "zoomFit": "Ajustar a la vista"
+  },
+  "gates": {
+    "dataImport": "Importación de Datos",
+    "processDefine": "Definición del Proceso",
+    "modeling": "Centro de Modelos",
+    "spc": "Control SPC",
+    "monteCarlo": "Monte Carlo",
+    "prediction": "Predicción",
+    "validation": "Laboratorio de Validación",
+    "confirmed": "Confirmado",
+    "pending": "Pendiente",
+    "notStarted": "No Iniciado"
   }
 }
