@@ -1758,8 +1758,6 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_project_create(params)
     if method == "project/open":
         return _handle_project_open(params)
-    if method == "project/resolve-root":
-        return _handle_project_resolve_root(params)
     if method == "project/settings":
         return _handle_project_settings(params)
     if method == "project/dirs":
@@ -2161,11 +2159,6 @@ def _handle_project_open(params: dict) -> dict:
     # Reload version chain and gate manager for the opened project
     _reload_chain_for_project(root)
     return result
-
-
-def _handle_project_resolve_root(params: dict) -> dict:
-    file_path = params["file_path"]
-    return PROJECT_ENGINE.resolve_project_root(file_path)
 
 
 def _reload_chain_for_project(root: str) -> None:

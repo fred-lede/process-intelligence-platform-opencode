@@ -274,26 +274,6 @@ class ProjectEngine:
             "process_groups": len(manifest.process_groups),
         }
 
-    def resolve_project_root(self, file_path: str) -> dict:
-        """Given a .piproj.json path, walk up the tree to find project_manifest.json."""
-        candidate = Path(file_path).resolve()
-        # Try each ancestor directory
-        for parent in [candidate] + list(candidate.parents):
-            manifest_path = parent / "project_manifest.json"
-            if manifest_path.exists():
-                self._root = parent
-                self._manifest = None
-                self._manifest_path = manifest_path
-                manifest = self._load()
-                return {
-                    "project_root": str(parent),
-                    "project_id": manifest.project_id,
-                    "project_name": manifest.project_name,
-                }
-        raise FileNotFoundError(
-            f"project_manifest.json not found in {file_path} or any parent directory"
-        )
-
     def get_manifest(self) -> dict:
         self._ensure_project()
         manifest = self._load()
