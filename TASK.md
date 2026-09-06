@@ -830,3 +830,21 @@
 - **Commits**：`8b37832`（feat）+ `98f38a5`（docs）
 - **Push**：✅
 - **Files changed** — `src/lib/assistantGuide.ts`（+56/-12）、`PROGRESS.md`
+
+---
+
+## v0.4.0 可信分析鏈（Trustworthy Analysis Chain）
+
+### 規格書
+- **Status**: DRAFT - 等待使用者審查
+- **規格文件**: `docs/superpowers/specs/2026-09-06-v040-trustworthy-chain.md`
+- **核心目標**: 從功能擴張轉向分析可信度、版本治理、實驗驗證與工程落地
+- **六個 Phase**:
+  - **Phase A**: 版本鏈基礎設施（VersionChain 中央管理器）
+  - **Phase B**: 分析階段閘門（未完成→待確認→已確認）
+  - **Phase C**: 報告證據包（追溯性、來源標籤、核准紀錄）
+  - **Phase D**: 模型治理規則（適用性檢查、DOE 退回規則、選模推薦）
+  - **Phase E**: 異常來源追蹤（source/confidence/user_confirmed 完整標注）
+  - **Phase F**: 驗證實驗閉環（verdict 判定、模型狀態自動更新、下次實驗建議）
+- **預估工時**: 13-19 天
+- **不納入**: AI 助手面板、MES 即時連線、影像深度學習、UI 美化
