@@ -313,6 +313,9 @@ class VersionChain:
         entities_path = self._entities_path()
         links_path = self._links_path()
         claims_path = self._claims_path()
+        self._entities.clear()
+        self._links.clear()
+        self._claims.clear()
         if entities_path.exists():
             for line in entities_path.read_text().splitlines():
                 if line.strip():
@@ -329,3 +332,7 @@ class VersionChain:
                     d = json.loads(line)
                     self._claims.setdefault(d["entity_id"], []).append(ClaimRecord(**d))
         self._load_counters()
+        # Reconstruct counters from durable entities, including pre-v0.4.2 logs.
+        for entity in self._entities.values():
+            key = (entity.project_id, entity.entity_type)
+            self._version_counters[key] = max(self._version_counters.get(key, 0), entity.version)

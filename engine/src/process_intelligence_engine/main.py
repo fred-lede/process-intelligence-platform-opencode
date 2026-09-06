@@ -165,6 +165,7 @@ AUTH_MANAGER = AuthManager()
 PROJECT_ENGINE = ProjectEngine()
 _PROJECT_ROOT = "/tmp/default-project"
 _VERSION_CHAIN = VersionChain(_PROJECT_ROOT, "anonymous")
+_VERSION_CHAIN.load()
 GATE_MANAGER = GateManager(project_root=_PROJECT_ROOT, project_id="default")
 
 
@@ -385,6 +386,7 @@ def _handle_import(params: dict) -> dict:
         entity_type="dataset",
         project_id="default",
         metadata={
+            "dataset_id": dataset_id,
             "source_file": result.file_path,
             "row_count": result.row_count,
             "column_count": result.column_count,
@@ -392,6 +394,8 @@ def _handle_import(params: dict) -> dict:
         created_by=params.get("operator", "anonymous"),
     )
     dto["chain_entity_id"] = dataset_chain_id
+    for module in GATE_MANAGER.ALL_MODULES:
+        GATE_MANAGER.reset(module, "Dataset imported; review current analysis")
     return dto
 
 
@@ -623,6 +627,7 @@ def _handle_modeling_fit(params: dict) -> dict:
         project_id="default",
         metadata={
             "model_type": model_type,
+            "model_id": fit.model_id,
             "dataset_id": params["dataset_id"],
             "target": target,
             "inputs": inputs,
@@ -633,6 +638,8 @@ def _handle_modeling_fit(params: dict) -> dict:
     )
     result_dict = fit.to_dto()
     result_dict["chain_entity_id"] = model_chain_id
+    for module in ("modeling", "monte_carlo", "prediction", "validation"):
+        GATE_MANAGER.reset(module, "Model fitted; review current analysis")
     return result_dict
 
 
@@ -753,6 +760,20 @@ def _handle_validation_full(params: dict) -> dict:
         "experiment_recommendations": exp_recommendation,
         "credibility": credibility_per_model,
     }
+
+
+def _report_entities(dataset_id: str, model_ids: list[str]) -> list:
+    """Resolve only the requested runtime IDs; never guess legacy mappings."""
+    selected = []
+    for item in _VERSION_CHAIN.get_chain_summary():
+        entity = _VERSION_CHAIN.get_entity(item["entity_id"])
+        meta = entity.metadata
+        if entity.entity_type == "dataset" and meta.get("dataset_id") == dataset_id:
+            selected.append(entity)
+        elif (entity.entity_type == "model" and meta.get("dataset_id") == dataset_id
+              and meta.get("model_id") in model_ids):
+            selected.append(entity)
+    return selected
 
 
 def _handle_report_generate(params: dict) -> dict:
@@ -950,16 +971,25 @@ def _handle_report_generate(params: dict) -> dict:
     except Exception:
         pass
 
-    # Evidence chain data for report
-    chain_summary = _VERSION_CHAIN.get_chain_summary()
-    dataset_trace = {}
-    for entry in chain_summary:
-        if entry["entity_type"] == "dataset":
-            try:
-                dataset_trace = _VERSION_CHAIN.get_trace(entry["entity_id"])
-                break
-            except KeyError:
-                pass
+    # Resolve the actual report inputs, excluding unrelated project evidence.
+    evidence = _report_entities(dataset_id, model_ids)
+    if monte_carlo_result:
+        simulation_id = _VERSION_CHAIN.register_entity(
+            "simulation", "default",
+            {"dataset_id": dataset_id, "model_id": best_model.get("model_id"),
+             "seed": int(params.get("seed", 42)),
+             "n_simulations": int(params.get("n_simulations", 10000)),
+             "spec": _spec_serializable(spec, lsl, usl),
+             "result": monte_carlo_result},
+            created_by=operator, parent_ids=[e.entity_id for e in evidence],
+        )
+        evidence.append(_VERSION_CHAIN.get_entity(simulation_id))
+        GATE_MANAGER.reset("monte_carlo", "Report generated a new simulation")
+    selected_ids = {e.entity_id for e in evidence}
+    chain_summary = [e for e in _VERSION_CHAIN.get_chain_summary()
+                     if e["entity_id"] in selected_ids]
+    dataset_trace = next((_VERSION_CHAIN.get_trace(e.entity_id) for e in evidence
+                          if e.entity_type == "dataset"), {})
     chain_trace = {"steps": [
         {"step": e["entity_type"], "entity_id": e["entity_id"],
          "operator": e["created_by"], "timestamp": e["created_at"],
@@ -978,15 +1008,8 @@ def _handle_report_generate(params: dict) -> dict:
         except KeyError:
             pass
 
-    # Enforce report status based on gate state
-    required_modules = ["data_import", "modeling", "monte_carlo"]
-    all_required_confirmed = all(
-        gate_summary.get(m) == "confirmed" for m in required_modules
-        if m in gate_summary
-    )
-    report_status = "approved" if all_required_confirmed else "draft"
-    approved_by = operator if report_status == "approved" else ""
-    approved_at = datetime.now().isoformat() if report_status == "approved" else ""
+    # Confirmation makes a report eligible for review, never auto-approved.
+    report_status, approved_by, approved_at = "draft", "", ""
 
     report_data = ReportData(
         project_name=project_name,
@@ -1030,10 +1053,14 @@ def _handle_report_generate(params: dict) -> dict:
         project_id="default",
         metadata={
             "model_id": model_ids[0] if model_ids else "",
+            "model_ids": model_ids,
             "dataset_id": dataset_id,
             "format": output_format,
+            "report_status": "draft",
+            "has_simulation": bool(monte_carlo_result),
         },
         created_by=operator,
+        parent_ids=[e.entity_id for e in evidence],
     )
 
     if output_format == "html":
@@ -1513,6 +1540,7 @@ def _handle_monte_carlo_run(params: dict) -> dict:
         created_by=params.get("operator", "anonymous"),
     )
     result["chain_entity_id"] = sim_chain_id
+    GATE_MANAGER.reset("monte_carlo", "Simulation changed")
     return {"success": True, "result": result}
 
 
@@ -1992,6 +2020,26 @@ def _handle_approval_submit(params: dict) -> dict:
 
 
 def _handle_approval_approve(params: dict) -> dict:
+    if params["resource_type"] == "report":
+        report = _VERSION_CHAIN.get_entity(params["resource_id"])
+        if report.entity_type != "report":
+            raise ValueError("Expected a report chain entity ID")
+        parents = [_VERSION_CHAIN.get_entity(eid) for eid in report.parent_ids]
+        if not any(e.entity_type == "dataset" for e in parents):
+            raise ValueError("Report dataset has no traceable version; regenerate from imported data")
+        found_models = {e.metadata.get("model_id") for e in parents if e.entity_type == "model"}
+        if not set(report.metadata.get("model_ids", [])).issubset(found_models):
+            raise ValueError("Report model has no traceable version")
+        modules = {"dataset": "data_import", "model": "modeling", "simulation": "monte_carlo"}
+        for entity in parents:
+            module = modules.get(entity.entity_type)
+            if module:
+                gate = GATE_MANAGER.get_details(module)
+                if (gate["status"] != "confirmed" or gate["entity_id"] != entity.entity_id
+                        or gate["entity_version"] != entity.version):
+                    raise ValueError(f"Report requires confirmation of {module} version {entity.entity_id}")
+        if APPROVAL_WORKFLOW.get_status("report", report.entity_id) != "pending_review":
+            raise ValueError("Report must be submitted for review before approval")
     return APPROVAL_WORKFLOW.approve(
         resource_type=params["resource_type"],
         resource_id=params["resource_id"],
@@ -2150,7 +2198,9 @@ def _handle_project_create(params: dict) -> dict:
     root = params["root"]
     name = params.get("name", "Untitled")
     operator = params.get("operator", "anonymous")
-    return PROJECT_ENGINE.create_project(root, name, operator)
+    result = PROJECT_ENGINE.create_project(root, name, operator)
+    _reload_chain_for_project(root)
+    return result
 
 
 def _handle_project_open(params: dict) -> dict:
@@ -2164,7 +2214,9 @@ def _handle_project_open(params: dict) -> dict:
 def _reload_chain_for_project(root: str) -> None:
     """Reinitialize the shared version chain and gate manager for a project root."""
     global _VERSION_CHAIN, GATE_MANAGER
-    _VERSION_CHAIN = VersionChain(root, "anonymous")
+    chain = VersionChain(root, "anonymous")
+    chain.load()
+    _VERSION_CHAIN = chain
     GATE_MANAGER = GateManager(project_root=root, project_id="default")
 
 

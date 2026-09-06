@@ -6,6 +6,12 @@ import os
 from process_intelligence_engine.settings import SettingsManager, AIProviderConfig
 
 
+@pytest.fixture(autouse=True)
+def isolated_settings(tmp_path, monkeypatch):
+    monkeypatch.setattr(SettingsManager, "_get_config_path",
+                        lambda self: str(tmp_path / "settings.json"))
+
+
 def test_default_config():
     mgr = SettingsManager()
     config = mgr.get_config()

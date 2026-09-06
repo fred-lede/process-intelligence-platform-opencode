@@ -169,7 +169,7 @@ class GateManager:
         with self._lock:
             gate = self._gates[module]
             old_status = gate.status
-            if gate.entity_version != entity_version:
+            if (gate.entity_id, gate.entity_version) != (entity_id, entity_version):
                 gate.status = "pending_confirmation"
                 gate.entity_id = entity_id
                 gate.entity_version = entity_version
