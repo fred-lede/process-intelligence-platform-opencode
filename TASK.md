@@ -869,18 +869,17 @@
   - **Phase A**: 版本鏈基礎設施（VersionChain 中央管理器）
   - **Phase B**: 分析階段閘門（未完成→待確認→已確認）
   - **Phase C**: 報告證據包（追溯性、來源標籤、核准紀錄）
-- **Phase C**: 報告證據包（追溯性、來源標籤、核准紀錄）
-  - [x] Task C1: ReportData 新增 7 個 evidence chain 欄位
-  - [x] Task C2: HTML 報告新增 evidence summary + 3 個 appendix（A/B/C）
-  - [x] 測試 2 支新增；引擎 373 passed, 1 skipped
-  - [x] commit e735b1e
   - **Phase D**: 模型治理規則（適用性檢查、DOE 退回規則、選模推薦）
   - **Phase E**: 異常來源追蹤（source/confidence/user_confirmed 完整標注）
   - **Phase F**: 驗證實驗閉環（verdict 判定、模型狀態自動更新、下次實驗建議）
-    - [x] F2: TypeScript types + API wrappers in engine.ts (ChainEntitySummary, ChainTrace, ChainLink, ChainClaim, GovernanceCheckResult, ModelRecommendation, DoeAiComparison, ExperimentVerdictResult, NextExperimentSuggestion + all API functions)
-    - [x] F3: Analysis Phase Card in ProjectOverview.tsx (gate summary display with Tag colors)
-    - [x] F4: i18n keys in en.json, zh-TW.json, es-MX.json (gates, project.analysisPhaseTitle, evidence, governance, experiment sections)
-    - **驗證**：`npx tsc --noEmit` clean + `npm run build` 成功（10.58s）、三語 JSON 有效
-    - **Commit**：`14f488e feat(frontend): add v0.4.0 evidence chain, gates, and governance UI`
-- **預估工時**: 13-19 天
-- **不納入**: AI 助手面板、MES 即時連線、影像深度學習、UI 美化
+
+### 實作狀態
+- **Phase A-F** + **前端整合**：全部完成 ✅
+- **v0.4.0-b1 修正**（追加批次）：
+  - VersionChain append-only writes + counter persistence ✅
+  - GateManager project_id + JSONL persistence ✅
+  - 報告證據鏈顯示 ClaimRecord ✅
+  - Governance tolerance derived from spec_range/rmse + classification verdict + prediction interval ✅
+- **驗證**：引擎 **393 passed, 1 skipped**（baseline 345 + 48 新）；tsc clean；build ✓ 10.4s
+- **Tags**: `v0.4.0` / `v0.4.1`（追加修正批次）
+- **預估工時**: 已完成

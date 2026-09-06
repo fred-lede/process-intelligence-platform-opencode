@@ -10,8 +10,14 @@
 - **Phase E**：異常來源追蹤 — `register_anomaly_event` 登記到版本鏈
 - **Phase F**：驗證實驗閉環 — verdict 判定（supports/partially_supports/does_not_support/needs_remodel）、下次實驗建議
 - **前端**：TypeScript 類型 + API 包裝器 + 分析階段 Card + i18n 三語
-- **驗證**：引擎 **382 passed, 1 skipped**（baseline 345 + 37 新）；`npx tsc --noEmit` clean；`npm run build` ✓ built in 12s
-- **Commits**：`cb90146` → `44fb639`（共 10 筆）
+- **驗證**：引擎 **393 passed, 1 skipped**（baseline 345 + 48 新）；`npx tsc --noEmit` clean；`npm run build` ✓ built in 10s
+- **Commits**：`cb90146` → 本次推送
+
+### v0.4.0 alpha → beta 修正（追加批次）
+- **Version Chain append-only**：`save()` 改用完整覆寫（shutdown），`register_entity`/`add_link`/`add_claim` 改為 append 模式；新增 `version_counters.json` 持久化，`load()` 恢復 `_version_counters`，重啟後版本號不再歸零
+- **Gate 持久化 + project_id**：`GateRecord` 加入 `project_id`；`save()`/`load()` JSONL 持久化；不同 `project_id` 的 GateManager 互相隔離；`main.py` 初始化的 `GATE_MANAGER` 指定 `project_root` 與 `project_id`
+- **報告證據鏈**：`_render_evidence_summary()` 顯示 ClaimRecord 表格（type/source/text/confidence/status）；`_render_appendix_chain()` 合併 entity trace + claims；`_handle_report_generate()` 從版本鏈匯入 claims 與 gate 狀態
+- **Governance 增強**：`compute_experiment_verdict()` 支援 `spec_range`/`rmse` 自動推導 tolerance；新增 `is_classification` 路徑（accuracy/recall 判定）；新增 `compute_prediction_interval()` 預測區間計算
 
 ## 2026-09-05 — Assistant guide 領域知識強化（SPC / Monte Carlo / Exploration）
 - **實作**：`assistantGuide.ts` 三頁 entry 擴充領域知識
