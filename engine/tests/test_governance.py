@@ -1,0 +1,62 @@
+import pytest
+import pandas as pd
+import numpy as np
+from process_intelligence_engine.modeling.governance import (
+    check_model_applicability,
+    check_doeb_ai_discrepancy,
+    recommend_models,
+)
+
+
+def test_small_sample_warns_tree_models():
+    df = pd.DataFrame({"x": np.random.rand(20), "y": np.random.rand(20)})
+    warnings = check_model_applicability(df, target="y", inputs=["x"])
+    assert any("tree" in w.lower() or "sample" in w.lower() for w in warnings)
+
+
+def test_class_imbalance_warns():
+    df = pd.DataFrame({"x": np.random.rand(100), "y": ["OK"] * 95 + ["NG"] * 5})
+    warnings = check_model_applicability(df, target="y", inputs=["x"], is_binary=True)
+    assert any("imbalance" in w.lower() for w in warnings)
+
+
+def test_constant_column_warns():
+    df = pd.DataFrame({"x": [1.0] * 50, "y": np.random.rand(50)})
+    warnings = check_model_applicability(df, target="y", inputs=["x"])
+    assert any("constant" in w.lower() for w in warnings)
+
+
+def test_doeb_ai_discrepancy_small_diff():
+    result = check_doeb_ai_discrepancy(
+        doe_r2=0.85, ai_r2=0.88,
+        ai_pred=[1.0, 2.0, 3.0],
+        doe_pred=[1.05, 2.02, 2.98],
+        scale=1.0,
+    )
+    assert result["needs_review"] == False
+
+
+def test_doeb_ai_discrepancy_large_diff():
+    result = check_doeb_ai_discrepancy(
+        doe_r2=0.50, ai_r2=0.90,
+        ai_pred=[1.0, 2.0, 3.0],
+        doe_pred=[1.5, 2.8, 4.0],
+        scale=1.0,
+    )
+    assert result["needs_review"] == True
+
+
+def test_recommend_models_small_sample():
+    recs = recommend_models(n_samples=30, n_features=3, is_binary_target=False, has_nonlinearity=False, need_interpretability=True)
+    assert "doe_linear" in recs
+
+
+def test_recommend_models_large_sample_no_interpretability():
+    recs = recommend_models(n_samples=500, n_features=10, is_binary_target=False, has_nonlinearity=True, need_interpretability=False)
+    assert "xgboost" in recs or "lightgbm" in recs
+
+
+def test_recommend_models_binary():
+    recs = recommend_models(n_samples=200, n_features=5, is_binary_target=True, has_nonlinearity=True, need_interpretability=True)
+    assert "logistic_regression" in recs
+    assert "xgboost" in recs

@@ -1529,6 +1529,32 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "modeling/validation/full":
         return _handle_validation_full(params)
 
+    if method == "modeling/governance/check":
+        dataset_id = params.get("dataset_id")
+        df = REGISTRY.get(dataset_id)
+        warnings = check_model_applicability(
+            df, params["target"], params["inputs"],
+            is_binary=params.get("is_binary", False),
+        )
+        result = {"warnings": warnings, "can_proceed": len([w for w in warnings if "tree" in w.lower() and "not recommended" in w]) == 0}
+    if method == "modeling/governance/recommend":
+        recs = recommend_models(
+            params.get("n_samples", 0),
+            params.get("n_features", 0),
+            params.get("is_binary_target", False),
+            params.get("has_nonlinearity", False),
+            params.get("need_interpretability", True),
+        )
+        result = {"recommendations": recs}
+    if method == "modeling/governance/doe_ai_compare":
+        result = check_doeb_ai_discrepancy(
+            params.get("doe_r2", 0),
+            params.get("ai_r2", 0),
+            params.get("ai_pred", []),
+            params.get("doe_pred", []),
+            params.get("scale", 1.0),
+        )
+
     if method == "spec/suggest":
         return _handle_spec_suggest(params)
 
