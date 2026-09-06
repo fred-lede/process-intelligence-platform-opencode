@@ -880,6 +880,6 @@
   - GateManager project_id + JSONL persistence ✅
   - 報告證據鏈顯示 ClaimRecord ✅
   - Governance tolerance derived from spec_range/rmse + classification verdict + prediction interval ✅
-- **驗證**：引擎 **393 passed, 1 skipped**（baseline 345 + 48 新）；tsc clean；build ✓ 10.4s
-- **Tags**: `v0.4.0` / `v0.4.1`（追加修正批次）
+- **驗證**：引擎 **395 passed, 1 skipped**（baseline 345 + 50 新）；tsc clean；build ✓ 11.5s
+- **Tags**: `v0.4.0` / `v0.4.1` / `v0.4.2`（追加修正批次）
 - **預估工時**: 已完成
