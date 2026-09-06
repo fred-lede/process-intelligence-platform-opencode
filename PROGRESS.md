@@ -1,5 +1,16 @@
 # PROGRESS.md
 
+## 2026-09-07 — macOS libomp 缺失導致引擎 Broken pipe（+ 選配庫載入失敗降級）
+
+- **徵狀**：app 啟動後「無法連線分析引擎 … failed to write to engine: Broken pipe (os error 32)」
+- **Root cause（macOS 限定）**：xgboost 的 mac wheel 不 bundle OpenMP（dmlc/xgboost#6494），`libxgboost.dylib` 硬編碼 rpath `/opt/homebrew/opt/libomp/lib/libomp.dylib`。當該 brew 路徑不存在（libomp 未安裝）時，`import xgboost` 拋 `xgboost.core.XGBoostError`——**不是 `ImportError`**，而 `fitters.py` 的 availability guard 只攔 `except ImportError` → 缺失漏過 → 引擎 module import 直接 crash → 引擎 stdout 永不回應 → Rust 端 write 得到 `Broken pipe` → 前端顯示無法連線。lightgbm mac wheel 同理需 libomp。
+- **修復**：
+  - 環境（macOS 必做）：`brew install libomp`（Windows/Linux 不需——Windows wheel 自帶 `vcomp140.dll`、Linux wheel 用 auditwheel bundle）
+  - 環境：`uv pip install 'lightgbm>=4.0.0'`（pyproject 宣告依賴但 venv 遺漏）
+  - 程式碼（commit `b54a07d`）：`fitters.py` xgboost/lightgbm 的 `except ImportError` → `except Exception`，任何選配庫載入失敗降級為 `XGBOOST_AVAILABLE/LIGHTGBM_AVAILABLE=False`，引擎不再因單一選配庫掛掉。新增回歸測試 `test_xgboost_dylib_failure_degrades_gracefully`（子進程模擬非 ImportError 載入失敗）。
+- **驗證**：全引擎 **417 passed, 1 skipped**（含 lightgbm/xgboost 真實訓練）；`pings_live_engine`（Rust live Python 子進程）通過；engine JSON-RPC ping `{"pong": true, "version": "0.4.0"}`
+- **部署提醒**：若 mac bundle 重新 build 前未 `brew install libomp`，安裝版 app 仍會 Broken pipe。`time_series_returns_fast_live_engine` Rust 測試為 pre-existing failure（欄位名 `time/temperature` 與 `data/test_dataset.csv` 現行欄位不符），與本次無關。
+
 ## 2026-09-07 — v0.4.0 開機彩虹圈 + Broken pipe 修復
 
 - **徵狀**：使用者啟動 installed app 轉彩虹圈（beachball），之後前端顯示「無法連線分析引擎 … failed to write to engine: Broken pipe (os error 32)」

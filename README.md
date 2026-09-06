@@ -28,6 +28,11 @@
 - Node.js 18+
 - Python 3.11（不支援 3.12+）
 - 系統 WebView (macOS: WebKit / Windows: WebView2)
+- **macOS：OpenMP 執行時（libomp）**——xgboost/lightgbm 的 macOS wheel 不會自行 bundle OpenMP，需系統安裝：
+  ```bash
+  brew install libomp
+  ```
+  Windows/Linux 不需要（Windows wheel 自帶 `vcomp140.dll`、Linux wheel 已 bundle）。
 
 ### 安裝 Rust（若尚未安裝）
 
@@ -85,12 +90,14 @@ npm run tauri dev
 2. **Python venv 已建立**：執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && pip install -r requirements.txt`
 3. **Node 模組已安裝**：執行 `npm install`
 4. **瀏覽器 WebView**：macOS 內建 WebKit，Windows 需安裝 WebView2 Runtime
+5. **macOS 需安裝 libomp**：執行 `brew install libomp`（缺失會導致 xgboost 載入失敗、引擎無法啟動，見下方排錯）
 
 若啟動時出現以下錯誤，請檢查：
 
 - **`failed to run cargo metadata`**：Rust 未安裝或 PATH 未設定，執行 `source $HOME/.cargo/env`
 - **`engine start failed`**：Python venv 未建立，執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && pip install -r requirements.txt`
 - **`Failed to load data`**：引擎未就緒，等待 3 秒後自動重試；若持續失敗請檢查 Python 路徑
+- **`無法連線分析引擎 … failed to write to engine: Broken pipe (os error 32)`（macOS）**：引擎子進程啟動時 crash。最常見為 macOS 缺少 OpenMP（libomp）→ xgboost/lightgbm import 失敗 → 引擎 module import 中斷。執行 `brew install libomp` 後重新 build + 部署。若 `engine/.venv` 缺少 `lightgbm`，先執行 `uv pip install 'lightgbm>=4.0.0'`
 
 
 ### 測試
