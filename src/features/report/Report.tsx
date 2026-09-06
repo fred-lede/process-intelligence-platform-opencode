@@ -5,7 +5,7 @@ import { FileTextOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { generateReport } from '../../lib/engine'
+import { generateReport, listReports, exportReport, type ReportRecord } from '../../lib/engine'
 import { buildReportsContext } from '../../lib/assistantData'
 
 export default function Report() {
@@ -16,6 +16,15 @@ export default function Report() {
   const { setContext } = useAssistantContextStore()
 
   const [generating, setGenerating] = useState(false)
+  const [savedReports, setSavedReports] = useState<ReportRecord[]>([])
+  useEffect(() => { listReports().then(r => setSavedReports(r.reports)).catch(e => messageApi.error(String(e))) }, [])
+  const openSaved = async (id: string) => {
+    try {
+      const result = await exportReport(id)
+      setReportHtml(result.content)
+      setLastFormat('html')
+    } catch (e) { messageApi.error(String(e)) }
+  }
   const [reportHtml, setReportHtml] = useState<string | null>(null)
   const [lastFormat, setLastFormat] = useState<'html' | 'pdf' | 'excel' | null>(null)
 
@@ -70,6 +79,7 @@ export default function Report() {
       }
 
       messageApi.success(t('report.generateSuccess'))
+      setSavedReports((await listReports()).reports)
       setLastFormat(format)
     } catch (err) {
       messageApi.error(t('report.generateError'))
@@ -78,7 +88,7 @@ export default function Report() {
     }
   }
 
-  if (!datasetId) {
+  if (!datasetId && !savedReports.length) {
     return (
       <Card title={t('report.title')}>
         <Alert type="info" showIcon message={t('report.noData')} />
@@ -91,6 +101,7 @@ export default function Report() {
       {contextHolder}
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <Card title={t('report.title')} extra={<FileTextOutlined />}>
+          <Space wrap>{savedReports.map(r => <Button key={r.report_id} onClick={() => void openSaved(r.report_id)}>{r.project_name} · {r.report_id.slice(0, 12)}</Button>)}</Space>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Alert
               type="info"

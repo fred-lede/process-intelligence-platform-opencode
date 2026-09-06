@@ -9,7 +9,7 @@ import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
 import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult } from '../../lib/engine'
-import { computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, type DoeStatisticsResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, type DoeStatisticsResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -81,6 +81,8 @@ export default function ModelCenter() {
   const [minSamplesLeaf, setMinSamplesLeaf] = useState(3)
   const [learningRate, setLearningRate] = useState(0.1)
   const [autoSelectFeatures, setAutoSelectFeatures] = useState(false)
+  const [governance, setGovernance] = useState<string[]>([])
+  const [recommended, setRecommended] = useState<string[]>([])
 
   useEffect(() => {
     setContext(
@@ -90,6 +92,19 @@ export default function ModelCenter() {
   }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, setContext])
 
   const datasetId = importResult?.dataset_id
+  useEffect(() => {
+    let active = true
+    setGovernance([])
+    setRecommended([])
+    if (datasetId && target && selectedInputs.length) {
+      Promise.all([
+        checkModelApplicability(datasetId, target, selectedInputs, modelType === 'logistic_regression'),
+        recommendModels(importResult?.row_count ?? 0, selectedInputs.length, modelType === 'logistic_regression', false, true),
+      ]).then(([check, rec]) => { if (active) { setGovernance(check.warnings); setRecommended(rec.recommendations) } })
+        .catch(e => { if (active) setGovernance([String(e)]) })
+    }
+    return () => { active = false }
+  }, [datasetId, target, selectedInputs, modelType])
   const inputOptions = fields
     .filter((f) => f.role === 'input')
     .map((f) => ({ label: f.originalName, value: f.originalName }))
@@ -325,6 +340,8 @@ export default function ModelCenter() {
         {error && <Alert type="error" showIcon message={error} closable onClose={clearError} />}
 
         <Card title={t('modelCenter.fitTitle')} extra={<ExperimentOutlined />}>
+          {governance.map((warning, i) => <Alert key={i} type="warning" showIcon message={warning} />)}
+          <Space>{recommended.map(name => <Tag key={name}>{name}</Tag>)}</Space>
           <Space direction="vertical" style={{ width: '100%' }}>
             <div>
               <label>{t('modelCenter.modelType.label')}</label>

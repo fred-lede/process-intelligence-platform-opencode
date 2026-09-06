@@ -12,6 +12,7 @@ import { openProject, getGateSummary } from '../../lib/engine'
 import { buildProjectFile, loadProjectFile, saveProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
+import AnalysisReview from '../../components/AnalysisReview'
 
 export default function ProjectOverview() {
   const { t } = useTranslation()
@@ -184,6 +185,7 @@ export default function ProjectOverview() {
         </Typography.Text>
       </Card>
 
+      <AnalysisReview />
       <Card title={t('project.engineTitle')} size="small">
         {status.state === 'offline' ? (
           <Alert

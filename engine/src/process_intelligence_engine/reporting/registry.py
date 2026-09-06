@@ -23,8 +23,9 @@ class ReportRegistry:
         project_name: str,
         operator: str = "Unknown",
         output_format: str = "html",
+        report_id: str | None = None,
     ) -> str:
-        report_id = str(uuid.uuid4())
+        report_id = report_id or str(uuid.uuid4())
         rec = {
             "report_id": report_id,
             "project_name": project_name,

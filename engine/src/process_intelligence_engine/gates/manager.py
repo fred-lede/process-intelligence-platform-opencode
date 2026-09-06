@@ -278,3 +278,15 @@ class GateManager:
         with self._lock:
             mods = modules or self.ALL_MODULES
             return all(self._gates[m].status == "confirmed" for m in mods if m in self._gates)
+
+    def is_confirmed(self, module: str, entity_id: str, version: int) -> bool:
+        """Confirmations of comparison models coexist until a reset."""
+        with self._lock:
+            for event in reversed(self._events):
+                if event.module != module:
+                    continue
+                if event.event_type == "reset":
+                    return False
+                if event.event_type == "confirm" and event.entity_id == entity_id:
+                    return event.entity_version == version
+            return False

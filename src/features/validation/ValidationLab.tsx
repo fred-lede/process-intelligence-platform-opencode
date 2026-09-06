@@ -16,7 +16,8 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import {
   runFullValidation,
-  recordExperiment,
+  recordExperimentWithVerdict,
+  suggestNextExperiment,
   listExperiments,
   getModelInfo,
   type ExperimentRecord,
@@ -35,7 +36,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 export default function ValidationLab() {
   const { t } = useTranslation()
-  const { importResult } = useDataPipelineStore()
+  const { importResult, spec } = useDataPipelineStore()
   const { models, loadModels } = useModelStore()
   const { setContext } = useAssistantContextStore()
   const [messageApi, contextHolder] = message.useMessage()
@@ -53,6 +54,7 @@ export default function ValidationLab() {
 
   const [form] = Form.useForm()
   const [submitting, setSubmitting] = useState(false)
+  const [nextConditions, setNextConditions] = useState<Array<{ condition: Record<string, number>; rationale: string }>>([])
 
   const datasetId = importResult?.dataset_id
 
@@ -110,6 +112,12 @@ export default function ValidationLab() {
     }
   }
 
+  const loadNextConditions = async () => {
+    if (!selectedModelId || !datasetId) return
+    try { setNextConditions((await suggestNextExperiment(selectedModelId, 3, datasetId)).suggestions) }
+    catch (e) { messageApi.error(String(e)) }
+  }
+
   const handleSubmitExperiment = async (values: {
     planned_inputs: Record<string, number>
     actual_inputs: Record<string, number>
@@ -122,18 +130,19 @@ export default function ValidationLab() {
     if (!selectedModelId) return
     setSubmitting(true)
     try {
-      const result = await recordExperiment({
+      const result = await recordExperimentWithVerdict({
         model_id: selectedModelId,
         planned_inputs: values.planned_inputs,
         actual_inputs: values.actual_inputs,
         predicted_output: values.predicted_output,
         actual_output: values.actual_output,
-        result: values.result,
+        dataset_id: datasetId,
+        spec_range: spec?.lsl != null && spec?.usl != null ? spec.usl - spec.lsl : undefined,
         operator: values.operator || 'anonymous',
         notes: values.notes,
       })
       messageApi.success(
-        t('validationLab.recordSuccess', { error: Math.abs(result.prediction_error).toFixed(4) })
+        `${t('validationLab.recordSuccess', { error: Math.abs(result.prediction_error).toFixed(4) })} · ${result.verdict}`
       )
       form.resetFields()
       if (selectedModelId) loadExperiments(selectedModelId)
@@ -165,7 +174,7 @@ export default function ValidationLab() {
       width: 90,
       render: (v: string) => (
         <Tag color={v === 'pass' ? 'success' : v === 'fail' ? 'error' : v === 'inconclusive' ? 'warning' : 'default'}>
-          {v === 'pass' ? t('validationLab.result.pass') : v === 'fail' ? t('validationLab.result.fail') : v === 'inconclusive' ? t('validationLab.result.inconclusive') : t('validationLab.result.unknown')}
+          {v === 'pass' ? t('validationLab.result.pass') : v === 'fail' ? t('validationLab.result.fail') : v === 'inconclusive' ? t('validationLab.result.inconclusive') : v}
         </Tag>
       ),
     },
@@ -213,6 +222,11 @@ export default function ValidationLab() {
   return (
     <Space direction="vertical" style={{ width: '100%' }} size={16}>
       {contextHolder}
+      <Card title={t('validationLab.experimentSuggestions', { defaultValue: 'Next experiment conditions' })}>
+        <Button disabled={!selectedModelId || !datasetId} onClick={() => void loadNextConditions()}>{t('common.refresh')}</Button>
+        {nextConditions.map((s, i) => <div key={i}><Typography.Text>{s.rationale}: {JSON.stringify(s.condition)}</Typography.Text>
+          <Button onClick={() => form.setFieldsValue({ planned_inputs: s.condition })}>{t('common.confirm')}</Button></div>)}
+      </Card>
 
       {/* Model selector */}
       <Card size="small" title={t('validationLab.modelSelect')}>

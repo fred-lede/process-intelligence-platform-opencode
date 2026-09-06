@@ -28,6 +28,7 @@ import {
   buildAnalysisPackage,
   runQualityChecks,
   suggestSpecLimits,
+  registerAnomalyEvent,
   type AnomalyScenario,
   type QualityIssue,
   type QualityReport,
@@ -62,7 +63,6 @@ export default function ProcessDefine() {
     setControlLimit,
     setAnomalyScenarios,
     confirmAnomaly,
-    confirmAllAnomalies,
     setAnalysisPackage,
   } = useDataPipelineStore()
 
@@ -73,6 +73,18 @@ export default function ProcessDefine() {
   const [target, setTarget] = useState<number | null>(spec?.target ?? null)
   const [inputUnits, setInputUnits] = useState<Record<string, string>>(spec?.inputUnits ?? {})
   const [error, setError] = useState<string | null>(null)
+  const [operator, setOperator] = useState('')
+  const updateScenario = (id: string, changes: Partial<AnomalyScenario>) => {
+    setAnomalyScenarios(anomalyScenarios.map(s => s.anomaly_id === id ? { ...s, ...changes, user_confirmed: false } : s))
+  }
+  const saveConfirmation = async (scenario: AnomalyScenario) => {
+    if (!importResult || !operator.trim()) return
+    try {
+      await registerAnomalyEvent({ dataset_id: importResult.dataset_id, anomaly_id: scenario.anomaly_id,
+        source: scenario.source, confidence: scenario.confidence, user_confirmed: true, operator, scenario })
+      confirmAnomaly(scenario.anomaly_id)
+    } catch (e) { setError(String(e)) }
+  }
 
   // Manual control limit overrides per input field.
   const [manualLimits, setManualLimits] = useState<Record<string, ControlLimits>>({})
@@ -352,7 +364,7 @@ export default function ProcessDefine() {
       dataIndex: 'confidence',
       key: 'confidence',
       width: 90,
-      render: (c: number) => `${(c * 100).toFixed(0)}%`,
+      render: (c: number, row) => <InputNumber min={0} max={1} step={0.05} value={c} onChange={v => updateScenario(row.anomaly_id, { confidence: v ?? 0 })} />,
     },
     {
       title: t('processDefine.scenarioSource'),
@@ -360,6 +372,7 @@ export default function ProcessDefine() {
       key: 'source',
       width: 160,
       ellipsis: true,
+      render: (source: string, row) => <Select value={source} style={{ width: 155 }} options={['historical_observation', 'fitted_distribution', 'engineering_input', 'ai_estimate', 'user_override'].map(value => ({ value, label: value }))} onChange={value => updateScenario(row.anomaly_id, { source: value as AnomalyScenario['source'] })} />,
     },
     {
       title: t('processDefine.anomalyAction'),
@@ -369,7 +382,7 @@ export default function ProcessDefine() {
         record.user_confirmed ? (
           <Tag color="green">{t('processDefine.statusConfirmed')}</Tag>
         ) : (
-          <Button size="small" type="link" onClick={() => confirmAnomaly(record.anomaly_id)}>
+          <Button size="small" type="link" disabled={!operator.trim()} onClick={() => void saveConfirmation(record)}>
             {t('common.confirm')}
           </Button>
         ),
@@ -576,6 +589,7 @@ export default function ProcessDefine() {
 
           {anomalyScenarios.length > 0 && (
             <>
+              <Input value={operator} onChange={e => setOperator(e.target.value)} placeholder={t('validationLab.column.operator')} style={{ width: 240, marginBottom: 12 }} />
               <Table<AnomalyScenario>
                 size="small"
                 rowKey="anomaly_id"
@@ -587,10 +601,10 @@ export default function ProcessDefine() {
               <div style={{ marginTop: 12 }}>
                 <Popconfirm
                   title={t('processDefine.confirmAll')}
-                  onConfirm={confirmAllAnomalies}
-                  disabled={unconfirmedCount === 0}
+                  onConfirm={async () => { for (const scenario of anomalyScenarios.filter(s => !s.user_confirmed)) await saveConfirmation(scenario) }}
+                  disabled={unconfirmedCount === 0 || !operator.trim()}
                 >
-                  <Button disabled={unconfirmedCount === 0}>
+                  <Button disabled={unconfirmedCount === 0 || !operator.trim()}>
                     {t('processDefine.confirmAll')} ({unconfirmedCount})
                   </Button>
                 </Popconfirm>

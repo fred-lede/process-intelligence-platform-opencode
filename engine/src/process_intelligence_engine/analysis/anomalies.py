@@ -407,11 +407,17 @@ def register_anomaly_event(
     confidence: float,
     user_confirmed: bool,
     operator: str,
+    scenario: dict | None = None,
 ) -> str:
     """Register an anomaly event in the version chain."""
+    dataset = chain.get_entity(dataset_id)
+    if source not in {"historical_observation", "fitted_distribution", "engineering_input", "ai_estimate", "user_override"}:
+        raise ValueError("Unknown anomaly source")
+    if not 0 <= confidence <= 1:
+        raise ValueError("Confidence must be between 0 and 1")
     entity_id = chain.register_entity(
         entity_type="anomaly",
-        project_id=dataset_id,
+        project_id=dataset.project_id,
         metadata={
             "dataset_id": dataset_id,
             "anomaly_id": anomaly_id,
@@ -419,8 +425,10 @@ def register_anomaly_event(
             "confidence": confidence,
             "user_confirmed": user_confirmed,
             "operator": operator,
+            "scenario": scenario or {},
         },
         created_by=operator,
+        parent_ids=[dataset_id],
     )
     chain.add_link(entity_id, dataset_id, "derived_from", "unverified", operator)
     return entity_id

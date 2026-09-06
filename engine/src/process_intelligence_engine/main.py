@@ -22,9 +22,11 @@ import asyncio
 import threading
 import traceback
 import uuid
+import hashlib
 
 import numpy as np
 import pandas as pd
+from process_intelligence_engine.project.session import save_dataset, load_dataset, prediction_check, rebuild_model
 
 from process_intelligence_engine.analysis.anomalies import (
     build_analysis_package,
@@ -294,6 +296,7 @@ def _handle_experiment_record(params: dict) -> dict:
             "dataset_id": params.get("dataset_id", ""),
             "predicted_output": predicted_output,
             "actual_output": actual_output,
+            "record": vars(record).copy(),
         },
         created_by=operator,
     )
@@ -309,10 +312,22 @@ def _handle_experiment_record_with_verdict(params: dict) -> dict:
     """Record experiment with automatic verdict computation."""
     predicted = float(params.get("predicted_output", 0))
     actual = float(params.get("actual_output", 0))
-    tolerance = float(params.get("tolerance", 0.1))
-    verdict = compute_experiment_verdict(predicted, actual, tolerance)
-
-    exp_result = _handle_experiment_record(params)
+    fit = MODEL_REGISTRY.get(params["model_id"])
+    tolerance = params.get("tolerance")
+    rmse = params.get("rmse", fit.metrics.get("rmse"))
+    binary = fit.model_type == "logistic_regression"
+    verdict = compute_experiment_verdict(predicted, actual, tolerance,
+        spec_range=params.get("spec_range"), rmse=rmse, is_classification=binary,
+        accuracy=params.get("accuracy"), recall=params.get("recall"))
+    exp_result = _handle_experiment_record({**params, "result": verdict})
+    model_entities = [e for e in _VERSION_CHAIN.get_chain_summary() if e["entity_type"] == "model"
+                      and _VERSION_CHAIN.get_entity(e["entity_id"]).metadata.get("model_id") == fit.model_id]
+    if model_entities:
+        model_entity_id = model_entities[-1]["entity_id"]
+        _VERSION_CHAIN.add_link(exp_result["chain_entity_id"], model_entity_id, "tests_model")
+        _VERSION_CHAIN.add_claim(model_entity_id, "experiment_verdict", verdict,
+            [exp_result["chain_entity_id"]], "historical_observation", "unverified")
+    GATE_MANAGER.reset("validation", "New experiment requires review")
 
     return {
         **exp_result,
@@ -326,6 +341,12 @@ def _handle_experiment_suggest_next(params: dict) -> dict:
     model_id = params["model_id"]
     n_suggestions = params.get("n_suggestions", 3)
     dataset_id = params.get("dataset_id")
+    if not dataset_id:
+        for item in reversed(_VERSION_CHAIN.get_chain_summary()):
+            entity = _VERSION_CHAIN.get_entity(item["entity_id"])
+            if entity.entity_type == "model" and entity.metadata.get("model_id") == model_id:
+                dataset_id = entity.metadata.get("dataset_id")
+                break
 
     df = None
     if dataset_id:
@@ -382,6 +403,7 @@ def _handle_import(params: dict) -> dict:
     )
     dto = result.to_dto()
     dto["dataset_id"] = dataset_id
+    checksum = save_dataset(_VERSION_CHAIN._project_root, dataset_id, df)
     dataset_chain_id = _VERSION_CHAIN.register_entity(
         entity_type="dataset",
         project_id="default",
@@ -390,8 +412,10 @@ def _handle_import(params: dict) -> dict:
             "source_file": result.file_path,
             "row_count": result.row_count,
             "column_count": result.column_count,
+            "import_result": dto.copy(),
         },
         created_by=params.get("operator", "anonymous"),
+        content_hash=checksum,
     )
     dto["chain_entity_id"] = dataset_chain_id
     for module in GATE_MANAGER.ALL_MODULES:
@@ -607,6 +631,7 @@ def _handle_modeling_fit(params: dict) -> dict:
     fitter = MODEL_FITTERS.get(model_type)
     if fitter is None:
         raise ValueError(f"Unknown model_type: {model_type}")
+    governance_warnings = check_model_applicability(df, target, inputs, is_binary=model_type == "logistic_regression")
 
     # Extract hyperparameters (pass-through for tree models)
     hyperparams: dict = {}
@@ -619,6 +644,7 @@ def _handle_modeling_fit(params: dict) -> dict:
         if key in params:
             hyperparams[key] = params[key]
     hyperparams = {k: v for k, v in hyperparams.items() if v is not None}
+    hyperparams.setdefault("random_state", 42)
 
     fit = fitter(df, target=target, inputs=inputs, **hyperparams)
     MODEL_REGISTRY.register(fit)
@@ -633,11 +659,19 @@ def _handle_modeling_fit(params: dict) -> dict:
             "inputs": inputs,
             "n_train": int(fit.n_train) if hasattr(fit, 'n_train') else 0,
             "n_test": int(fit.n_test) if hasattr(fit, 'n_test') else 0,
+            "governance_warnings": governance_warnings,
+            "recipe": hyperparams,
+            "training_inputs": inputs,
+            "fit_snapshot": fit.to_dto(),
+            "prediction_check": prediction_check(fit, df),
         },
         created_by=params.get("operator", "anonymous"),
+        parameters_hash=hashlib.sha256(json.dumps(hyperparams, sort_keys=True).encode()).hexdigest(),
+        parent_ids=[e.entity_id for e in _report_entities(params["dataset_id"], [])],
     )
     result_dict = fit.to_dto()
     result_dict["chain_entity_id"] = model_chain_id
+    result_dict["governance_warnings"] = governance_warnings
     for module in ("modeling", "monte_carlo", "prediction", "validation"):
         GATE_MANAGER.reset(module, "Model fitted; review current analysis")
     return result_dict
@@ -651,6 +685,7 @@ def _handle_modeling_list(params: dict) -> dict:
 
 def _handle_modeling_transition(params: dict) -> dict:
     fit = MODEL_REGISTRY.transition(params["model_id"], params["status"])
+    _VERSION_CHAIN.register_entity("model_state", "default", {"model_id": fit.model_id, "status": fit.status})
     return fit.to_dto()
 
 
@@ -786,6 +821,8 @@ def _handle_report_generate(params: dict) -> dict:
     project_name = params.get("project_name", "Untitled Project")
     operator = params.get("operator", "Unknown")
     output_format = params.get("format", "html")  # html | pdf | excel
+    if output_format not in ("html", "pdf", "excel"):
+        raise ValueError(f"Unsupported format: {output_format}")
 
     dataset_id = params.get("dataset_id")
     if not dataset_id:
@@ -1043,16 +1080,14 @@ def _handle_report_generate(params: dict) -> dict:
         approved_at=approved_at,
     )
 
-    REPORT_REGISTRY.register(
-        project_name=project_name,
-        operator=operator,
-        output_format=output_format,
-    )
+    from dataclasses import asdict
+    snapshot = json.dumps(_plain_types(asdict(report_data)), default=str)
     rep_chain_id = _VERSION_CHAIN.register_entity(
         entity_type="report",
         project_id="default",
         metadata={
             "model_id": model_ids[0] if model_ids else "",
+            "project_name": project_name,
             "model_ids": model_ids,
             "dataset_id": dataset_id,
             "format": output_format,
@@ -1061,22 +1096,47 @@ def _handle_report_generate(params: dict) -> dict:
         },
         created_by=operator,
         parent_ids=[e.entity_id for e in evidence],
+        content_hash=hashlib.sha256(snapshot.encode()).hexdigest(),
     )
+    REPORT_REGISTRY.register(project_name, operator, output_format, report_id=rep_chain_id)
+    path = _VERSION_CHAIN._project_root / "reports" / f"{rep_chain_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(snapshot, encoding="utf-8")
+    return _render_saved_report(report_data, output_format, rep_chain_id)
 
-    if output_format == "html":
-        generator = HTMLReportGenerator(report_data)
-        result = generator.generate()
-        return {"format": "html", "content": result, "chain_entity_id": rep_chain_id}
-    elif output_format == "pdf":
-        generator = PDFReportGenerator(report_data)
-        pdf_bytes = generator.generate()
-        return {"format": "pdf", "content_base64": pdf_bytes.hex(), "chain_entity_id": rep_chain_id}
-    elif output_format == "excel":
-        generator = ExcelReportGenerator(report_data)
-        result = generator.generate()
-        return {"format": "excel", "content_base64": result.hex(), "chain_entity_id": rep_chain_id}
-    else:
+
+def _render_saved_report(data, output_format, entity_id):
+    import base64
+    generators = {"html": HTMLReportGenerator, "pdf": PDFReportGenerator, "excel": ExcelReportGenerator}
+    if output_format not in generators:
         raise ValueError(f"Unsupported format: {output_format}")
+    content = generators[output_format](data).generate()
+    result = {"format": output_format, "chain_entity_id": entity_id, "report_status": data.report_status}
+    result["content" if output_format == "html" else "content_base64"] = content if output_format == "html" else base64.b64encode(content).decode("ascii")
+    return result
+
+
+def _handle_report_export(params):
+    entity = _VERSION_CHAIN.get_entity(params["report_id"])
+    if entity.entity_type != "report":
+        raise ValueError("Expected report ID")
+    path = _VERSION_CHAIN._project_root / "reports" / f"{entity.entity_id}.json"
+    from datetime import datetime
+    snapshot = path.read_text(encoding="utf-8")
+    if hashlib.sha256(snapshot.encode()).hexdigest() != entity.content_hash:
+        raise ValueError("Report snapshot checksum mismatch")
+    saved = json.loads(snapshot)
+    saved["created_at"] = datetime.fromisoformat(saved["created_at"])
+    data = ReportData(**saved)
+    data.report_status = APPROVAL_WORKFLOW.get_status("report", entity.entity_id)
+    if data.report_status == "approved":
+        approvals = [r for r in APPROVAL_WORKFLOW.list_records("report", entity.entity_id) if r["action"] == "approve"]
+        if not approvals:
+            raise ValueError("Missing approval evidence")
+        data.approved_by = approvals[-1]["reviewer"]
+        data.approved_at = approvals[-1]["timestamp"]
+        data.approval_record = {**(data.approval_record or {}), "approval": approvals[-1]}
+    return _render_saved_report(data, params.get("format", "html"), entity.entity_id)
 
 
 def _handle_report_list(params: dict) -> dict:
@@ -1618,7 +1678,7 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "analysis/package":
         return _handle_analysis_package(params)
 
-    if method == "modeling/fit":
+    if method in ("modeling/fit", "modeling/governance/fit_with_check"):
         return _handle_modeling_fit(params)
 
     if method == "modeling/list":
@@ -1657,6 +1717,7 @@ def handle_request(method: str, params: dict) -> dict:
             is_binary=params.get("is_binary", False),
         )
         result = {"warnings": warnings, "can_proceed": len([w for w in warnings if "tree" in w.lower() and "not recommended" in w]) == 0}
+        return result
     if method == "modeling/governance/recommend":
         recs = recommend_models(
             params.get("n_samples", 0),
@@ -1666,6 +1727,7 @@ def handle_request(method: str, params: dict) -> dict:
             params.get("need_interpretability", True),
         )
         result = {"recommendations": recs}
+        return result
     if method == "modeling/governance/doe_ai_compare":
         result = check_doeb_ai_discrepancy(
             params.get("doe_r2", 0),
@@ -1674,6 +1736,7 @@ def handle_request(method: str, params: dict) -> dict:
             params.get("doe_pred", []),
             params.get("scale", 1.0),
         )
+        return result
 
     if method == "spec/suggest":
         return _handle_spec_suggest(params)
@@ -1683,6 +1746,8 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "report/list":
         return _handle_report_list(params)
+    if method == "report/export":
+        return _handle_report_export(params)
 
     if method == "auth/login":
         return _handle_auth_login(params)
@@ -1786,6 +1851,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_project_create(params)
     if method == "project/open":
         return _handle_project_open(params)
+    if method == "project/save_session":
+        return _handle_project_save_session(params)
     if method == "project/settings":
         return _handle_project_settings(params)
     if method == "project/dirs":
@@ -1839,6 +1906,12 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "gates/status":
         return {"statuses": GATE_MANAGER.get_summary()}
     if method == "gates/confirm":
+        entity = _VERSION_CHAIN.get_entity(params["entity_id"])
+        expected_module = {"dataset": "data_import", "model": "modeling", "simulation": "monte_carlo", "experiment": "validation"}.get(entity.entity_type)
+        if params["module"] != expected_module or params["entity_version"] != entity.version:
+            raise ValueError("Gate entity type or version does not match")
+        if not params.get("confirmed_by", "").strip():
+            raise ValueError("Confirmation operator is required")
         return GATE_MANAGER.confirm(
             params["module"],
             params["entity_id"],
@@ -1858,16 +1931,29 @@ def handle_request(method: str, params: dict) -> dict:
         return {"history": GATE_MANAGER.get_history(params.get("module"))}
 
     if method == "analysis/anomaly/register":
+        dataset_id = params.get("dataset_id", "")
+        matches = [e for e in _report_entities(dataset_id, []) if e.entity_type == "dataset"]
+        if not matches:
+            try:
+                candidate = _VERSION_CHAIN.get_entity(dataset_id)
+                if candidate.entity_type == "dataset":
+                    matches = [candidate]
+            except KeyError:
+                pass
+        if not matches:
+            raise ValueError("Anomaly requires a registered dataset version")
         entity_id = register_anomaly_event(
             _VERSION_CHAIN,
-            params.get("dataset_id", ""),
+            matches[-1].entity_id,
             params["anomaly_id"],
             params.get("source", "historical_observation"),
             params.get("confidence", 0.0),
             params.get("user_confirmed", False),
             params.get("operator", "anonymous"),
+            params.get("scenario"),
         )
         result = {"entity_id": entity_id}
+        GATE_MANAGER.reset("monte_carlo", "Anomaly assumptions changed")
         return result
 
     raise ValueError(f"Unknown method: {method}")
@@ -2010,13 +2096,15 @@ def _handle_consecutive_exceedance(params: dict) -> dict:
 
 
 def _handle_approval_submit(params: dict) -> dict:
-    return APPROVAL_WORKFLOW.submit_for_review(
+    result = APPROVAL_WORKFLOW.submit_for_review(
         resource_type=params["resource_type"],
         resource_id=params["resource_id"],
         reviewer=params["reviewer"],
         reviewer_role=params["reviewer_role"],
         comments=params.get("comments", ""),
     )
+    APPROVAL_WORKFLOW.save(_VERSION_CHAIN._project_root / "audit" / "approvals.json")
+    return result
 
 
 def _handle_approval_approve(params: dict) -> dict:
@@ -2034,29 +2122,31 @@ def _handle_approval_approve(params: dict) -> dict:
         for entity in parents:
             module = modules.get(entity.entity_type)
             if module:
-                gate = GATE_MANAGER.get_details(module)
-                if (gate["status"] != "confirmed" or gate["entity_id"] != entity.entity_id
-                        or gate["entity_version"] != entity.version):
+                if not GATE_MANAGER.is_confirmed(module, entity.entity_id, entity.version):
                     raise ValueError(f"Report requires confirmation of {module} version {entity.entity_id}")
         if APPROVAL_WORKFLOW.get_status("report", report.entity_id) != "pending_review":
             raise ValueError("Report must be submitted for review before approval")
-    return APPROVAL_WORKFLOW.approve(
+    result = APPROVAL_WORKFLOW.approve(
         resource_type=params["resource_type"],
         resource_id=params["resource_id"],
         reviewer=params["reviewer"],
         reviewer_role=params["reviewer_role"],
         comments=params.get("comments", ""),
     )
+    APPROVAL_WORKFLOW.save(_VERSION_CHAIN._project_root / "audit" / "approvals.json")
+    return result
 
 
 def _handle_approval_reject(params: dict) -> dict:
-    return APPROVAL_WORKFLOW.reject(
+    result = APPROVAL_WORKFLOW.reject(
         resource_type=params["resource_type"],
         resource_id=params["resource_id"],
         reviewer=params["reviewer"],
         reviewer_role=params["reviewer_role"],
         comments=params.get("comments", ""),
     )
+    APPROVAL_WORKFLOW.save(_VERSION_CHAIN._project_root / "audit" / "approvals.json")
+    return result
 
 
 def _handle_approval_status(params: dict) -> dict:
@@ -2199,12 +2289,13 @@ def _handle_project_create(params: dict) -> dict:
     name = params.get("name", "Untitled")
     operator = params.get("operator", "anonymous")
     result = PROJECT_ENGINE.create_project(root, name, operator)
-    _reload_chain_for_project(root)
-    return result
+    restored = _reload_chain_for_project(root)
+    return {**result, **restored}
 
 
 def _handle_project_open(params: dict) -> dict:
     from pathlib import Path
+    global PROJECT_ENGINE
 
     root = params["root"]
     path = Path(root).expanduser().resolve()
@@ -2212,10 +2303,11 @@ def _handle_project_open(params: dict) -> dict:
         return _open_portable_project(path)
     if path.is_file() and path.name == "project_manifest.json":
         root = str(path.parent)
-    result = PROJECT_ENGINE.open_project(root)
-    # Reload version chain and gate manager for the opened project
-    _reload_chain_for_project(root)
-    return result
+    candidate = ProjectEngine()
+    result = candidate.open_project(root)
+    restored = _reload_chain_for_project(root)
+    PROJECT_ENGINE = candidate
+    return {**result, **restored}
 
 
 def _open_portable_project(path) -> dict:
@@ -2224,6 +2316,7 @@ def _open_portable_project(path) -> dict:
     import tempfile
 
     global PROJECT_ENGINE, _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY
+    global EXPERIMENT_REGISTRY, APPROVAL_WORKFLOW, REPORT_REGISTRY
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict) or data.get("app") != "process-intelligence-platform":
         raise ValueError("Not a Process Intelligence Platform project file")
@@ -2242,7 +2335,8 @@ def _open_portable_project(path) -> dict:
 
     # A portable export is a settings snapshot, not a saved approval history.
     # Build an isolated workspace; never turn Downloads itself into a project.
-    previous = (PROJECT_ENGINE, _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY)
+    previous = (PROJECT_ENGINE, _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY,
+                EXPERIMENT_REGISTRY, APPROVAL_WORKFLOW, REPORT_REGISTRY)
     try:
         root = tempfile.mkdtemp(prefix="piproj-")
         PROJECT_ENGINE = ProjectEngine()
@@ -2252,19 +2346,88 @@ def _open_portable_project(path) -> dict:
         MODEL_REGISTRY = ModelRegistry()
         imported = _handle_import({"file_path": str(source)})
     except Exception:
-        PROJECT_ENGINE, _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY = previous
+        (PROJECT_ENGINE, _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY,
+         EXPERIMENT_REGISTRY, APPROVAL_WORKFLOW, REPORT_REGISTRY) = previous
         raise
     return {**project, "kind": "portable", "datasets": 1, "process_groups": 0,
             "project_file": data, "import_result": imported}
 
 
-def _reload_chain_for_project(root: str) -> None:
+def _reload_chain_for_project(root: str) -> dict:
     """Reinitialize the shared version chain and gate manager for a project root."""
-    global _VERSION_CHAIN, GATE_MANAGER
+    global _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY, EXPERIMENT_REGISTRY
+    global APPROVAL_WORKFLOW, REPORT_REGISTRY
     chain = VersionChain(root, "anonymous")
     chain.load()
+    datasets = DatasetRegistry()
+    models = ModelRegistry()
+    experiments = ExperimentRegistry()
+    import_result = None
+    for item in chain.get_chain_summary():
+        entity = chain.get_entity(item["entity_id"])
+        if entity.entity_type == "dataset" and entity.metadata.get("import_result"):
+            did = entity.metadata["dataset_id"]
+            df = load_dataset(chain._project_root, entity)
+            datasets._datasets[did] = df
+            datasets._meta[did] = {"file_path": entity.metadata["source_file"]}
+            import_result = entity.metadata["import_result"]
+        elif entity.entity_type == "experiment" and entity.metadata.get("record"):
+            record = dict(entity.metadata["record"])
+            record.pop("prediction_error", None)
+            experiments.record(ExperimentRecord(**record))
+    for item in chain.get_chain_summary():
+        entity = chain.get_entity(item["entity_id"])
+        if entity.entity_type == "model" and "recipe" in entity.metadata:
+            models.restore(rebuild_model(entity, datasets.get(entity.metadata["dataset_id"]), MODEL_FITTERS))
+    for item in chain.get_chain_summary():
+        entity = chain.get_entity(item["entity_id"])
+        if entity.entity_type == "model_state" and entity.metadata["model_id"] in models.list_ids():
+            models.get(entity.metadata["model_id"]).status = entity.metadata["status"]
+    gates = GateManager(project_root=root, project_id="default")
+    approvals = type(APPROVAL_WORKFLOW)()
+    approvals.load(chain._project_root / "audit" / "approvals.json")
+    reports = type(REPORT_REGISTRY)()
+    for item in chain.get_chain_summary():
+        if item["entity_type"] == "report":
+            entity = chain.get_entity(item["entity_id"])
+            reports.register(entity.metadata.get("project_name", "Report"), entity.created_by,
+                                     entity.metadata.get("format", "html"), entity.entity_id)
+    ui_path = chain._project_root / "registry" / "ui_state.json"
+    ui_state = json.loads(ui_path.read_text(encoding="utf-8")) if ui_path.exists() else None
     _VERSION_CHAIN = chain
-    GATE_MANAGER = GateManager(project_root=root, project_id="default")
+    REGISTRY, MODEL_REGISTRY, EXPERIMENT_REGISTRY = datasets, models, experiments
+    GATE_MANAGER, APPROVAL_WORKFLOW, REPORT_REGISTRY = gates, approvals, reports
+    return {"import_result": import_result, "project_file": ui_state, "models_rebuilt": len(models.list_ids())}
+
+
+def _handle_project_save_session(params):
+    """Save a complete data-only analysis directory without overwriting a project."""
+    from pathlib import Path
+    import shutil
+    target = Path(params["root"]).expanduser().resolve()
+    if target.exists():
+        raise ValueError("Choose a new analysis directory; existing directories are not overwritten")
+    source = _VERSION_CHAIN._project_root.resolve()
+    if target == source or source in target.parents:
+        raise ValueError("Destination must be outside the active project")
+    state = params.get("project_file")
+    if not isinstance(state, dict):
+        raise ValueError("Analysis settings are required")
+    target.mkdir(parents=True)
+    for folder in ("registry", "audit", "reports", "curated_data", "models", "experiments", "simulations"):
+        directory = source / folder
+        if directory.exists():
+            if directory.is_symlink() or any(p.is_symlink() for p in directory.rglob("*")):
+                raise ValueError("Analysis snapshots cannot contain symlinks")
+            shutil.copytree(directory, target / folder)
+    engine = ProjectEngine()
+    if (source / "project_manifest.json").exists():
+        shutil.copy2(source / "project_manifest.json", target / "project_manifest.json")
+    else:
+        engine.create_project(str(target), target.name)
+    (target / "registry").mkdir(exist_ok=True)
+    (target / "registry" / "ui_state.json").write_text(json.dumps(state), encoding="utf-8")
+    return {"project_root": str(target)}
 
 
 def _handle_project_settings(params: dict) -> dict:

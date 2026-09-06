@@ -152,6 +152,20 @@ class ApprovalWorkflow:
         with self._lock:
             return self._statuses.get(key, "draft")
 
+    def save(self, path) -> None:
+        with self._lock:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = path.with_suffix(".tmp")
+            temporary.write_text(json.dumps({"statuses": self._statuses,
+                "records": [r.to_dict() for r in self._records.values()]}), encoding="utf-8")
+            temporary.replace(path)
+
+    def load(self, path) -> None:
+        with self._lock:
+            data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+            self._statuses = data.get("statuses", {})
+            self._records = {r["record_id"]: ApprovalRecord(**r) for r in data.get("records", [])}
+
     def list_records(
         self,
         resource_type: str | None = None,

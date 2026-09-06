@@ -51,6 +51,14 @@ class ModelRegistry:
                 raise KeyError(f"Unknown model_id: {model_id}")
             return self._models[model_id]
 
+    def restore(self, fit: ModelFit) -> None:
+        """Restore only after the session loader verifies deterministic replay."""
+        with self._lock:
+            if not fit.model_id or fit.model_id in self._models or fit.status not in VALID_STATUS:
+                raise ValueError("Invalid restored model")
+            self._models[fit.model_id] = fit
+            self._version_counter = max(self._version_counter, fit.version)
+
     def list_ids(self) -> list[str]:
         with self._lock:
             return sorted(self._models.keys())

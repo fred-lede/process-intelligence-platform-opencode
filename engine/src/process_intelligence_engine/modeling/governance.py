@@ -21,7 +21,7 @@ def check_model_applicability(
 
     if is_binary:
         target_vals = df[target]
-        if target_vals.dtype == 'object' or pd.api.types.is_string_dtype(target_vals):
+        if target_vals.nunique() == 2:
             counts = target_vals.value_counts()
             if len(counts) == 2:
                 ratio = counts.max() / max(counts.min(), 1)
@@ -30,7 +30,7 @@ def check_model_applicability(
 
     for col in inputs:
         if col in df.columns and df[col].nunique() == 1:
-            warnings.append(f"Column {col} is constant, will be excluded")
+            warnings.append(f"Column {col} is constant; review before fitting")
 
     if len(inputs) >= 2:
         try:
@@ -65,8 +65,10 @@ def check_doeb_ai_discrepancy(
     max_threshold: float = 0.30,
 ) -> dict:
     """Check if DOE and AI predictions differ significantly."""
-    if not ai_pred or not doe_pred:
-        return {"needs_review": False, "recommendation": "Cannot compare: missing prediction data"}
+    if not ai_pred or not doe_pred or len(ai_pred) != len(doe_pred):
+        raise ValueError("Comparison requires non-empty, equally sized predictions")
+    if not np.isfinite(scale) or scale <= 0 or not np.all(np.isfinite(ai_pred + doe_pred)):
+        raise ValueError("Comparison requires finite predictions and a positive scale")
 
     normalized_diff = [
         abs(a - b) / max(scale, 1e-12)
@@ -102,8 +104,6 @@ def recommend_models(
 
     if is_binary_target:
         recommendations.append("logistic_regression")
-        if n_samples >= 100:
-            recommendations.append("xgboost")
     else:
         if n_samples < 50:
             recommendations.append("doe_linear")
@@ -121,7 +121,7 @@ def recommend_models(
                 recommendations.append("xgboost")
                 recommendations.append("lightgbm")
 
-    if n_samples >= 100 and not need_interpretability:
+    if not is_binary_target and n_samples >= 100 and not need_interpretability:
         recommendations.append("random_forest")
 
     return recommendations
@@ -140,7 +140,7 @@ def compute_experiment_verdict(
 ) -> str:
     """Compute experiment verdict with adaptive tolerance.
 
-    When ``tolerance`` is not provided, it is derived from the larger of:
+    When ``tolerance`` is not provided, it is derived from the smaller of:
     - half the specification range (``spec_range / 2``)
     - 2× the model RMSE (prediction-interval proxy)
 
@@ -150,6 +150,8 @@ def compute_experiment_verdict(
     if is_classification:
         if accuracy is None or recall is None:
             return "insufficient_data"
+        if not all(np.isfinite(v) and 0 <= v <= 1 for v in (accuracy, recall, target_recall)):
+            raise ValueError("Classification metrics must be probabilities")
         acc_pass = accuracy >= 0.80
         rec_pass = recall >= target_recall
         if acc_pass and rec_pass:
@@ -160,6 +162,10 @@ def compute_experiment_verdict(
             return "needs_remodel"
         return "does_not_support"
 
+    if tolerance is not None and (not np.isfinite(tolerance) or tolerance <= 0):
+        raise ValueError("tolerance must be finite and positive")
+    if not np.isfinite(predicted) or not np.isfinite(actual):
+        raise ValueError("Experiment outputs must be finite")
     if tolerance is None:
         parts: list[float] = []
         if spec_range is not None and spec_range > 0:
@@ -167,7 +173,7 @@ def compute_experiment_verdict(
         if rmse is not None and rmse > 0:
             parts.append(2.0 * rmse)
         if not parts:
-            tolerance = 0.1  # backward-compatible fallback
+            return "insufficient_data"
         else:
             tolerance = min(parts)
 
@@ -193,8 +199,11 @@ def compute_prediction_interval(
     import math
     if n < 4 or rmse <= 0:
         return {"lower": predicted, "upper": predicted, "width": 0}
-    # t-value approximation for 95 % two-sided (z ≈ 1.96 for large n)
-    z = 1.96 if n >= 30 else 2.0
+    if not 0 < confidence < 1:
+        raise ValueError("confidence must be between 0 and 1")
+    from scipy.stats import t
+    # Approximation assumes independent residuals and n-1 residual degrees of freedom.
+    z = float(t.ppf((1 + confidence) / 2, df=n - 1))
     sem = rmse * math.sqrt(1 + 1.0 / n)
     half_width = z * sem
     return {
@@ -251,7 +260,7 @@ def recommend_next_experiment(
 
     suggestions = []
     inputs = getattr(model, 'inputs', [])
-    if not inputs or len(df) == 0:
+    if not inputs or df is None or len(df) == 0:
         return suggestions
 
     # Get input ranges from data
@@ -269,19 +278,28 @@ def recommend_next_experiment(
     if not input_stats:
         return suggestions
 
-    # Suggest boundary and center points
+    center = {col: s["mean"] for col, s in input_stats.items()}
+    # Complete executable settings; vary one factor while holding others fixed.
     for col, stats in input_stats.items():
         suggestions.append({
-            "condition": {col: stats["low"]},
+            "condition": {**center, col: stats["low"]},
             "rationale": "low_boundary",
         })
         suggestions.append({
-            "condition": {col: stats["high"]},
+            "condition": {**center, col: stats["high"]},
             "rationale": "high_boundary",
         })
 
     # Always suggest center point
     center = {col: (s["low"] + s["high"]) / 2 for col, s in input_stats.items()}
     suggestions.append({"condition": center, "rationale": "center_point"})
-
-    return suggestions[:n_suggestions]
+    estimators = getattr(model.model, "estimators_", None)
+    if estimators is not None and len(estimators):
+        candidates = np.array([[s["condition"][col] for col in inputs] for s in suggestions])
+        predictions = np.array([tree.predict(candidates) for tree in estimators])
+        spread = predictions.std(axis=0)
+        for suggestion, score in zip(suggestions, spread):
+            suggestion["rationale"] = "ensemble_disagreement (heuristic, not a calibrated interval)"
+            suggestion["score"] = float(score)
+        suggestions.sort(key=lambda s: s["score"], reverse=True)
+    return suggestions[:max(1, min(int(n_suggestions), 20))]

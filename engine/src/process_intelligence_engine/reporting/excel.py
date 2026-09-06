@@ -31,6 +31,15 @@ class ExcelReportGenerator(ReportGenerator):
         ws1.append(["來源檔案", self.data.source_file])
         ws1.append(["資料列數", self.data.row_count])
         ws1.append(["欄位數", self.data.column_count])
+        ws1.append(["Report status", self.data.report_status])
+        ws1.append(["Approved by", self.data.approved_by])
+        ws1.append(["Approved at", self.data.approved_at])
+        evidence = wb.create_sheet("Evidence")
+        evidence.append(["Claim ID", "Source", "Status", "Text", "Source entities"])
+        for claim in (self.data.approval_record or {}).get("claims", []):
+            evidence.append([claim.get("claim_id", ""), claim.get("origin_source", ""),
+                claim.get("evidence_status", ""), claim.get("text", ""),
+                ", ".join(claim.get("source_entity_ids", []))])
         
         # Sheet 2: Field Roles
         ws2 = wb.create_sheet("欄位角色")

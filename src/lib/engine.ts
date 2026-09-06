@@ -586,6 +586,10 @@ export async function generateReport(params: ReportParams): Promise<ReportResult
   return engineCall<ReportResult>('report/generate', params as unknown as Record<string, unknown>)
 }
 
+export async function exportReport(reportId: string): Promise<ReportResult> {
+  return engineCall('report/export', { report_id: reportId, format: 'html' })
+}
+
 export interface ReportRecord {
   report_id: string
   project_name: string
@@ -1780,7 +1784,7 @@ export async function compareDoeVsAi(
 
 export interface ExperimentVerdictResult {
   experiment_id: string
-  verdict: 'supports' | 'partially_supports' | 'does_not_support' | 'needs_remodel'
+  verdict: 'supports' | 'partially_supports' | 'does_not_support' | 'needs_remodel' | 'insufficient_data'
   prediction_error: number
 }
 
@@ -1792,13 +1796,17 @@ export interface NextExperimentSuggestion {
 }
 
 export async function recordExperimentWithVerdict(params: {
-  experiment_id: string
+  experiment_id?: string
   model_id: string
   planned_inputs: Record<string, number>
   actual_inputs: Record<string, number>
   predicted_output: number
   actual_output: number
-  tolerance: number
+  tolerance?: number
+  spec_range?: number
+  dataset_id?: string
+  accuracy?: number
+  recall?: number
   operator: string
   notes?: string
 }): Promise<ExperimentVerdictResult> {
@@ -1808,8 +1816,9 @@ export async function recordExperimentWithVerdict(params: {
 export async function suggestNextExperiment(
   modelId: string,
   nSuggestions = 3,
+  datasetId?: string,
 ): Promise<NextExperimentSuggestion> {
-  return engineCall('experiment/suggest_next', { model_id: modelId, n_suggestions: nSuggestions })
+  return engineCall('experiment/suggest_next', { model_id: modelId, n_suggestions: nSuggestions, dataset_id: datasetId })
 }
 
 // --- v0.4.0 Anomaly Source -----------------------------------------------
@@ -1821,6 +1830,7 @@ export async function registerAnomalyEvent(params: {
   confidence: number
   user_confirmed: boolean
   operator: string
+  scenario?: AnomalyScenario
 }): Promise<{ entity_id: string }> {
   return engineCall('analysis/anomaly/register', params as unknown as Record<string, unknown>)
 }

@@ -59,7 +59,8 @@ def test_recommend_models_large_sample_no_interpretability():
 def test_recommend_models_binary():
     recs = recommend_models(n_samples=200, n_features=5, is_binary_target=True, has_nonlinearity=True, need_interpretability=True)
     assert "logistic_regression" in recs
-    assert "xgboost" in recs
+    # Current XGBoost/RandomForest implementations are regressors, not classifiers.
+    assert recs == ["logistic_regression"]
 
 
 def test_verdict_supports():
