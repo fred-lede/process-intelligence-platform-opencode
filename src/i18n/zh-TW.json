@@ -121,7 +121,8 @@
     "opened": "已從 {{path}} 開啟專案",
     "saveNoData": "儲存前請先匯入資料。",
     "newDone": "已開始新專案。",
-    "analysisPhaseTitle": "分析階段狀態"
+    "analysisPhaseTitle": "分析階段狀態",
+    "modulesConfirmed": "個模組已確認"
   },
   "dataImport": {
     "stepPick": "選擇檔案",
@@ -912,13 +913,13 @@
     "zoomFit": "適合視窗"
   },
   "gates": {
-    "dataImport": "資料匯入",
-    "processDefine": "製程定義",
-    "modeling": "模型中心",
+    "data_import": "資料匯入",
+    "process_define": "製程定義",
+    "modeling": "模型訓練",
     "spc": "SPC 管制圖",
-    "monteCarlo": "蒙地卡羅",
+    "monte_carlo": "蒙地卡羅",
     "prediction": "互動預測",
-    "validation": "驗證實驗室",
+    "validation": "驗證實驗",
     "confirmed": "已確認",
     "pending": "待確認",
     "notStarted": "未開始"

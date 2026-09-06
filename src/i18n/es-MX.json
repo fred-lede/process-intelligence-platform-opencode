@@ -121,7 +121,8 @@
     "openExisting": "Abrir Proyecto Existente",
     "projectDescription": "Descripción",
     "engineDescription": "El motor de análisis se encarga de la importación de datos, el ajuste de distribuciones, el modelado DOE, la simulación Monte Carlo y la generación de reportes.",
-    "analysisPhaseTitle": "Estado de la Fase de Análisis"
+    "analysisPhaseTitle": "Estado de la Fase de Análisis",
+    "modulesConfirmed": "módulos confirmados"
   },
   "dataImport": {
     "downloadTemplate": "Descargar plantilla CSV",
@@ -908,13 +909,13 @@
     "zoomFit": "Ajustar a la vista"
   },
   "gates": {
-    "dataImport": "Importación de Datos",
-    "processDefine": "Definición del Proceso",
-    "modeling": "Centro de Modelos",
+    "data_import": "Importación de Datos",
+    "process_define": "Definición del Proceso",
+    "modeling": "Modelado",
     "spc": "Control SPC",
-    "monteCarlo": "Monte Carlo",
+    "monte_carlo": "Monte Carlo",
     "prediction": "Predicción",
-    "validation": "Laboratorio de Validación",
+    "validation": "Validación",
     "confirmed": "Confirmado",
     "pending": "Pendiente",
     "notStarted": "No Iniciado"

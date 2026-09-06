@@ -121,7 +121,8 @@
     "opened": "Project opened from {{path}}",
     "saveNoData": "Import data first before saving a project.",
     "newDone": "Started a new project.",
-    "analysisPhaseTitle": "Analysis Phase Status"
+    "analysisPhaseTitle": "Analysis Phase Status",
+    "modulesConfirmed": "modules confirmed"
   },
   "dataImport": {
     "stepPick": "Pick File",
@@ -912,13 +913,13 @@
     "zoomFit": "Fit to view"
   },
   "gates": {
-    "dataImport": "Data Import",
-    "processDefine": "Process Definition",
-    "modeling": "Model Center",
+    "data_import": "Data Import",
+    "process_define": "Process Definition",
+    "modeling": "Modeling",
     "spc": "SPC Control",
-    "monteCarlo": "Monte Carlo",
+    "monte_carlo": "Monte Carlo",
     "prediction": "Prediction",
-    "validation": "Validation Lab",
+    "validation": "Validation",
     "confirmed": "Confirmed",
     "pending": "Pending",
     "notStarted": "Not Started"
