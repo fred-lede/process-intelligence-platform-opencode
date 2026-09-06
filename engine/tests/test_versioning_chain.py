@@ -1,4 +1,5 @@
 import pytest
+import pathlib
 import tempfile
 from process_intelligence_engine.versioning.chain import (
     VersionChain,
