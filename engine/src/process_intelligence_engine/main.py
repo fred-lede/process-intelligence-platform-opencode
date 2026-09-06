@@ -84,6 +84,7 @@ from process_intelligence_engine.features.time_series import (
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 from process_intelligence_engine.versioning.chain import VersionChain
+from process_intelligence_engine.gates.manager import GateManager
 
 
 def _plain_types(value):
@@ -151,6 +152,7 @@ MODEL_REGISTRY = ModelRegistry()
 AUTH_MANAGER = AuthManager()
 PROJECT_ENGINE = ProjectEngine()
 _VERSION_CHAIN = VersionChain("/tmp/default-project", "anonymous")
+GATE_MANAGER = GateManager()
 
 
 class ExperimentRecord:
@@ -1706,6 +1708,25 @@ def handle_request(method: str, params: dict) -> dict:
             params.get("created_by", params.get("operator", "anonymous")),
         )
         return {"success": True}
+
+    if method == "gates/status":
+        return {"statuses": GATE_MANAGER.get_summary()}
+    if method == "gates/confirm":
+        return GATE_MANAGER.confirm(
+            params["module"],
+            params["entity_id"],
+            params["entity_version"],
+            params["confirmed_by"],
+            params.get("comment", ""),
+        )
+    if method == "gates/reset":
+        return GATE_MANAGER.reset(params["module"], params.get("reason", ""))
+    if method == "gates/summary":
+        return {
+            "summary": GATE_MANAGER.get_summary(),
+            "all_confirmed": GATE_MANAGER.are_all_confirmed(),
+            "details": {m: GATE_MANAGER.get_details(m) for m in params.get("modules", GATE_MANAGER.ALL_MODULES)},
+        }
 
     raise ValueError(f"Unknown method: {method}")
 
