@@ -50,10 +50,13 @@ v0.4.0 必須達成：
 
 ### 2.1 設計原則
 
-- 中央管理器（`versioning/chain.py`）維護跨實體關聯
+- 中央管理器（`versioning/chain.py`）維護跨實體關聯，資料採 append-only 持久化
+- 版本鏈以 `project_id` 隔離，App 重啟後必須能完整恢復
+- 每個不可變實體保存內容 hash、參數 hash 與 schema 版本，確保可重現
 - 現有註冊表（`ModelRegistry`、`ReportRegistry`）不感知版本鏈
 - 新增實體時只改 `chain.py`，不改現有註冊表
 - UUID + 類型前綴（`ds-xxx`、`md-xxx`、`sim-xxx`、`rep-xxx`、`exp-xxx`）
+- 任何修訂都建立新 entity，不覆蓋既有 entity；撤銷只新增 revocation event
 
 ### 2.2 資料結構
 
@@ -61,32 +64,64 @@ v0.4.0 必須達成：
 @dataclass
 class EntityRecord:
     entity_id: str           # UUID（ds-xxx, md-xxx, sim-xxx, rep-xxx, exp-xxx）
-    entity_type: str         # "dataset" | "model" | "simulation" | "report" | "experiment"
-    version: int             # monotonic counter per type
+    entity_type: str         # "dataset" | "model" | "simulation" | "report" | "experiment" | "anomaly"
+    project_id: str          # 專案範圍
+    version: int             # monotonic counter per project and entity type
     metadata: dict           # 自由欄位（dataset_id, model_type, operator, seed 等）
-    parent_id: str | None    # 父實體 ID
+    parent_ids: list[str]    # 可同時依賴多個父實體
     created_at: str          # ISO 8601 UTC
+    created_by: str
+    content_hash: str        # 不可變內容或輸入資料 hash
+    parameters_hash: str | None
+    schema_version: str
     tags: list[str]          # e.g. ["verified", "cross_plotted"]
-    source_label: str        # "ai_guess" | "stat_sig" | "eng_hypothesis" | "exp_confirmed" | "unverified"
+    evidence_status: str     # "unverified" | "statistically_supported" | "experimentally_confirmed"
 
 
 @dataclass
 class LinkRecord:
     from_id: str
     to_id: str
-    relation: str            # "uses_dataset" | "trained_on" | "simulated_by" | "reported_in"
-    source_label: str        # 同上
+    relation: str            # uses_dataset | trained_on | simulated_by | reported_in | derived_from | replaced_by
+    evidence_status: str
+    created_by: str
+    created_at: str
+    revoked_at: str | None
+
+
+@dataclass
+class ClaimRecord:
+    claim_id: str
+    entity_id: str
+    claim_type: str
+    text: str
+    source_entity_ids: list[str]
+    origin_source: str       # historical_observation | engineering_input | ai_estimate | user_override
+    evidence_status: str     # unverified | statistically_supported | experimentally_confirmed
+    confidence: float | None
+    valid_range: dict | None
 ```
 
 ### 2.3 版本鏈管理器
 
 ```python
 class VersionChain:
-    def register_entity(self, entity_type: str, metadata: dict, parent_id: str | None = None) -> str
+    def register_entity(self, project_id: str, entity_type: str, metadata: dict, parent_ids: list[str] | None = None, content_hash: str = "", parameters_hash: str | None = None, created_by: str = "") -> str
     def get_entity(self, entity_id: str) -> EntityRecord
-    def add_link(self, from_id: str, to_id: str, relation: str, source_label: str = "unverified")
+    def add_link(self, from_id: str, to_id: str, relation: str, evidence_status: str = "unverified")
+    def add_claim(self, claim: ClaimRecord) -> str
     def get_trace(self, entity_id: str) -> dict  # 完整追溯圖
     def get_chain_summary(self) -> list[dict]    # 所有實體的簡表
+
+持久化結構：
+
+```text
+<project-root>/registry/version_chain.jsonl
+<project-root>/registry/claims.jsonl
+<project-root>/audit/events.jsonl
+```
+
+寫入採 append-only；讀取時依 entity ID 重建目前狀態。不得以 UUID 是否存在取代內容 hash 驗證。
 ```
 
 ### 2.4 整合現有註冊表
@@ -100,6 +135,7 @@ class VersionChain:
 | `monte_carlo/run` | `simulation` | model_id, dataset_id, n_simulations, seed |
 | `report/generate` | `report` | model_id, dataset_id, format, operator |
 | `experiment/record` | `experiment` | model_id, dataset_id, actual_output |
+| 異常情境建立或修改 | `anomaly` | dataset_id, source, confidence, user_confirmed |
 
 ### 2.5 版本鏈 API
 
@@ -117,7 +153,8 @@ POST versioning/chain/link            # 手動建立關聯
 
 - **混合模式**：專案級總覽 + 模組級獨立控制
 - 每個模組有獨立狀態：`not_started` / `pending_confirmation` / `confirmed`
-- 報告產生時彙總各模組狀態，未確認模組的數據打標但不阻止報告生成
+- 每個狀態必須綁定 `entity_id` 與 `entity_version`
+- 未確認模組可以產生 draft report，但不得標記為正式或核准報告
 
 ### 3.2 狀態機
 
@@ -144,9 +181,11 @@ not_started ──► pending_confirmation ──► confirmed
 
 ```
 GET  gates/status                    # 所有模組狀態總覽
-POST gates/confirm/:module           # 使用者確認某模組
+POST gates/confirm/:module           # body: entity_id, expected_version, operator, comment
 POST gates/reset/:module             # 重置為待確認
 GET  gates/summary                   # 報告產生時呼叫（彙總可用數據）
+
+Gate record 必須保存：`project_id`、`module`、`entity_id`、`entity_version`、`status`、`confirmed_by`、`confirmed_at`、`reset_reason`、`comment`。若 entity version 改變，原 gate 自動失效並回到 `pending_confirmation`。
 ```
 
 ### 3.5 前端整合
@@ -229,6 +268,8 @@ class ReportData:
 - 報告尾部新增三個 appendix（版本鏈追溯、來源標籤、外插警告）
 - 未確認項目以 warning badge 顯示
 
+若必要 gate 未確認，報告只能是 `draft`，不能進入 `approved`。來源與證據狀態必須分開保存：`origin_source` 描述資料或假設從何而來；`evidence_status` 描述目前是否已獲統計或實驗支持。重要結論以 `ClaimRecord` 逐項追蹤，不只在整個模型或報告上放單一標籤。
+
 ---
 
 ## 5. 模型治理規則（Phase D）
@@ -244,10 +285,13 @@ class ReportData:
 | 多重共線性 | VIF > 10 | 警告，建議移除相關變數 |
 | 常數欄位 | 唯一值 = 1 | 自動排除 |
 | 外插風險 | 預測點超出訓練範圍 | 在預測時警告 |
+| 完全分離 | Logistic 完全或近似完全分離 | 警告並限制正式核准 |
+| 時間相依 | 時間序列資料使用不適當 random CV | 阻止或改用時間切分 |
+| 預測校準 | 分類機率未校準 | 警告，不得只看 Accuracy |
 
 ### 5.2 DOE 退回規則
 
-當 DOE 與 AI 模型預測差異過大時，自動建議退回 DOE：
+當 DOE 與 AI 模型預測差異過大時，自動建議人工審查並優先回看 DOE：
 
 ```python
 def check_doeb_ai_discrepancy(
@@ -255,20 +299,22 @@ def check_doeb_ai_discrepancy(
     ai_r2: float,
     ai_pred: list[float],
     doe_pred: list[float],
-    threshold: float = 0.15
+    scale: float,
+    mean_threshold: float = 0.15,
+    max_threshold: float = 0.30,
 ) -> dict:
     """檢查 DOE 與 AI 預測差異."""
-    abs_diff = [abs(a - b) for a, b in zip(ai_pred, doe_pred)]
-    max_diff = max(abs_diff)
-    mean_diff = sum(abs_diff) / len(abs_diff)
+    normalized_diff = [abs(a - b) / max(scale, 1e-12) for a, b in zip(ai_pred, doe_pred)]
+    max_diff = max(normalized_diff)
+    mean_diff = sum(normalized_diff) / len(normalized_diff)
     
-    should_retreat = max_diff > threshold or mean_diff > threshold
+    needs_review = max_diff > max_threshold or mean_diff > mean_threshold
     
     return {
-        "should_retreat": should_retreat,
+        "needs_review": needs_review,
         "max_difference": max_diff,
         "mean_difference": mean_diff,
-        "recommendation": "建議退回 DOE 模型" if should_retreat else "AI 模型可接受",
+        "recommendation": "需要人工審查，預設採 DOE 作為保守基準" if needs_review else "AI 模型可進入後續驗證",
     }
 ```
 
@@ -343,9 +389,9 @@ POST modeling/governance/doe_ai_compare   # 比較 DOE vs AI 差異
 ```python
 @dataclass
 class AnomalyScenario:
-    source: str = "historical_observation"  # 已有
-    confidence: float = 0.0                  # 已有
-    user_confirmed: bool = False             # 已有
+    source: str = "historical_observation"  # origin_source
+    confidence: float = 0.0                  # evidence confidence
+    user_confirmed: bool = False             # gate confirmation
     # ... 其他欄位 ...
 ```
 
@@ -382,7 +428,7 @@ def register_anomaly_event(
             "operator": operator,
         }
     )
-    chain.add_link(entity_id, dataset_id, "derived_from", source_label=source)
+    chain.add_link(entity_id, dataset_id, "derived_from", evidence_status="unverified")
     return entity_id
 ```
 
@@ -415,13 +461,12 @@ EXPERIMENT_VERDICT = {
 def compute_experiment_verdict(
     predicted: float,
     actual: float,
-    tolerance: float = 0.1  # 10% 誤差容限
+    tolerance: float = 0.1  # 由 output 單位、規格寬度或量測能力定義
 ) -> str:
     """根據預測誤差計算實驗結論."""
-    if predicted == 0:
-        abs_error = abs(actual)
-    else:
-        abs_error = abs(actual - predicted) / abs(predicted)
+    # tolerance 必須由 output 的工程單位、規格寬度或量測系統能力定義，
+    # 不得把單一相對誤差門檻套用到所有 output 類型。
+    abs_error = abs(actual - predicted)
     
     if abs_error <= tolerance * 0.5:
         return "supports"
@@ -435,7 +480,7 @@ def compute_experiment_verdict(
 
 ### 7.3 模型狀態自動更新
 
-當實驗結果為 `does_not_support` 或 `needs_remodel` 時：
+當實驗結果為 `does_not_support` 或 `needs_remodel` 時，不得直接自動退役已核准模型：
 
 ```python
 def update_model_after_experiment(
@@ -447,16 +492,20 @@ def update_model_after_experiment(
     model = MODEL_REGISTRY.get(model_id)
     
     if verdict in ("does_not_support", "needs_remodel"):
-        # 退回 draft，提示重新配適
-        if model.status in ("approved", "validated"):
-            MODEL_REGISTRY.transition(model_id, "retired")
-            # 自動產生新版本（保留歷史）
-            chain.add_link(
-                from_id=model_id,
-                to_id=model_id,  # 新 ID 由呼叫端產生
-                relation="replaced_by",
-                source_label="exp_confirmed"
-            )
+        # 建立「需要審查」事件；只有使用者確認後才建立新模型版本。
+        chain.add_claim(ClaimRecord(
+            claim_id="",
+            entity_id=model_id,
+            claim_type="experiment_impact",
+            text="實驗結果未支持目前模型，需人工審查",
+            source_entity_ids=[],
+            origin_source="user_override",
+            evidence_status="experimentally_confirmed",
+            confidence=None,
+            valid_range=None,
+        ))
+
+模型替換必須由明確的新模型 entity 完成：`old_model --replaced_by--> new_model`。舊模型可標記為 `superseded`，但不得刪除或建立 self-link。
 ```
 
 ### 7.4 下次實驗建議
@@ -472,7 +521,8 @@ def recommend_next_experiment(
     """基於模型不確定度推薦下次實驗條件."""
     model = MODEL_REGISTRY.get(model_id)
     
-    # 使用 SHAP 不確定度或預測區間寬度
+    # 使用預測區間、bootstrap/ensemble variance 或 conformal prediction。
+    # SHAP 僅代表特徵貢獻，不可直接視為預測不確定度。
     # 優先選擇：
     # 1. 模型預測最好與最差的條件
     # 2. output 接近規格邊界的條件
@@ -556,7 +606,7 @@ POST experiment/impact/:model_id   # 記錄實驗結果對模型的影響
 
 ### 9.3 測試目標
 
-- 新增測試 ≥ 45 支
+- 新增測試 ≥ 47 支
 - 現有測試無回歸
 - 目標覆蓋率 ≥ 80%
 
