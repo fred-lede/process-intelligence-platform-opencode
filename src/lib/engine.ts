@@ -1439,8 +1439,19 @@ export async function createProject(params: { root: string; name?: string; opera
   return engineCall<{ project_id: string; project_name: string; project_root: string; created_at: string }>('project/create', params as unknown as Record<string, unknown>)
 }
 
-export async function openProject(root: string): Promise<{ project_id: string; project_name: string; project_root: string; datasets: number; process_groups: number }> {
-  return engineCall<{ project_id: string; project_name: string; project_root: string; datasets: number; process_groups: number }>('project/open', { root })
+export interface OpenProjectResult {
+  project_id: string
+  project_name: string
+  project_root: string
+  datasets: number
+  process_groups: number
+  kind?: 'portable'
+  import_result?: ImportResult
+  project_file?: import('./project').ProjectFile
+}
+
+export async function openProject(root: string): Promise<OpenProjectResult> {
+  return engineCall<OpenProjectResult>('project/open', { root })
 }
 
 export async function updateProjectSettings(updates: Record<string, unknown>): Promise<Record<string, unknown>> {

@@ -2204,11 +2204,58 @@ def _handle_project_create(params: dict) -> dict:
 
 
 def _handle_project_open(params: dict) -> dict:
+    from pathlib import Path
+
     root = params["root"]
+    path = Path(root).expanduser().resolve()
+    if path.name.endswith(".piproj.json"):
+        return _open_portable_project(path)
+    if path.is_file() and path.name == "project_manifest.json":
+        root = str(path.parent)
     result = PROJECT_ENGINE.open_project(root)
     # Reload version chain and gate manager for the opened project
     _reload_chain_for_project(root)
     return result
+
+
+def _open_portable_project(path) -> dict:
+    """Restore a portable settings export without requiring a sibling manifest."""
+    from pathlib import Path
+    import tempfile
+
+    global PROJECT_ENGINE, _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or data.get("app") != "process-intelligence-platform":
+        raise ValueError("Not a Process Intelligence Platform project file")
+    version = data.get("version")
+    if type(version) is not int or version not in (1, 2):
+        raise ValueError(f"Unsupported portable project version: {version}")
+    source_info = data.get("import")
+    if not isinstance(source_info, dict) or not isinstance(source_info.get("file_path"), str) or not source_info["file_path"].strip():
+        raise ValueError("Portable project is missing import.file_path")
+    source = Path(source_info["file_path"]).expanduser()
+    if not source.is_absolute():
+        source = path.parent / source
+    source = source.resolve()
+    if not source.is_file():
+        raise FileNotFoundError(f"Original Excel/CSV not found: {source}. The .piproj.json stores a path, not the source data.")
+
+    # A portable export is a settings snapshot, not a saved approval history.
+    # Build an isolated workspace; never turn Downloads itself into a project.
+    previous = (PROJECT_ENGINE, _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY)
+    try:
+        root = tempfile.mkdtemp(prefix="piproj-")
+        PROJECT_ENGINE = ProjectEngine()
+        project = PROJECT_ENGINE.create_project(root, path.name.removesuffix(".piproj.json"))
+        _reload_chain_for_project(root)
+        REGISTRY = DatasetRegistry()
+        MODEL_REGISTRY = ModelRegistry()
+        imported = _handle_import({"file_path": str(source)})
+    except Exception:
+        PROJECT_ENGINE, _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY = previous
+        raise
+    return {**project, "kind": "portable", "datasets": 1, "process_groups": 0,
+            "project_file": data, "import_result": imported}
 
 
 def _reload_chain_for_project(root: str) -> None:

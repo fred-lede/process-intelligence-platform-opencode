@@ -8,9 +8,10 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { useEngineStatus } from '../../hooks/useEngineStatus'
-import { importDataFile, getGateSummary } from '../../lib/engine'
+import { openProject, getGateSummary } from '../../lib/engine'
 import { buildProjectFile, loadProjectFile, saveProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
+import { useModelStore } from '../../stores/modelStore'
 
 export default function ProjectOverview() {
   const { t } = useTranslation()
@@ -73,11 +74,14 @@ export default function ProjectOverview() {
   const handleOpen = async () => {
     setBusy(true)
     try {
-      const data = await loadProjectFile()
-      if (!data) return
+      const selected = await loadProjectFile()
+      if (!selected) return
 
-      // Re-import the source file so the engine dataset is registered again.
-      const result = await importDataFile(data.import.file_path)
+      const opened = await openProject(selected.file_path)
+      const data = opened.project_file
+      const result = opened.import_result
+      if (!data || !result) throw new Error('Invalid portable project response')
+      useModelStore.setState({ models: [], selectedModelId: null, error: null })
       setImportResult(result)
       if (data.fields) setFields(data.fields)
       if (data.quality) setQuality(data.quality)
@@ -90,7 +94,7 @@ export default function ProjectOverview() {
       // Refresh gate summary (portable .piproj.json has no gate state)
       const gateRes = await getGateSummary()
       setGateSummary(gateRes.summary || {})
-      messageApi.success(t('project.opened', { path: data.import.file_path }))
+      messageApi.success(t('project.opened', { path: selected.file_path }))
     } catch (err) {
       messageApi.error(err instanceof Error ? err.message : String(err))
     } finally {
