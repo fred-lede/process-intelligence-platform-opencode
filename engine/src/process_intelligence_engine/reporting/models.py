@@ -59,6 +59,11 @@ class ReportData:
     extrapolation_summary: dict = field(default_factory=dict)
     version_chain_summary: list[dict] = field(default_factory=list)
 
+    # Report status enforced by gate state (v0.4.1)
+    report_status: str = "draft"  # "draft" | "approved"
+    approved_by: str = ""
+    approved_at: str = ""
+
     # Metadata
     version: str = "1.0.0"
     language: str = "en"

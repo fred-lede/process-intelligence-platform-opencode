@@ -978,6 +978,16 @@ def _handle_report_generate(params: dict) -> dict:
         except KeyError:
             pass
 
+    # Enforce report status based on gate state
+    required_modules = ["data_import", "modeling", "monte_carlo"]
+    all_required_confirmed = all(
+        gate_summary.get(m) == "confirmed" for m in required_modules
+        if m in gate_summary
+    )
+    report_status = "approved" if all_required_confirmed else "draft"
+    approved_by = operator if report_status == "approved" else ""
+    approved_at = datetime.now().isoformat() if report_status == "approved" else ""
+
     report_data = ReportData(
         project_name=project_name,
         operator=operator,
@@ -1005,6 +1015,9 @@ def _handle_report_generate(params: dict) -> dict:
         unconfirmed_items=unconfirmed_items,
         extrapolation_summary={},
         version_chain_summary=chain_summary,
+        report_status=report_status,
+        approved_by=approved_by,
+        approved_at=approved_at,
     )
 
     REPORT_REGISTRY.register(
@@ -1813,6 +1826,8 @@ def handle_request(method: str, params: dict) -> dict:
             "all_confirmed": GATE_MANAGER.are_all_confirmed(),
             "details": {m: GATE_MANAGER.get_details(m) for m in params.get("modules", GATE_MANAGER.ALL_MODULES)},
         }
+    if method == "gates/history":
+        return {"history": GATE_MANAGER.get_history(params.get("module"))}
 
     if method == "analysis/anomaly/register":
         entity_id = register_anomaly_event(

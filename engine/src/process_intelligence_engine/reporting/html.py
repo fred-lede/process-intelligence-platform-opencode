@@ -53,9 +53,20 @@ class HTMLReportGenerator(ReportGenerator):
         gs = self.data.gate_summary or {}
         unconfirmed = self.data.unconfirmed_items or []
         claims = self.data.approval_record or {}
+        report_status = getattr(self.data, 'report_status', 'draft')
+        approved_by = getattr(self.data, 'approved_by', '')
+        approved_at = getattr(self.data, 'approved_at', '')
 
         body = '<div class="evidence-summary">'
         body += '<h3>Analysis Evidence Summary</h3>'
+
+        # Report status badge
+        status_cls = "success" if report_status == "approved" else "warning"
+        body += f'<p><strong>Report Status:</strong> '
+        body += f'<span class="badge badge-{status_cls}">{self._e(report_status.upper())}</span>'
+        if report_status == "approved" and approved_by:
+            body += f' — Approved by {self._e(approved_by)}'
+        body += '</p>'
 
         ds = ct.get("dataset", {})
         body += f"<p><strong>Dataset:</strong> {self._e(ds.get('entity_id', 'N/A'))} | "

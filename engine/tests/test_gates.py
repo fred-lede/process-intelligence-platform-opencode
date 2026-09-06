@@ -1,4 +1,5 @@
 import pytest
+import tempfile
 from process_intelligence_engine.gates.manager import GateManager
 
 
@@ -100,3 +101,32 @@ def test_gate_reset_saves():
     gm1.reset("modeling", "review needed")
     gm2 = GateManager(project_root=tmp, project_id="proj")
     assert gm2.get_status("modeling") == "pending_confirmation"
+
+
+def test_gate_has_gate_id():
+    tmp = tempfile.mkdtemp()
+    gm = GateManager(project_root=tmp, project_id="proj")
+    details = gm.get_details("modeling")
+    assert "gate_id" in details
+    assert details["gate_id"].startswith("gt-")
+
+
+def test_gate_event_history():
+    tmp = tempfile.mkdtemp()
+    gm = GateManager(project_root=tmp, project_id="proj")
+    gm.confirm("modeling", "md-1", 1, "fred", "approved")
+    gm.reset("modeling", "changed inputs")
+    gm.confirm("modeling", "md-2", 2, "fred", "")
+    history = gm.get_history("modeling")
+    assert len(history) >= 3  # confirm + reset + confirm with version change
+    event_types = [e["event_type"] for e in history]
+    assert "confirm" in event_types
+    assert "reset" in event_types
+    assert "version_changed" in event_types
+    # Each event has required fields
+    for evt in history:
+        assert "event_id" in evt
+        assert "gate_id" in evt
+        assert "operation_id" in evt
+        assert "old_status" in evt
+        assert "new_status" in evt

@@ -3,11 +3,16 @@
 Controls the not_started -> pending_confirmation -> confirmed state machine
 per module. Each confirmation is bound to an entity_id and entity_version,
 scoped by project_id for multi-project isolation. State persists to JSONL.
+
+Each gate state change is recorded as an audit event (gate_id, event_type,
+operation_id) so the full history of confirm/reset/version-change events
+can be reconstructed.
 """
 from __future__ import annotations
 
 import json
 import threading
+import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +27,25 @@ VALID_TRANSITIONS = {
 
 
 @dataclass
+class GateEvent:
+    """Audit event for each gate state transition."""
+    event_id: str
+    gate_id: str
+    module: str
+    project_id: str
+    event_type: str  # "confirm" / "reset" / "version_changed"
+    operation_id: str
+    old_status: str
+    new_status: str
+    entity_id: str
+    entity_version: int
+    confirmed_by: str
+    reset_reason: str
+    comment: str
+    timestamp: str
+
+
+@dataclass
 class GateRecord:
     module: str
     project_id: str
@@ -32,6 +56,7 @@ class GateRecord:
     confirmed_at: str
     reset_reason: str = ""
     comment: str = ""
+    gate_id: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -49,6 +74,7 @@ class GateManager:
         self._project_root = Path(project_root) if project_root else Path()
         self._project_id = project_id
         self._gates: dict[str, GateRecord] = {}
+        self._events: list[GateEvent] = []
         self._lock = threading.Lock()
         for mod in self.ALL_MODULES:
             self._gates[mod] = GateRecord(
@@ -59,6 +85,7 @@ class GateManager:
                 status="not_started",
                 confirmed_by="",
                 confirmed_at="",
+                gate_id=f"gt-{uuid.uuid4().hex[:8]}",
             )
         self._load()
 
@@ -68,21 +95,36 @@ class GateManager:
     def _gates_path(self) -> Path:
         return self._project_root / "registry" / "gates.jsonl"
 
+    def _events_path(self) -> Path:
+        return self._project_root / "registry" / "gate_events.jsonl"
+
     def _load(self) -> None:
         path = self._gates_path()
-        if not path.exists():
-            return
-        try:
-            for line in path.read_text().splitlines():
-                if not line.strip():
-                    continue
-                d = json.loads(line)
-                if d.get("project_id") != self._project_id:
-                    continue
-                rec = GateRecord(**d)
-                self._gates[rec.module] = rec
-        except (json.JSONDecodeError, OSError, KeyError):
-            pass
+        if path.exists():
+            try:
+                for line in path.read_text().splitlines():
+                    if not line.strip():
+                        continue
+                    d = json.loads(line)
+                    if d.get("project_id") != self._project_id:
+                        continue
+                    rec = GateRecord(**d)
+                    self._gates[rec.module] = rec
+            except (json.JSONDecodeError, OSError, KeyError):
+                pass
+        # Load event history (last event per module wins for current state)
+        ev_path = self._events_path()
+        if ev_path.exists():
+            try:
+                for line in ev_path.read_text().splitlines():
+                    if not line.strip():
+                        continue
+                    d = json.loads(line)
+                    if d.get("project_id") != self._project_id:
+                        continue
+                    self._events.append(GateEvent(**d))
+            except (json.JSONDecodeError, OSError, KeyError):
+                pass
 
     def _save(self) -> None:
         if not self._project_root:
@@ -93,6 +135,15 @@ class GateManager:
             for rec in self._gates.values():
                 if rec.project_id == self._project_id:
                     f.write(json.dumps(asdict(rec), default=str) + "\n")
+
+    def _append_event(self, event: GateEvent) -> None:
+        """Persist a gate event to the audit log."""
+        if not self._project_root:
+            return
+        path = self._events_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a") as f:
+            f.write(json.dumps(asdict(event), default=str) + "\n")
 
     def get_status(self, module: str) -> str:
         with self._lock:
@@ -110,27 +161,87 @@ class GateManager:
         entity_version: int,
         confirmed_by: str,
         comment: str = "",
+        operation_id: str = "",
     ) -> dict:
         if not entity_id:
             raise ValueError("entity_id is required")
+        op_id = operation_id or f"op-{uuid.uuid4().hex[:8]}"
         with self._lock:
             gate = self._gates[module]
+            old_status = gate.status
             if gate.entity_version != entity_version:
                 gate.status = "pending_confirmation"
                 gate.entity_id = entity_id
                 gate.entity_version = entity_version
+                # Record version change event
+                evt = GateEvent(
+                    event_id=f"ev-{uuid.uuid4().hex[:8]}",
+                    gate_id=gate.gate_id,
+                    module=module,
+                    project_id=self._project_id,
+                    event_type="version_changed",
+                    operation_id=op_id,
+                    old_status=old_status,
+                    new_status="pending_confirmation",
+                    entity_id=entity_id,
+                    entity_version=entity_version,
+                    confirmed_by="",
+                    reset_reason="",
+                    comment="",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
+                )
+                self._events.append(evt)
+                self._append_event(evt)
             gate.status = "confirmed"
             gate.confirmed_by = confirmed_by
             gate.confirmed_at = datetime.now(timezone.utc).isoformat()
             gate.comment = comment
+            evt2 = GateEvent(
+                event_id=f"ev-{uuid.uuid4().hex[:8]}",
+                gate_id=gate.gate_id,
+                module=module,
+                project_id=self._project_id,
+                event_type="confirm",
+                operation_id=op_id,
+                old_status=old_status,
+                new_status="confirmed",
+                entity_id=entity_id,
+                entity_version=entity_version,
+                confirmed_by=confirmed_by,
+                reset_reason="",
+                comment=comment,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+            self._events.append(evt2)
+            self._append_event(evt2)
             self._save()
             return {"new_status": "confirmed"}
 
-    def reset(self, module: str, reason: str = "") -> dict:
+    def reset(self, module: str, reason: str = "", operation_id: str = "") -> dict:
+        op_id = operation_id or f"op-{uuid.uuid4().hex[:8]}"
         with self._lock:
             gate = self._gates[module]
+            old_status = gate.status
             gate.status = "pending_confirmation"
             gate.reset_reason = reason
+            evt = GateEvent(
+                event_id=f"ev-{uuid.uuid4().hex[:8]}",
+                gate_id=gate.gate_id,
+                module=module,
+                project_id=self._project_id,
+                event_type="reset",
+                operation_id=op_id,
+                old_status=old_status,
+                new_status="pending_confirmation",
+                entity_id=gate.entity_id,
+                entity_version=gate.entity_version,
+                confirmed_by=gate.confirmed_by,
+                reset_reason=reason,
+                comment="",
+                timestamp=datetime.now(timezone.utc).isoformat(),
+            )
+            self._events.append(evt)
+            self._append_event(evt)
             self._save()
             return {"new_status": "pending_confirmation"}
 
@@ -146,6 +257,7 @@ class GateManager:
             return {
                 "module": gate.module,
                 "project_id": gate.project_id,
+                "gate_id": gate.gate_id,
                 "status": gate.status,
                 "entity_id": gate.entity_id,
                 "entity_version": gate.entity_version,
@@ -154,6 +266,13 @@ class GateManager:
                 "reset_reason": gate.reset_reason,
                 "comment": gate.comment,
             }
+
+    def get_history(self, module: str | None = None) -> list[dict]:
+        """Return full event history, optionally filtered by module."""
+        with self._lock:
+            if module:
+                return [asdict(e) for e in self._events if e.module == module]
+            return [asdict(e) for e in self._events]
 
     def are_all_confirmed(self, modules: list[str] | None = None) -> bool:
         with self._lock:

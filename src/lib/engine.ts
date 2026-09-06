@@ -1689,6 +1689,18 @@ export async function getGateSummary(): Promise<{
   return engineCall('gates/summary', { modules: [] })
 }
 
+export async function getGateHistory(module?: string): Promise<Array<{
+  event_id: string
+  gate_id: string
+  module: string
+  event_type: string
+  old_status: string
+  new_status: string
+  timestamp: string
+}>> {
+  return engineCall('gates/history', { module: module || '' })
+}
+
 // --- v0.4.0 Model Governance ---------------------------------------------
 
 export interface GovernanceCheckResult {

@@ -58,8 +58,15 @@ class VersionChain:
     """Central version chain manager with JSONL persistence.
 
     Entities, links and claims are append-only event log records.
-    _version_counters are persisted separately so app restarts preserve
-    monotonic sequence numbers.
+    _version_counters are keyed by (project_id, entity_type) for
+    per-project isolation and persisted separately so app restarts
+    preserve monotonic sequence numbers.
+
+    Mutation operations (register_entity, add_link, add_claim) append
+    to their respective JSONL files. save() writes a full snapshot
+    (used at shutdown or on-demand). This hybrid approach supports:
+    - append-only audit trail for normal operations
+    - full-state rebuild via save()/load() for recovery
     """
 
     SCHEMA_VERSION = "1.0.0"
@@ -80,7 +87,8 @@ class VersionChain:
         self._entities: dict[str, EntityRecord] = {}
         self._links: list[LinkRecord] = []
         self._claims: dict[str, list[ClaimRecord]] = {}
-        self._version_counters: dict[str, int] = {}
+        # Counter keyed by (project_id, entity_type) for per-project isolation
+        self._version_counters: dict[tuple[str, str], int] = {}
         self._lock = threading.Lock()
 
     def _prefix(self, entity_type: str) -> str:
@@ -105,13 +113,20 @@ class VersionChain:
     def _persist_counters(self) -> None:
         path = self._counters_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self._version_counters))
+        # Serialize tuple keys as "project_id:entity_type" strings
+        serializable = {f"{k[0]}||{k[1]}": v for k, v in self._version_counters.items()}
+        path.write_text(json.dumps(serializable))
 
     def _load_counters(self) -> None:
         path = self._counters_path()
         if path.exists():
             try:
-                self._version_counters = json.loads(path.read_text())
+                raw = json.loads(path.read_text())
+                self._version_counters = {}
+                for key, val in raw.items():
+                    parts = key.split("||", 1)
+                    if len(parts) == 2:
+                        self._version_counters[(parts[0], parts[1])] = val
             except (json.JSONDecodeError, OSError):
                 self._version_counters = {}
 
@@ -127,9 +142,10 @@ class VersionChain:
     ) -> str:
         with self._lock:
             prefix = self._prefix(entity_type)
-            self._version_counters.setdefault(entity_type, 0)
-            self._version_counters[entity_type] += 1
-            ver = self._version_counters[entity_type]
+            counter_key = (project_id, entity_type)
+            self._version_counters.setdefault(counter_key, 0)
+            self._version_counters[counter_key] += 1
+            ver = self._version_counters[counter_key]
             entity_id = f"{prefix}-{uuid.uuid4().hex[:8]}"
             record = EntityRecord(
                 entity_id=entity_id,
