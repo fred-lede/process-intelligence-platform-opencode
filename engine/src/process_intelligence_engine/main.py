@@ -2155,7 +2155,17 @@ def _handle_project_create(params: dict) -> dict:
 
 def _handle_project_open(params: dict) -> dict:
     root = params["root"]
-    return PROJECT_ENGINE.open_project(root)
+    result = PROJECT_ENGINE.open_project(root)
+    # Reload version chain and gate manager for the opened project
+    _reload_chain_for_project(root)
+    return result
+
+
+def _reload_chain_for_project(root: str) -> None:
+    """Reinitialize the shared version chain and gate manager for a project root."""
+    global _VERSION_CHAIN, GATE_MANAGER
+    _VERSION_CHAIN = VersionChain(root, "anonymous")
+    GATE_MANAGER = GateManager(project_root=root, project_id="default")
 
 
 def _handle_project_settings(params: dict) -> dict:
