@@ -39,8 +39,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 )
 
 function getInitialLanguage(): string {
-  // In Phase 0, default to browser language if supported, else 'en'
+  // Read stored preference first (set by Sidebar language selector)
   const stored = localStorage.getItem('i18nextLng')
-  if (stored === 'en' || stored === 'zh-TW') return stored
-  return navigator.language.startsWith('zh') ? 'zh-TW' : 'en'
+  if (stored && (stored.startsWith('en') || stored.startsWith('zh-TW') || stored.startsWith('es-MX'))) {
+    return stored
+  }
+  // Fallback to browser language if supported
+  const browser = navigator.language
+  if (browser.startsWith('zh')) return 'zh-TW'
+  if (browser.startsWith('es')) return 'es-MX'
+  return 'en'
 }
