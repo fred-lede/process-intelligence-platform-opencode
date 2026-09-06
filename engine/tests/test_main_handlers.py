@@ -622,3 +622,14 @@ def test_apply_row_filter_rejects_empty_value():
     df = pd.DataFrame({"x": [1, 2, 3], "cat": ["A", "B", "A"]})
     with pytest.raises(ValueError, match="filter_value is required"):
         _apply_row_filter(df, {"filter_column": "cat", "filter_value": ""})
+
+
+def test_version_chain_summary_after_import(tmp_path):
+    csv = tmp_path / "test.csv"
+    csv.write_text("x,y\n1,2\n3,4\n5,6\n")
+    handle_request("versioning/chain/summary", {})
+    result = handle_request("data/import", {"file_path": str(csv)})
+    did = result["dataset_id"]
+    summary = handle_request("versioning/chain/summary", {})
+    assert any(e["entity_type"] == "dataset" for e in summary["summary"])
+    assert "chain_entity_id" in result
