@@ -11,7 +11,6 @@ import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -102,8 +101,6 @@ class VersionChain:
             self._version_counters[entity_type] += 1
             ver = self._version_counters[entity_type]
             entity_id = f"{prefix}-{uuid.uuid4().hex[:8]}"
-            if content_hash:
-                content_hash = self._compute_hash(metadata)
             record = EntityRecord(
                 entity_id=entity_id,
                 entity_type=entity_type,

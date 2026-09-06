@@ -70,6 +70,7 @@ def test_get_chain_summary_returns_all_entities():
     assert len(summary) == 2
     assert summary[0]["entity_id"] == id1
     assert summary[1]["entity_id"] == id2
+    assert summary == sorted(summary, key=lambda x: (x["entity_type"], x["version"]))
 
 
 def test_persist_and_reload():
