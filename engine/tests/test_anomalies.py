@@ -213,3 +213,23 @@ def test_build_analysis_package_incomplete_without_output():
     )
     assert pkg["complete"] is False
     assert "output" in "".join(pkg["missing_requirements"])
+
+
+def test_register_anomaly_event(tmp_path):
+    """Verify anomaly registration in version chain."""
+    from process_intelligence_engine.versioning.chain import VersionChain
+    from process_intelligence_engine.analysis.anomalies import register_anomaly_event
+
+    chain = VersionChain(str(tmp_path), "testuser")
+    chain.register_entity(
+        entity_type="dataset", project_id="ds-test",
+        metadata={"id": "ds-test"}, created_by="testuser",
+    )
+    entity_id = register_anomaly_event(
+        chain, "ds-test", "ano-001",
+        "historical_observation", 0.85, True, "testuser",
+    )
+    assert entity_id.startswith("ano-")
+    summary = chain.get_chain_summary()
+    assert any(e["entity_id"] == entity_id for e in summary)
+    assert any(e["entity_type"] == "anomaly" for e in summary)

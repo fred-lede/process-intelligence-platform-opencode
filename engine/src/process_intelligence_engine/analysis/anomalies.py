@@ -397,3 +397,30 @@ __all__ = [
     "detect_anomaly_scenarios",
     "build_analysis_package",
 ]
+
+
+def register_anomaly_event(
+    chain,
+    dataset_id: str,
+    anomaly_id: str,
+    source: str,
+    confidence: float,
+    user_confirmed: bool,
+    operator: str,
+) -> str:
+    """Register an anomaly event in the version chain."""
+    entity_id = chain.register_entity(
+        entity_type="anomaly",
+        project_id=dataset_id,
+        metadata={
+            "dataset_id": dataset_id,
+            "anomaly_id": anomaly_id,
+            "source": source,
+            "confidence": confidence,
+            "user_confirmed": user_confirmed,
+            "operator": operator,
+        },
+        created_by=operator,
+    )
+    chain.add_link(entity_id, dataset_id, "derived_from", "unverified", operator)
+    return entity_id

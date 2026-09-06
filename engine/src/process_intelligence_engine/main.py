@@ -26,7 +26,11 @@ import uuid
 import numpy as np
 import pandas as pd
 
-from process_intelligence_engine.analysis.anomalies import build_analysis_package, detect_anomaly_scenarios
+from process_intelligence_engine.analysis.anomalies import (
+    build_analysis_package,
+    detect_anomaly_scenarios,
+    register_anomaly_event,
+)
 from process_intelligence_engine.data.distribution import fit_best_distribution
 from process_intelligence_engine.data.field_detector import detect_fields
 from process_intelligence_engine.data.importer import import_file
@@ -1727,6 +1731,18 @@ def handle_request(method: str, params: dict) -> dict:
             "all_confirmed": GATE_MANAGER.are_all_confirmed(),
             "details": {m: GATE_MANAGER.get_details(m) for m in params.get("modules", GATE_MANAGER.ALL_MODULES)},
         }
+
+    if method == "analysis/anomaly/register":
+        entity_id = register_anomaly_event(
+            _VERSION_CHAIN,
+            params.get("dataset_id", ""),
+            params["anomaly_id"],
+            params.get("source", "historical_observation"),
+            params.get("confidence", 0.0),
+            params.get("user_confirmed", False),
+            params.get("operator", "anonymous"),
+        )
+        result = {"entity_id": entity_id}
 
     raise ValueError(f"Unknown method: {method}")
 

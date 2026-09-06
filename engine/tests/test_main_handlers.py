@@ -633,3 +633,27 @@ def test_version_chain_summary_after_import(tmp_path):
     summary = handle_request("versioning/chain/summary", {})
     assert any(e["entity_type"] == "dataset" for e in summary["summary"])
     assert "chain_entity_id" in result
+
+
+def test_anomaly_register_in_chain(tmp_path):
+    csv = tmp_path / "test.csv"
+    csv.write_text("x,y\n1,2\n3,4\n5,6\n")
+    result = handle_request("data/import", {"file_path": str(csv)})
+    dataset_id = result["dataset_id"]
+    from process_intelligence_engine.main import _VERSION_CHAIN
+    _VERSION_CHAIN.register_entity(
+        entity_type="dataset", project_id="default",
+        metadata={"dataset_id": dataset_id}, created_by="anonymous",
+    )
+    exp = handle_request("analysis/anomaly/register", {
+        "dataset_id": dataset_id,
+        "anomaly_id": "ano-test",
+        "source": "engineering_input",
+        "confidence": 0.9,
+        "user_confirmed": True,
+        "operator": "fred",
+    })
+    assert "entity_id" in exp
+    assert exp["entity_id"].startswith("ano-")
+    summary = handle_request("versioning/chain/summary", {})
+    assert any(e["entity_type"] == "anomaly" for e in summary["summary"])
