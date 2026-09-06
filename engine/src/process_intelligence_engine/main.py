@@ -167,8 +167,13 @@ AUTH_MANAGER = AuthManager()
 PROJECT_ENGINE = ProjectEngine()
 _PROJECT_ROOT = "/tmp/default-project"
 _VERSION_CHAIN = VersionChain(_PROJECT_ROOT, "anonymous")
-_VERSION_CHAIN.load()
 GATE_MANAGER = GateManager(project_root=_PROJECT_ROOT, project_id="default")
+try:
+    _VERSION_CHAIN.load()
+except Exception:
+    # A corrupt/cross-version state file must never prevent engine startup.
+    import traceback
+    print(f"[engine] version_chain.load() failed at startup: {traceback.format_exc()}", file=sys.stderr)
 
 
 class ExperimentRecord:

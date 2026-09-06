@@ -251,6 +251,24 @@
 
 <!-- NEXT_ITEM_ANCHOR -->
 
+## Completed (cont.)
+
+### Debug: 開機彩虹圈 + Broken pipe 修復
+- **Status**: DONE（新版已部署到 `/Applications`，0.4.0 03:09 build）
+- **徵狀**：開 app 轉彩虹圈（beachball）→ 之後顯示「無法連線分析引擎 … failed to write to engine: Broken pipe (os error 32)」
+- **Root cause（4 項組合）**：
+  1. Tauri commands 是 sync `pub fn` → 在 **主執行緒** 執行；`engine_call` timeout 120s、`engine_ping/health` 10s → 引擎慢時 UI 直接凍結（beachball）
+  2. 引擎 `stderr` 被 `Stdio::piped()` 但 **無執行緒 drain** → 引擎大量 stderr 輸出時 pipe 填滿卡死
+  3. `GateManager._save()` 用 append 寫入**全部 7 個 gate** → `gates.jsonl` 無界成長（47,194 行 / 12.4MB），boot 越開越慢
+  4. module 級 `_VERSION_CHAIN.load()`（main.py:168）無 try/catch → 任何 corrupt/cross-version JSONL schema mismatch（`EntityRecord(**d)` TypeError）→ **import 時引擎 crash → Broken pipe**
+- **修復**：
+  - `commands/mod.rs`：`engine_ping`/`engine_health`/`engine_call` 改 `async` + `tauri::async_runtime::spawn_blocking` + `AppState.engine` 改 `Arc<EngineManager>` → 不再 block 主執行緒
+  - `engine/mod.rs`：新增 stderr reader thread（drain + log）
+  - `gates/manager.py`：`_save()` append → **rewrite 全量**（7 行固定）；`_load()` 兩處 catch 加 `TypeError`
+  - `main.py`：module 級 `_VERSION_CHAIN.load()` 包 try/except（壞檔不阻止引擎啟動）
+- **驗證**：引擎 409 passed, 1 skipped；tsc clean；`cargo build` ok；live engine test 0.94s ok；新 release bundle launch → 引擎 alive + 主執行緒 idle
+- **Files changed** — `src-tauri/src/commands/mod.rs`, `src-tauri/src/engine/mod.rs`, `engine/src/process_intelligence_engine/gates/manager.py`, `engine/src/process_intelligence_engine/main.py`
+
 ## In Progress
 
 ## Pending

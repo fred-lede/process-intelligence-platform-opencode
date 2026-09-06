@@ -8,43 +8,57 @@ use tauri::{Manager, State};
 
 /// Tauri-managed application state.
 pub struct AppState {
-    pub engine: EngineManager,
+    pub engine: std::sync::Arc<EngineManager>,
 }
 
 /// Ping the analysis engine.
 #[tauri::command]
-pub fn engine_ping(state: State<'_, AppState>) -> Result<Value, String> {
-    state
-        .engine
-        .call("engine/ping", json!({}), Duration::from_secs(10))
-        .map_err(|e| e.to_string())
+pub async fn engine_ping(state: State<'_, AppState>) -> Result<Value, String> {
+    let engine = state.engine.clone();
+    // Run on a blocking task so a slow engine does not freeze the UI main
+    // thread (sync tauri commands otherwise execute on the main thread).
+    tauri::async_runtime::spawn_blocking(move || {
+        engine
+            .call("engine/ping", json!({}), Duration::from_secs(10))
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Read engine health status.
 #[tauri::command]
-pub fn engine_health(state: State<'_, AppState>) -> Result<Value, String> {
-    state
-        .engine
-        .call("engine/health", json!({}), Duration::from_secs(10))
-        .map_err(|e| e.to_string())
+pub async fn engine_health(state: State<'_, AppState>) -> Result<Value, String> {
+    let engine = state.engine.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        engine
+            .call("engine/health", json!({}), Duration::from_secs(10))
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Generic RPC bridge: lets the frontend call any engine method.
 #[tauri::command]
-pub fn engine_call(
+pub async fn engine_call(
     method: String,
     params: Value,
     state: State<'_, AppState>,
 ) -> Result<Value, String> {
-    state
-        .engine
-        .call(&method, params, Duration::from_secs(120))
-        .map_err(|e| e.to_string())
+    let engine = state.engine.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        engine
+            .call(&method, params, Duration::from_secs(120))
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Initialize application state and start the engine on app setup.
 pub fn setup_engine(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let engine = crate::engine::default_engine();
+    let engine = std::sync::Arc::new(crate::engine::default_engine());
     let state = AppState { engine };
     app.manage(state);
 

@@ -1,5 +1,18 @@
 # PROGRESS.md
 
+## 2026-09-07 — v0.4.0 開機彩虹圈 + Broken pipe 修復
+
+- **徵狀**：使用者啟動 installed app 轉彩虹圈（beachball），之後前端顯示「無法連線分析引擎 … failed to write to engine: Broken pipe (os error 32)」
+- **Root cause（4 項組合）**：sync Tauri commands 在**主執行緒**執行（`engine_call` 120s/`engine_ping` 10s timeout → 引擎慢時 UI 凍結）；引擎 `stderr` piped 但**無執行緒 drain**（大量輸出時 pipe 滿卡死）；`GateManager._save()` append 全部 7 個 gate → `gates.jsonl` 無界成長（47,194 行 / 12.4MB）；module 級 `_VERSION_CHAIN.load()`（main.py:168）無 try/catch → corrupt/cross-version JSONL schema mismatch = TypeError → **import 即 crash → Broken pipe**
+- **修復**：
+  - `commands/mod.rs`：`engine_ping`/`engine_health`/`engine_call` → `async` + `tauri::async_runtime::spawn_blocking`；`AppState.engine` → `Arc<EngineManager>`（不再 block 主執行緒）
+  - `engine/mod.rs`：stderr reader thread（drain + log）
+  - `gates/manager.py`：`_save()` append → **rewrite 全量**（固定 7 行）；`_load()` 兩處 catch 加 `TypeError`
+  - `main.py`：module 級 `_VERSION_CHAIN.load()` 包 try/except（壞檔不再阻止引擎啟動）
+- **驗證**：引擎 **409 passed, 1 skipped**；`npx tsc --noEmit` EXIT 0；`cargo build` ok；live engine test 0.94s ok；新 release bundle launch → 引擎 alive + 主執行緒 idle（無彩虹圈）
+- **部署**：`npm run tauri build` 重建 bundles → `cp -R` 部署至 `/Applications/Process Intelligence Platform.app`（0.4.0, 03:09 build）
+- **Files changed** — `src-tauri/src/commands/mod.rs`, `src-tauri/src/engine/mod.rs`, `engine/src/process_intelligence_engine/gates/manager.py`, `engine/src/process_intelligence_engine/main.py`
+
 ## 2026-09-06 — v0.4.0 可信分析鏈（Trustworthy Analysis Chain）
 
 - **實作**：從功能擴張轉向分析可信度、版本治理、實驗驗證與工程落地

@@ -116,6 +116,23 @@ impl EngineManager {
             .stdout
             .take()
             .ok_or_else(|| EngineError::Start("could not capture stdout".into()))?;
+        let stderr = child
+            .stderr
+            .take()
+            .ok_or_else(|| EngineError::Start("could not capture stderr".into()))?;
+
+        // Reader thread for stderr: drain + log so a chatty engine can never
+        // block itself writing into a full pipe.
+        thread::spawn(move || {
+            let reader = BufReader::new(stderr);
+            for line in reader.lines() {
+                match line {
+                    Ok(l) => log::info!("[engine:stderr] {l}"),
+                    Err(_) => break,
+                }
+            }
+            log::info!("engine stderr closed");
+        });
 
         // Reader thread: dispatch responses to pending senders by id.
         let pending = Arc::clone(&self.pending);

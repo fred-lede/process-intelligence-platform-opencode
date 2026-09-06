@@ -110,7 +110,7 @@ class GateManager:
                         continue
                     rec = GateRecord(**d)
                     self._gates[rec.module] = rec
-            except (json.JSONDecodeError, OSError, KeyError):
+            except (json.JSONDecodeError, OSError, KeyError, TypeError):
                 pass
         # Load event history (last event per module wins for current state)
         ev_path = self._events_path()
@@ -123,7 +123,7 @@ class GateManager:
                     if d.get("project_id") != self._project_id:
                         continue
                     self._events.append(GateEvent(**d))
-            except (json.JSONDecodeError, OSError, KeyError):
+            except (json.JSONDecodeError, OSError, KeyError, TypeError):
                 pass
 
     def _save(self) -> None:
@@ -131,7 +131,9 @@ class GateManager:
             return
         path = self._gates_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "a") as f:
+        # Rewrite the full current state (7 gates) instead of appending:
+        # appending every confirm/reset grows gates.jsonl without bound.
+        with open(path, "w") as f:
             for rec in self._gates.values():
                 if rec.project_id == self._project_id:
                     f.write(json.dumps(asdict(rec), default=str) + "\n")
