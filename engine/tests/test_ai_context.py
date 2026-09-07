@@ -57,3 +57,24 @@ def test_context_rejects_raw_rows_and_oversized_summaries(chain):
             {"selected_model_id": "x" * (33 * 1024)},
             chain,
         )
+
+
+def test_context_rejects_dataframe_under_allowed_summary_key(chain):
+    pandas = pytest.importorskip("pandas")
+    with pytest.raises(ValueError, match="Assistant context exceeds the local summary limit"):
+        build_assistant_context(
+            "project-a",
+            "dataImport",
+            {"dataset_summary": pandas.DataFrame({"temperature": [150.2]})},
+            chain,
+        )
+
+
+def test_context_rejects_nested_tabular_values_under_allowed_summary_key(chain):
+    with pytest.raises(ValueError, match="Assistant context exceeds the local summary limit"):
+        build_assistant_context(
+            "project-a",
+            "dataImport",
+            {"dataset_summary": [["temperature", "pressure"], [150.2, 5.1]]},
+            chain,
+        )

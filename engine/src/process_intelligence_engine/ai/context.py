@@ -32,18 +32,21 @@ def _ensure_summary_is_bounded(page_summary: dict) -> None:
     if len(serialized) > MAX_LOCAL_SUMMARY_BYTES:
         raise ValueError("Assistant context exceeds the local summary limit")
 
-    def contains_prohibited_value(value: object) -> bool:
+    def is_safe_summary_value(value: object) -> bool:
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return True
         if isinstance(value, dict):
-            return any(
-                str(key).lower() in _PROHIBITED_SUMMARY_KEYS
-                or contains_prohibited_value(item)
+            return all(
+                isinstance(key, str)
+                and key.lower() not in _PROHIBITED_SUMMARY_KEYS
+                and is_safe_summary_value(item)
                 for key, item in value.items()
             )
         if isinstance(value, (list, tuple)):
-            return any(contains_prohibited_value(item) for item in value)
+            return all(item is None or isinstance(item, (str, int, float, bool)) for item in value)
         return False
 
-    if contains_prohibited_value(page_summary):
+    if not is_safe_summary_value(page_summary):
         raise ValueError("Assistant context exceeds the local summary limit")
 
 
