@@ -2,6 +2,7 @@
 import base64
 import json
 from pathlib import Path
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -40,6 +41,7 @@ def test_governance_ipc_returns_and_fit_records_checks(project):
     assert "governance_warnings" in fit
 
 
+@pytest.mark.filterwarnings("error::DeprecationWarning")
 def test_report_review_export_and_reopen_golden_case(project):
     root, data = project
     fit = app.handle_request("modeling/fit", {"dataset_id": data["dataset_id"],
@@ -89,6 +91,14 @@ def test_anomaly_runtime_id_maps_to_chain_and_validates(project):
     assert app._VERSION_CHAIN.get_entity(result["entity_id"]).parent_ids == [data["chain_entity_id"]]
     with pytest.raises(ValueError, match="Confidence"):
         app.handle_request("analysis/anomaly/register", {**args, "confidence": 2})
+
+
+def test_saving_prediction_scenario_does_not_emit_datetime_deprecation_warning():
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = app.handle_request("prediction/scenario/save", {"model_id": "model-1"})
+    assert result["scenario_id"]
+    assert not [warning for warning in caught if issubclass(warning.category, DeprecationWarning)]
 
 
 def test_gate_rejects_forged_version(project):

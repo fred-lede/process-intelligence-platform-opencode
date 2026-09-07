@@ -290,7 +290,7 @@ def _handle_experiment_record(params: dict) -> dict:
         result=result,
         operator=operator,
         notes=notes,
-        timestamp=datetime.datetime.utcnow().isoformat() + "Z",
+        timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
     )
     EXPERIMENT_REGISTRY.record(record)
     exp_chain_id = _VERSION_CHAIN.register_entity(
@@ -2008,7 +2008,7 @@ def _handle_prediction_scenario_save(params: dict) -> dict:
         predicted_output=float(params.get("predicted_output", 0)),
         operator=params.get("operator", "anonymous"),
         notes=params.get("notes", ""),
-        timestamp=_dt.datetime.utcnow().isoformat() + "Z",
+        timestamp=_dt.datetime.now(_dt.timezone.utc).isoformat().replace("+00:00", "Z"),
     )
     SCENARIO_REGISTRY[scenario_id] = record
     return {"scenario_id": scenario_id, "name": record.name}

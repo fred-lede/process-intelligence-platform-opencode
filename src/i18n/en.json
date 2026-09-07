@@ -121,6 +121,11 @@
     "opened": "Project opened from {{path}}",
     "saveNoData": "Import data first before saving a project.",
     "newDone": "Started a new project.",
+    "newProjectTitle": "Create New Project",
+    "selectParentDirectory": "Choose Project Location",
+    "projectNamePlaceholder": "Enter project folder name",
+    "invalidProjectName": "Enter a valid project folder name (without / or \\\\).",
+    "createdTo": "Project created at {{path}}",
     "analysisPhaseTitle": "Analysis Phase Status",
     "modulesConfirmed": "modules confirmed"
   },

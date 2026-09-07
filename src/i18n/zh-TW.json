@@ -121,6 +121,11 @@
     "opened": "已從 {{path}} 開啟專案",
     "saveNoData": "儲存前請先匯入資料。",
     "newDone": "已開始新專案。",
+    "newProjectTitle": "建立新專案",
+    "selectParentDirectory": "選擇專案存放位置",
+    "projectNamePlaceholder": "輸入專案目錄名稱",
+    "invalidProjectName": "請輸入有效的專案目錄名稱（不可包含 / 或 \\\\）。",
+    "createdTo": "專案已建立於 {{path}}",
     "analysisPhaseTitle": "分析階段狀態",
     "modulesConfirmed": "個模組已確認"
   },

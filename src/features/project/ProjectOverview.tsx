@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Typography, Card, Button, Space, Alert, Badge, Row, Col, message, Divider, Tag } from 'antd'
+import { Typography, Card, Button, Space, Alert, Badge, Row, Col, message, Divider, Tag, Modal, Input } from 'antd'
+import { open } from '@tauri-apps/plugin-dialog'
 import {
   PlusOutlined,
   FolderOpenOutlined,
@@ -8,7 +9,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { useEngineStatus } from '../../hooks/useEngineStatus'
-import { openProject, getGateSummary } from '../../lib/engine'
+import { openProject, getGateSummary, createProject } from '../../lib/engine'
 import { buildProjectFile, loadProjectFile, saveProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
@@ -20,6 +21,8 @@ export default function ProjectOverview() {
   const [busy, setBusy] = useState(false)
   const [messageApi, contextHolder] = message.useMessage()
   const [gateSummary, setGateSummary] = useState<Record<string, string>>({})
+  const [newProjectParent, setNewProjectParent] = useState<string | null>(null)
+  const [newProjectName, setNewProjectName] = useState('')
   const {
     importResult,
     fields,
@@ -42,9 +45,41 @@ export default function ProjectOverview() {
     }).catch(console.error)
   }, [])
 
-  const handleNew = () => {
-    resetAll()
-    messageApi.success(t('project.newDone'))
+  const handleNew = async () => {
+    const selected = await open({
+      title: t('project.selectParentDirectory'),
+      multiple: false,
+      directory: true,
+    })
+    if (typeof selected === 'string') {
+      setNewProjectParent(selected)
+      setNewProjectName('')
+    }
+  }
+
+  const createNewProject = async () => {
+    const name = newProjectName.trim()
+    if (!name || name === '.' || name === '..' || /[\\/]/.test(name)) {
+      messageApi.warning(t('project.invalidProjectName'))
+      return
+    }
+    if (!newProjectParent) return
+
+    setBusy(true)
+    try {
+      const root = `${newProjectParent.replace(/[\\/]+$/, '')}/${name}`
+      const created = await createProject({ root, name })
+      useModelStore.setState({ models: [], selectedModelId: null, error: null })
+      resetAll()
+      const gateRes = await getGateSummary()
+      setGateSummary(gateRes.summary || {})
+      setNewProjectParent(null)
+      messageApi.success(t('project.createdTo', { path: created.project_root }))
+    } catch (err) {
+      messageApi.error(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
   }
 
   const handleSave = async () => {
@@ -145,7 +180,7 @@ export default function ProjectOverview() {
           {t('project.welcomeSubtitle')}
         </Typography.Paragraph>
         <Space style={{ marginTop: 16 }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleNew}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => void handleNew()}>
             {t('project.createNew')}
           </Button>
           <Button
@@ -165,6 +200,26 @@ export default function ProjectOverview() {
           </Button>
         </Space>
       </Card>
+
+      <Modal
+        title={t('project.newProjectTitle')}
+        open={newProjectParent !== null}
+        confirmLoading={busy}
+        okText={t('project.createNew')}
+        onOk={() => void createNewProject()}
+        onCancel={() => setNewProjectParent(null)}
+      >
+        <Typography.Paragraph type="secondary">
+          {newProjectParent}
+        </Typography.Paragraph>
+        <Input
+          autoFocus
+          value={newProjectName}
+          onChange={(event) => setNewProjectName(event.target.value)}
+          placeholder={t('project.projectNamePlaceholder')}
+          onPressEnter={() => void createNewProject()}
+        />
+      </Modal>
 
       <Card title={t('project.analysisPhaseTitle')} size="small">
         <Row gutter={[16, 16]}>

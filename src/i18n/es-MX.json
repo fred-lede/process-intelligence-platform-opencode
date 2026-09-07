@@ -121,6 +121,11 @@
     "openExisting": "Abrir Proyecto Existente",
     "projectDescription": "Descripción",
     "engineDescription": "El motor de análisis se encarga de la importación de datos, el ajuste de distribuciones, el modelado DOE, la simulación Monte Carlo y la generación de reportes.",
+    "newProjectTitle": "Crear proyecto nuevo",
+    "selectParentDirectory": "Elegir ubicación del proyecto",
+    "projectNamePlaceholder": "Ingrese el nombre de la carpeta del proyecto",
+    "invalidProjectName": "Ingrese un nombre de carpeta válido (sin / ni \\\\).",
+    "createdTo": "Proyecto creado en {{path}}",
     "analysisPhaseTitle": "Estado de la Fase de Análisis",
     "modulesConfirmed": "módulos confirmados"
   },
