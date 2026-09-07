@@ -131,6 +131,8 @@ def _nonzero_numbers(mean_value: str, standard_deviation_value: str) -> tuple[fl
         standard_deviation = float(standard_deviation_value)
     except (TypeError, ValueError):
         return None, None
-    if mean == 0 or standard_deviation == 0:
+    if not math.isfinite(mean) or not math.isfinite(standard_deviation):
+        return None, None
+    if mean == 0 or standard_deviation <= 0:
         return None, None
     return mean, standard_deviation

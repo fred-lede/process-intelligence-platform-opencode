@@ -37,6 +37,29 @@ def test_standardized_policy_rejects_missing_or_zero_parameters():
         )
 
 
+@pytest.mark.parametrize(
+    ("mean", "standard_deviation"),
+    [
+        ("nan", "10"),
+        ("inf", "10"),
+        ("-inf", "10"),
+        ("100", "nan"),
+        ("100", "inf"),
+        ("100", "-inf"),
+        ("100", "-10"),
+    ],
+)
+def test_standardized_policy_rejects_nonfinite_or_nonpositive_parameters(
+    mean, standard_deviation
+):
+    with pytest.raises(ValueError, match="nonzero mean and standard deviation"):
+        sanitize_context(
+            {"temperature": 150.2},
+            {"temperature.mean": mean, "temperature.std": standard_deviation},
+            "standardized",
+        )
+
+
 def test_standardized_policy_uses_explicit_nonzero_parameters():
     preview = sanitize_context(
         {"temperature": 150.0},
