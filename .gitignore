@@ -4,6 +4,7 @@ dist/
 *.log
 .npm/
 release/
+.worktrees/
 
 # Rust / Tauri
 src-tauri/target/
