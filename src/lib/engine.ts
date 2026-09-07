@@ -1462,8 +1462,8 @@ export async function saveProjectUiState(projectFile: import('./project').Projec
   return engineCall('project/save_ui_state', { project_file: projectFile })
 }
 
-export async function saveProjectSession(root: string, projectFile: import('./project').ProjectFile): Promise<{ project_root: string }> {
-  return engineCall('project/save_session', { root, project_file: projectFile })
+export async function saveProjectSession(root: string, projectFile: import('./project').ProjectFile, name?: string): Promise<{ project_root: string }> {
+  return engineCall('project/save_session', { root, name, project_file: projectFile })
 }
 
 export async function updateProjectSettings(updates: Record<string, unknown>): Promise<Record<string, unknown>> {

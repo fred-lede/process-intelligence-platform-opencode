@@ -60,6 +60,7 @@
     "createProject": "Create Project",
     "openProject": "Open Project",
     "projectName": "Project Name",
+    "noActiveProject": "No Project Open",
     "projectRoot": "Project Root",
     "operator": "Operator",
     "projectRootPlaceholder": "/path/to/project",

@@ -60,6 +60,7 @@
     "createProject": "建立專案",
     "openProject": "開啟專案",
     "projectName": "專案名稱",
+    "noActiveProject": "尚未開啟專案",
     "projectRoot": "專案根目錄",
     "operator": "操作者",
     "projectRootPlaceholder": "/path/to/project",

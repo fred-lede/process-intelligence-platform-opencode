@@ -114,10 +114,11 @@ def test_saved_session_reopens_without_original_source(project):
         "target": "y", "inputs": ["a", "b", "c"], "model_type": "doe_linear"})
     destination = root.parent / f"{root.name}-saved"
     state = {"app": "process-intelligence-platform", "version": 2}
-    app.handle_request("project/save_session", {"root": str(destination), "project_file": state})
+    app.handle_request("project/save_session", {"root": str(destination), "name": "Restored analysis", "project_file": state})
     (root / "source.csv").unlink()
     reopened = app.handle_request("project/open", {"root": str(destination)})
     assert reopened["import_result"]["dataset_id"] == data["dataset_id"]
+    assert reopened["project_name"] == "Restored analysis"
     assert reopened["project_file"] == state
     assert reopened["models_rebuilt"] == 1
     assert app.MODEL_REGISTRY.get(fit["model_id"]).version == fit["version"]

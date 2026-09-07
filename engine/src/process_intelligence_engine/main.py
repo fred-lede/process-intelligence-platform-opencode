@@ -2432,6 +2432,8 @@ def _handle_project_save_session(params):
         shutil.copy2(source / "project_manifest.json", target / "project_manifest.json")
     else:
         engine.create_project(str(target), target.name)
+    if params.get("name"):
+        engine.create_project(str(target), params["name"])
     (target / "registry").mkdir(exist_ok=True)
     (target / "registry" / "ui_state.json").write_text(json.dumps(state), encoding="utf-8")
     return {"project_root": str(target)}

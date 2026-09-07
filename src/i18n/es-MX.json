@@ -68,6 +68,7 @@
     "noProject": "No hay proyecto abierto. Cree o abra un proyecto para gestionar los directorios de datos y los grupos de procesos.",
     "createProject": "Crear Proyecto",
     "projectName": "Nombre del Proyecto",
+    "noActiveProject": "No hay proyecto abierto",
     "projectRoot": "Raíz del Proyecto",
     "operator": "Operador",
     "projectRootPlaceholder": "/ruta/al/proyecto",

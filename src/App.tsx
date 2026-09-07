@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useProcessFlowNavStore } from './stores/processFlowNavStore'
-import { Layout } from 'antd'
+import { Layout, Typography } from 'antd'
+import { useTranslation } from 'react-i18next'
 import Sidebar from './components/layout/Sidebar'
 import AssistantPanel from './components/layout/AssistantPanel'
 import ProjectOverview from './features/project/ProjectOverview'
@@ -23,8 +24,15 @@ import type { AppTab } from './types'
 
 const { Content } = Layout
 
+interface ActiveProject {
+  name: string
+  root: string
+}
+
 export default function App() {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<AppTab>('project')
+  const [activeProject, setActiveProject] = useState<ActiveProject | null>(null)
 
   const pendingTarget = useProcessFlowNavStore((s) => s.pending?.targetTab)
 
@@ -35,7 +43,7 @@ export default function App() {
   }, [pendingTarget, activeTab])
 
   const renderTab = () => {
-    if (activeTab === 'project') return <ProjectOverview />
+    if (activeTab === 'project') return <ProjectOverview onProjectChanged={setActiveProject} />
     if (activeTab === 'dataImport') return <DataImport onFinished={() => setActiveTab('processDefine')} />
     if (activeTab === 'processDefine') return <ProcessDefine />
     if (activeTab === 'exploration') return <Exploration />
@@ -56,9 +64,17 @@ export default function App() {
   return (
     <Layout style={{ height: '100vh' }}>
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-      <Content style={{ padding: 24, overflow: 'auto', background: '#F5F7FA' }}>
-        {renderTab()}
-      </Content>
+      <Layout style={{ minWidth: 0 }}>
+        <div style={{ height: 52, padding: '0 24px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
+          <Typography.Text type="secondary">{t('project.projectName')}:</Typography.Text>
+          <Typography.Text strong ellipsis={{ tooltip: activeProject?.root }}>
+            {activeProject?.name ?? t('project.noActiveProject')}
+          </Typography.Text>
+        </div>
+        <Content style={{ padding: 24, overflow: 'auto', background: '#F5F7FA' }}>
+          {renderTab()}
+        </Content>
+      </Layout>
       <AssistantPanel activeTab={activeTab} />
     </Layout>
   )
