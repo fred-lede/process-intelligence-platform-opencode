@@ -17,6 +17,7 @@ class AIProviderConfig:
     model: str = 'gemma4:e2b-mlx'
     enabled: bool = True
     lightgbm_device: LightGBMDevice = 'auto'
+    cloud_enabled: bool = False
 
 
 class SettingsManager:
