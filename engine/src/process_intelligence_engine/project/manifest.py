@@ -51,6 +51,14 @@ _PROCESS_GROUP_TEMPLATES = [
 ]
 
 
+def _default_assistant_policy() -> dict[str, Any]:
+    return {
+        "cloud_consent": False,
+        "sanitization_rules": {},
+        "consented_at": None,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
@@ -147,6 +155,7 @@ class ProjectManifest:
     reports: list[dict[str, Any]] = field(default_factory=list)
     settings: dict[str, Any] = field(default_factory=dict)
     association_keys: list[str] = field(default_factory=list)
+    assistant_policy: dict[str, Any] = field(default_factory=_default_assistant_policy)
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items()}
@@ -167,7 +176,40 @@ class ProjectManifest:
         obj.datasets = [
             DatasetRegistration.from_dict(ds) for ds in d.get("datasets", [])
         ]
+        policy = _default_assistant_policy()
+        stored_policy = d.get("assistant_policy", {})
+        if isinstance(stored_policy, dict):
+            policy.update(stored_policy)
+        obj.assistant_policy = policy
         return obj
+
+    @classmethod
+    def create(cls, root: str | Path, name: str, operator: str = "anonymous") -> "ProjectManifest":
+        project_root = Path(root).resolve()
+        project_root.mkdir(parents=True, exist_ok=True)
+        now = datetime.now(timezone.utc).isoformat()
+        return cls(
+            project_id=str(uuid.uuid4()),
+            project_name=name,
+            operator=operator,
+            version="1.0.0",
+            created_at=now,
+            updated_at=now,
+            project_root=str(project_root),
+        )
+
+    @classmethod
+    def load(cls, root: str | Path) -> "ProjectManifest":
+        manifest_path = Path(root) / "project_manifest.json"
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            return cls.from_dict(json.load(f))
+
+    def save(self) -> None:
+        self.updated_at = datetime.now(timezone.utc).isoformat()
+        manifest_path = Path(self.project_root) / "project_manifest.json"
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, indent=2, ensure_ascii=False)
 
 
 # ---------------------------------------------------------------------------
