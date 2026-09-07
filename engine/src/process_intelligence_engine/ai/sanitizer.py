@@ -96,7 +96,9 @@ def _sanitize_number(
 
     mean, standard_deviation = _standardization_parameters(key, path, rules)
     if mean is None or standard_deviation is None:
-        return value
+        raise ValueError(
+            "Standardized numeric policy requires an explicit nonzero mean and standard deviation"
+        )
     return (value - mean) / standard_deviation
 
 
