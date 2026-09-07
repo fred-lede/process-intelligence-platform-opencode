@@ -126,6 +126,11 @@
     "projectNamePlaceholder": "輸入專案目錄名稱",
     "invalidProjectName": "請輸入有效的專案目錄名稱（不可包含 / 或 \\\\）。",
     "createdTo": "專案已建立於 {{path}}",
+    "saveCurrentProject": "儲存目前專案",
+    "exportSettings": "匯出分析設定",
+    "importSettings": "匯入分析設定",
+    "saveImportedProjectTitle": "將匯入設定另存為完整專案",
+    "reviewableModulesConfirmed": "個可確認模組已確認",
     "analysisPhaseTitle": "分析階段狀態",
     "modulesConfirmed": "個模組已確認"
   },

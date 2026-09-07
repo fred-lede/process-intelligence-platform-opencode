@@ -126,6 +126,11 @@
     "projectNamePlaceholder": "Ingrese el nombre de la carpeta del proyecto",
     "invalidProjectName": "Ingrese un nombre de carpeta válido (sin / ni \\\\).",
     "createdTo": "Proyecto creado en {{path}}",
+    "saveCurrentProject": "Guardar proyecto actual",
+    "exportSettings": "Exportar configuración de análisis",
+    "importSettings": "Importar configuración de análisis",
+    "saveImportedProjectTitle": "Guardar la configuración importada como proyecto completo",
+    "reviewableModulesConfirmed": "módulos confirmables confirmados",
     "analysisPhaseTitle": "Estado de la Fase de Análisis",
     "modulesConfirmed": "módulos confirmados"
   },

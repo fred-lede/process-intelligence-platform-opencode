@@ -5,7 +5,7 @@ import { confirmGate, getChainSummary, getChainTrace, type ChainEntitySummary } 
 
 const modules: Record<string, string> = { dataset: 'data_import', model: 'modeling', simulation: 'monte_carlo', experiment: 'validation' }
 
-export default function AnalysisReview() {
+export default function AnalysisReview({ onConfirmed }: { onConfirmed?: () => void }) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<ChainEntitySummary[]>([])
   const [operator, setOperator] = useState('')
@@ -17,7 +17,7 @@ export default function AnalysisReview() {
       const trace = await getChainTrace(row.entity_id)
       Modal.confirm({ title: `${t('common.confirm')} · ${row.entity_id} · v${row.version}`,
         width: 720, content: <pre style={{ maxHeight: 400, overflow: 'auto' }}>{JSON.stringify(trace.metadata, null, 2)}</pre>,
-        onOk: async () => { await confirmGate(modules[row.entity_type], row.entity_id, row.version, operator); api.success(t('gates.confirmed')); await refresh() },
+        onOk: async () => { await confirmGate(modules[row.entity_type], row.entity_id, row.version, operator); api.success(t('gates.confirmed')); await refresh(); onConfirmed?.() },
       })
     } catch (e) { api.error(String(e)) }
   }

@@ -9,13 +9,14 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { useEngineStatus } from '../../hooks/useEngineStatus'
-import { openProject, getGateSummary, createProject } from '../../lib/engine'
-import { buildProjectFile, loadProjectFile, saveProjectFile } from '../../lib/project'
+import { openProject, getGateSummary, createProject, saveProjectUiState, saveProjectSession } from '../../lib/engine'
+import { buildProjectFile, loadProjectFile, saveProjectFile, type ProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import AnalysisReview from '../../components/AnalysisReview'
 
 export default function ProjectOverview() {
+  const confirmableModules = ['data_import', 'modeling', 'monte_carlo', 'validation']
   const { t } = useTranslation()
   const { status, refresh } = useEngineStatus(5000)
   const [busy, setBusy] = useState(false)
@@ -23,6 +24,7 @@ export default function ProjectOverview() {
   const [gateSummary, setGateSummary] = useState<Record<string, string>>({})
   const [newProjectParent, setNewProjectParent] = useState<string | null>(null)
   const [newProjectName, setNewProjectName] = useState('')
+  const [pendingImport, setPendingImport] = useState<{ filePath: string; projectFile: ProjectFile } | null>(null)
   const {
     importResult,
     fields,
@@ -68,13 +70,36 @@ export default function ProjectOverview() {
     setBusy(true)
     try {
       const root = `${newProjectParent.replace(/[\\/]+$/, '')}/${name}`
-      const created = await createProject({ root, name })
-      useModelStore.setState({ models: [], selectedModelId: null, error: null })
-      resetAll()
+      let projectRoot = root
+      if (pendingImport) {
+        await openProject(pendingImport.filePath)
+        const saved = await saveProjectSession(root, pendingImport.projectFile)
+        projectRoot = saved.project_root
+        const opened = await openProject(projectRoot)
+        const data = opened.project_file
+        const result = opened.import_result
+        useModelStore.setState({ models: [], selectedModelId: null, error: null })
+        resetAll()
+        if (result) setImportResult(result)
+        if (data?.fields) setFields(data.fields)
+        if (data?.quality) setQuality(data.quality)
+        if (data?.spec) setSpec(data.spec)
+        if (data) restoreAnalysis({
+          anomalyScenarios: data.anomalyScenarios ?? [],
+          controlLimits: data.controlLimits ?? {},
+          analysisPackage: data.analysisPackage ?? null,
+        })
+      } else {
+        const created = await createProject({ root, name })
+        projectRoot = created.project_root
+        useModelStore.setState({ models: [], selectedModelId: null, error: null })
+        resetAll()
+      }
       const gateRes = await getGateSummary()
       setGateSummary(gateRes.summary || {})
       setNewProjectParent(null)
-      messageApi.success(t('project.createdTo', { path: created.project_root }))
+      setPendingImport(null)
+      messageApi.success(t('project.createdTo', { path: projectRoot }))
     } catch (err) {
       messageApi.error(err instanceof Error ? err.message : String(err))
     } finally {
@@ -82,22 +107,45 @@ export default function ProjectOverview() {
     }
   }
 
+  const buildCurrentProjectFile = () => {
+    if (!importResult) return null
+    return buildProjectFile(
+      importResult.file_path,
+      fields,
+      quality,
+      spec,
+      anomalyScenarios,
+      controlLimits,
+      analysisPackage,
+    )
+  }
+
   const handleSave = async () => {
+    const data = buildCurrentProjectFile()
+    if (!data) {
+      messageApi.warning(t('project.saveNoData'))
+      return
+    }
+    setBusy(true)
+    try {
+      const saved = await saveProjectUiState(data)
+      messageApi.success(t('project.savedTo', { path: saved.project_root }))
+    } catch (err) {
+      messageApi.error(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleExportSettings = async () => {
     if (!importResult) {
       messageApi.warning(t('project.saveNoData'))
       return
     }
     setBusy(true)
     try {
-      const data = buildProjectFile(
-        importResult.file_path,
-        fields,
-        quality,
-        spec,
-        anomalyScenarios,
-        controlLimits,
-        analysisPackage,
-      )
+      const data = buildCurrentProjectFile()
+      if (!data) return
       const target = await saveProjectFile(data)
       if (target) messageApi.success(t('project.savedTo', { path: target }))
     } catch (err) {
@@ -110,31 +158,52 @@ export default function ProjectOverview() {
   const handleOpen = async () => {
     setBusy(true)
     try {
-      const selected = await loadProjectFile()
+      const selected = await open({
+        title: t('project.openExisting'),
+        multiple: false,
+        directory: true,
+      })
       if (!selected) return
 
-      const opened = await openProject(selected.file_path)
+      const opened = await openProject(selected)
       const data = opened.project_file
       const result = opened.import_result
-      if (!data || !result) throw new Error('Invalid portable project response')
       useModelStore.setState({ models: [], selectedModelId: null, error: null })
-      setImportResult(result)
-      if (data.fields) setFields(data.fields)
-      if (data.quality) setQuality(data.quality)
-      if (data.spec) setSpec(data.spec)
-      restoreAnalysis({
+      resetAll()
+      if (result) setImportResult(result)
+      if (data?.fields) setFields(data.fields)
+      if (data?.quality) setQuality(data.quality)
+      if (data?.spec) setSpec(data.spec)
+      if (data) restoreAnalysis({
         anomalyScenarios: data.anomalyScenarios ?? [],
         controlLimits: data.controlLimits ?? {},
         analysisPackage: data.analysisPackage ?? null,
       })
-      // Refresh gate summary (portable .piproj.json has no gate state)
       const gateRes = await getGateSummary()
       setGateSummary(gateRes.summary || {})
-      messageApi.success(t('project.opened', { path: selected.file_path }))
+      messageApi.success(t('project.opened', { path: selected }))
     } catch (err) {
       messageApi.error(err instanceof Error ? err.message : String(err))
     } finally {
       setBusy(false)
+    }
+  }
+
+  const handleImportSettings = async () => {
+    try {
+      const selected = await loadProjectFile()
+      if (!selected) return
+      const parent = await open({
+        title: t('project.selectParentDirectory'),
+        multiple: false,
+        directory: true,
+      })
+      if (typeof parent !== 'string') return
+      setPendingImport({ filePath: selected.file_path, projectFile: selected })
+      setNewProjectParent(parent)
+      setNewProjectName('')
+    } catch (err) {
+      messageApi.error(err instanceof Error ? err.message : String(err))
     }
   }
 
@@ -196,18 +265,31 @@ export default function ProjectOverview() {
             onClick={() => void handleSave()}
             disabled={!importResult}
           >
-            {t('project.saveProject')}
+            {t('project.saveCurrentProject')}
+          </Button>
+          <Button
+            loading={busy}
+            onClick={() => void handleExportSettings()}
+            disabled={!importResult}
+          >
+            {t('project.exportSettings')}
+          </Button>
+          <Button
+            loading={busy}
+            onClick={() => void handleImportSettings()}
+          >
+            {t('project.importSettings')}
           </Button>
         </Space>
       </Card>
 
       <Modal
-        title={t('project.newProjectTitle')}
+        title={pendingImport ? t('project.saveImportedProjectTitle') : t('project.newProjectTitle')}
         open={newProjectParent !== null}
         confirmLoading={busy}
-        okText={t('project.createNew')}
+        okText={pendingImport ? t('project.saveCurrentProject') : t('project.createNew')}
         onOk={() => void createNewProject()}
-        onCancel={() => setNewProjectParent(null)}
+        onCancel={() => { setNewProjectParent(null); setPendingImport(null) }}
       >
         <Typography.Paragraph type="secondary">
           {newProjectParent}
@@ -223,7 +305,7 @@ export default function ProjectOverview() {
 
       <Card title={t('project.analysisPhaseTitle')} size="small">
         <Row gutter={[16, 16]}>
-          {Object.entries(gateSummary).map(([module, status]) => (
+          {Object.entries(gateSummary).filter(([module]) => confirmableModules.includes(module)).map(([module, status]) => (
             <Col key={module} span={8}>
               <Space>
                 <span>{t(`gates.${module}`)}</span>
@@ -236,11 +318,11 @@ export default function ProjectOverview() {
         </Row>
         <Divider />
         <Typography.Text type="secondary">
-          {Object.values(gateSummary).filter(s => s === 'confirmed').length}/{Object.keys(gateSummary).length} {t('project.modulesConfirmed')}
+          {confirmableModules.filter(module => gateSummary[module] === 'confirmed').length}/{confirmableModules.length} {t('project.reviewableModulesConfirmed')}
         </Typography.Text>
       </Card>
 
-      <AnalysisReview />
+      <AnalysisReview onConfirmed={() => { getGateSummary().then((res) => setGateSummary(res.summary || {})).catch(console.error) }} />
       <Card title={t('project.engineTitle')} size="small">
         {status.state === 'offline' ? (
           <Alert

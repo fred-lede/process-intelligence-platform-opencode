@@ -126,6 +126,11 @@
     "projectNamePlaceholder": "Enter project folder name",
     "invalidProjectName": "Enter a valid project folder name (without / or \\\\).",
     "createdTo": "Project created at {{path}}",
+    "saveCurrentProject": "Save Current Project",
+    "exportSettings": "Export Analysis Settings",
+    "importSettings": "Import Analysis Settings",
+    "saveImportedProjectTitle": "Save Imported Settings as a Full Project",
+    "reviewableModulesConfirmed": "reviewable modules confirmed",
     "analysisPhaseTitle": "Analysis Phase Status",
     "modulesConfirmed": "modules confirmed"
   },

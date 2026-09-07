@@ -124,6 +124,17 @@ def test_saved_session_reopens_without_original_source(project):
     assert len(app.REGISTRY.get(data["dataset_id"])) == 40
 
 
+def test_current_project_saves_ui_state_for_reopen(project):
+    root, _ = project
+    state = {"app": "process-intelligence-platform", "version": 2, "fields": [{"name": "y", "role": "output"}]}
+
+    saved = app.handle_request("project/save_ui_state", {"project_file": state})
+    reopened = app.handle_request("project/open", {"root": str(root)})
+
+    assert saved["project_root"] == str(root)
+    assert reopened["project_file"] == state
+
+
 def test_failed_open_preserves_active_project(project):
     root, data = project
     destination = root.parent / f"{root.name}-corrupt"

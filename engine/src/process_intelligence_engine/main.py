@@ -1858,6 +1858,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_project_open(params)
     if method == "project/save_session":
         return _handle_project_save_session(params)
+    if method == "project/save_ui_state":
+        return _handle_project_save_ui_state(params)
     if method == "project/settings":
         return _handle_project_settings(params)
     if method == "project/dirs":
@@ -2433,6 +2435,17 @@ def _handle_project_save_session(params):
     (target / "registry").mkdir(exist_ok=True)
     (target / "registry" / "ui_state.json").write_text(json.dumps(state), encoding="utf-8")
     return {"project_root": str(target)}
+
+
+def _handle_project_save_ui_state(params):
+    """Persist the current UI settings inside the active full project."""
+    state = params.get("project_file")
+    if not isinstance(state, dict):
+        raise ValueError("Analysis settings are required")
+    target = _VERSION_CHAIN._project_root / "registry"
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "ui_state.json").write_text(json.dumps(state), encoding="utf-8")
+    return {"project_root": str(_VERSION_CHAIN._project_root)}
 
 
 def _handle_project_settings(params: dict) -> dict:

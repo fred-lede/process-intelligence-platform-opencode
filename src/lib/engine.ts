@@ -1458,6 +1458,14 @@ export async function openProject(root: string): Promise<OpenProjectResult> {
   return engineCall<OpenProjectResult>('project/open', { root })
 }
 
+export async function saveProjectUiState(projectFile: import('./project').ProjectFile): Promise<{ project_root: string }> {
+  return engineCall('project/save_ui_state', { project_file: projectFile })
+}
+
+export async function saveProjectSession(root: string, projectFile: import('./project').ProjectFile): Promise<{ project_root: string }> {
+  return engineCall('project/save_session', { root, project_file: projectFile })
+}
+
 export async function updateProjectSettings(updates: Record<string, unknown>): Promise<Record<string, unknown>> {
   return engineCall<Record<string, unknown>>('project/settings', { updates })
 }
