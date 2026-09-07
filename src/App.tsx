@@ -41,7 +41,7 @@ export default function App() {
   }, [pendingTarget, activeTab])
 
   const renderTab = () => {
-    if (activeTab === 'project') return <ProjectOverview onProjectChanged={setActiveProject} />
+    if (activeTab === 'project') return <ProjectOverview onProjectChanged={setActiveProject} projectOpen={activeProject !== null} />
     if (activeTab === 'dataImport') return <DataImport onFinished={() => setActiveTab('processDefine')} />
     if (activeTab === 'processDefine') return <ProcessDefine />
     if (activeTab === 'exploration') return <Exploration />

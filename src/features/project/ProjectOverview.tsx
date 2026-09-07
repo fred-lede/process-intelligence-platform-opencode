@@ -15,7 +15,7 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import AnalysisReview from '../../components/AnalysisReview'
 
-export default function ProjectOverview({ onProjectChanged }: { onProjectChanged: (project: { name: string; root: string }) => void }) {
+export default function ProjectOverview({ onProjectChanged, projectOpen }: { onProjectChanged: (project: { name: string; root: string }) => void; projectOpen: boolean }) {
   const confirmableModules = ['data_import', 'modeling', 'monte_carlo', 'validation']
   const { t } = useTranslation()
   const { status, refresh } = useEngineStatus(5000)
@@ -42,10 +42,14 @@ export default function ProjectOverview({ onProjectChanged }: { onProjectChanged
   } = useDataPipelineStore()
 
   useEffect(() => {
+    if (!projectOpen) {
+      setGateSummary({})
+      return
+    }
     getGateSummary().then((res) => {
       setGateSummary(res.summary || {})
     }).catch(console.error)
-  }, [])
+  }, [projectOpen])
 
   const handleNew = async () => {
     const selected = await open({
@@ -308,25 +312,27 @@ export default function ProjectOverview({ onProjectChanged }: { onProjectChanged
       </Modal>
 
       <Card title={t('project.analysisPhaseTitle')} size="small">
-        <Row gutter={[16, 16]}>
-          {Object.entries(gateSummary).filter(([module]) => confirmableModules.includes(module)).map(([module, status]) => (
-            <Col key={module} span={8}>
-              <Space>
-                <span>{t(`gates.${module}`)}</span>
-                <Tag color={status === 'confirmed' ? 'green' : status === 'pending_confirmation' ? 'orange' : 'default'}>
-                  {status === 'confirmed' ? t('gates.confirmed') : status === 'pending_confirmation' ? t('gates.pending') : t('gates.notStarted')}
-                </Tag>
-              </Space>
-            </Col>
-          ))}
-        </Row>
-        <Divider />
-        <Typography.Text type="secondary">
-          {confirmableModules.filter(module => gateSummary[module] === 'confirmed').length}/{confirmableModules.length} {t('project.reviewableModulesConfirmed')}
-        </Typography.Text>
+        {projectOpen ? <>
+          <Row gutter={[16, 16]}>
+            {Object.entries(gateSummary).filter(([module]) => confirmableModules.includes(module)).map(([module, status]) => (
+              <Col key={module} span={8}>
+                <Space>
+                  <span>{t(`gates.${module}`)}</span>
+                  <Tag color={status === 'confirmed' ? 'green' : status === 'pending_confirmation' ? 'orange' : 'default'}>
+                    {status === 'confirmed' ? t('gates.confirmed') : status === 'pending_confirmation' ? t('gates.pending') : t('gates.notStarted')}
+                  </Tag>
+                </Space>
+              </Col>
+            ))}
+          </Row>
+          <Divider />
+          <Typography.Text type="secondary">
+            {confirmableModules.filter(module => gateSummary[module] === 'confirmed').length}/{confirmableModules.length} {t('project.reviewableModulesConfirmed')}
+          </Typography.Text>
+        </> : <Typography.Text type="secondary">{t('project.noActiveProject')}</Typography.Text>}
       </Card>
 
-      <AnalysisReview onConfirmed={() => { getGateSummary().then((res) => setGateSummary(res.summary || {})).catch(console.error) }} />
+      <AnalysisReview projectOpen={projectOpen} onConfirmed={() => { getGateSummary().then((res) => setGateSummary(res.summary || {})).catch(console.error) }} />
       <Card title={t('project.engineTitle')} size="small">
         {status.state === 'offline' ? (
           <Alert
