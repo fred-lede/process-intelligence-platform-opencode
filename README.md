@@ -26,7 +26,7 @@
 
 - Rust 1.77+（[安裝指南](https://www.rust-lang.org/tools/install)）
 - Node.js 18+
-- Python 3.11（不支援 3.12+）
+- Python 3.11 或 3.12（專案以 `uv` 管理；不支援 Python 3.13+）
 - 系統 WebView (macOS: WebKit / Windows: WebView2)
 - **macOS：OpenMP 執行時（libomp）**——xgboost/lightgbm 的 macOS wheel 不會自行 bundle OpenMP，需系統安裝：
   ```bash
@@ -64,14 +64,10 @@ cargo --version
 # 安裝前端依賴
 npm install
 
-# 建立 Python 虛擬環境（仅需第一次）
+# 建立 Python 3.12 虛擬環境（僅需第一次）
 cd engine
-python3 -m venv .venv
-# On Windows:
-# .venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
-pip install -e ".[dev]" && pip install -r requirements.txt
+uv venv --python 3.12
+uv sync --extra dev
 cd ..
 
 # 確認 Rust 環境
@@ -87,10 +83,11 @@ npm run tauri dev
 在新電腦上首次部署時，請確保：
 
 1. **Rust 已安裝**：執行 `cargo --version` 確認
-2. **Python venv 已建立**：執行 `cd engine && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]" && pip install -r requirements.txt`
+2. **Python venv 已建立**：執行 `cd engine && uv venv --python 3.12 && uv sync --extra dev`
 3. **Node 模組已安裝**：執行 `npm install`
 4. **瀏覽器 WebView**：macOS 內建 WebKit，Windows 需安裝 WebView2 Runtime
 5. **macOS 需安裝 libomp**：執行 `brew install libomp`（缺失會導致 xgboost 載入失敗、引擎無法啟動，見下方排錯）
+6. **PDF 匯出需安裝 WeasyPrint 系統相依套件**：依作業系統執行 [PDF 報告部署指南](docs/deployment.md#pdf-報告匯出weasyprint)；僅安裝 Python 套件不足以輸出 PDF。
 
 若啟動時出現以下錯誤，請檢查：
 

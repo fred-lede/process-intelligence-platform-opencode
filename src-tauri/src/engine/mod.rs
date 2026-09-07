@@ -104,6 +104,9 @@ impl EngineManager {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 
+        #[cfg(target_os = "macos")]
+        configure_macos_weasyprint_libraries(&mut cmd);
+
         let mut child = cmd
             .spawn()
             .map_err(|e| EngineError::Start(e.to_string()))?;
@@ -238,6 +241,25 @@ impl EngineManager {
     pub fn stop(&self) {
         self.kill_child();
     }
+}
+
+#[cfg(target_os = "macos")]
+fn configure_macos_weasyprint_libraries(cmd: &mut Command) {
+    let homebrew_lib = if std::path::Path::new("/opt/homebrew/lib").is_dir() {
+        "/opt/homebrew/lib"
+    } else if std::path::Path::new("/usr/local/lib").is_dir() {
+        "/usr/local/lib"
+    } else {
+        return;
+    };
+
+    let inherited = std::env::var("DYLD_FALLBACK_LIBRARY_PATH").unwrap_or_default();
+    let value = if inherited.is_empty() {
+        homebrew_lib.to_string()
+    } else {
+        format!("{homebrew_lib}:{inherited}")
+    };
+    cmd.env("DYLD_FALLBACK_LIBRARY_PATH", value);
 }
 
 impl Drop for EngineManager {

@@ -32,8 +32,12 @@ async def test_health_check_success(client):
 
 @pytest.mark.asyncio
 async def test_health_check_failure(client):
-    with patch('aiohttp.ClientSession') as mock_session:
-        mock_session.return_value.get.side_effect = Exception("Connection failed")
+    mock_session = MagicMock()
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=False)
+    mock_session.get.side_effect = Exception("Connection failed")
+
+    with patch('aiohttp.ClientSession', return_value=mock_session):
         result = await client.health_check()
         assert result is False
 
