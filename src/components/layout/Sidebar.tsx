@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Layout, Menu, Select, Typography, Button, Modal } from 'antd'
+import { Layout, Menu, Select, Typography, Button, Modal, Tooltip } from 'antd'
 import {
   DashboardOutlined,
   ImportOutlined,
@@ -10,6 +10,7 @@ import {
   RobotOutlined,
   SlidersOutlined,
   FileTextOutlined,
+  FolderOpenOutlined,
   SettingOutlined,
   InfoCircleOutlined,
   LineChartOutlined,
@@ -24,6 +25,7 @@ const { Sider } = Layout
 
 interface SidebarProps {
   activeTab: AppTab
+  activeProject: { name: string; root: string } | null
   onTabChange: (tab: AppTab) => void
 }
 
@@ -46,7 +48,7 @@ const tabItems = [
 
 const settingsItem = { key: 'settings', icon: <SettingOutlined /> }
 
-export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export default function Sidebar({ activeTab, activeProject, onTabChange }: SidebarProps) {
   const { t, i18n } = useTranslation()
   const [aboutOpen, setAboutOpen] = useState(false)
 
@@ -83,6 +85,18 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         <Typography.Title level={5} style={{ margin: 0 }}>
           {t('app.name')}
         </Typography.Title>
+        <Tooltip title={activeProject?.root}>
+          <Button
+            block
+            icon={<FolderOpenOutlined />}
+            style={{ display: 'flex', marginTop: 12, textAlign: 'left' }}
+            type="default"
+          >
+            <Typography.Text ellipsis style={{ minWidth: 0 }}>
+              {activeProject?.name ?? t('project.noActiveProject')}
+            </Typography.Text>
+          </Button>
+        </Tooltip>
       </div>
       <Menu
         mode="inline"

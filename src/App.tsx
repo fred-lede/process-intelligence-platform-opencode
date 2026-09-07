@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useProcessFlowNavStore } from './stores/processFlowNavStore'
-import { Layout, Typography } from 'antd'
-import { useTranslation } from 'react-i18next'
+import { Layout } from 'antd'
 import Sidebar from './components/layout/Sidebar'
 import AssistantPanel from './components/layout/AssistantPanel'
 import ProjectOverview from './features/project/ProjectOverview'
@@ -30,7 +29,6 @@ interface ActiveProject {
 }
 
 export default function App() {
-  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<AppTab>('project')
   const [activeProject, setActiveProject] = useState<ActiveProject | null>(null)
 
@@ -63,14 +61,12 @@ export default function App() {
 
   return (
     <Layout style={{ height: '100vh' }}>
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Sidebar
+        activeTab={activeTab}
+        activeProject={activeProject}
+        onTabChange={setActiveTab}
+      />
       <Layout style={{ minWidth: 0 }}>
-        <div style={{ height: 52, padding: '0 24px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
-          <Typography.Text type="secondary">{t('project.projectName')}:</Typography.Text>
-          <Typography.Text strong ellipsis={{ tooltip: activeProject?.root }}>
-            {activeProject?.name ?? t('project.noActiveProject')}
-          </Typography.Text>
-        </div>
         <Content style={{ padding: 24, overflow: 'auto', background: '#F5F7FA' }}>
           {renderTab()}
         </Content>
