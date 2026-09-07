@@ -1,5 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Layout, Menu, Select, Typography, Button, Modal, Tooltip } from 'antd'
+import { getVersion } from '@tauri-apps/api/app'
+import { isTauri } from '@tauri-apps/api/core'
 import {
   DashboardOutlined,
   ImportOutlined,
@@ -19,7 +21,7 @@ import {
   AuditOutlined,
 } from '@ant-design/icons'
 import type { AppTab } from '../../types'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const { Sider } = Layout
 
@@ -51,6 +53,12 @@ const settingsItem = { key: 'settings', icon: <SettingOutlined /> }
 export default function Sidebar({ activeTab, activeProject, onTabChange }: SidebarProps) {
   const { t, i18n } = useTranslation()
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [appVersion, setAppVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isTauri()) return
+    void getVersion().then(setAppVersion).catch(() => setAppVersion(null))
+  }, [])
 
   const menuItems = [
     ...tabItems.map((item) => ({
@@ -148,7 +156,7 @@ export default function Sidebar({ activeTab, activeProject, onTabChange }: Sideb
           <strong>{t('about.author')}:</strong> Fred Wang
         </Typography.Paragraph>
         <Typography.Paragraph>
-          <strong>{t('about.version')}:</strong> 0.3.0
+          <strong>{t('about.version')}:</strong> {appVersion ?? '—'}
         </Typography.Paragraph>
         <Typography.Paragraph>
           <strong>{t('about.license')}:</strong> MIT License
