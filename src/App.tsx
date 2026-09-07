@@ -67,7 +67,7 @@ export default function App() {
         onTabChange={setActiveTab}
       />
       <Layout style={{ minWidth: 0 }}>
-        <Content style={{ padding: 24, overflow: 'auto', background: '#F5F7FA' }}>
+        <Content style={{ padding: '76px 24px 24px', overflow: 'auto', background: '#F5F7FA' }}>
           {renderTab()}
         </Content>
       </Layout>
