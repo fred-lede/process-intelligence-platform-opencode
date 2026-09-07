@@ -33,7 +33,7 @@ class AssistantRequest:
     project_id: str
     page: str
     context: dict[str, Any] = field(default_factory=dict)
-    provider: str = "local"
+    provider: str = "ollama"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
