@@ -275,9 +275,10 @@ print('GPU OK')
 
 - **Ollama 客戶端**: 聊天/生成/列出模型/健康檢查
 - **多 Provider 支援**: Ollama (local) / OpenAI (cloud) / Azure / Custom (自訂 Endpoint)
-- **AI 助手面板**: 右側可收合，支援 Enter 發送、思考動畫
-- **模型下拉選單**: 從 API 載入可用模型，支援搜尋
-- **設定持久化**: 修復保存時 api_key/base_url 流失問題
+- **AI 助手面板**: 右側可收合，顯示目前 Provider·模型與思考狀態
+- **安全輸入**: 雙 Enter 送出，避免編輯期間誤發訊息
+- **跨頁上下文**: SPC、分布、模型、模擬、預測與報告摘要可供助手解讀
+- **設定持久化**: 保留模型與 API 金鑰，避免遮罩值覆寫原始金鑰
 
 ### Phase 8 — SPC 統計製程控制 ✅
 
@@ -353,7 +354,7 @@ print('GPU OK')
 
 | 項目 | 數值 |
 |------|------|
-| **測試總數** | 250 tests |
+| **測試總數** | 497 passed |
 | **跳過** | 1 |
 | **覆蓋率** | 70% |
 | **Commits** | 202 |
@@ -375,11 +376,11 @@ print('GPU OK')
 | 決策 | 選擇 |
 |------|------|
 | 桌面框架 | Tauri 2.0 |
-| Python 版本 | 3.11 (bundled venv) |
+| Python 版本 | 3.12 (`uv` 管理 `.venv`) |
 | 本地 AI | Ollama (local) + OpenAI/Azure/Custom |
 | i18n 語言 | en + zh-TW + es-MX |
 | 資料粒度 | 單片產品/單一測試樣本 |
-| 模型儲存 | 記憶體 (DatasetRegistry) |
+| 模型與模擬紀錄 | `registry/version_chain.jsonl`（`models/`、`simulations/` 為預留目錄） |
 | 雲端策略 | 預設不上雲；上雲前遮罩 + 確認 |
 | 製程定義 | JSON 配置（不硬編產業名稱） |
 | 流程圖 | SVG 可交互編輯器 |
