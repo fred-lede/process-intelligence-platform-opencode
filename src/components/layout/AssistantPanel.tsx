@@ -53,8 +53,9 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
     let cancelled = false
     getSettings().then(({ config }) => {
       if (!cancelled) {
-        setCloudProvider(config.enabled && config.cloud_enabled && config.provider !== 'ollama' ? config.provider : null)
-        setProvider('ollama')
+        const configuredProvider = config.enabled ? config.provider : 'ollama'
+        setCloudProvider(config.enabled && configuredProvider !== 'ollama' ? configuredProvider : null)
+        setProvider(configuredProvider)
         setConfiguredModel(config.model || '')
         setPendingTransfer(null)
       }
