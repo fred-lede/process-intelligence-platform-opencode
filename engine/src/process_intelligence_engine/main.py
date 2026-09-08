@@ -427,6 +427,10 @@ def _handle_import(params: dict) -> dict:
             "source_file": result.file_path,
             "row_count": result.row_count,
             "column_count": result.column_count,
+            "metadata_columns": [c for c in result.columns if c in {
+                "measurement_id", "product_id", "lot_id", "machine_id", "station_id",
+                "process_step", "timestamp", "subgroup_id", "metric", "unit",
+            }],
             "import_result": dto.copy(),
         },
         created_by=params.get("operator", "anonymous"),
@@ -2551,8 +2555,19 @@ def _reload_chain_for_project(root: str) -> dict:
             did = entity.metadata["dataset_id"]
             df = load_dataset(chain._project_root, entity)
             datasets._datasets[did] = df
-            datasets._meta[did] = {"file_path": entity.metadata["source_file"]}
             import_result = entity.metadata["import_result"]
+            # Restore the same schema/metadata context that was available
+            # immediately after import, not only the raw dataframe.
+            datasets._meta[did] = {
+                "file_path": entity.metadata["source_file"],
+                "format": import_result.get("format"),
+                "encoding": import_result.get("encoding"),
+                "delimiter": import_result.get("delimiter"),
+                "row_count": import_result.get("row_count"),
+                "column_count": import_result.get("column_count"),
+                "columns": import_result.get("columns", []),
+                "metadata_columns": entity.metadata.get("metadata_columns", []),
+            }
         elif entity.entity_type == "experiment" and entity.metadata.get("record"):
             record = dict(entity.metadata["record"])
             record.pop("prediction_error", None)
