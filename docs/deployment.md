@@ -15,6 +15,14 @@ npm run tauri build
 
 在各目標作業系統原生 runner 上建置；不要把 macOS 的 venv 或系統函式庫複製到 Windows 或 Linux 產物中。
 
+## v0.6.0 多層級資料範本
+
+既有 CSV 可維持 `input_*`、`output_*` 與 `result` 欄位直接匯入；工程多層級範本則在相同輸入／輸出欄位之外，加入 `measurement_id`、`product_id`、`lot_id`、`machine_id`、`station_id`、`process_step` 與 `subgroup_id` 追溯欄位。這些欄位是可選的，不會破壞舊版 CSV。
+
+時間欄位建議使用 `YYYY-MM-DD HH:MM:SS`（例如 `2026-09-09 08:00:00`）；引擎同時相容 ISO 8601 的 `T` 分隔符與時區格式。匯入後欄位角色會自動偵測，工程 ID 會標示為識別欄位，`part`／`product` 會標示為類別資料。
+
+SPC 頁面的圖表類型、輸出欄位、子群組大小與 grain/filter 選擇會保存於專案檔，重開同一專案時自動恢復。
+
 ## PDF 報告匯出（WeasyPrint）
 
 專案 venv 已安裝 Python `weasyprint` 套件，但它仍須載入 Pango、GObject 與字型相關的系統函式庫。以下指令供建置機與執行 PDF 匯出的工作站使用。詳細的發行版版本需求請以 [WeasyPrint 官方安裝文件](https://doc.courtbouillon.org/weasyprint/latest/first_steps.html) 為準。
