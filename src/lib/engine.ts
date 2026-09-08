@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import type { AppTab } from '../types'
 
 /**
  * Frontend API layer for the Python analysis engine.
@@ -688,6 +689,84 @@ export async function checkAIHealth(): Promise<AIHealthResult> {
   return engineCall<AIHealthResult>('ai/health', {})
 }
 
+export interface AssistantContext {
+  tab: AppTab
+  summary: string
+  project_id: string | null
+}
+
+export interface AssistantRequest {
+  message: string
+  tab: AppTab
+  context: AssistantContext
+  provider?: AIProviderType
+  preview_hash?: string
+}
+
+export interface AssistantEvidence {
+  evidence_id: string
+  status: string
+  summary: string
+}
+
+export interface AssistantActionDraft {
+  draft_id: string
+  method: string
+  params: Record<string, unknown>
+  impact: string
+  expected_result: string
+}
+
+export interface AssistantResponse {
+  success: boolean
+  explanation: string
+  evidence: AssistantEvidence[]
+  evidence_status: string
+  recommendations: string[]
+  action_draft?: AssistantActionDraft | null
+  limitations: string[]
+  error_code?: string | null
+  provider?: AIProviderType | null
+}
+
+// Deliberately excludes payload: the UI receives only transfer metadata.
+export interface AssistantCloudTransferPreview {
+  provider: string
+  masked_fields: string[]
+  numeric_policy: string
+  payload_hash: string
+}
+
+function assistantParams(request: AssistantRequest): Record<string, unknown> {
+  if (!request.context.project_id) throw new Error('Open a project before using the assistant.')
+  return {
+    message: request.message,
+    page: request.tab,
+    project_id: request.context.project_id,
+    provider: request.provider ?? 'ollama',
+    // Text summaries remain local; the engine builds authoritative evidence.
+    context: request.preview_hash ? { preview_hash: request.preview_hash } : {},
+  }
+}
+
+export async function assistantRespond(request: AssistantRequest): Promise<AssistantResponse> {
+  return engineCall<AssistantResponse>('assistant/respond', assistantParams(request))
+}
+
+export async function previewAssistantCloudTransfer(request: AssistantRequest): Promise<AssistantCloudTransferPreview> {
+  const { provider, masked_fields, numeric_policy, payload_hash } =
+    await engineCall<AssistantCloudTransferPreview>('assistant/cloud_preview', assistantParams(request))
+  return { provider, masked_fields, numeric_policy, payload_hash }
+}
+
+export async function grantAssistantCloudConsent(preview_hash: string): Promise<{ cloud_consent?: boolean; error_code?: string }> {
+  return engineCall('assistant/cloud_consent', { preview_hash, confirmed: true })
+}
+
+export async function executeAssistantDraft(draft_id: string, confirmed: boolean): Promise<{ success?: boolean; error_code?: string; error?: string }> {
+  return engineCall('assistant/draft/execute', { draft_id, confirmed })
+}
+
 // --- Phase 7: AI Provider Settings ------------------------------------------
 
 export type AIProviderType = 'ollama' | 'openai' | 'azure' | 'custom'
@@ -698,6 +777,7 @@ export interface AIProviderConfig {
   api_key: string
   model: string
   enabled: boolean
+  cloud_enabled?: boolean
   lightgbm_device?: 'auto' | 'cpu' | 'gpu'
 }
 

@@ -24,6 +24,7 @@ import type { AppTab } from './types'
 const { Content } = Layout
 
 interface ActiveProject {
+  id: string
   name: string
   root: string
 }
@@ -31,6 +32,7 @@ interface ActiveProject {
 export default function App() {
   const [activeTab, setActiveTab] = useState<AppTab>('project')
   const [activeProject, setActiveProject] = useState<ActiveProject | null>(null)
+  const [projectSession, setProjectSession] = useState(0)
 
   const pendingTarget = useProcessFlowNavStore((s) => s.pending?.targetTab)
 
@@ -41,7 +43,10 @@ export default function App() {
   }, [pendingTarget, activeTab])
 
   const renderTab = () => {
-    if (activeTab === 'project') return <ProjectOverview onProjectChanged={setActiveProject} projectOpen={activeProject !== null} />
+    if (activeTab === 'project') return <ProjectOverview onProjectChanged={(project) => {
+      setActiveProject(project)
+      setProjectSession(session => session + 1)
+    }} projectOpen={activeProject !== null} />
     if (activeTab === 'dataImport') return <DataImport onFinished={() => setActiveTab('processDefine')} />
     if (activeTab === 'processDefine') return <ProcessDefine />
     if (activeTab === 'exploration') return <Exploration />
@@ -71,7 +76,7 @@ export default function App() {
           {renderTab()}
         </Content>
       </Layout>
-      <AssistantPanel activeTab={activeTab} />
+      <AssistantPanel key={projectSession} activeTab={activeTab} activeProject={activeProject} />
     </Layout>
   )
 }

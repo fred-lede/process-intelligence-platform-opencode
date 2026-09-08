@@ -13,9 +13,10 @@ import { openProject, getGateSummary, createProject, saveProjectUiState, savePro
 import { buildProjectFile, loadProjectFile, saveProjectFile, type ProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
+import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import AnalysisReview from '../../components/AnalysisReview'
 
-export default function ProjectOverview({ onProjectChanged, projectOpen }: { onProjectChanged: (project: { name: string; root: string }) => void; projectOpen: boolean }) {
+export default function ProjectOverview({ onProjectChanged, projectOpen }: { onProjectChanged: (project: { id: string; name: string; root: string }) => void; projectOpen: boolean }) {
   const confirmableModules = ['data_import', 'modeling', 'monte_carlo', 'validation']
   const { t } = useTranslation()
   const { status, refresh } = useEngineStatus(5000)
@@ -72,15 +73,18 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
     if (!newProjectParent) return
 
     setBusy(true)
+    useAssistantContextStore.getState().setActiveProjectId(null)
     try {
       const root = `${newProjectParent.replace(/[\\/]+$/, '')}/${name}`
       let projectRoot = root
       let projectName = name
+      let projectId: string
       if (pendingImport) {
         await openProject(pendingImport.filePath)
         const saved = await saveProjectSession(root, pendingImport.projectFile, name)
         projectRoot = saved.project_root
         const opened = await openProject(projectRoot)
+        projectId = opened.project_id
         projectName = opened.project_name
         const data = opened.project_file
         const result = opened.import_result
@@ -97,15 +101,17 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
         })
       } else {
         const created = await createProject({ root, name })
+        projectId = created.project_id
         projectRoot = created.project_root
         useModelStore.setState({ models: [], selectedModelId: null, error: null })
         resetAll()
       }
+      useAssistantContextStore.getState().setActiveProjectId(projectId)
+      onProjectChanged({ id: projectId, name: projectName, root: projectRoot })
       const gateRes = await getGateSummary()
       setGateSummary(gateRes.summary || {})
       setNewProjectParent(null)
       setPendingImport(null)
-      onProjectChanged({ name: projectName, root: projectRoot })
       messageApi.success(t('project.createdTo', { path: projectRoot }))
     } catch (err) {
       messageApi.error(err instanceof Error ? err.message : String(err))
@@ -172,7 +178,10 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
       })
       if (!selected) return
 
+      useAssistantContextStore.getState().setActiveProjectId(null)
       const opened = await openProject(selected)
+      useAssistantContextStore.getState().setActiveProjectId(opened.project_id)
+      onProjectChanged({ id: opened.project_id, name: opened.project_name, root: opened.project_root })
       const data = opened.project_file
       const result = opened.import_result
       useModelStore.setState({ models: [], selectedModelId: null, error: null })
@@ -188,7 +197,6 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
       })
       const gateRes = await getGateSummary()
       setGateSummary(gateRes.summary || {})
-      onProjectChanged({ name: opened.project_name, root: opened.project_root })
       messageApi.success(t('project.opened', { path: selected }))
     } catch (err) {
       messageApi.error(err instanceof Error ? err.message : String(err))

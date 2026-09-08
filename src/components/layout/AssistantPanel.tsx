@@ -1,164 +1,196 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin, Popconfirm } from 'antd'
-import { RobotOutlined, SendOutlined, CheckCircleOutlined, CloseCircleOutlined, ClearOutlined } from '@ant-design/icons'
-import { aiChat, checkAIHealth, type AIChatMessage } from '../../lib/engine'
+import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin, Popconfirm, Alert, Select } from 'antd'
+import { RobotOutlined, SendOutlined, ClearOutlined } from '@ant-design/icons'
+import {
+  assistantRespond, previewAssistantCloudTransfer, grantAssistantCloudConsent, executeAssistantDraft, getSettings,
+  type AIChatMessage, type AIProviderType, type AssistantRequest, type AssistantResponse, type AssistantCloudTransferPreview,
+} from '../../lib/engine'
 import { useAIStore } from '../../stores/aiStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { buildAssistantSystemPrompt } from '../../lib/assistantGuide'
+import EvidenceCard from '../assistant/EvidenceCard'
+import TransferPreviewCard from '../assistant/TransferPreviewCard'
+import ActionDraftCard from '../assistant/ActionDraftCard'
 import type { AppTab } from '../../types'
 
 const { Sider } = Layout
 
 interface AssistantPanelProps {
   activeTab: AppTab
+  activeProject: { id: string; name: string; root: string } | null
 }
 
-export default function AssistantPanel({ activeTab }: AssistantPanelProps) {
-  const { t, i18n } = useTranslation()
-  const { context } = useAssistantContextStore()
-  const [messages, setMessages] = useState<AIChatMessage[]>([
-    { role: 'assistant', content: t('assistant.welcome') }
-  ])
+interface TranscriptMessage extends AIChatMessage {
+  result?: AssistantResponse
+  draftDismissed?: boolean
+  draftExecuted?: boolean
+  actionError?: string
+}
+
+export default function AssistantPanel({ activeTab, activeProject }: AssistantPanelProps) {
+  const { t } = useTranslation()
+  const projectId = useAssistantContextStore((s) => s.activeProjectId)
+  const [messages, setMessages] = useState<TranscriptMessage[]>([{ role: 'assistant', content: t('assistant.welcome') }])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [health, setHealth] = useState<boolean | null>(null)
+  const [executingDraft, setExecutingDraft] = useState<string | null>(null)
+  const [provider, setProvider] = useState<AIProviderType>('ollama')
+  const [cloudProvider, setCloudProvider] = useState<AIProviderType | null>(null)
+  const [pendingTransfer, setPendingTransfer] = useState<{ request: AssistantRequest; preview: AssistantCloudTransferPreview; error?: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const mounted = useRef(true)
   const refreshKey = useAIStore((s) => s.refreshKey)
+  const projectReady = !!activeProject && projectId === activeProject.id
+  const busy = loading || executingDraft !== null
 
   useEffect(() => {
-    checkHealth()
+    mounted.current = true
+    return () => { mounted.current = false }
   }, [])
 
   useEffect(() => {
-    if (refreshKey > 0) checkHealth()
+    let cancelled = false
+    getSettings().then(({ config }) => {
+      if (!cancelled) {
+        setCloudProvider(config.enabled && config.cloud_enabled && config.provider !== 'ollama' ? config.provider : null)
+        setProvider('ollama')
+        setPendingTransfer(null)
+      }
+    }).catch(() => { if (!cancelled) setCloudProvider(null) })
+    return () => { cancelled = true }
   }, [refreshKey])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, pendingTransfer])
 
-  const checkHealth = async () => {
-    try {
-      const result = await checkAIHealth()
-      setHealth(result.healthy)
-    } catch {
-      setHealth(false)
+  const stillCurrent = (id: string | null) => mounted.current && id !== null && useAssistantContextStore.getState().activeProjectId === id
+
+  const appendResponse = async (request: AssistantRequest) => {
+    const result = await assistantRespond(request)
+    if (stillCurrent(request.context.project_id)) {
+      setMessages(prev => [...prev, { role: 'assistant', content: result.explanation, result }])
     }
   }
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return
-
-    const userMessage: AIChatMessage = { role: 'user', content: input }
-    setMessages(prev => [...prev, userMessage])
+    if (!input.trim() || busy || pendingTransfer || !projectReady) return
+    const context = useAssistantContextStore.getState().getCurrentContext(activeTab)
+    if (context.project_id !== activeProject?.id) return
+    const request: AssistantRequest = { message: input.trim(), tab: activeTab, context, provider }
+    setMessages(prev => [...prev, { role: 'user', content: request.message }])
     setInput('')
     setLoading(true)
-    // Let React flush the loading state and the browser paint before awaiting.
-    await new Promise(r => setTimeout(r, 0))
-
-    // Keep the "thinking" banner visible for a guaranteed minimum time so the
-    // green bar is clearly seen BEFORE the reply reveals itself (a perceptible
-    // think -> answer sequence even though the local AI answers instantly).
-    const MIN_THINK_MS = 800
-    const started = Date.now()
-
-    let reply: string
     try {
-      const payload: AIChatMessage[] = [
-        { role: 'system', content: buildAssistantSystemPrompt(activeTab, i18n.language, context[activeTab]) },
-        ...messages,
-        userMessage,
-      ]
-      const result = await aiChat(payload)
-      reply = result.response ?? `Error: ${result.error ?? 'Unknown error'}`
-    } catch {
-      reply = 'Failed to connect to AI assistant.'
+      if (provider === 'ollama') {
+        await appendResponse(request)
+      } else {
+        const preview = await previewAssistantCloudTransfer(request)
+        if (stillCurrent(context.project_id)) setPendingTransfer({ request, preview })
+      }
+    } catch (error) {
+      if (stillCurrent(context.project_id)) setMessages(prev => [...prev, { role: 'assistant', content: String(error) }])
     } finally {
-      const remaining = Math.max(0, MIN_THINK_MS - (Date.now() - started))
-      await new Promise(r => setTimeout(r, remaining))
+      setLoading(false)
     }
+  }
 
-    setMessages(prev => [...prev, { role: 'assistant', content: reply }])
-    setLoading(false)
+  const handleTransferConfirm = async () => {
+    if (!pendingTransfer || busy || !projectReady || !stillCurrent(pendingTransfer.request.context.project_id)) return
+    const { request, preview } = pendingTransfer
+    setLoading(true)
+    try {
+      const consent = await grantAssistantCloudConsent(preview.payload_hash)
+      if (!consent.cloud_consent) throw new Error(consent.error_code ?? 'Cloud consent failed.')
+      if (!stillCurrent(request.context.project_id)) return
+      await appendResponse({ ...request, preview_hash: preview.payload_hash })
+      setPendingTransfer(null)
+    } catch (error) {
+      if (stillCurrent(request.context.project_id)) setPendingTransfer({ request, preview, error: String(error) })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDraftConfirm = async (index: number, draftId: string) => {
+    if (busy || pendingTransfer || !projectReady || !stillCurrent(projectId)) return
+    setExecutingDraft(draftId)
+    try {
+      const result = await executeAssistantDraft(draftId, true)
+      if (result.success === false || result.error_code || result.error) throw new Error(result.error_code ?? result.error ?? 'Action failed.')
+      if (stillCurrent(projectId)) setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, draftExecuted: true, actionError: undefined } : msg))
+    } catch (error) {
+      if (stillCurrent(projectId)) setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, actionError: String(error) } : msg))
+    } finally {
+      setExecutingDraft(null)
+    }
   }
 
   const handleClear = () => {
     setInput('')
+    setPendingTransfer(null)
     setMessages([{ role: 'assistant', content: t('assistant.welcome') }])
   }
 
   return (
-    <Sider
-      width={320}
-      theme="light"
-      style={{ borderLeft: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}
-    >
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography.Title level={5} style={{ margin: 0 }}>{t('assistant.title')}</Typography.Title>
-          <Space size={8}>
-            {health === true ? (
-              <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontSize: 12, margin: 0 }}>Online</Tag>
-            ) : health === false ? (
-              <Tag color="error" icon={<CloseCircleOutlined />} style={{ fontSize: 12, margin: 0 }}>Offline</Tag>
-            ) : null}
-            <Popconfirm
-              title={t('assistant.clearConfirm')}
-              onConfirm={handleClear}
-              okText={t('common.confirm')}
-              cancelText={t('common.cancel')}
-            >
-              <Button size="small" type="text" icon={<ClearOutlined />} disabled={loading}>
-                {t('assistant.clear')}
-              </Button>
+    <Sider width={320} theme="light" style={{ borderLeft: '1px solid #e5e7eb', height: '100vh', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+            <Typography.Title level={5} style={{ margin: 0 }}>{t('assistant.title')}</Typography.Title>
+            <Popconfirm title={t('assistant.clearConfirm')} onConfirm={handleClear} okText={t('common.confirm')} cancelText={t('common.cancel')}>
+              <Button size="small" type="text" icon={<ClearOutlined />} disabled={busy}>{t('assistant.clear')}</Button>
             </Popconfirm>
           </Space>
+          <Typography.Text type="secondary">{activeProject?.name ?? t('assistant.openProject', { defaultValue: 'Open a project to use the assistant.' })}</Typography.Text>
+          <Select
+            aria-label={t('assistant.provider', { defaultValue: 'Provider' })}
+            size="small" style={{ width: '100%', marginTop: 8 }} value={provider}
+            disabled={busy || !!pendingTransfer || !projectReady}
+            onChange={setProvider}
+            options={[
+              { value: 'ollama', label: t('assistant.localProvider', { defaultValue: 'Local · Ollama' }) },
+              ...(cloudProvider ? [{ value: cloudProvider, label: `${t('assistant.cloudProvider', { defaultValue: 'Cloud' })} · ${cloudProvider}` }] : []),
+            ]}
+          />
         </div>
-
-      </div>
-
-      {loading && (
-        <div style={{ padding: '10px 16px', borderBottom: '1px solid #d1fae5', background: '#ecfdf5', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Spin size="small" />
-          <Typography.Text style={{ fontSize: 13, color: '#10b981', fontWeight: 600 }}>{t('assistant.thinking')}</Typography.Text>
-        </div>
-      )}
-      <div
-        className="assistant-messages"
-        style={{ flex: '1 1 0', minHeight: 0, maxHeight: 'calc(100vh - 118px)', overflowY: 'auto', overflowX: 'hidden', padding: 16 }}
-      >
-        {messages.map((msg, idx) => (
-          <div key={idx} style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
-            <Avatar
-              size="small"
-              icon={<RobotOutlined />}
-              style={{ backgroundColor: msg.role === 'user' ? '#2563EB' : '#10b981', marginTop: 4 }}
-            />
-            <div style={{ flex: 1, background: '#f5f5f5', padding: '8px 12px', borderRadius: 8 }}>
-              <Typography.Text style={{ fontSize: 13 }}>{msg.content}</Typography.Text>
+        {loading && <div style={{ padding: '10px 16px', background: '#ecfdf5' }}><Space><Spin size="small" /><Typography.Text>{t('assistant.thinking')}</Typography.Text></Space></div>}
+        <div className="assistant-messages" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 16 }}>
+          {messages.map((msg, idx) => (
+            <div key={idx} style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+              <Avatar size="small" icon={<RobotOutlined />} style={{ flexShrink: 0, backgroundColor: msg.role === 'user' ? '#2563EB' : '#10b981', marginTop: 4 }} />
+              <div style={{ flex: 1, minWidth: 0, background: '#f5f5f5', padding: '8px 12px', borderRadius: 8, overflowWrap: 'anywhere' }}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  {msg.result?.error_code === 'local_model_unavailable' ? (
+                    <Alert type="warning" showIcon message={t('assistant.localUnavailable', { defaultValue: 'Local model is not ready' })} description={t('assistant.localSetup', { defaultValue: 'Start Ollama, install a local model, then choose and test it in Settings → AI Provider. Retry here when ready.' })} />
+                  ) : <Typography.Text style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{msg.content}</Typography.Text>}
+                  {msg.result && <>
+                    <EvidenceCard evidence={msg.result.evidence} status={msg.result.evidence_status} />
+                    {msg.result.recommendations.length > 0 && <div><Typography.Text strong>{t('assistant.recommendations', { defaultValue: 'Recommendations' })}</Typography.Text><ul style={{ paddingLeft: 18, marginBottom: 0 }}>{msg.result.recommendations.map((value, i) => <li key={i}>{value}</li>)}</ul></div>}
+                    {msg.result.limitations.length > 0 && <Alert type="warning" message={t('assistant.limitations', { defaultValue: 'Limitations' })} description={msg.result.limitations.join('\n')} />}
+                    {msg.draftExecuted && <Tag color="success">{t('assistant.draftExecuted', { defaultValue: 'Action completed' })}</Tag>}
+                    {msg.result.success && msg.result.action_draft && !msg.draftDismissed && !msg.draftExecuted && <ActionDraftCard
+                      draft={msg.result.action_draft}
+                      busy={executingDraft === msg.result.action_draft.draft_id}
+                      disabled={busy || !!pendingTransfer || !projectReady}
+                      error={msg.actionError}
+                      onConfirm={() => void handleDraftConfirm(idx, msg.result!.action_draft!.draft_id)}
+                      onCancel={() => setMessages(prev => prev.map((item, i) => i === idx ? { ...item, draftDismissed: true } : item))}
+                    />}
+                  </>}
+                </Space>
+              </div>
             </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <div style={{ padding: 12, borderTop: '1px solid #e5e7eb' }}>
-        <Space.Compact style={{ width: '100%' }}>
-          <Input
-            placeholder={t('assistant.placeholder')}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={loading || health === false}
-          />
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={handleSend}
-            loading={loading}
-            disabled={!input.trim() || health === false}
-          />
-        </Space.Compact>
+          ))}
+          {pendingTransfer && <TransferPreviewCard preview={pendingTransfer.preview} busy={busy || !projectReady} error={pendingTransfer.error} onConfirm={() => void handleTransferConfirm()} onCancel={() => setPendingTransfer(null)} />}
+          <div ref={messagesEndRef} />
+        </div>
+        <div style={{ padding: 12, borderTop: '1px solid #e5e7eb' }}>
+          <Space.Compact style={{ width: '100%' }}>
+            <Input placeholder={t('assistant.placeholder')} value={input} onChange={(e) => setInput(e.target.value)} onPressEnter={() => void handleSend()} disabled={busy || !!pendingTransfer || !projectReady} />
+            <Button aria-label={t('assistant.send', { defaultValue: 'Send' })} type="primary" icon={<SendOutlined />} onClick={() => void handleSend()} loading={loading} disabled={!input.trim() || busy || !!pendingTransfer || !projectReady} />
+          </Space.Compact>
+        </div>
       </div>
     </Sider>
   )
