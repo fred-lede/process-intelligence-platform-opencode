@@ -21,43 +21,43 @@
 
 **Files:** Modify `engine/src/process_intelligence_engine/data/importer.py`, `engine/src/process_intelligence_engine/main.py`; test `engine/tests/test_importer.py`, `engine/tests/test_main_handlers.py`.
 
-- [ ] Add a canonical metadata-column map and return detected grain metadata with import results.
-- [ ] Preserve unknown columns and flat-import behavior.
-- [ ] Add tests for full metadata, partial metadata, and legacy CSV input.
+- [x] Add a canonical metadata-column map and return detected grain metadata with import results.
+- [x] Preserve unknown columns and flat-import behavior.
+- [x] Add tests for full metadata, partial metadata, and legacy CSV input.
 - [ ] Run focused importer and handler tests; commit.
 
 ### Task 2: Filter and grain contract
 
 **Files:** Create `engine/src/process_intelligence_engine/data/grain.py`; modify analysis handlers and `src/lib/engine.ts`; test `engine/tests/test_grain.py`.
 
-- [ ] Define `DataGrain` and `DataFilter` validation for supported fields.
-- [ ] Apply filters without mutating the registered dataset.
-- [ ] Reject unknown filter columns with a clear error.
-- [ ] Add typed frontend parameters and focused tests; commit.
+- [x] Define `DataGrain` and `DataFilter` validation for supported fields.
+- [x] Apply filters without mutating the registered dataset.
+- [x] Reject unknown filter columns with a clear error.
+- [x] Add typed frontend parameters and focused tests; commit.
 
 ### Task 3: SPC subgroup integration
 
 **Files:** Modify `engine/src/process_intelligence_engine/main.py`, `src/features/spc/SPC.tsx`, `src/lib/assistantData.ts`; test SPC handler and frontend build.
 
-- [ ] Accept optional grain/filter parameters in `spc/analyze` and batch handlers.
-- [ ] Use `subgroup_id` or selected grouping field for X-bar-R/X-bar-S.
-- [ ] Include selected grain/filter and resulting sample counts in the assistant summary.
+- [x] Accept optional grain/filter parameters in `spc/analyze` and batch handlers.
+- [x] Use `subgroup_id` or selected grouping field for X-bar-R/X-bar-S.
+- [x] Include selected grain/filter and resulting sample counts in the assistant summary.
 - [ ] Run SPC tests and frontend build; commit.
 
 ### Task 4: Persistence, reports, and assistant traceability
 
 **Files:** Modify project manifest/version-chain metadata, report context, and assistant context builders; add regression tests.
 
-- [ ] Persist dataset schema metadata and active grain/filter with the dataset entity.
-- [ ] Include grain/filter in report metadata and assistant summaries.
-- [ ] Ensure project reopen restores metadata without changing raw data.
-- [ ] Run full engine suite and build; commit.
+- [x] Persist dataset schema metadata and active grain/filter with the dataset entity.
+- [x] Include grain/filter in report metadata and assistant summaries.
+- [x] Ensure project reopen restores metadata without changing raw data.
+- [x] Run full engine suite and build; commit.
 
 ### Task 5: Documentation and release update
 
 **Files:** Modify `README.md`, `docs/deployment.md`, locale strings if UI labels are added.
 
-- [ ] Document legacy flat mode and optional hierarchical fields.
-- [ ] Document examples for product, lot, machine, station, process step, and subgroup.
-- [ ] Update v0.6.0 release notes after all tests pass.
-- [ ] Run `git diff --check`, full pytest, frontend build, and `cargo check`; commit.
+- [x] Document legacy flat mode and optional hierarchical fields.
+- [x] Document examples for product, lot, machine, station, process step, and subgroup.
+- [x] Update v0.6.0 release notes after all tests pass.
+- [x] Run `git diff --check`, full pytest, frontend build, and `cargo check`; commit.
