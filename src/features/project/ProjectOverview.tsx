@@ -9,7 +9,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { useEngineStatus } from '../../hooks/useEngineStatus'
-import { openProject, getGateSummary, createProject, saveProjectUiState, saveProjectSession } from '../../lib/engine'
+import { openProject, getProjectManifest, getGateSummary, createProject, saveProjectUiState, saveProjectSession } from '../../lib/engine'
 import { buildProjectFile, loadProjectFile, saveProjectFile, type ProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
@@ -178,8 +178,25 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
       })
       if (!selected) return
 
+      const previousProjectId = useAssistantContextStore.getState().activeProjectId
       useAssistantContextStore.getState().setActiveProjectId(null)
-      const opened = await openProject(selected)
+      let opened: Awaited<ReturnType<typeof openProject>>
+      try {
+        opened = await openProject(selected)
+      } catch (err) {
+        if (previousProjectId) {
+          try {
+            const current = await getProjectManifest()
+            if (current.project_id === previousProjectId) {
+              useAssistantContextStore.getState().setActiveProjectId(current.project_id)
+              onProjectChanged({ id: current.project_id, name: current.project_name, root: current.project_root })
+            }
+          } catch {
+            // Keep the assistant suspended when the engine identity cannot be verified.
+          }
+        }
+        throw err
+      }
       useAssistantContextStore.getState().setActiveProjectId(opened.project_id)
       onProjectChanged({ id: opened.project_id, name: opened.project_name, root: opened.project_root })
       const data = opened.project_file
