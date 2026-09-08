@@ -745,7 +745,10 @@ function assistantParams(request: AssistantRequest): Record<string, unknown> {
     project_id: request.context.project_id,
     provider: request.provider ?? 'ollama',
     // Text summaries remain local; the engine builds authoritative evidence.
-    context: request.preview_hash ? { preview_hash: request.preview_hash } : {},
+    context: {
+      page_summary: request.context.summary ? { dataset_summary: request.context.summary } : {},
+      ...(request.preview_hash ? { preview_hash: request.preview_hash } : {}),
+    },
   }
 }
 
