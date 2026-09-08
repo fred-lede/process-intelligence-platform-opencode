@@ -243,7 +243,7 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
   }
 
   const renderEngineStatus = () => {
-    if (assistantBusy) return <Badge status="processing" color="#2563eb" text={`${t('engine.processing')} · v${status.state === 'online' ? status.health.version : '0.5.0'}`} />
+    if (assistantBusy) return <Badge status="processing" color="#2563eb" text={`${t('engine.processing')} · v${status.state === 'online' ? status.health.version : '0.6.0'}`} />
     if (status.state === 'checking') {
       return <Badge status="processing" text={t('common.loading')} />
     }
