@@ -65,6 +65,7 @@ def build_assistant_context(
             "project_id": item["project_id"],
             "version": item["version"],
             "evidence_status": item["evidence_status"],
+            **({"grain": item.get("metadata", {}).get("grain")} if item["entity_type"] == "report" and item.get("metadata", {}).get("grain") else {}),
         }
         for item in chain.get_chain_summary()
         if item["project_id"] == project_id
