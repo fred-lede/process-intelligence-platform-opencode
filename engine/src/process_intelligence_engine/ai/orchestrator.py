@@ -127,6 +127,19 @@ class AssistantOrchestrator:
     def respond(self, request: AssistantRequest) -> AssistantResponse:
         manifest = self._manifest(request.project_id)
         context = self._context(request)
+        if self._is_general_guidance(request.message):
+            return AssistantResponse(
+                success=True,
+                explanation=("當然可以。你可以從以下功能開始：\n"
+                             "1. 匯入資料：檢查資料品質與欄位\n"
+                             "2. 建立模型：比較 DOE、隨機森林等模型\n"
+                             "3. 探索分析：查看異常與變數關係\n"
+                             "4. 驗證實驗：規劃與記錄驗證實驗\n"
+                             "5. 產生報告：輸出 HTML、PDF 或 Excel\n\n"
+                             "你想先從哪一項開始？如果不確定，我可以先帶你檢查目前資料集。"),
+                evidence_status="ai_guess",
+                recommendations=[], limitations=[], provider=request.provider,
+            )
         if request.provider == "ollama":
             if self.config.enabled is not True:
                 return self._error("local_model_unavailable")
@@ -164,6 +177,11 @@ class AssistantOrchestrator:
                     f"Cloud model request failed: {exc}",
                 )
         return self._decode(raw, request.provider, context)
+
+    @staticmethod
+    def _is_general_guidance(message: str) -> bool:
+        normalized = "".join(message.lower().split())
+        return normalized in {"請引導我使用", "請教我使用", "如何使用", "怎麼使用", "guide me", "how do i use this"}
 
     async def _cloud_chat(self, payload: dict) -> str:
         headers = {"Content-Type": "application/json"}
