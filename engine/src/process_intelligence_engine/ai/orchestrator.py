@@ -172,9 +172,10 @@ class AssistantOrchestrator:
             try:
                 raw = asyncio.run(self._cloud_chat(preview.payload))
             except Exception as exc:
+                detail = f"{type(exc).__name__}: {exc}" if str(exc) else type(exc).__name__
                 return self._error(
                     "cloud_model_unavailable",
-                    f"Cloud model request failed: {exc}",
+                    f"Cloud model request failed ({detail}). Endpoint: {self.config.base_url.rstrip('/')}/chat/completions",
                 )
         return self._decode(raw, request.provider, context)
 
