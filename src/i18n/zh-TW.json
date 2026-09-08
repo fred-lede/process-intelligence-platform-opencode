@@ -765,6 +765,7 @@
     "refresh": "重新整理",
     "type": "類型",
     "model": "模型",
+    "cloudAssistantEnabled": "啟用雲端 AI 助手",
     "report": "報告",
     "resource": "資源",
     "statusDraft": "草稿",

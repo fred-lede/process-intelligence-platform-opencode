@@ -761,6 +761,7 @@
     "refresh": "Actualizar",
     "type": "Tipo",
     "model": "Modelo",
+    "cloudAssistantEnabled": "Activar asistente de IA en la nube",
     "report": "Informe",
     "resource": "Recurso",
     "statusDraft": "Borrador",

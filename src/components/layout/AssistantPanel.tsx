@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin, Popconfirm, Alert, Select } from 'antd'
+import { Layout, Input, Button, Space, Avatar, Typography, Tag, Spin, Popconfirm, Alert } from 'antd'
 import { RobotOutlined, SendOutlined, ClearOutlined } from '@ant-design/icons'
 import {
   assistantRespond, previewAssistantCloudTransfer, grantAssistantCloudConsent, executeAssistantDraft, getSettings,
@@ -36,7 +36,6 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
   const [executingDraft, setExecutingDraft] = useState<string | null>(null)
   const [provider, setProvider] = useState<AIProviderType>('ollama')
   const [configuredModel, setConfiguredModel] = useState('')
-  const [cloudProvider, setCloudProvider] = useState<AIProviderType | null>(null)
   const [pendingTransfer, setPendingTransfer] = useState<{ request: AssistantRequest; preview: AssistantCloudTransferPreview; error?: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const mounted = useRef(true)
@@ -54,12 +53,11 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
     getSettings().then(({ config }) => {
       if (!cancelled) {
         const configuredProvider = config.enabled ? config.provider : 'ollama'
-        setCloudProvider(config.enabled && configuredProvider !== 'ollama' ? configuredProvider : null)
         setProvider(configuredProvider)
         setConfiguredModel(config.model || '')
         setPendingTransfer(null)
       }
-    }).catch(() => { if (!cancelled) setCloudProvider(null) })
+    }).catch(() => {})
     return () => { cancelled = true }
   }, [refreshKey])
 
@@ -146,16 +144,9 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
             </Popconfirm>
           </Space>
           <Typography.Text type="secondary">{activeProject?.name ?? t('assistant.openProject', { defaultValue: 'Open a project to use the assistant.' })}</Typography.Text>
-          <Select
-            aria-label={t('assistant.provider', { defaultValue: 'Provider' })}
-            size="small" style={{ width: '100%', marginTop: 8 }} value={provider}
-            disabled={busy || !!pendingTransfer || !projectReady}
-            onChange={setProvider}
-            options={[
-              { value: 'ollama', label: `${t('assistant.localProvider', { defaultValue: 'Local · Ollama' })}${configuredModel ? ` · ${configuredModel}` : ''}` },
-              ...(cloudProvider ? [{ value: cloudProvider, label: `${t('assistant.cloudProvider', { defaultValue: 'Cloud' })} · ${cloudProvider}${configuredModel ? ` · ${configuredModel}` : ''}` }] : []),
-            ]}
-          />
+          <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+            {provider === 'ollama' ? t('assistant.localProvider', { defaultValue: 'Local · Ollama' }) : provider} · {configuredModel || '—'}
+          </Typography.Text>
         </div>
         {loading && <div style={{ padding: '10px 16px', background: '#ecfdf5' }}><Space><Spin size="small" /><Typography.Text>{t('assistant.thinking')}</Typography.Text></Space></div>}
         <div className="assistant-messages" style={{ flex: '1 1 0', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: 16 }}>

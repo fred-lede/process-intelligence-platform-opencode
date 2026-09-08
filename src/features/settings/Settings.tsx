@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message, InputNumber, Typography } from 'antd'
+import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message, InputNumber, Typography, Switch } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined, ExperimentOutlined } from '@ant-design/icons'
 import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing, previewCloudUpload, confirmCloudUpload, listCloudUploadRecords, getDataAssets, detectFields, type UploadPreview, type UploadRecord, type DataAsset, type DetectedField } from '../../lib/engine'
@@ -369,6 +369,10 @@ export default function Settings() {
                   }
                 }}
               />
+            </Form.Item>
+
+            <Form.Item name="cloud_enabled" label={t('settings.cloudAssistantEnabled')} valuePropName="checked">
+              <Switch disabled={aiConfig.provider === 'ollama'} />
             </Form.Item>
 
             <Form.Item>

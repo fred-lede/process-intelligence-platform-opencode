@@ -765,6 +765,7 @@
     "refresh": "Refresh",
     "type": "Type",
     "model": "Model",
+    "cloudAssistantEnabled": "Enable cloud AI assistant",
     "report": "Report",
     "resource": "Resource",
     "statusDraft": "Draft",
