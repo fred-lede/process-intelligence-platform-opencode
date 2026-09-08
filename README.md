@@ -454,7 +454,7 @@ data/test_dataset.csv
 - prediction 段新增 `predictedProbability`/`predictedMeanTTF`/`ng`/`ok`/`highRisk`/`lowRisk` ×3 語
 
 **版本**
-- 引擎 `__version__` 與 API 回傳版本同步至 0.3.0
+- 引擎 `__version__`、Tauri 與前端版本同步至 0.5.0
 - 前端 About 對話框顯示 v0.3.0
 
 ---

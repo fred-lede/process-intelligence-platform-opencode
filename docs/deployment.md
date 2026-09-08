@@ -82,3 +82,7 @@ cd engine
 ```
 
 Windows 請改用 `.venv\Scripts\python`。測試全部通過後，再於 Tauri App 產生一份 PDF 報告並以系統 PDF 閱讀器開啟。
+
+### 專案目錄中的模型與模擬目錄
+
+`models/` 與 `simulations/` 是預留的資產目錄，目前可保持空白。模型版本與模擬紀錄的實際索引、追溯與重建來源是 `registry/version_chain.jsonl`；模型與模擬完成後不會自動在這兩個目錄產生檔案。
