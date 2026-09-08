@@ -95,7 +95,11 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
         if (stillCurrent(context.project_id)) setPendingTransfer({ request, preview })
       }
     } catch (error) {
-      if (stillCurrent(context.project_id)) setMessages(prev => [...prev, { role: 'assistant', content: String(error) }])
+      const raw = String(error)
+      const message = raw.includes('TimeoutError')
+        ? '雲端模型回覆逾時，模型可能仍在推理中，請稍後重試。'
+        : raw
+      if (stillCurrent(context.project_id)) setMessages(prev => [...prev, { role: 'assistant', content: message }])
     } finally {
       setLoading(false)
       setAssistantBusy(false)

@@ -192,7 +192,7 @@ class AssistantOrchestrator:
         url = f"{self.config.base_url.rstrip('/')}/chat/completions"
         async with aiohttp.ClientSession() as session:
             async with session.post(url, json=payload, headers=headers,
-                                    timeout=aiohttp.ClientTimeout(total=60)) as response:
+                                    timeout=aiohttp.ClientTimeout(total=180)) as response:
                 response.raise_for_status()
                 data = await response.json()
                 return data["choices"][0]["message"]["content"]
