@@ -517,6 +517,8 @@
     "htmlButton": "Generate HTML",
     "excelButton": "Download Excel",
     "pdfButton": "Download PDF",
+    "saveOutput": "Choose report output location",
+    "savedTo": "Saved to: {{path}}",
     "preview": "HTML Preview",
     "generateSuccess": "Report generated successfully",
     "generateError": "Failed to generate report",

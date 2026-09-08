@@ -519,6 +519,8 @@
     "htmlButton": "Generar HTML",
     "excelButton": "Descargar Excel",
     "pdfButton": "Descargar PDF",
+    "saveOutput": "Elegir ubicación de salida del informe",
+    "savedTo": "Guardado en: {{path}}",
     "preview": "Vista previa HTML",
     "generateSuccess": "Informe generado exitosamente",
     "generateError": "Error al generar informe",

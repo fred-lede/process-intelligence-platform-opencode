@@ -517,6 +517,8 @@
     "htmlButton": "產生 HTML",
     "excelButton": "下載 Excel",
     "pdfButton": "下載 PDF",
+    "saveOutput": "選擇報告輸出位置",
+    "savedTo": "已儲存至：{{path}}",
     "preview": "HTML 預覽",
     "generateSuccess": "報告產生成功",
     "generateError": "報告產生失敗",

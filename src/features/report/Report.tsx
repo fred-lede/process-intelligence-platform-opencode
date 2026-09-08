@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, Button, Space, Alert, message, Tag } from 'antd'
 import { FileTextOutlined, DownloadOutlined } from '@ant-design/icons'
+import { save } from '@tauri-apps/plugin-dialog'
+import { writeTextFile, writeFile } from '@tauri-apps/plugin-fs'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
@@ -27,6 +29,25 @@ export default function Report() {
   }
   const [reportHtml, setReportHtml] = useState<string | null>(null)
   const [lastFormat, setLastFormat] = useState<'html' | 'pdf' | 'excel' | null>(null)
+
+  const saveReportOutput = async (format: 'html' | 'pdf' | 'excel', result: { content?: string; content_base64?: string }) => {
+    const ext = format === 'html' ? 'html' : format === 'pdf' ? 'pdf' : 'xlsx'
+    const target = await save({
+      title: t('report.saveOutput'),
+      defaultPath: `process-analysis-report.${ext}`,
+      filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+    })
+    if (!target) return false
+    if (format === 'html') {
+      await writeTextFile(target, result.content ?? '')
+    } else {
+      const raw = atob(result.content_base64 ?? '')
+      const bytes = Uint8Array.from(raw, char => char.charCodeAt(0))
+      await writeFile(target, bytes)
+    }
+    messageApi.success(t('report.savedTo', { path: target }))
+    return true
+  }
 
   useEffect(() => {
     setContext('reports', buildReportsContext(!!lastFormat, lastFormat ?? ''))
@@ -60,23 +81,8 @@ export default function Report() {
 
       if (format === 'html' && result.content) {
         setReportHtml(result.content)
-      } else if ((format === 'pdf' || format === 'excel') && result.content_base64) {
-        const byteCharacters = atob(result.content_base64)
-        const byteNumbers = new Array(byteCharacters.length)
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i)
-        }
-        const byteArray = new Uint8Array(byteNumbers)
-        const ext = format === 'pdf' ? 'pdf' : 'xlsx'
-        const mimeType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        const blob = new Blob([byteArray], { type: mimeType })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `report.${ext}`
-        a.click()
-        URL.revokeObjectURL(url)
       }
+      await saveReportOutput(format, result)
 
       messageApi.success(t('report.generateSuccess'))
       setSavedReports((await listReports()).reports)
