@@ -35,6 +35,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
   const [loading, setLoading] = useState(false)
   const [executingDraft, setExecutingDraft] = useState<string | null>(null)
   const [provider, setProvider] = useState<AIProviderType>('ollama')
+  const [configuredModel, setConfiguredModel] = useState('')
   const [cloudProvider, setCloudProvider] = useState<AIProviderType | null>(null)
   const [pendingTransfer, setPendingTransfer] = useState<{ request: AssistantRequest; preview: AssistantCloudTransferPreview; error?: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -54,6 +55,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
       if (!cancelled) {
         setCloudProvider(config.enabled && config.cloud_enabled && config.provider !== 'ollama' ? config.provider : null)
         setProvider('ollama')
+        setConfiguredModel(config.model || '')
         setPendingTransfer(null)
       }
     }).catch(() => { if (!cancelled) setCloudProvider(null) })
@@ -149,8 +151,8 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
             disabled={busy || !!pendingTransfer || !projectReady}
             onChange={setProvider}
             options={[
-              { value: 'ollama', label: t('assistant.localProvider', { defaultValue: 'Local · Ollama' }) },
-              ...(cloudProvider ? [{ value: cloudProvider, label: `${t('assistant.cloudProvider', { defaultValue: 'Cloud' })} · ${cloudProvider}` }] : []),
+              { value: 'ollama', label: `${t('assistant.localProvider', { defaultValue: 'Local · Ollama' })}${configuredModel ? ` · ${configuredModel}` : ''}` },
+              ...(cloudProvider ? [{ value: cloudProvider, label: `${t('assistant.cloudProvider', { defaultValue: 'Cloud' })} · ${cloudProvider}${configuredModel ? ` · ${configuredModel}` : ''}` }] : []),
             ]}
           />
         </div>
