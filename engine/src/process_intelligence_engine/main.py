@@ -1368,6 +1368,7 @@ def _handle_settings_test(params: dict) -> dict:
 def _handle_spc_analyze(params: dict) -> dict:
     """Analyze SPC control chart for a column."""
     df = REGISTRY.get(params["dataset_id"])
+    source_row_count = len(df)
     df = _apply_row_filter(df, params)
     column = params["column"]
     if column not in df.columns:
@@ -1437,6 +1438,10 @@ def _handle_spc_analyze(params: dict) -> dict:
     result["change_points"] = change_point_result["change_points"]
     result["outlier_stats"] = outlier_result["stats"]
 
+    result["grain"] = {"filter_column": params.get("filter_column"),
+                        "filter_value": params.get("filter_value"),
+                        "source_row_count": source_row_count,
+                        "analyzed_row_count": len(df)}
     return {"success": True, **result}
 
 

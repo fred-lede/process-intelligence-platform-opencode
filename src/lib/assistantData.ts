@@ -155,6 +155,8 @@ export function buildSpcContext(result: SPCAnalysisResult | null): string {
     `SPC chart: ${result.chart_type}. Violations found: ${result.violations.length} ` +
       `(${result.violations.map((v) => `rule ${v.rule}`).join(', ') || 'none'}).`,
   ]
+  const grain = (result as SPCAnalysisResult & { grain?: { filter_column?: string; filter_value?: string; analyzed_row_count?: number } }).grain
+  if (grain?.filter_column) lines.push(`Filter: ${grain.filter_column}=${grain.filter_value}; analyzed rows=${grain.analyzed_row_count}.`)
   if (cap) {
     const cpkStatus = cap.cpk === null ? 'N/A' : cap.cpk >= 1.33 ? 'GOOD' : cap.cpk >= 1.0 ? 'MARGINAL' : 'POOR'
     lines.push(
