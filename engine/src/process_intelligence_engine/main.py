@@ -1696,6 +1696,12 @@ def _assistant_request(params: dict, state: dict) -> AssistantRequest:
                 summary[f"selected_{kind}_id"] = selected
                 summary[f"{kind}_summary"] = {key: entity.metadata[key] for key in fields if key in entity.metadata}
                 break
+    # Preserve bounded, feature-generated summaries (for example SPC control
+    # limits and violations) instead of dropping them during normalization.
+    for key in ("dataset_summary", "model_summary", "gate_summary", "report_summary", "evidence_status"):
+        value = selectors.get(key)
+        if isinstance(value, (str, int, float, bool)):
+            summary[key] = value
     # Reuse the bounded summary validation before sending any server-built fields.
     context["page_summary"] = build_assistant_context(project_id, page, _plain_types(summary), _VERSION_CHAIN)["page_summary"]
     if "preview_hash" in supplied:
