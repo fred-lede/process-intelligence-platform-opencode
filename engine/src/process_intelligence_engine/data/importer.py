@@ -19,6 +19,10 @@ except ImportError:  # pragma: no cover
     pd = None
 
 SUPPORTED_EXTENSIONS = {".xlsx", ".xls", ".csv"}
+CANONICAL_METADATA_COLUMNS = (
+    "measurement_id", "product_id", "lot_id", "machine_id", "station_id",
+    "process_step", "timestamp", "subgroup_id", "metric", "unit",
+)
 
 
 @dataclass
@@ -122,6 +126,7 @@ class ImportResult:
             "raw_preview": self.raw_preview,
             "row_count": self.row_count,
             "column_count": self.column_count,
+            "metadata_columns": [c for c in self.columns if c in CANONICAL_METADATA_COLUMNS],
             "stats": {
                 "row_count": self.stats.row_count,
                 "column_count": self.stats.column_count,

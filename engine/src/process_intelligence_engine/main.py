@@ -410,6 +410,10 @@ def _handle_import(params: dict) -> dict:
             "delimiter": result.delimiter,
             "row_count": result.row_count,
             "column_count": result.column_count,
+            "metadata_columns": [c for c in result.columns if c in {
+                "measurement_id", "product_id", "lot_id", "machine_id", "station_id",
+                "process_step", "timestamp", "subgroup_id", "metric", "unit",
+            }],
         },
     )
     dto = result.to_dto()
