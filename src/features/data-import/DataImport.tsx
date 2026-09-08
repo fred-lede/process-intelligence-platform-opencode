@@ -124,7 +124,7 @@ function buildEngineeringTemplateCsv(): string {
   const rows = Array.from({ length: 6 }, (_, i) => {
     const n = i + 1
     const output = 1.60 + i * 0.01
-    return `M-${String(n).padStart(3, '0')},P-${String(Math.ceil(n / 3)).padStart(3, '0')},LOT-20260909,MC-01,ST-01,coating,2026-09-09T0${8 + Math.floor(i / 3)}:${String((i % 3) * 10).padStart(2, '0')}:00,SG-${Math.ceil(n / 3)},180,3.3,1.2,1200,0.8,${output.toFixed(2)},OK`
+    return `M-${String(n).padStart(3, '0')},P-${String(Math.ceil(n / 3)).padStart(3, '0')},LOT-20260909,MC-01,ST-01,coating,2026-09-09 0${8 + Math.floor(i / 3)}:${String((i % 3) * 10).padStart(2, '0')}:00,SG-${Math.ceil(n / 3)},180,3.3,1.2,1200,0.8,${output.toFixed(2)},OK`
   })
   return `${header}\n${rows.join('\n')}\n`
 }

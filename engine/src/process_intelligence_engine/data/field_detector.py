@@ -94,6 +94,12 @@ def _parse_value(v: str) -> float | None:
 def _parse_datetime(v: str) -> datetime | None:
     if not isinstance(v, str):
         return None
+    value = v.strip()
+    # ISO 8601 timestamps are common in exported engineering data.
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        pass
     for fmt in (
         "%Y-%m-%d %H:%M:%S",
         "%Y-%m-%d %H:%M",
@@ -103,7 +109,7 @@ def _parse_datetime(v: str) -> datetime | None:
         "%m/%d/%Y",
     ):
         try:
-            return datetime.strptime(v.strip(), fmt)
+            return datetime.strptime(value, fmt)
         except (ValueError, AttributeError):
             continue
     return None
