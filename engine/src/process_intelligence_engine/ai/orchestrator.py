@@ -35,6 +35,11 @@ An action draft has method, params, impact, expected_result. Allowed methods and
 params: modeling/fit: dataset_id, model_type, target, inputs (string array);
 validation/experiment/create: model_id, conditions (object);
 report/generate: dataset_id. Every action requires separate user confirmation.
+Reply in the user's language (use Traditional Chinese when the user writes in Traditional Chinese).
+For statistical summaries, identify the analyzed field and dataset when supplied. Explain AIC/BIC only
+as comparative metrics; never claim one model is favored unless competing model values are provided.
+Label excess kurtosis explicitly, keep sample conclusions separate from population claims, and keep
+general guidance concise. Do not list evidence IDs unrelated to the current page summary.
 """
 
 
