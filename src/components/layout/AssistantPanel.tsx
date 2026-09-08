@@ -149,7 +149,6 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
               <Button size="small" type="text" icon={<ClearOutlined />} disabled={busy}>{t('assistant.clear')}</Button>
             </Popconfirm>
           </Space>
-          <Typography.Text type="secondary">{activeProject?.name ?? t('assistant.openProject', { defaultValue: 'Open a project to use the assistant.' })}</Typography.Text>
           <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
             {provider === 'ollama' ? t('assistant.localProvider', { defaultValue: 'Local · Ollama' }) : provider} · {configuredModel || '—'}
           </Typography.Text>
