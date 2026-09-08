@@ -129,7 +129,11 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
       if (result.success === false || result.error_code || result.error) throw new Error(result.error_code ?? result.error ?? 'Action failed.')
       if (stillCurrent(projectId)) setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, draftExecuted: true, actionError: undefined } : msg))
     } catch (error) {
-      if (stillCurrent(projectId)) setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, actionError: String(error) } : msg))
+      const raw = String(error)
+      const actionError = raw.includes('Unknown dataset_id')
+        ? '此操作引用的資料集尚未載入目前工作階段。請先回到資料匯入或 SPC 頁面重新載入資料，再重試。'
+        : raw
+      if (stillCurrent(projectId)) setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, actionError } : msg))
     } finally {
       setExecutingDraft(null)
     }
