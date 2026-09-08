@@ -40,7 +40,7 @@ class DetectedField:
 # --- Name-based patterns (matched case-insensitively after normalization) ---
 
 IDENTIFIER_PATTERNS = [
-    r"\b(barcode|serial.?no|serial_number|s\\?n|part_id|board_id|panel_id|panel|lot|wip.?id|assy.?no|sequence?)\b",
+    r"\b(measurement[ _]id|product[ _]id|lot[ _]id|machine[ _]id|station[ _]id|subgroup[ _]id|barcode|serial.?no|serial[ _]number|s\\?n|part[ _]id|board[ _]id|panel[ _]id|panel|lot|wip.?id|assy.?no|sequence?)\b",
     r"\b(料號|序號|批號|條碼|流水號|工單|板號)\b",
 ]
 
@@ -60,6 +60,10 @@ METADATA_PATTERNS = [
 
 MACHINE_PATTERNS = [
     r"\b(machine|equipment|裝置|設備|機台|station|工位|線別|line)\b",
+]
+
+PART_PATTERNS = [
+    r"\b(part|product|component|零件|產品|元件)\b",
 ]
 
 SENSITIVE_PATTERNS = [
@@ -220,6 +224,19 @@ def detect_fields(columns: list[dict]) -> list[DetectedField]:
                     data_type="categorical",
                     confidence=0.75,
                     reason=["name matches a machine/equipment/station pattern"],
+                )
+            )
+            continue
+
+        # Product / part identifiers with repeated values are categories.
+        if _match_any(normalized, PART_PATTERNS):
+            results.append(
+                DetectedField(
+                    name=name,
+                    role=FieldRole.CATEGORY,
+                    data_type="categorical",
+                    confidence=0.75,
+                    reason=["name matches a product/part category pattern"],
                 )
             )
             continue
