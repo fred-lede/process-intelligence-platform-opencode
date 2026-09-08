@@ -33,6 +33,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
   const projectId = useAssistantContextStore((s) => s.activeProjectId)
   const [messages, setMessages] = useState<TranscriptMessage[]>([{ role: 'assistant', content: t('assistant.welcome') }])
   const [input, setInput] = useState('')
+  const [enterArmed, setEnterArmed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [executingDraft, setExecutingDraft] = useState<string | null>(null)
   const [provider, setProvider] = useState<AIProviderType>('ollama')
@@ -83,6 +84,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
     const request: AssistantRequest = { message: input.trim(), tab: activeTab, context, provider }
     setMessages(prev => [...prev, { role: 'user', content: request.message }])
     setInput('')
+    setEnterArmed(false)
     setLoading(true)
     setAssistantBusy(true)
     try {
@@ -186,7 +188,20 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
         </div>
         <div style={{ padding: 12, borderTop: '1px solid #e5e7eb' }}>
           <Space.Compact style={{ width: '100%' }}>
-            <Input placeholder={t('assistant.placeholder')} value={input} onChange={(e) => setInput(e.target.value)} onPressEnter={() => void handleSend()} disabled={busy || !!pendingTransfer || !projectReady} />
+            <Input.TextArea
+              placeholder={t('assistant.placeholder')}
+              value={input}
+              autoSize={{ minRows: 1, maxRows: 5 }}
+              style={enterArmed ? { borderBottom: '2px solid #2563eb' } : undefined}
+              onChange={(e) => { setInput(e.target.value); setEnterArmed(false) }}
+              onPressEnter={(event) => {
+                event.preventDefault()
+                if (enterArmed) void handleSend()
+                else setEnterArmed(true)
+              }}
+              onBlur={() => setEnterArmed(false)}
+              disabled={busy || !!pendingTransfer || !projectReady}
+            />
             <Button aria-label={t('assistant.send', { defaultValue: 'Send' })} type="primary" icon={<SendOutlined />} onClick={() => void handleSend()} loading={loading} disabled={!input.trim() || busy || !!pendingTransfer || !projectReady} />
           </Space.Compact>
         </div>
