@@ -71,6 +71,26 @@ def test_ping(engine):
     assert result["version"]
 
 
+def test_multilevel_spc_report_trace(engine, tmp_path):
+    csv_path = tmp_path / "multilevel.csv"
+    rows = ["measurement_id,product_id,lot_id,machine_id,station_id,process_step,timestamp,subgroup_id,input_temperature,output_thickness,result"]
+    for i in range(6):
+        rows.append(f"M-{i:03d},P-01,LOT-A,MC-01,ST-01,coating,2026-09-09 08:{i:02d}:00,SG-{i // 3},180,{1.60 + i * 0.01:.2f},OK")
+    csv_path.write_text("\n".join(rows), encoding="utf-8")
+    imported = engine.call("data/import", {"file_path": str(csv_path)})
+    dataset_id = imported["dataset_id"]
+    fields = engine.call("data/detect_fields", {"dataset_id": dataset_id})["fields"]
+    roles = {f["name"]: f["role"] for f in fields}
+    assert roles["measurement_id"] == "identifier"
+    assert roles["timestamp"] == "timestamp"
+    assert roles["output_thickness"] == "output"
+    spc = engine.call("spc/analyze", {"dataset_id": dataset_id, "column": "output_thickness", "filter_column": "lot_id", "filter_value": "LOT-A"})
+    assert spc["grain"]["analyzed_row_count"] == 6
+    report = engine.call("report/generate", {"dataset_id": dataset_id, "format": "html", "project_name": "Multilevel", "filter_column": "lot_id", "filter_value": "LOT-A"})
+    assert report["format"] == "html"
+    assert report["content"]
+
+
 def test_full_pipeline(engine, tmp_path):
     # Build a realistic SMT-style file.
     header = "barcode,temperature,pressure,ok_flag,defect"
