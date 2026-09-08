@@ -1749,6 +1749,20 @@ def _handle_assistant_draft_execute(params: dict) -> dict:
         return {"success": False, "error_code": "draft_not_found"}
     # Revalidate the stored allow-list contract; client execution params are inert.
     validated = AssistantOrchestrator._draft(deepcopy(draft))
+    dataset_id = validated.params.get("dataset_id")
+    if isinstance(dataset_id, str):
+        try:
+            REGISTRY.get(dataset_id)
+        except KeyError:
+            # Rehydrate a project-owned dataset that was restored in the chain
+            # but not yet materialized in the runtime registry.
+            entity = next((e for e in _VERSION_CHAIN.get_chain_summary()
+                           if e["entity_type"] == "dataset"
+                           and e.get("metadata", {}).get("dataset_id") == dataset_id), None)
+            if entity is not None:
+                restored = _VERSION_CHAIN.get_entity(entity["entity_id"])
+                REGISTRY._datasets[dataset_id] = load_dataset(_VERSION_CHAIN._project_root, restored)
+                REGISTRY._meta[dataset_id] = {"file_path": restored.metadata.get("source_file", "")}
     result = handle_request(validated.method, validated.params)
     if result.get("success") is False or result.get("error_code") or result.get("error"):
         return result
