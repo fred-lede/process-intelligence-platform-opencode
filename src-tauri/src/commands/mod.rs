@@ -49,7 +49,7 @@ pub async fn engine_call(
     let engine = state.engine.clone();
     tauri::async_runtime::spawn_blocking(move || {
         engine
-            .call(&method, params, Duration::from_secs(120))
+            .call(&method, params, Duration::from_secs(210))
             .map_err(|e| e.to_string())
     })
     .await
