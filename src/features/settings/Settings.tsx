@@ -217,7 +217,9 @@ export default function Settings() {
     try {
       // Filter out masked keys before saving — never persist a masked value back
       const savePayload: Record<string, unknown> = { ...aiConfig }
-      if (/^\w{3}\.\.\./.test(String(savePayload.api_key ?? ''))) {
+      // The backend returns masked keys as prefix...suffix. Never persist that
+      // display value over the real secret when saving another setting.
+      if (String(savePayload.api_key ?? '').includes('...')) {
         delete savePayload.api_key
       }
       const result = await updateSettings(savePayload as Parameters<typeof updateSettings>[0])
