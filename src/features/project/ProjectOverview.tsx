@@ -9,6 +9,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons'
 import { useEngineStatus } from '../../hooks/useEngineStatus'
+import { useEngineActivityStore } from '../../stores/engineStatusStore'
 import { openProject, getProjectManifest, getGateSummary, createProject, saveProjectUiState, saveProjectSession } from '../../lib/engine'
 import { buildProjectFile, loadProjectFile, saveProjectFile, type ProjectFile } from '../../lib/project'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
@@ -20,6 +21,7 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
   const confirmableModules = ['data_import', 'modeling', 'monte_carlo', 'validation']
   const { t } = useTranslation()
   const { status, refresh } = useEngineStatus(5000)
+  const assistantBusy = useEngineActivityStore((s) => s.assistantBusy)
   const [busy, setBusy] = useState(false)
   const [messageApi, contextHolder] = message.useMessage()
   const [gateSummary, setGateSummary] = useState<Record<string, string>>({})
@@ -241,6 +243,7 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
   }
 
   const renderEngineStatus = () => {
+    if (assistantBusy) return <Badge status="processing" color="#2563eb" text={`${t('engine.processing')} · v${status.state === 'online' ? status.health.version : '0.5.0'}`} />
     if (status.state === 'checking') {
       return <Badge status="processing" text={t('common.loading')} />
     }

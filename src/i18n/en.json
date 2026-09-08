@@ -41,6 +41,7 @@
   },
   "engine": {
     "online": "Analysis Engine Online",
+    "processing": "AI request in progress",
     "offline": "Analysis Engine Offline",
     "offlineMessage": "The analysis engine could not be reached. The application may still work for basic tasks, but data import and analysis are unavailable."
   },

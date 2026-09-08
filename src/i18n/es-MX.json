@@ -41,6 +41,7 @@
   },
   "engine": {
     "online": "Motor de análisis en línea",
+    "processing": "Solicitud de IA en curso",
     "offline": "Motor de análisis fuera de línea",
     "offlineMessage": "No se pudo alcanzar el motor de análisis. La aplicación puede funcionar para tareas básicas, pero la importación de datos y el análisis no están disponibles."
   },

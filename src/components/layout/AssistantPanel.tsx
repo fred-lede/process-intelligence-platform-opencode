@@ -8,6 +8,7 @@ import {
 } from '../../lib/engine'
 import { useAIStore } from '../../stores/aiStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
+import { useEngineActivityStore } from '../../stores/engineStatusStore'
 import EvidenceCard from '../assistant/EvidenceCard'
 import TransferPreviewCard from '../assistant/TransferPreviewCard'
 import ActionDraftCard from '../assistant/ActionDraftCard'
@@ -42,6 +43,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
   const refreshKey = useAIStore((s) => s.refreshKey)
   const projectReady = !!activeProject && projectId === activeProject.id
   const busy = loading || executingDraft !== null
+  const setAssistantBusy = useEngineActivityStore((s) => s.setAssistantBusy)
 
   useEffect(() => {
     mounted.current = true
@@ -82,6 +84,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
     setMessages(prev => [...prev, { role: 'user', content: request.message }])
     setInput('')
     setLoading(true)
+    setAssistantBusy(true)
     try {
       if (provider === 'ollama') {
         await appendResponse(request)
@@ -93,6 +96,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
       if (stillCurrent(context.project_id)) setMessages(prev => [...prev, { role: 'assistant', content: String(error) }])
     } finally {
       setLoading(false)
+      setAssistantBusy(false)
     }
   }
 
@@ -100,6 +104,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
     if (!pendingTransfer || busy || !projectReady || !stillCurrent(pendingTransfer.request.context.project_id)) return
     const { request, preview } = pendingTransfer
     setLoading(true)
+    setAssistantBusy(true)
     try {
       const consent = await grantAssistantCloudConsent(preview.payload_hash)
       if (!consent.cloud_consent) throw new Error(consent.error_code ?? 'Cloud consent failed.')
@@ -110,6 +115,7 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
       if (stillCurrent(request.context.project_id)) setPendingTransfer({ request, preview, error: String(error) })
     } finally {
       setLoading(false)
+      setAssistantBusy(false)
     }
   }
 
