@@ -455,7 +455,7 @@ data/test_dataset.csv
 
 **版本**
 - 引擎 `__version__`、Tauri 與前端版本同步至 0.5.0
-- 前端 About 對話框顯示 v0.3.0
+- 前端 About 對話框顯示 v0.5.0
 
 ---
 
