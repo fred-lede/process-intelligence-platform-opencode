@@ -1,6 +1,6 @@
 [package]
 name = "process-intelligence-platform"
-version = "0.5.0"
+version = "0.6.0"
 description = "Process Intelligence Platform - Interpretable, traceable, switchable-model process analysis"
 authors = ["Process Intelligence Platform Team"]
 license = "MIT"
