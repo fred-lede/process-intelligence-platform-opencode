@@ -50,6 +50,21 @@ def test_timestamp_column_detected_as_timestamp():
     assert field.role == FieldRole.TIMESTAMP
 
 
+def test_iso_timestamp_column_detected_as_timestamp():
+    field = _detect("timestamp", ["2026-09-09T08:00:00", "2026-09-09T08:10:00Z"])
+    assert field.role == FieldRole.TIMESTAMP
+
+
+def test_engineering_measurement_id_detected_as_identifier():
+    field = _detect("measurement_id", ["M-001", "M-002", "M-003"])
+    assert field.role == FieldRole.IDENTIFIER
+
+
+def test_part_column_detected_as_category():
+    field = _detect("part", ["P-01", "P-02", "P-01"])
+    assert field.role == FieldRole.CATEGORY
+
+
 def test_category_column_detected():
     field = _detect("machine", ["line1", "line2", "line1", "line3"])
     assert field.role == FieldRole.CATEGORY
