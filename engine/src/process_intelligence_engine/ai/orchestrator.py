@@ -191,7 +191,19 @@ class AssistantOrchestrator:
             raise ValueError("Non-JSON numeric constant")
 
         try:
-            data = json.loads(raw, parse_constant=reject_constant)
+            text = raw.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[1] if "\n" in text else text
+                if text.endswith("```"):
+                    text = text[:-3].rstrip()
+            # Some compatible providers prepend a short reasoning/markdown
+            # line; decode only the JSON object while keeping schema checks.
+            if not text.startswith("{"):
+                start, end = text.find("{"), text.rfind("}")
+                if start < 0 or end <= start:
+                    raise ValueError
+                text = text[start:end + 1]
+            data = json.loads(text, parse_constant=reject_constant)
             if not isinstance(data, dict):
                 raise ValueError
             if not isinstance(data["explanation"], str) or data["evidence_status"] not in _STATUSES:
