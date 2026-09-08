@@ -158,8 +158,11 @@ class AssistantOrchestrator:
                 raise PermissionError("Cloud assistant use requires a current preview")
             try:
                 raw = asyncio.run(self._cloud_chat(preview.payload))
-            except Exception:
-                return self._error("cloud_model_unavailable")
+            except Exception as exc:
+                return self._error(
+                    "cloud_model_unavailable",
+                    f"Cloud model request failed: {exc}",
+                )
         return self._decode(raw, request.provider, context)
 
     async def _cloud_chat(self, payload: dict) -> str:
@@ -176,8 +179,12 @@ class AssistantOrchestrator:
                 return data["choices"][0]["message"]["content"]
 
     @staticmethod
-    def _error(code: str) -> AssistantResponse:
-        return AssistantResponse(success=False, explanation=code, error_code=code)
+    def _error(code: str, explanation: str | None = None) -> AssistantResponse:
+        return AssistantResponse(
+            success=False,
+            explanation=explanation or code,
+            error_code=code,
+        )
 
     def _decode(self, raw: str, provider: str, context: dict) -> AssistantResponse:
         def reject_constant(value: str):
