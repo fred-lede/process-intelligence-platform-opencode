@@ -166,6 +166,7 @@
     "importSource": "Import Source",
     "importDescription": "Select an Excel (.xlsx, .xls) or CSV file to begin analysis.",
     "downloadTemplate": "Download CSV Template",
+    "downloadEngineeringTemplate": "Download Engineering Template",
     "downloadTemplateDesc": "Download a sample CSV with 5 inputs + continuous output + binary result, supporting all 8 models (DOE, RF, XGBoost, LightGBM, Residual Hybrid, Logistic, Weibull).",
     "errNoOutput": "Assign at least one field as an output (quality metric) before continuing.",
     "pickFile": "Select File",

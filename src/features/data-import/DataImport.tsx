@@ -119,6 +119,15 @@ function buildTemplateCsv(): string {
   return [header, ...rows].map((r) => r.join(',')).join('\n')
 }
 
+function buildEngineeringTemplateCsv(): string {
+  const header = 'measurement_id,product_id,lot_id,machine_id,station_id,process_step,timestamp,subgroup_id,metric,value,unit'
+  const rows = Array.from({ length: 6 }, (_, i) => {
+    const n = i + 1
+    return `M-${String(n).padStart(3, '0')},P-${String(Math.ceil(n / 3)).padStart(3, '0')},LOT-20260909,MC-01,ST-01,coating,2026-09-09T0${8 + Math.floor(i / 3)}:${String((i % 3) * 10).padStart(2, '0')}:00,SG-${Math.ceil(n / 3)},thickness,${1.60 + i * 0.01},mm`
+  })
+  return `${header}\n${rows.join('\n')}\n`
+}
+
 export default function DataImport({ onDetected, onFinished }: DataImportProps) {
   const { t } = useTranslation()
   const {
@@ -173,6 +182,16 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
     const a = document.createElement('a')
     a.href = url
     a.download = 'process-analysis-template.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleDownloadEngineeringTemplate = () => {
+    const blob = new Blob([buildEngineeringTemplateCsv()], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'process-analysis-engineering-template.csv'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -377,6 +396,9 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
                   {t('dataImport.downloadTemplate')}
                 </Button>
               </Tooltip>
+              <Button type="link" icon={<DownloadOutlined />} onClick={handleDownloadEngineeringTemplate}>
+                {t('dataImport.downloadEngineeringTemplate')}
+              </Button>
             </Space>
           </Space>
         ) : (

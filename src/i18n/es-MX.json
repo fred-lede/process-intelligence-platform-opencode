@@ -160,6 +160,7 @@
   },
   "dataImport": {
     "downloadTemplate": "Descargar plantilla CSV",
+    "downloadEngineeringTemplate": "Descargar plantilla de ingeniería",
     "downloadTemplateDesc": "Descarga un CSV de ejemplo con 5 entradas + salida continua + resultado binario, compatible con los 8 modelos (DOE, RF, XGBoost, LightGBM, Híbrido, Logística, Weibull).",
     "errNoOutput": "Asigna al menos un campo como salida (métrica de calidad) antes de continuar.",
     "previewTitle": "Vista previa de datos",
