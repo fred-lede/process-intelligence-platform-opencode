@@ -28,7 +28,7 @@ const WE_RULE_NAMES: Record<number, string> = {
 
 export default function SPC() {
   const { t } = useTranslation()
-  const { importResult, spec, controlLimits } = useDataPipelineStore()
+  const { importResult, spec, controlLimits, spcSettings, setSpcSettings } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
 
   const consumedRef = useRef(false)
@@ -96,6 +96,14 @@ export default function SPC() {
   const [datasetAssets, setDatasetAssets] = useState<Array<{ dataset_id: string; file_path: string; row_count: number; column_count: number }>>([])
 
   useEffect(() => {
+    if (spcSettings.chartType && CHART_TYPES.includes(spcSettings.chartType as ChartType)) setChartType(spcSettings.chartType as ChartType)
+    if (spcSettings.column) setColumn(spcSettings.column)
+    if (spcSettings.subgroupSize) setSubgroupSize(spcSettings.subgroupSize)
+    if (spcSettings.filterColumn) setNodeFilterColumn(spcSettings.filterColumn)
+    if (spcSettings.filterValue) setNodeFilterValue(spcSettings.filterValue)
+  }, [spcSettings])
+
+  useEffect(() => {
     getDataAssets().then(r => setDatasetAssets(r.datasets ?? [])).catch(() => {})
   }, [])
 
@@ -124,6 +132,7 @@ export default function SPC() {
 
   const handleAnalyze = async () => {
     if (!importResult || !column) return
+    setSpcSettings({ chartType, column, subgroupSize, filterColumn: nodeFilterColumn, filterValue: nodeFilterValue })
     setLoading(true)
     setError(null)
     try {
@@ -153,6 +162,7 @@ export default function SPC() {
 
   const handleMultiDatasetAnalyze = async () => {
     if (datasetEntries.length === 0) return
+    setSpcSettings({ chartType, subgroupSize })
     setLoading(true)
     setError(null)
     try {
@@ -172,6 +182,7 @@ export default function SPC() {
 
   const handleBatchAnalyze = async () => {
     if (!importResult || selectedColumns.length === 0) return
+    setSpcSettings({ chartType, column: selectedColumns[0], subgroupSize, filterColumn: nodeFilterColumn, filterValue: nodeFilterValue })
     setLoading(true)
     setError(null)
     try {

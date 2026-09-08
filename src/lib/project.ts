@@ -19,6 +19,14 @@ export interface ProjectFile {
   anomalyScenarios: AnomalyScenario[] | null
   controlLimits: ControlLimitsMap | null
   analysisPackage: AnalysisPackage | null
+  /** Optional SPC view settings introduced in v0.6.0. */
+  spcSettings?: {
+    chartType?: string
+    column?: string
+    subgroupSize?: number
+    filterColumn?: string
+    filterValue?: string
+  }
 }
 
 const PROJECT_FILTER = [{ name: 'Project', extensions: ['piproj.json'] }]
@@ -31,6 +39,7 @@ export function buildProjectFile(
   anomalyScenarios: AnomalyScenario[] = [],
   controlLimits: ControlLimitsMap = {},
   analysisPackage: AnalysisPackage | null = null,
+  spcSettings: ProjectFile['spcSettings'] = {},
 ): ProjectFile {
   return {
     version: PROJECT_FORMAT_VERSION,
@@ -43,6 +52,7 @@ export function buildProjectFile(
     anomalyScenarios: anomalyScenarios.length ? anomalyScenarios : null,
     controlLimits: Object.keys(controlLimits).length ? controlLimits : null,
     analysisPackage,
+    spcSettings,
   }
 }
 

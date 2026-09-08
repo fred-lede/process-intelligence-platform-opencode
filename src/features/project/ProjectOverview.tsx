@@ -36,11 +36,13 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
     controlLimits,
     anomalyScenarios,
     analysisPackage,
+    spcSettings,
     setImportResult,
     setFields,
     setQuality,
     setSpec,
     restoreAnalysis,
+    restoreSpcSettings,
     resetAll,
   } = useDataPipelineStore()
 
@@ -132,6 +134,7 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
       anomalyScenarios,
       controlLimits,
       analysisPackage,
+      spcSettings,
     )
   }
 
@@ -214,6 +217,7 @@ export default function ProjectOverview({ onProjectChanged, projectOpen }: { onP
         controlLimits: data.controlLimits ?? {},
         analysisPackage: data.analysisPackage ?? null,
       })
+      if (data) restoreSpcSettings(data.spcSettings)
       const gateRes = await getGateSummary()
       setGateSummary(gateRes.summary || {})
       messageApi.success(t('project.opened', { path: selected }))

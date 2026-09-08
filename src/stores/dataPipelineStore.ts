@@ -33,6 +33,13 @@ interface DataPipelineState {
   anomalyScenarios: AnomalyScenario[]
   anomalyScenariosConfirmed: boolean
   analysisPackage: AnalysisPackage | null
+  spcSettings: {
+    chartType?: string
+    column?: string
+    subgroupSize?: number
+    filterColumn?: string
+    filterValue?: string
+  }
   status: ConfirmStatus
 
   setImportResult: (result: ImportResult) => void
@@ -52,6 +59,8 @@ interface DataPipelineState {
     controlLimits: ControlLimitsMap
     analysisPackage: AnalysisPackage | null
   }) => void
+  setSpcSettings: (settings: DataPipelineState['spcSettings']) => void
+  restoreSpcSettings: (settings: DataPipelineState['spcSettings'] | undefined) => void
   updateFieldRole: (originalName: string, role: FieldRole) => void
   confirmField: (originalName: string, confirmed?: boolean) => void
   confirmAllFields: () => void
@@ -68,6 +77,7 @@ export const useDataPipelineStore = create<DataPipelineState>((set) => ({
   anomalyScenarios: [],
   anomalyScenariosConfirmed: false,
   analysisPackage: null,
+  spcSettings: {},
   status: 'notStarted',
 
   setImportResult: (result) =>
@@ -81,6 +91,7 @@ export const useDataPipelineStore = create<DataPipelineState>((set) => ({
       anomalyScenarios: [],
       anomalyScenariosConfirmed: false,
       analysisPackage: null,
+      spcSettings: {},
     }),
 
   setDetectedFields: (detected) =>
@@ -136,7 +147,9 @@ export const useDataPipelineStore = create<DataPipelineState>((set) => ({
       anomalyScenariosConfirmed:
         anomalyScenarios.length > 0 && anomalyScenarios.every((s) => s.user_confirmed),
       analysisPackage,
-    }),
+  }),
+  setSpcSettings: (settings) => set({ spcSettings: settings }),
+  restoreSpcSettings: (settings) => set({ spcSettings: settings ?? {} }),
 
   updateFieldRole: (originalName, role) =>
     set((state) => {
