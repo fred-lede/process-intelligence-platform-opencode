@@ -23,6 +23,7 @@ import threading
 import traceback
 import uuid
 import hashlib
+from copy import deepcopy
 
 import numpy as np
 import pandas as pd
@@ -71,6 +72,10 @@ from process_intelligence_engine.reporting.pdf import PDFReportGenerator
 from process_intelligence_engine.auth.models import UserRole, AuditAction
 from process_intelligence_engine.auth.manager import AuthManager
 from process_intelligence_engine.ai.ollama_client import get_ollama_client
+from process_intelligence_engine.ai.context import build_assistant_context
+from process_intelligence_engine.ai.contracts import AssistantRequest
+from process_intelligence_engine.ai.orchestrator import AssistantOrchestrator
+from process_intelligence_engine.project.manifest import ProjectManifest
 from process_intelligence_engine.spc import (
     compute_i_mr,
     compute_xbar_r,
@@ -168,6 +173,7 @@ PROJECT_ENGINE = ProjectEngine()
 _PROJECT_ROOT = "/tmp/default-project"
 _VERSION_CHAIN = VersionChain(_PROJECT_ROOT, "anonymous")
 GATE_MANAGER = GateManager(project_root=_PROJECT_ROOT, project_id="default")
+_ASSISTANT_STATE = None
 try:
     _VERSION_CHAIN.load()
 except Exception:
@@ -1642,6 +1648,136 @@ def _handle_prediction_model_info(params: dict) -> dict:
     }
 
 
+def _assistant_state():
+    """Bind pending actions and cloud previews to the opened project session."""
+    global _ASSISTANT_STATE
+    root = _VERSION_CHAIN._project_root.resolve()
+    manifest = ProjectManifest.load(root)
+    identity = (root, manifest.project_id, _VERSION_CHAIN)
+    if _ASSISTANT_STATE is None or _ASSISTANT_STATE["identity"] != identity:
+        _ASSISTANT_STATE = {
+            "identity": identity, "drafts": {},
+            "orchestrator": AssistantOrchestrator(str(root)),
+        }
+    _ASSISTANT_STATE["orchestrator"].config = get_settings_manager()._config
+    return _ASSISTANT_STATE
+
+
+def _assistant_request(params: dict, state: dict) -> AssistantRequest:
+    project_id = state["identity"][1]
+    if params.get("project_id", project_id) != project_id:
+        raise PermissionError("Assistant request does not match the current project")
+    message, page = params.get("message"), params.get("page", "")
+    if not isinstance(message, str) or not message.strip() or not isinstance(page, str):
+        raise ValueError("Assistant message and page must be strings")
+    supplied = params.get("context", {})
+    if not isinstance(supplied, dict):
+        raise ValueError("Assistant context must be an object")
+    selectors = supplied.get("page_summary", {})
+    if not isinstance(selectors, dict):
+        raise ValueError("Assistant page summary must be an object")
+    context = build_assistant_context(project_id, page, {}, _VERSION_CHAIN)
+    # Legacy handlers use 'default' inside a chain already isolated by project root.
+    # Normalize only those records; explicit foreign project IDs remain excluded.
+    if project_id != "default":
+        legacy = build_assistant_context("default", page, {}, _VERSION_CHAIN)
+        context["evidence"].extend({**item, "project_id": project_id} for item in legacy["evidence"])
+    summary = {}
+    for kind, fields in (
+        ("dataset", ("row_count", "column_count")),
+        ("model", ("model_type", "target", "inputs", "n_train", "n_test")),
+    ):
+        selected = selectors.get(f"selected_{kind}_id")
+        if not isinstance(selected, str):
+            continue
+        for item in reversed(context["evidence"]):
+            entity = _VERSION_CHAIN.get_entity(item["entity_id"])
+            if entity.entity_type == kind and entity.metadata.get(f"{kind}_id") == selected:
+                summary[f"selected_{kind}_id"] = selected
+                summary[f"{kind}_summary"] = {key: entity.metadata[key] for key in fields if key in entity.metadata}
+                break
+    # Reuse the bounded summary validation before sending any server-built fields.
+    context["page_summary"] = build_assistant_context(project_id, page, _plain_types(summary), _VERSION_CHAIN)["page_summary"]
+    if "preview_hash" in supplied:
+        context["preview_hash"] = supplied["preview_hash"]
+    return AssistantRequest(message=message, project_id=project_id, page=page,
+                            context=context, provider=params.get("provider", "ollama"))
+
+
+def _handle_assistant_respond(params: dict) -> dict:
+    state = _assistant_state()
+    response = state["orchestrator"].respond(_assistant_request(params, state))
+    if response.success and response.action_draft is not None:
+        draft = response.action_draft
+        state["drafts"][draft.draft_id] = deepcopy(draft.to_dict())
+    return response.to_dict()
+
+
+def _handle_assistant_cloud_preview(params: dict) -> dict:
+    state = _assistant_state()
+    request = _assistant_request(params, state)
+    preview = state["orchestrator"].preview_cloud(request)
+    state["preview_request"] = request.to_dict()
+    return preview.to_dict()
+
+
+def _handle_assistant_cloud_consent(params: dict) -> dict:
+    if params.get("confirmed") is not True:
+        return {"success": False, "error_code": "confirmation_required"}
+    state = _assistant_state()
+    if "preview_request" in state:
+        state["orchestrator"].preview_cloud(_assistant_request(state["preview_request"], state))
+    policy = state["orchestrator"].grant_project_cloud_consent(
+        str(state["identity"][0]), params.get("preview_hash", ""))
+    # Refresh the manifest cache so later project saves retain persisted consent.
+    PROJECT_ENGINE.open_project(str(state["identity"][0]))
+    return policy
+
+
+def _handle_assistant_draft_execute(params: dict) -> dict:
+    if params.get("confirmed") is not True:
+        return {"success": False, "error_code": "confirmation_required"}
+    state = _assistant_state()
+    draft = state["drafts"].get(params.get("draft_id"))
+    if draft is None:
+        return {"success": False, "error_code": "draft_not_found"}
+    # Revalidate the stored allow-list contract; client execution params are inert.
+    validated = AssistantOrchestrator._draft(deepcopy(draft))
+    result = handle_request(validated.method, validated.params)
+    if result.get("success") is False or result.get("error_code") or result.get("error"):
+        return result
+    del state["drafts"][draft["draft_id"]]
+    AUTH_MANAGER._log_audit(AuditAction.CHANGE_SETTING, "assistant_draft_confirmed", {
+        "draft_id": draft["draft_id"], "project_id": state["identity"][1],
+        "method": validated.method,
+    })
+    return result
+
+
+def _handle_validation_experiment_create(params: dict) -> dict:
+    """Persist planned conditions without recording measurements or a verdict."""
+    model_id, conditions = params.get("model_id"), params.get("conditions")
+    if not isinstance(model_id, str) or not isinstance(conditions, dict) or not conditions:
+        raise ValueError("Experiment requires model_id and conditions")
+    fit = MODEL_REGISTRY.get(model_id)
+    if (set(conditions) != set(fit.inputs) or any(
+            isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value)
+            for value in conditions.values())):
+        raise ValueError("Conditions must contain finite values for every model input")
+    project_id = ProjectManifest.load(_VERSION_CHAIN._project_root).project_id
+    models = [_VERSION_CHAIN.get_entity(item["entity_id"]) for item in _VERSION_CHAIN.get_chain_summary()
+              if item["entity_type"] == "model" and item["project_id"] in (project_id, "default")]
+    parents = [entity.entity_id for entity in models if entity.metadata.get("model_id") == model_id]
+    if not parents:
+        raise ValueError("Model does not belong to the current project")
+    experiment_id = str(uuid.uuid4())
+    metadata = {"experiment_id": experiment_id, "model_id": model_id,
+                "conditions": deepcopy(conditions), "status": "planned"}
+    entity_id = _VERSION_CHAIN.register_entity("experiment", project_id, metadata,
+        parent_ids=[parents[-1]], created_by=AUTH_MANAGER.current_user.username if AUTH_MANAGER.current_user else "anonymous")
+    return {"success": True, **metadata, "chain_entity_id": entity_id}
+
+
 def handle_request(method: str, params: dict) -> dict:
     """Dispatch an RPC method to its handler.
 
@@ -1769,6 +1905,14 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "ai/chat":
         return _handle_ai_chat(params)
+    if method == "assistant/respond":
+        return _handle_assistant_respond(params)
+    if method == "assistant/cloud_preview":
+        return _handle_assistant_cloud_preview(params)
+    if method == "assistant/cloud_consent":
+        return _handle_assistant_cloud_consent(params)
+    if method == "assistant/draft/execute":
+        return _handle_assistant_draft_execute(params)
     if method == "ai/models":
         return _handle_ai_models(params)
     if method == "ai/health":
@@ -1783,6 +1927,8 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "experiment/record":
         return _handle_experiment_record(params)
+    if method == "validation/experiment/create":
+        return _handle_validation_experiment_create(params)
     if method == "experiment/list":
         return _handle_experiment_list(params)
     if method == "experiment/get":
@@ -2363,7 +2509,7 @@ def _open_portable_project(path) -> dict:
 def _reload_chain_for_project(root: str) -> dict:
     """Reinitialize the shared version chain and gate manager for a project root."""
     global _VERSION_CHAIN, GATE_MANAGER, REGISTRY, MODEL_REGISTRY, EXPERIMENT_REGISTRY
-    global APPROVAL_WORKFLOW, REPORT_REGISTRY
+    global APPROVAL_WORKFLOW, REPORT_REGISTRY, _ASSISTANT_STATE
     chain = VersionChain(root, "anonymous")
     chain.load()
     datasets = DatasetRegistry()
@@ -2402,6 +2548,7 @@ def _reload_chain_for_project(root: str) -> dict:
     ui_path = chain._project_root / "registry" / "ui_state.json"
     ui_state = json.loads(ui_path.read_text(encoding="utf-8")) if ui_path.exists() else None
     _VERSION_CHAIN = chain
+    _ASSISTANT_STATE = None
     REGISTRY, MODEL_REGISTRY, EXPERIMENT_REGISTRY = datasets, models, experiments
     GATE_MANAGER, APPROVAL_WORKFLOW, REPORT_REGISTRY = gates, approvals, reports
     return {"import_result": import_result, "project_file": ui_state, "models_rebuilt": len(models.list_ids())}

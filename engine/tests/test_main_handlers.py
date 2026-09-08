@@ -4,8 +4,239 @@ import json
 
 import pytest
 
+from types import SimpleNamespace
+
 from process_intelligence_engine.main import handle_request, REGISTRY
 from process_intelligence_engine.reporting.registry import _REPORT_REGISTRY
+
+
+@pytest.fixture
+def assistant_project(tmp_path, monkeypatch):
+    from process_intelligence_engine import main as app
+    from process_intelligence_engine.ai.ollama_client import OllamaClient
+    from process_intelligence_engine.ai.orchestrator import AssistantOrchestrator
+    from process_intelligence_engine.settings import AIProviderConfig
+
+    for name in ("PROJECT_ENGINE", "_VERSION_CHAIN", "GATE_MANAGER", "REGISTRY",
+                 "MODEL_REGISTRY", "EXPERIMENT_REGISTRY", "APPROVAL_WORKFLOW", "REPORT_REGISTRY"):
+        monkeypatch.setattr(app, name, getattr(app, name))
+    monkeypatch.setattr(app, "PROJECT_ENGINE", app.ProjectEngine())
+    monkeypatch.setattr(app, "AUTH_MANAGER", app.AuthManager())
+    monkeypatch.setattr(app, "_ASSISTANT_STATE", None, raising=False)
+    config = AIProviderConfig(enabled=True)
+    monkeypatch.setattr(app, "get_settings_manager", lambda: SimpleNamespace(_config=config))
+    state = SimpleNamespace(app=app, root=tmp_path / "a", config=config, messages=[],
+                            output={"explanation": "Review this evidence", "evidence_ids": [],
+                                    "evidence_status": "confirmed", "recommendations": [],
+                                    "action_draft": None, "limitations": []})
+
+    async def health(self):
+        return True
+
+    async def chat(self, messages):
+        state.messages.append(messages)
+        return json.dumps(state.output)
+
+    async def cloud_chat(self, payload):
+        state.messages.append(payload["messages"])
+        return json.dumps(state.output)
+
+    monkeypatch.setattr(OllamaClient, "health_check", health)
+    monkeypatch.setattr(OllamaClient, "chat", chat)
+    monkeypatch.setattr(AssistantOrchestrator, "_cloud_chat", cloud_chat)
+    state.project = handle_request("project/create", {"root": str(state.root)})
+    state.project_id = app.PROJECT_ENGINE.get_manifest()["project_id"]
+    return state
+
+
+def _assistant_request(state, **updates):
+    return {"message": "Explain the analysis", "project_id": state.project_id,
+            "page": "modeling", **updates}
+
+
+def _assistant_dataset(state):
+    path = state.root / "sample.csv"
+    path.write_text("x,y\n1,2\n2,4\n3,6\n4,8\n5,10\n6,12\n7,14\n8,16\n9,18\n10,20\n")
+    return handle_request("data/import", {"file_path": str(path)})
+
+
+def _assistant_draft(state, method, params):
+    state.output["action_draft"] = {"method": method, "params": params,
+        "impact": "Creates a new draft artifact", "expected_result": "Reviewable result"}
+    result = handle_request("assistant/respond", _assistant_request(state))
+    assert result["success"] is True
+    return result["action_draft"]
+
+
+@pytest.mark.parametrize("confirmed", [None, False, 1, "true"])
+def test_assistant_execute_requires_literal_confirmation(assistant_project, confirmed):
+    result = handle_request("assistant/draft/execute", {"draft_id": "invented", "confirmed": confirmed})
+    assert result["error_code"] == "confirmation_required"
+
+
+def test_assistant_unknown_draft_is_rejected(assistant_project):
+    result = handle_request("assistant/draft/execute", {"draft_id": "invented", "confirmed": True,
+        "method": "report/generate", "params": {"dataset_id": "invented"}})
+    assert result["error_code"] == "draft_not_found"
+
+
+def test_assistant_context_uses_server_evidence_and_summary(assistant_project):
+    s = assistant_project
+    dataset = _assistant_dataset(s)
+    eid = dataset["chain_entity_id"]
+    foreign = s.app._VERSION_CHAIN.register_entity("dataset", "other-project", {})
+    s.output["evidence_ids"] = [eid]
+    result = handle_request("assistant/respond", _assistant_request(s, context={
+        "project_id": "spoofed", "evidence": [{"entity_id": eid, "evidence_status": "confirmed"}],
+        "page_summary": {"selected_dataset_id": dataset["dataset_id"],
+                         "dataset_summary": {"row_count": 999}, "evidence_status": "confirmed"}}))
+    sent = json.loads(s.messages[-1][-1]["content"])["context"]
+    assert sent["project_id"] == s.project_id
+    assert [e["entity_id"] for e in sent["evidence"]] == [eid]
+    assert foreign not in json.dumps(sent)
+    assert sent["page_summary"]["dataset_summary"]["row_count"] == 10
+    assert "source_file" not in json.dumps(sent)
+    assert result["evidence_status"] == "unverified"
+
+
+def test_assistant_rejects_other_project_request(assistant_project):
+    with pytest.raises(PermissionError):
+        handle_request("assistant/respond", _assistant_request(assistant_project, project_id="other"))
+
+
+def test_assistant_draft_is_inert_server_owned_and_consumed_once(assistant_project):
+    s = assistant_project
+    dataset = _assistant_dataset(s)
+    draft = _assistant_draft(s, "modeling/fit", {"dataset_id": dataset["dataset_id"],
+        "model_type": "doe_linear", "target": "y", "inputs": ["x"]})
+    assert s.app.MODEL_REGISTRY.list_ids() == []
+    draft["params"]["dataset_id"] = "tampered"
+    result = handle_request("assistant/draft/execute", {"draft_id": draft["draft_id"],
+        "confirmed": True, "params": {"dataset_id": "also-tampered"}})
+    assert result["model_id"] in s.app.MODEL_REGISTRY.list_ids()
+    assert handle_request("assistant/draft/execute", {"draft_id": draft["draft_id"],
+        "confirmed": True})["error_code"] == "draft_not_found"
+    events = [e for e in handle_request("audit/log", {})["log"]
+              if e["target"] == "assistant_draft_confirmed"]
+    assert len(events) == 1
+    assert events[0]["details"]["draft_id"] == draft["draft_id"]
+    assert events[0]["details"]["project_id"] == s.project_id
+
+
+def test_assistant_failed_execution_keeps_draft_for_retry(assistant_project):
+    s = assistant_project
+    draft = _assistant_draft(s, "report/generate", {"dataset_id": "missing"})
+    for _ in range(2):
+        with pytest.raises(KeyError):
+            handle_request("assistant/draft/execute", {"draft_id": draft["draft_id"], "confirmed": True})
+    assert not any(e["target"] == "assistant_draft_confirmed" for e in handle_request("audit/log", {})["log"])
+
+
+def test_assistant_project_switch_invalidates_drafts(assistant_project):
+    s = assistant_project
+    draft = _assistant_draft(s, "report/generate", {"dataset_id": "missing"})
+    handle_request("project/create", {"root": str(s.root.parent / "b")})
+    assert handle_request("assistant/draft/execute", {"draft_id": draft["draft_id"],
+        "confirmed": True})["error_code"] == "draft_not_found"
+    handle_request("project/open", {"root": str(s.root)})
+    assert handle_request("assistant/draft/execute", {"draft_id": draft["draft_id"],
+        "confirmed": True})["error_code"] == "draft_not_found"
+
+
+@pytest.mark.parametrize("method", ["settings/update", "experiment/record", "cloud/upload"])
+def test_assistant_disallowed_actions_never_become_executable(assistant_project, method):
+    with pytest.raises(ValueError, match="not allowed"):
+        _assistant_draft(assistant_project, method, {})
+
+
+def test_assistant_confirmed_experiment_creates_persisted_plan_only(assistant_project):
+    s = assistant_project
+    dataset = _assistant_dataset(s)
+    fit = handle_request("modeling/fit", {"dataset_id": dataset["dataset_id"],
+        "model_type": "doe_linear", "target": "y", "inputs": ["x"]})
+    draft = _assistant_draft(s, "validation/experiment/create", {
+        "model_id": fit["model_id"], "conditions": {"x": 4.5}})
+    result = handle_request("assistant/draft/execute", {"draft_id": draft["draft_id"], "confirmed": True})
+    assert result["status"] == "planned"
+    entity = s.app._VERSION_CHAIN.get_entity(result["chain_entity_id"])
+    assert entity.metadata["conditions"] == {"x": 4.5}
+    assert entity.parent_ids == [fit["chain_entity_id"]]
+    assert entity.evidence_status == "unverified"
+    assert "actual_output" not in entity.metadata
+    assert handle_request("experiment/list", {})["experiments"] == []
+    handle_request("project/open", {"root": str(s.root)})
+    assert s.app._VERSION_CHAIN.get_entity(result["chain_entity_id"]).metadata["status"] == "planned"
+
+
+def test_assistant_cloud_consent_requires_preview_and_confirmation(assistant_project):
+    s = assistant_project
+    result = handle_request("assistant/cloud_consent", {"preview_hash": "abc", "confirmed": False})
+    assert result["error_code"] == "confirmation_required"
+    with pytest.raises(PermissionError):
+        handle_request("assistant/cloud_consent", {"preview_hash": "abc", "confirmed": True})
+
+
+def test_assistant_cloud_consent_persisted_and_exact_preview_sent(assistant_project):
+    from process_intelligence_engine.project.manifest import ProjectManifest
+    s = assistant_project
+    s.config.provider, s.config.cloud_enabled = "openai", True
+    s.config.model = "test-cloud"
+    request = _assistant_request(s, provider="openai")
+    preview = handle_request("assistant/cloud_preview", request)
+    assert s.messages == []
+    result = handle_request("assistant/cloud_consent", {"preview_hash": preview["payload_hash"], "confirmed": True})
+    assert result["cloud_consent"] is True
+    assert ProjectManifest.load(s.root).assistant_policy["preview_hash"] == preview["payload_hash"]
+    response = handle_request("assistant/respond", {**request, "context": {"preview_hash": preview["payload_hash"]}})
+    assert response["success"] is True
+    assert s.messages[-1] == preview["payload"]["messages"]
+    manifest = ProjectManifest.load(s.root)
+    manifest.assistant_policy["cloud_consent"] = False
+    manifest.save()
+    with pytest.raises(PermissionError):
+        handle_request("assistant/respond", {**request, "context": {"preview_hash": preview["payload_hash"]}})
+
+
+def test_assistant_cloud_preview_invalid_after_project_switch(assistant_project):
+    s = assistant_project
+    s.config.provider, s.config.cloud_enabled = "openai", True
+    preview = handle_request("assistant/cloud_preview", _assistant_request(s, provider="openai"))
+    handle_request("project/create", {"root": str(s.root.parent / "b")})
+    with pytest.raises(PermissionError):
+        handle_request("assistant/cloud_consent", {"preview_hash": preview["payload_hash"], "confirmed": True})
+
+
+def test_assistant_cloud_send_rebuilds_changed_server_context(assistant_project):
+    s = assistant_project
+    s.config.provider, s.config.cloud_enabled = "openai", True
+    request = _assistant_request(s, provider="openai")
+    preview = handle_request("assistant/cloud_preview", request)
+    handle_request("assistant/cloud_consent", {"preview_hash": preview["payload_hash"], "confirmed": True})
+    _assistant_dataset(s)
+    with pytest.raises(PermissionError):
+        handle_request("assistant/respond", {**request, "context": {"preview_hash": preview["payload_hash"]}})
+    assert s.messages == []
+
+
+def test_assistant_cloud_consent_survives_project_settings_save(assistant_project):
+    from process_intelligence_engine.project.manifest import ProjectManifest
+    s = assistant_project
+    s.config.provider, s.config.cloud_enabled = "openai", True
+    preview = handle_request("assistant/cloud_preview", _assistant_request(s, provider="openai"))
+    handle_request("assistant/cloud_consent", {"preview_hash": preview["payload_hash"], "confirmed": True})
+    handle_request("project/settings", {"updates": {"theme": "dark"}})
+    assert ProjectManifest.load(s.root).assistant_policy["cloud_consent"] is True
+
+
+def test_assistant_cloud_consent_rejects_changed_server_evidence(assistant_project):
+    from process_intelligence_engine.project.manifest import ProjectManifest
+    s = assistant_project
+    s.config.provider, s.config.cloud_enabled = "openai", True
+    preview = handle_request("assistant/cloud_preview", _assistant_request(s, provider="openai"))
+    _assistant_dataset(s)
+    with pytest.raises(PermissionError):
+        handle_request("assistant/cloud_consent", {"preview_hash": preview["payload_hash"], "confirmed": True})
+    assert ProjectManifest.load(s.root).assistant_policy["cloud_consent"] is False
 
 
 def _detect_fields_payload():
