@@ -120,10 +120,11 @@ function buildTemplateCsv(): string {
 }
 
 function buildEngineeringTemplateCsv(): string {
-  const header = 'measurement_id,product_id,lot_id,machine_id,station_id,process_step,timestamp,subgroup_id,metric,value,unit'
+  const header = 'measurement_id,product_id,lot_id,machine_id,station_id,process_step,timestamp,subgroup_id,input_temperature,input_voltage,input_pressure,input_speed,input_load,output_thickness,result'
   const rows = Array.from({ length: 6 }, (_, i) => {
     const n = i + 1
-    return `M-${String(n).padStart(3, '0')},P-${String(Math.ceil(n / 3)).padStart(3, '0')},LOT-20260909,MC-01,ST-01,coating,2026-09-09T0${8 + Math.floor(i / 3)}:${String((i % 3) * 10).padStart(2, '0')}:00,SG-${Math.ceil(n / 3)},thickness,${1.60 + i * 0.01},mm`
+    const output = 1.60 + i * 0.01
+    return `M-${String(n).padStart(3, '0')},P-${String(Math.ceil(n / 3)).padStart(3, '0')},LOT-20260909,MC-01,ST-01,coating,2026-09-09T0${8 + Math.floor(i / 3)}:${String((i % 3) * 10).padStart(2, '0')}:00,SG-${Math.ceil(n / 3)},180,3.3,1.2,1200,0.8,${output.toFixed(2)},OK`
   })
   return `${header}\n${rows.join('\n')}\n`
 }
