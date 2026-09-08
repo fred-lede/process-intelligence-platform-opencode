@@ -848,6 +848,11 @@ def _handle_report_generate(params: dict) -> dict:
         raise ValueError("dataset_id is required")
 
     df = REGISTRY.get(dataset_id)
+    source_row_count = len(df)
+    report_filter_column = params.get("filter_column")
+    report_filter_value = params.get("filter_value")
+    if report_filter_column:
+        df = _apply_row_filter(df, params)
     meta = REGISTRY.meta(dataset_id)
 
     spec = params.get("spec") or {}
@@ -1112,6 +1117,12 @@ def _handle_report_generate(params: dict) -> dict:
             "format": output_format,
             "report_status": "draft",
             "has_simulation": bool(monte_carlo_result),
+            "grain": {
+                "filter_column": report_filter_column,
+                "filter_value": report_filter_value,
+                "source_row_count": source_row_count,
+                "analyzed_row_count": len(df),
+            },
         },
         created_by=operator,
         parent_ids=[e.entity_id for e in evidence],
