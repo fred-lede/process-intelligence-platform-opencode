@@ -7,13 +7,13 @@ import { writeTextFile, writeFile } from '@tauri-apps/plugin-fs'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { generateReport, listReports, exportReport, deleteReport, type ReportRecord } from '../../lib/engine'
+import { generateReport, listReports, exportReport, deleteReport, runReadiness, type ReportRecord } from '../../lib/engine'
 import { buildReportsContext } from '../../lib/assistantData'
 
 export default function Report() {
   const { t } = useTranslation()
   const [messageApi, contextHolder] = message.useMessage()
-  const { importResult, spec } = useDataPipelineStore()
+  const { importResult, spec, fields } = useDataPipelineStore()
   const { models } = useModelStore()
   const { setContext } = useAssistantContextStore()
 
@@ -72,6 +72,7 @@ export default function Report() {
 
     setGenerating(true)
     try {
+      const readiness = fields.length ? await runReadiness(datasetId, fields.filter(f => f.role === 'input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))) : undefined
       const result = await generateReport({
         project_name: 'Process Analysis Report',
         operator: 'Fred Wang',
@@ -85,6 +86,7 @@ export default function Report() {
         n_simulations: 10000,
         seed: 42,
         enable_anomalies: true,
+        readiness_snapshot: readiness,
       })
 
       if (format === 'html' && result.content) {

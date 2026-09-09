@@ -579,6 +579,7 @@ export interface ReportParams {
   seed?: number
   enable_anomalies?: boolean
   spc_columns?: string[]
+  readiness_snapshot?: unknown
 }
 
 export async function suggestSpecLimits(params: {

@@ -1105,6 +1105,7 @@ def _handle_report_generate(params: dict) -> dict:
         unconfirmed_items=unconfirmed_items,
         extrapolation_summary={},
         version_chain_summary=chain_summary,
+        readiness_snapshot=params.get("readiness_snapshot") or {},
         report_status=report_status,
         approved_by=approved_by,
         approved_at=approved_at,

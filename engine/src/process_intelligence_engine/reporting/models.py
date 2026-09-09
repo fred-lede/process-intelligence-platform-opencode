@@ -58,6 +58,7 @@ class ReportData:
     unconfirmed_items: list[str] = field(default_factory=list)
     extrapolation_summary: dict = field(default_factory=dict)
     version_chain_summary: list[dict] = field(default_factory=list)
+    readiness_snapshot: dict[str, Any] = field(default_factory=dict)
 
     # Report status enforced by gate state (v0.4.1)
     report_status: str = "draft"  # "draft" | "approved"
