@@ -26,8 +26,10 @@ import {
   importDataFile,
   detectFields,
   runQualityChecks,
+  runReadiness,
   type FieldRole,
   type QualityIssue,
+  type ReadinessResult,
 } from '../../lib/engine'
 import { useDataPipelineStore, type FieldAssignment } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
@@ -148,6 +150,14 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [readiness, setReadiness] = useState<ReadinessResult | null>(null)
+
+  useEffect(() => {
+    if (!importResult || !fields.length) return
+    const selected = fields.filter(f => f.role === 'input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))
+    if (!selected.length) return
+    runReadiness(importResult.dataset_id, selected).then(setReadiness).catch(() => setReadiness(null))
+  }, [importResult, fields])
 
   useEffect(() => {
     setContext(
@@ -515,6 +525,19 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
               />
             )}
           </Space>
+        </Card>
+      )}
+
+      {readiness && (
+        <Card title={t('dataImport.readinessTitle')} size="small">
+          <Alert type={readiness.status === 'critical' ? 'error' : readiness.status === 'warning' ? 'warning' : 'success'} showIcon message={t('dataImport.readinessSummary', { status: readiness.status, columns: readiness.columns.length })} />
+          <Table size="small" rowKey="column" pagination={false} dataSource={readiness.columns} columns={[
+            { title: t('dataImport.readinessColumn'), dataIndex: 'column', key: 'column' },
+            { title: t('dataImport.readinessRole'), dataIndex: 'role', key: 'role' },
+            { title: t('dataImport.readinessDistribution'), dataIndex: 'best_distribution', key: 'best_distribution', render: (v: string | null) => v ?? '—' },
+            { title: t('dataImport.readinessStatus'), dataIndex: 'status', key: 'status' },
+            { title: t('dataImport.readinessIssues'), key: 'issues', render: (_: unknown, row: ReadinessResult['columns'][number]) => row.issues.length },
+          ]} />
         </Card>
       )}
     </Space>
