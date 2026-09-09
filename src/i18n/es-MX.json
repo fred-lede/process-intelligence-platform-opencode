@@ -372,6 +372,7 @@
       "placeholder": "Selecciona columnas de entrada"
     },
     "fitButton": "Ajustar modelo",
+    "readinessBlocked": "La preparación de datos encontró problemas bloqueantes. Corríjalos primero en Importación de datos.",
     "fitSuccess": "Modelo ajustado exitosamente",
     "deleteModelSuccess": "Modelo eliminado",
     "confirmDeleteModel": "¿Eliminar este modelo? Esta acción no se puede deshacer.",

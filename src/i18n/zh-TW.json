@@ -370,6 +370,7 @@
       "placeholder": "選擇輸入欄位"
     },
     "fitButton": "開始配適",
+    "readinessBlocked": "資料健檢發現阻擋問題，請先回到資料匯入頁修正。",
     "fitSuccess": "模型配適完成",
     "deleteModelSuccess": "模型已刪除",
     "confirmDeleteModel": "確定刪除此模型？此操作無法復原。",

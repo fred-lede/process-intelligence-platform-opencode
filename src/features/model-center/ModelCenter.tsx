@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, type DoeStatisticsResult } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, runReadiness, type DoeStatisticsResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -83,6 +83,7 @@ export default function ModelCenter() {
   const [autoSelectFeatures, setAutoSelectFeatures] = useState(false)
   const [governance, setGovernance] = useState<string[]>([])
   const [recommended, setRecommended] = useState<string[]>([])
+  const [readiness, setReadiness] = useState<ReadinessResult | null>(null)
 
   useEffect(() => {
     setContext(
@@ -92,6 +93,10 @@ export default function ModelCenter() {
   }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governance, recommended, setContext])
 
   const datasetId = importResult?.dataset_id
+  useEffect(() => {
+    if (!datasetId || !fields.length) return
+    runReadiness(datasetId, fields.filter(f => f.role === 'input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))).then(setReadiness).catch(() => setReadiness(null))
+  }, [datasetId, fields])
   useEffect(() => {
     let active = true
     setGovernance([])
@@ -437,7 +442,8 @@ export default function ModelCenter() {
                 </Space>
               </Card>
             )}
-            <Button type="primary" loading={fitting} onClick={handleFit} disabled={!datasetId || !target || selectedInputs.length === 0}>
+            {readiness?.status === 'critical' && <Alert type="error" showIcon message={t('modelCenter.readinessBlocked')} />}
+            <Button type="primary" loading={fitting} onClick={handleFit} disabled={!datasetId || !target || selectedInputs.length === 0 || readiness?.status === 'critical'}>
               {t('modelCenter.fitButton')}
             </Button>
           </Space>

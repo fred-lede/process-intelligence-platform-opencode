@@ -370,6 +370,7 @@
       "placeholder": "Select input columns"
     },
     "fitButton": "Fit Model",
+    "readinessBlocked": "Data readiness found blocking issues. Fix them on the Data Import page first.",
     "fitSuccess": "Model fitted successfully",
     "deleteModelSuccess": "Model deleted",
     "confirmDeleteModel": "Delete this model? This cannot be undone.",
