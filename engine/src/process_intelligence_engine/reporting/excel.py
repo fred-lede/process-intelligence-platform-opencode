@@ -78,6 +78,12 @@ class ExcelReportGenerator(ReportGenerator):
                 for j, val in enumerate(matrix[i]):
                     row.append(val)
                 ws4.append(row)
+
+        if self.data.sensitivity_effects.get("items"):
+            ws_sens = wb.create_sheet("敏感度與效應量")
+            ws_sens.append(["輸入欄位", "敏感度", "效應量"])
+            for item in self.data.sensitivity_effects["items"]:
+                ws_sens.append([item.get("input", ""), item.get("sensitivity", ""), item.get("effect_size", "")])
         
         # Sheet 5: Recommendations
         if self.data.recommendations:
