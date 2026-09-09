@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Button, Space, Alert, message, Tag } from 'antd'
-import { FileTextOutlined, DownloadOutlined } from '@ant-design/icons'
+import { Card, Button, Space, Alert, message, Tag, List, Popconfirm, Typography } from 'antd'
+import { FileTextOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, writeFile } from '@tauri-apps/plugin-fs'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { generateReport, listReports, exportReport, type ReportRecord } from '../../lib/engine'
+import { generateReport, listReports, exportReport, deleteReport, type ReportRecord } from '../../lib/engine'
 import { buildReportsContext } from '../../lib/assistantData'
 
 export default function Report() {
@@ -26,6 +26,14 @@ export default function Report() {
       setReportHtml(result.content)
       setLastFormat('html')
     } catch (e) { messageApi.error(String(e)) }
+  }
+  const removeSaved = async (id: string) => {
+    try {
+      await deleteReport(id)
+      setSavedReports(reports => reports.filter(report => report.report_id !== id))
+      if (reportHtml && savedReports.find(report => report.report_id === id)) setReportHtml(null)
+      messageApi.success(t('report.deleteSuccess'))
+    } catch (e) { messageApi.error(t('report.deleteError')) }
   }
   const [reportHtml, setReportHtml] = useState<string | null>(null)
   const [lastFormat, setLastFormat] = useState<'html' | 'pdf' | 'excel' | null>(null)
@@ -107,7 +115,18 @@ export default function Report() {
       {contextHolder}
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <Card title={t('report.title')} extra={<FileTextOutlined />}>
-        <Space wrap>{savedReports.map(r => <Button key={r.report_id} onClick={() => void openSaved(r.report_id)}>{r.project_name} · {r.report_id.slice(0, 12)}{r.grain?.filter_column ? ` · ${r.grain.filter_column}=${r.grain.filter_value}` : ''}</Button>)}</Space>
+          {savedReports.length > 0 && <Card type="inner" title={t('report.savedReports')} style={{ marginBottom: 16 }}>
+            <List
+              size="small"
+              dataSource={savedReports}
+              renderItem={r => <List.Item actions={[
+                <Button key="open" type="link" onClick={() => void openSaved(r.report_id)}>{t('report.open')}</Button>,
+                <Popconfirm key="delete" title={t('report.deleteConfirm')} onConfirm={() => void removeSaved(r.report_id)} okText={t('common.delete')} cancelText={t('common.cancel')}>
+                  <Button type="link" danger icon={<DeleteOutlined />}>{t('common.delete')}</Button>
+                </Popconfirm>,
+              ]}><List.Item.Meta title={r.project_name} description={<Typography.Text type="secondary">{r.report_id.slice(0, 12)} · {r.format.toUpperCase()} · {new Date(r.timestamp).toLocaleString()}{r.grain?.filter_column ? ` · ${r.grain.filter_column}=${r.grain.filter_value}` : ''}</Typography.Text>} /></List.Item>}
+            />
+          </Card>}
           <Space direction="vertical" style={{ width: '100%' }}>
             <Alert
               type="info"

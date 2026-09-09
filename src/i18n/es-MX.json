@@ -38,6 +38,7 @@
     "error": "Error",
     "success": "Éxito",
     "refresh": "Actualizar"
+    ,"delete": "Eliminar"
   },
   "engine": {
     "online": "Motor de análisis en línea",
@@ -518,6 +519,11 @@
     "resultLabel": "Resultado"
   },
   "report": {
+    "savedReports": "Informes generados",
+    "open": "Abrir",
+    "deleteConfirm": "¿Eliminar este informe?",
+    "deleteSuccess": "Informe eliminado",
+    "deleteError": "No se pudo eliminar el informe",
     "title": "Informe",
     "noData": "Importa datos para generar un informe.",
     "info": "Generar informe de análisis",

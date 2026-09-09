@@ -44,6 +44,10 @@ class ReportRegistry:
         with self._lock:
             return sorted(self._records.values(), key=lambda r: r["timestamp"], reverse=True)
 
+    def delete(self, report_id: str) -> bool:
+        with self._lock:
+            return self._records.pop(report_id, None) is not None
+
     def _clear(self) -> None:
         """Test helper: wipe all records."""
         with self._lock:

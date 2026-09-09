@@ -605,6 +605,10 @@ export async function listReports(): Promise<{ reports: ReportRecord[] }> {
   return engineCall<{ reports: ReportRecord[] }>('report/list', {})
 }
 
+export async function deleteReport(reportId: string): Promise<{ deleted: boolean }> {
+  return engineCall<{ deleted: boolean }>('report/delete', { report_id: reportId })
+}
+
 // --- Phase 6: Auth & Audit -----------------------------------------------
 
 export type UserRole = 'admin' | 'engineer' | 'reviewer' | 'viewer'

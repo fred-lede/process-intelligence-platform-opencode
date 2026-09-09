@@ -1187,6 +1187,18 @@ def _handle_report_list(params: dict) -> dict:
     return {"reports": REPORT_REGISTRY.list()}
 
 
+def _handle_report_delete(params: dict) -> dict:
+    report_id = params["report_id"]
+    entity = _VERSION_CHAIN.get_entity(report_id)
+    if entity is None or entity.entity_type != "report":
+        raise ValueError("Expected report ID")
+    deleted = REPORT_REGISTRY.delete(report_id)
+    path = _VERSION_CHAIN._project_root / "reports" / f"{report_id}.json"
+    if path.exists():
+        path.unlink()
+    return {"deleted": deleted}
+
+
 def _spec_serializable(spec: dict, lsl, usl) -> dict:
     """Normalize spec into a JSON-serializable form, merging explicit LSL/USL."""
     out: dict = {}
@@ -1947,6 +1959,8 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "report/list":
         return _handle_report_list(params)
+    if method == "report/delete":
+        return _handle_report_delete(params)
     if method == "report/export":
         return _handle_report_export(params)
 
@@ -2614,6 +2628,8 @@ def _reload_chain_for_project(root: str) -> dict:
     for item in chain.get_chain_summary():
         if item["entity_type"] == "report":
             entity = chain.get_entity(item["entity_id"])
+            if not (chain._project_root / "reports" / f"{entity.entity_id}.json").exists():
+                continue
             reports.register(entity.metadata.get("project_name", "Report"), entity.created_by,
                                      entity.metadata.get("format", "html"), entity.entity_id)
     ui_path = chain._project_root / "registry" / "ui_state.json"

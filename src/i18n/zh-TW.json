@@ -38,6 +38,7 @@
     "error": "錯誤",
     "success": "成功",
     "refresh": "重新整理"
+    ,"delete": "刪除"
   },
   "engine": {
     "online": "分析引擎已連線",
@@ -516,6 +517,11 @@
     "resultLabel": "結果"
   },
   "report": {
+    "savedReports": "已生成報告",
+    "open": "開啟",
+    "deleteConfirm": "確定要刪除這份報告嗎？",
+    "deleteSuccess": "報告已刪除",
+    "deleteError": "刪除報告失敗",
     "title": "報告",
     "noData": "請先匯入資料才能產生報告。",
     "info": "產生分析報告",

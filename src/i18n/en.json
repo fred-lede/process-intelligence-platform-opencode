@@ -38,6 +38,7 @@
     "error": "Error",
     "success": "Success",
     "refresh": "Refresh"
+    ,"delete": "Delete"
   },
   "engine": {
     "online": "Analysis Engine Online",
@@ -516,6 +517,11 @@
     "resultLabel": "Result"
   },
   "report": {
+    "savedReports": "Generated Reports",
+    "open": "Open",
+    "deleteConfirm": "Delete this report?",
+    "deleteSuccess": "Report deleted",
+    "deleteError": "Failed to delete report",
     "title": "Report",
     "noData": "Import data to generate a report.",
     "info": "Generate analysis report",
