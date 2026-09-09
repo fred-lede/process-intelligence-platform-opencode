@@ -210,6 +210,9 @@
     "qualityCheck": "檢查項目",
     "qualitySeverity": "嚴重度",
     "qualityMessage": "問題",
+    "severity": { "critical": "阻擋", "warning": "警告", "info": "資訊" },
+    "qualityChecks": { "constant_column": "常數欄位", "time_order": "時間順序", "unbalanced_okng": "OK/NG 不平衡", "unit_mixing": "單位混用", "missing_spec": "缺少規格" },
+    "qualityMessages": { "constant_column": "欄位「{{column}}」為常數，沒有分析資訊。", "time_order": "欄位「{{column}}」不是時間順序。", "unbalanced_okng": "欄位「{{column}}」的 OK/NG 比例不平衡。", "unit_mixing": "欄位「{{column}}」包含混用單位。", "missing_spec": "輸出欄位「{{column}}」尚未設定規格界限。" },
     "qualitySummary": "品質檢查 {{rows}} 列 × {{cols}} 欄，共發現 {{issues}} 個問題。",
     "qualityClean": "未發現資料品質問題。"
   },

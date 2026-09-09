@@ -288,6 +288,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
       dataIndex: 'check',
       key: 'check',
       width: 180,
+      render: (check: string) => t(`dataImport.qualityChecks.${check}`, { defaultValue: check }),
     },
     {
       title: t('dataImport.column'),
@@ -303,11 +304,11 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
       width: 120,
       render: (sev: QualityIssue['severity']) => (
         <Tag color={sev === 'critical' ? 'red' : sev === 'warning' ? 'orange' : 'blue'}>
-          {sev}
+          {t(`dataImport.severity.${sev}`, { defaultValue: sev })}
         </Tag>
       ),
     },
-    { title: t('dataImport.qualityMessage'), dataIndex: 'message', key: 'message' },
+    { title: t('dataImport.qualityMessage'), dataIndex: 'message', key: 'message', render: (msg: string, issue: QualityIssue) => t(`dataImport.qualityMessages.${issue.check}`, { column: issue.column ?? '—', defaultValue: msg }) },
   ]
 
   const roleLabel = (role: FieldRole) => t(`dataImport.role.${role}`)

@@ -210,6 +210,9 @@
     "qualityCheck": "Check",
     "qualitySeverity": "Severity",
     "qualityMessage": "Issue",
+    "severity": { "critical": "Blocking", "warning": "Warning", "info": "Info" },
+    "qualityChecks": { "constant_column": "Constant column", "time_order": "Time order", "unbalanced_okng": "Unbalanced OK/NG", "unit_mixing": "Unit mixing", "missing_spec": "Missing specification" },
+    "qualityMessages": { "constant_column": "Column '{{column}}' is constant and carries no analytical information.", "time_order": "Column '{{column}}' is not in chronological order.", "unbalanced_okng": "Column '{{column}}' has an unbalanced OK/NG ratio.", "unit_mixing": "Column '{{column}}' mixes units.", "missing_spec": "Output column '{{column}}' has no specification limits set." },
     "qualitySummary": "Quality check on {{rows}} rows × {{cols}} columns found {{issues}} issue(s).",
     "qualityClean": "No quality issues detected."
   },

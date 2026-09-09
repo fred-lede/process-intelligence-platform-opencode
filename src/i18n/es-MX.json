@@ -212,6 +212,9 @@
     "qualityCheck": "Verificación",
     "qualitySeverity": "Severidad",
     "qualityMessage": "Problema",
+    "severity": { "critical": "Bloqueante", "warning": "Advertencia", "info": "Información" },
+    "qualityChecks": { "constant_column": "Columna constante", "time_order": "Orden temporal", "unbalanced_okng": "OK/NG desequilibrado", "unit_mixing": "Mezcla de unidades", "missing_spec": "Especificación faltante" },
+    "qualityMessages": { "constant_column": "La columna '{{column}}' es constante y no aporta información analítica.", "time_order": "La columna '{{column}}' no está en orden cronológico.", "unbalanced_okng": "La columna '{{column}}' tiene una proporción OK/NG desequilibrada.", "unit_mixing": "La columna '{{column}}' mezcla unidades.", "missing_spec": "La columna de salida '{{column}}' no tiene límites de especificación." },
     "qualitySummary": "La verificación de calidad en {{rows}} filas × {{cols}} columnas encontró {{issues}} problema(s).",
     "qualityClean": "No se detectaron problemas de calidad."
   },
