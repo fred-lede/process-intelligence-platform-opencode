@@ -94,10 +94,17 @@ def recommend_experiments(
             "key": "recNewFactor",
         })
 
-    # Generate summary (use first rec's key for display)
+    # Generate a human-readable summary; never expose internal translation keys
     if recommendations:
         first = recommendations[0]
-        summary = f"{first['key']}: {first.get('factors', [])}"
+        labels = {
+            "recReplicate": "Replicate center points to estimate pure error.",
+            "recNewFactor": "Consider adding missing input factors.",
+            "recRangeExpansion": "Consider expanding the factor range.",
+        }
+        summary = labels.get(first["key"], "Model analysis produced an experiment recommendation.")
+        if first.get("factors"):
+            summary += f" Factors: {', '.join(first['factors'])}."
     else:
         summary = "Model analysis complete. No critical issues detected."
 
