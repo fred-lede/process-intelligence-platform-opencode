@@ -252,17 +252,21 @@ export function buildSpcContext(result: SPCAnalysisResult | null): string {
   return lines.join('\n')
 }
 
-export function buildMonteCarloContext(result: MonteCarloResult | null): string {
+export function buildMonteCarloContext(result: MonteCarloResult | null, spec?: { lsl?: number | null; usl?: number | null; target?: number | null }): string {
   if (!result) return ''
   const p = result.percentiles
   const top = (result.anomaly_rankings || []).slice(0, 5)
   const riskLevel =
     result.ng_probability > 0.05 ? 'HIGH' : result.ng_probability > 0.01 ? 'MEDIUM' : result.ng_probability > 0.001 ? 'MODERATE' : 'LOW'
   const lines = [
-    `Monte Carlo (${result.n_simulations} simulations): NG probability=${pct(result.ng_probability)} (${riskLevel}), ` +
+    `Monte Carlo (${result.n_simulations} simulations): NG probability=${pct(result.ng_probability, 2)} (${riskLevel}), ` +
       `NG count=${result.ng_count}, output mean=${num(result.output_mean)}, std=${num(result.output_std)}, median=${num(result.output_median)}.`,
     `Percentiles: p1=${num(p.p1)}, p5=${num(p.p5)}, p50=${num(p.p50)}, p95=${num(p.p95)}, p99=${num(p.p99)}.`,
   ]
+  if (spec?.lsl != null || spec?.usl != null || spec?.target != null) {
+    lines.push(`Specification limits: LSL=${num(spec.lsl)}, USL=${num(spec.usl)}, Target=${num(spec.target)}.`)
+  }
+  lines.push(`Multi-anomaly NG count=${result.multi_anomaly_ng}.`)
   if (top.length) {
     lines.push(`Top anomaly risk contributors: ${top.map((a) => `${a.name} (${pct(a.ng_contribution)})`).join(', ')}.`)
   }
@@ -271,6 +275,9 @@ export function buildMonteCarloContext(result: MonteCarloResult | null): string 
     lines.push(
       `Predicted capability (simulation): Pp=${num(result.capability.pp)}, Ppk=${num(result.capability.ppk)} (${ppkStatus}), sigma_overall=${num(result.capability.sigma_overall)}.`,
     )
+    if (result.capability.ppk < 0 && spec?.lsl != null) {
+      lines.push(`Capability diagnosis: Ppk is negative; output center is below the lower specification limit (LSL=${num(spec.lsl)}), indicating centering/alignment is the primary issue.`)
+    }
   }
   return lines.join('\n')
 }

@@ -73,8 +73,8 @@ export default function MonteCarlo() {
   }, [])
 
   useEffect(() => {
-    setContext('monteCarlo', buildMonteCarloContext(result))
-  }, [result, setContext])
+    setContext('monteCarlo', buildMonteCarloContext(result, spec ?? undefined))
+  }, [result, spec, setContext])
 
   const handleRun = async () => {
     if (!importResult || !selectedModel) return
