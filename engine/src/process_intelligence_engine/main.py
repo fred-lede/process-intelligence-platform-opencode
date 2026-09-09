@@ -1599,7 +1599,7 @@ def _handle_spc_batch_analyze(params: dict) -> dict:
 
 
 def _handle_spec_suggest(params: dict) -> dict:
-    """Suggest LSL/USL based on mean ± 3σ of a column."""
+    """Suggest LSL/USL and a centered target based on mean ± 3σ."""
     df = REGISTRY.get(params["dataset_id"])
     column = params["column"]
     if column not in df.columns:
@@ -1617,6 +1617,7 @@ def _handle_spec_suggest(params: dict) -> dict:
         "column": column,
         "mean": round(mean, 6),
         "std": round(std, 6),
+        "target": round(mean, 6),
         "lsl": round(mean - 3 * std, 6),
         "usl": round(mean + 3 * std, 6),
     }

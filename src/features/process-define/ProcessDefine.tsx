@@ -473,6 +473,7 @@ export default function ProcessDefine() {
                   try {
                     const r = await suggestSpecLimits({ dataset_id: importResult.dataset_id, column: outputField })
                     setLsl(r.lsl)
+                    setTarget(r.target)
                     setUsl(r.usl)
                   } catch {
                     // ignore — user can set manually

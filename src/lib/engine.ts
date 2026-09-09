@@ -602,7 +602,7 @@ export interface ReportParams {
 export async function suggestSpecLimits(params: {
   dataset_id: string
   column: string
-}): Promise<{ success: boolean; column: string; mean: number; std: number; lsl: number; usl: number }> {
+}): Promise<{ success: boolean; column: string; mean: number; std: number; target: number; lsl: number; usl: number }> {
   return engineCall('spec/suggest', params as unknown as Record<string, unknown>)
 }
 
