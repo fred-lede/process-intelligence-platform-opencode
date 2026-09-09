@@ -149,8 +149,15 @@ export default function Exploration() {
 
 
   useEffect(() => {
-    setContext('exploration', buildExplorationContext({ fits, series, tsFeatures, grrResult, filterColumn: nodeFilterColumn, filterValue: nodeFilterValue }))
-  }, [fits, series, tsFeatures, grrResult, nodeFilterColumn, nodeFilterValue, setContext])
+    setContext('exploration', buildExplorationContext({
+      fits: activeTab === 'distribution' ? fits : null,
+      series: activeTab === 'trend' ? series : null,
+      tsFeatures: activeTab === 'timeseries' ? tsFeatures : null,
+      grrResult: activeTab === 'grr' ? grrResult : null,
+      filterColumn: nodeFilterColumn,
+      filterValue: nodeFilterValue,
+    }))
+  }, [activeTab, fits, series, tsFeatures, grrResult, nodeFilterColumn, nodeFilterValue, setContext])
 
   const filterArgs =
     nodeFilterColumn && nodeFilterValue
