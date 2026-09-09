@@ -597,6 +597,8 @@ export interface ReportRecord {
   operator: string
   format: string
   timestamp: string
+  dataset_id?: string
+  grain?: { filter_column?: string; filter_value?: string; source_row_count?: number; analyzed_row_count?: number }
 }
 
 export async function listReports(): Promise<{ reports: ReportRecord[] }> {

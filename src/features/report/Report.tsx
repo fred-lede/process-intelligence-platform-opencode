@@ -107,7 +107,7 @@ export default function Report() {
       {contextHolder}
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <Card title={t('report.title')} extra={<FileTextOutlined />}>
-          <Space wrap>{savedReports.map(r => <Button key={r.report_id} onClick={() => void openSaved(r.report_id)}>{r.project_name} · {r.report_id.slice(0, 12)}</Button>)}</Space>
+        <Space wrap>{savedReports.map(r => <Button key={r.report_id} onClick={() => void openSaved(r.report_id)}>{r.project_name} · {r.report_id.slice(0, 12)}{r.grain?.filter_column ? ` · ${r.grain.filter_column}=${r.grain.filter_value}` : ''}</Button>)}</Space>
           <Space direction="vertical" style={{ width: '100%' }}>
             <Alert
               type="info"
