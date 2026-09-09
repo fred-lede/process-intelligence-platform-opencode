@@ -87,9 +87,9 @@ export default function ModelCenter() {
   useEffect(() => {
     setContext(
       'modelCenter',
-      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats }),
+      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governanceWarnings: governance, recommendedInputs: recommended }),
     )
-  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, setContext])
+  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governance, recommended, setContext])
 
   const datasetId = importResult?.dataset_id
   useEffect(() => {
@@ -340,7 +340,7 @@ export default function ModelCenter() {
         {error && <Alert type="error" showIcon message={error} closable onClose={clearError} />}
 
         <Card title={t('modelCenter.fitTitle')} extra={<ExperimentOutlined />}>
-          {governance.map((warning, i) => <Alert key={i} type="warning" showIcon message={warning} />)}
+          {governance.map((warning, i) => <Alert key={i} type="warning" showIcon message={warning.includes('Multicollinearity warning:') ? t('modelCenter.multicollinearityWarning', { warning: warning.replace('Multicollinearity warning: ', '') }) : warning} />)}
           <Space>{recommended.map(name => <Tag key={name}>{name}</Tag>)}</Space>
           <Space direction="vertical" style={{ width: '100%' }}>
             <div>
@@ -859,7 +859,7 @@ export default function ModelCenter() {
                   <strong>{t('modelCenter.residualDiagnostics')}:</strong>
                   <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
                     DW: {fullValidation.residual_analysis.durbin_watson.statistic.toFixed(3)}
-                    {' '}({t(`modelCenter.${fullValidation.residual_analysis.durbin_watson.interpretation}`)})
+                    {' '}({t(fullValidation.residual_analysis.durbin_watson.interpretation.startsWith('modelCenter.') ? fullValidation.residual_analysis.durbin_watson.interpretation : `modelCenter.${fullValidation.residual_analysis.durbin_watson.interpretation}`)})
                   </div>
                 </div>
                 <div>
@@ -872,9 +872,9 @@ export default function ModelCenter() {
                       message={
                         <span>
                           <Tag color={rec.priority === 'high' ? 'red' : rec.priority === 'medium' ? 'orange' : 'default'}>
-                            {rec.priority}
+                            {t(`modelCenter.priority${rec.priority.charAt(0).toUpperCase()}${rec.priority.slice(1)}`)}
                           </Tag>
-                          {t(`modelCenter.${rec.key}` as any, {
+                          {t((rec.key.includes('.') ? rec.key : `modelCenter.${rec.key}`) as any, {
                             factorA: rec.factors?.[0] ?? '',
                             factorB: rec.factors?.[1] ?? '',
                             strength: rec.strength?.toFixed(2) ?? '',

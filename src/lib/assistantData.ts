@@ -152,6 +152,8 @@ export function buildModelCenterContext(opts: {
   validationResult: ValidationResult | null
   fullValidation: FullValidationResult | null
   doeStats: DoeStatisticsResult | null
+  governanceWarnings?: string[]
+  recommendedInputs?: string[]
 }): string {
   const parts: string[] = []
   const interactions = opts.interactions
@@ -206,7 +208,13 @@ export function buildModelCenterContext(opts: {
         .map((m) => `${m.model_type} (R2=${num(m.cv_metrics.mean_r2, 3)}, score=${num(m.score, 1)})`)
         .join(' | ')}.`,
     )
+    const dw = opts.fullValidation.residual_analysis?.durbin_watson
+    if (dw) parts.push(`Residual diagnostics: Durbin-Watson=${num(dw.statistic, 3)}, interpretation=${dw.interpretation}.`)
+    const recs = opts.fullValidation.experiment_recommendations?.recommendations ?? []
+    if (recs.length) parts.push(`Experiment recommendations: ${recs.map((r) => `${r.priority}:${r.key} (${(r.factors ?? []).join(', ')})`).join('; ')}.`)
   }
+  if (opts.governanceWarnings?.length) parts.push(`Governance warnings: ${opts.governanceWarnings.join('; ')}.`)
+  if (opts.recommendedInputs?.length) parts.push(`Recommended inputs: ${opts.recommendedInputs.join(', ')}.`)
   return parts.join('\n')
 }
 
