@@ -803,6 +803,10 @@ def _handle_validation_full(params: dict) -> dict:
 
     comparison = compare_models(fits, df, k)
 
+    if not comparison.get("models"):
+        reasons = "; ".join(item.get("reason", "unsupported model") for item in comparison.get("skipped", []))
+        raise ValueError(f"No compatible models to validate{(': ' + reasons) if reasons else ''}")
+
     best_fit = next(f for f in fits if f.model_id == comparison["best_model_id"])
     residual_analysis = analyze_residuals(best_fit, df)
 

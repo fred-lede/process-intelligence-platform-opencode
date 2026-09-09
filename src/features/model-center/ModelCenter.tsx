@@ -282,8 +282,8 @@ export default function ModelCenter() {
     try {
       const result = await runFullValidation({ dataset_id: datasetId, model_ids: modelIds })
       setFullValidation(result)
-    } catch {
-      messageApi.error(t('modelCenter.fullValidationError'))
+    } catch (err) {
+      messageApi.error(`${t('modelCenter.fullValidationError')}: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setFullValidationLoading(false)
     }
