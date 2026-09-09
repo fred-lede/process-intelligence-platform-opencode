@@ -243,7 +243,7 @@ export function buildModelCenterContext(opts: {
 
 export function buildSpcContext(result: SPCAnalysisResult | null): string {
   if (!result || !result.success) return ''
-  const cl = result.control_limits
+  const cl = result.control_limits ?? {}
   const cap = result.capability
   const lines = [
     `SPC chart: ${result.chart_type}. Violations found: ${result.violations.length} ` +

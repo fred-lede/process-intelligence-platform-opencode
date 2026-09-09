@@ -934,7 +934,7 @@ export interface SPCCapabilityResult {
 }
 
 function flattenControlLimits(res: SPCAnalysisResult): SPCAnalysisResult {
-  const raw = res.control_limits as unknown as Record<string, Record<string, number | undefined>>
+  const raw = (res.control_limits ?? {}) as unknown as Record<string, Record<string, number | undefined>>
   const flat: SPCCtrlLimits = { chart_type: res.chart_type }
   const isImr = res.chart_type === 'i-mr'
   for (const [group, vals] of Object.entries(raw)) {
