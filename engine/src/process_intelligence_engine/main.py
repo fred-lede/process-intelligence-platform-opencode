@@ -38,6 +38,7 @@ from process_intelligence_engine.data.distribution import fit_best_distribution
 from process_intelligence_engine.data.field_detector import detect_fields
 from process_intelligence_engine.data.importer import import_file
 from process_intelligence_engine.data.quality import run_quality_checks
+from process_intelligence_engine.data.readiness import analyze_readiness
 from process_intelligence_engine.data.grr import analyze_grr
 from process_intelligence_engine.data.deidentify import (
     generate_upload_preview,
@@ -501,6 +502,11 @@ def _handle_quality(params: dict) -> dict:
             for i in report.issues
         ],
     }
+
+
+def _handle_readiness(params: dict) -> dict:
+    df = REGISTRY.get(params["dataset_id"])
+    return analyze_readiness(df, params.get("fields", []))
 
 
 def _df_from_rows(params: dict) -> pd.DataFrame:
@@ -1879,6 +1885,9 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "data/quality":
         return _handle_quality(params)
+
+    if method == "data/readiness":
+        return _handle_readiness(params)
 
     if method == "data/distribution":
         return _handle_distribution(params)

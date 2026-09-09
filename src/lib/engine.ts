@@ -148,6 +148,17 @@ export async function runQualityChecks(params: {
   return engineCall<QualityReport>('data/quality', params as unknown as Record<string, unknown>)
 }
 
+export interface ReadinessColumn {
+  column: string; role: 'input' | 'output'; data_type: string; row_count: number; valid_count: number; missing_count: number; unique_count: number
+  summary: { min: number | null; max: number | null; mean: number | null; std: number }
+  best_distribution: string | null; distribution_fits: Array<{ name: string; aic: number; bic: number; ks_p_value: number }>
+  issues: Array<{ severity: string; code: string; message: string }>; status: string
+}
+export interface ReadinessResult { status: string; row_count: number; columns: ReadinessColumn[] }
+export async function runReadiness(dataset_id: string, fields: Array<{ name: string; role: string }>): Promise<ReadinessResult> {
+  return engineCall<ReadinessResult>('data/readiness', { dataset_id, fields })
+}
+
 /** A single registered data asset (an imported dataset in the engine registry). */
 export interface DataAsset {
   dataset_id: string
