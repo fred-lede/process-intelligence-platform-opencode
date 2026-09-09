@@ -26,6 +26,11 @@ function pct(n: number | null | undefined, digits = 1): string {
   return `${(n * 100).toFixed(digits)}%`
 }
 
+function pctValue(n: number | null | undefined, digits = 1): string {
+  if (n === null || n === undefined || Number.isNaN(n)) return 'N/A'
+  return `${n.toFixed(digits)}%`
+}
+
 export function buildDataImportContext(opts: {
   fields: FieldAssignment[]
   spec: SpecConfiguration | null
@@ -57,6 +62,7 @@ export function buildExplorationContext(opts: {
   filterValue?: string
   trendControlLimits?: { ucl?: number; lcl?: number }
   timeSeriesColumn?: string
+  timeSeriesTimeColumn?: string
   grrMeasurementColumn?: string
   grrPartColumn?: string
   grrOperatorColumn?: string
@@ -82,19 +88,57 @@ export function buildExplorationContext(opts: {
         `numeric=${opts.series.numeric ? 'yes' : 'no'}, min=${num(min)}, max=${num(max)}, ` +
         `first=${num(first)}, last=${num(last)}, direction=${direction}.`,
     )
-    if (opts.trendControlLimits) parts.push(`Control limits: UCL=${num(opts.trendControlLimits.ucl)}, LCL=${num(opts.trendControlLimits.lcl)}.`)
+    if (numeric.length >= 2) {
+      let rising = 1
+      let falling = 1
+      let maxRising = 1
+      let maxFalling = 1
+      for (let i = 1; i < numeric.length; i += 1) {
+        rising = numeric[i] > numeric[i - 1] ? rising + 1 : 1
+        falling = numeric[i] < numeric[i - 1] ? falling + 1 : 1
+        maxRising = Math.max(maxRising, rising)
+        maxFalling = Math.max(maxFalling, falling)
+      }
+      parts.push(`Longest consecutive runs: rising=${maxRising} points, falling=${maxFalling} points.`)
+    }
+    if (opts.trendControlLimits) {
+      const { ucl, lcl } = opts.trendControlLimits
+      const violations = numeric.flatMap((value, index) => {
+        if (ucl != null && value > ucl) return [`index ${index}=${num(value)} (above UCL by ${num(value - ucl)})`]
+        if (lcl != null && value < lcl) return [`index ${index}=${num(value)} (below LCL by ${num(lcl - value)})`]
+        return []
+      })
+      parts.push(`Statistical control limits: UCL=${num(ucl)}, LCL=${num(lcl)}.`)
+      parts.push(violations.length ? `Control-limit violations (${violations.length}): ${violations.join('; ')}.` : 'Control-limit violations: none.')
+    }
   }
   if (opts.tsFeatures) {
+    const preview = opts.tsFeatures.preview
+    const baseColumn = opts.timeSeriesColumn
+    const baseValues = baseColumn
+      ? preview.map((row) => row[baseColumn]).filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+      : []
+    const timeValues = opts.timeSeriesTimeColumn
+      ? preview.map((row) => row[opts.timeSeriesTimeColumn!]).filter((value) => value != null).map(String)
+      : []
+    const featureSummaries = opts.tsFeatures.feature_columns.slice(0, 12).map((column) => {
+      const values = preview.map((row) => row[column]).filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+      return `${column}: n=${values.length}, min=${num(values.length ? Math.min(...values) : null)}, max=${num(values.length ? Math.max(...values) : null)}`
+    })
     parts.push(
-      `Time-series features for "${opts.timeSeriesColumn ?? 'selected value column'}": ` +
-        `${opts.tsFeatures.feature_columns.length} features across ${opts.tsFeatures.n_rows} rows.`,
+      `Time-series analysis for time column "${opts.timeSeriesTimeColumn ?? 'selected time column'}" and value column "${opts.timeSeriesColumn ?? 'selected value column'}": ` +
+        `${opts.tsFeatures.feature_columns.length} features across ${opts.tsFeatures.n_rows} rows, ` +
+        `preview=${preview.length} rows, valid values=${baseValues.length}, ` +
+        `range=${timeValues.length ? `${timeValues[0]} to ${timeValues[timeValues.length - 1]}` : 'N/A'}, ` +
+        `value min=${num(baseValues.length ? Math.min(...baseValues) : null)}, max=${num(baseValues.length ? Math.max(...baseValues) : null)}. ` +
+        `Feature summaries: ${featureSummaries.join('; ')}.`,
     )
   }
   if (opts.grrResult) {
     parts.push(
       `GRR (Gage R&R) using measurement="${opts.grrMeasurementColumn ?? 'selected measurement column'}", ` +
         `part="${opts.grrPartColumn ?? 'selected part column'}", operator="${opts.grrOperatorColumn ?? 'selected operator column'}": ` +
-        `%GRR=${pct(opts.grrResult.pct_grr)}, %part=${pct(opts.grrResult.pct_part)}, ` +
+        `%GRR=${pctValue(opts.grrResult.pct_grr)}, %part=${pctValue(opts.grrResult.pct_part)}, ` +
         `verdict=${opts.grrResult.verdict}. Reason: ${opts.grrResult.verdict_reason}.`,
     )
   }

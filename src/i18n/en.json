@@ -847,6 +847,11 @@
     "noData": "Select measurement, part, and operator columns from imported data.",
     "analyzeSuccess": "GRR analysis complete",
     "analyzeError": "Failed to analyze GRR",
+    "repeatabilityWarning": "Repeatability (equipment variation) dominates. Consider improving measurement fixture stability.",
+    "reproducibilityWarning": "Reproducibility (operator variation) is significant. Consider additional operator training.",
+    "reasonAcceptable": "%GRR = {{pct}}% (< 10%): Measurement system is acceptable.",
+    "reasonMarginal": "%GRR = {{pct}}% (10–30%): Acceptable depending on application, cost, and importance.",
+    "reasonUnacceptable": "%GRR = {{pct}}% (≥ 30%): Measurement system needs improvement.",
     "column": {
       "verdict": "Verdict",
       "pctGRR": "%GRR",

@@ -843,6 +843,11 @@
     "noData": "Selecciona columnas de medición, pieza y operador de los datos importados.",
     "analyzeSuccess": "Análisis GRR completado",
     "analyzeError": "Error al analizar GRR",
+    "repeatabilityWarning": "Domina la repetibilidad (variación del equipo). Considere mejorar la estabilidad del dispositivo de medición.",
+    "reproducibilityWarning": "La reproducibilidad (variación del operador) es significativa. Considere capacitación adicional del operador.",
+    "reasonAcceptable": "%GRR = {{pct}}% (< 10%): El sistema de medición es aceptable.",
+    "reasonMarginal": "%GRR = {{pct}}% (10–30%): La aceptación depende de la aplicación, el costo y la importancia.",
+    "reasonUnacceptable": "%GRR = {{pct}}% (≥ 30%): El sistema de medición necesita mejoras.",
     "column": {
       "verdict": "Veredicto",
       "pctGRR": "%GRR",

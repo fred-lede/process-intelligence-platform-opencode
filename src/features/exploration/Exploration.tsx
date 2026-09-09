@@ -162,11 +162,12 @@ export default function Exploration() {
       filterValue: nodeFilterValue,
       trendControlLimits: activeTab === 'trend' ? trendCtrl ?? undefined : undefined,
       timeSeriesColumn: activeTab === 'timeseries' ? tsColumn : undefined,
+      timeSeriesTimeColumn: activeTab === 'timeseries' ? timeColumn : undefined,
       grrMeasurementColumn: activeTab === 'grr' ? grrMeasurementCol : undefined,
       grrPartColumn: activeTab === 'grr' ? grrPartCol : undefined,
       grrOperatorColumn: activeTab === 'grr' ? grrOperatorCol : undefined,
     }))
-  }, [activeTab, fits, series, tsFeatures, grrResult, grrMeasurementCol, grrPartCol, grrOperatorCol, nodeFilterColumn, nodeFilterValue, setContext])
+  }, [activeTab, fits, series, tsFeatures, timeColumn, tsColumn, grrResult, grrMeasurementCol, grrPartCol, grrOperatorCol, nodeFilterColumn, nodeFilterValue, setContext])
 
   const filterArgs =
     nodeFilterColumn && nodeFilterValue
@@ -725,10 +726,15 @@ export default function Exploration() {
               type="warning"
               showIcon
               message={t('grr.warnings')}
-              description={grrResult.warnings.map((w, i) => <div key={i} style={{ fontSize: 12 }}>{w}</div>)}
+              description={grrResult.warnings.map((w, i) => <div key={i} style={{ fontSize: 12 }}>{w.includes('Repeatability (equipment variation) dominates') ? t('grr.repeatabilityWarning') : w.includes('Reproducibility (operator variation) is significant') ? t('grr.reproducibilityWarning') : w}</div>)}
             />
           )}
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{grrResult.verdict_reason}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{(() => {
+            const pctText = grrResult.pct_grr.toFixed(1)
+            if (grrResult.verdict === 'acceptable') return t('grr.reasonAcceptable', { pct: pctText })
+            if (grrResult.verdict === 'marginal') return t('grr.reasonMarginal', { pct: pctText })
+            return t('grr.reasonUnacceptable', { pct: pctText })
+          })()}</Typography.Text>
         </Space>
       ) : null}
     </Space>

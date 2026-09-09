@@ -847,6 +847,11 @@
     "noData": "請從已匯入的資料中選擇測量、零件與操作者欄位。",
     "analyzeSuccess": "GRR 分析完成",
     "analyzeError": "分析失敗",
+    "repeatabilityWarning": "重複性（量具變異）占主導。建議改善量測治具穩定性。",
+    "reproducibilityWarning": "再現性（操作者變異）顯著。建議加強操作者訓練。",
+    "reasonAcceptable": "%GRR = {{pct}}%（< 10%）：量測系統可接受。",
+    "reasonMarginal": "%GRR = {{pct}}%（10–30%）：是否可接受取決於應用、成本與重要性。",
+    "reasonUnacceptable": "%GRR = {{pct}}%（≥ 30%）：量測系統需要改善。",
     "column": {
       "verdict": "判定",
       "pctGRR": "%GRR",
