@@ -1137,7 +1137,7 @@ def _handle_report_generate(params: dict) -> dict:
     )
     REPORT_REGISTRY.register(project_name, operator, output_format, report_id=rep_chain_id,
                              timestamp=report_data.created_at.isoformat(),
-                             metadata={"dataset_id": dataset_id, "report_timestamp": report_data.created_at.isoformat(), "grain": {
+                             metadata={"dataset_id": dataset_id, "report_timestamp": report_data.created_at.isoformat(), "readiness_status": (params.get("readiness_snapshot") or {}).get("status"), "grain": {
                                  "filter_column": report_filter_column,
                                  "filter_value": report_filter_value,
                                  "source_row_count": source_row_count,

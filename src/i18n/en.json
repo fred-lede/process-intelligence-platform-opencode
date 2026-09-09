@@ -533,6 +533,7 @@
     "deleteConfirm": "Delete this report?",
     "deleteSuccess": "Report deleted",
     "deleteError": "Failed to delete report",
+    "readinessStatus": "Readiness",
     "title": "Report",
     "noData": "Import data to generate a report.",
     "info": "Generate analysis report",

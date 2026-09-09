@@ -535,6 +535,7 @@
     "deleteConfirm": "¿Eliminar este informe?",
     "deleteSuccess": "Informe eliminado",
     "deleteError": "No se pudo eliminar el informe",
+    "readinessStatus": "Preparación",
     "title": "Informe",
     "noData": "Importa datos para generar un informe.",
     "info": "Generar informe de análisis",

@@ -533,6 +533,7 @@
     "deleteConfirm": "確定要刪除這份報告嗎？",
     "deleteSuccess": "報告已刪除",
     "deleteError": "刪除報告失敗",
+    "readinessStatus": "資料健檢",
     "title": "報告",
     "noData": "請先匯入資料才能產生報告。",
     "info": "產生分析報告",

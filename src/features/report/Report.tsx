@@ -126,7 +126,7 @@ export default function Report() {
                 <Popconfirm key="delete" title={t('report.deleteConfirm')} onConfirm={() => void removeSaved(r.report_id)} okText={t('common.delete')} cancelText={t('common.cancel')}>
                   <Button type="link" danger icon={<DeleteOutlined />}>{t('common.delete')}</Button>
                 </Popconfirm>,
-              ]}><List.Item.Meta title={r.project_name} description={<Typography.Text type="secondary">{r.report_id.slice(0, 12)} · {r.format.toUpperCase()} · {new Date(r.timestamp).toLocaleString()}{r.grain?.filter_column ? ` · ${r.grain.filter_column}=${r.grain.filter_value}` : ''}</Typography.Text>} /></List.Item>}
+              ]}><List.Item.Meta title={r.project_name} description={<Typography.Text type="secondary">{r.report_id.slice(0, 12)} · {r.format.toUpperCase()} · {new Date(r.timestamp).toLocaleString()}{r.grain?.filter_column ? ` · ${r.grain.filter_column}=${r.grain.filter_value}` : ''}{r.readiness_status ? ` · ${t('report.readinessStatus')}: ${r.readiness_status}` : ''}</Typography.Text>} /></List.Item>}
             />
           </Card>}
           <Space direction="vertical" style={{ width: '100%' }}>
