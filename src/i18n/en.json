@@ -272,7 +272,7 @@
     "inputRangesTitle": "Input Operating Ranges",
     "inputRangesHint": "Operating ranges constrain process settings and model sampling; they do not replace SPC control limits.",
     "inputLower": "Lower",
-    "inputNominal": "Nominal",
+    "inputNominal": "Center",
     "inputUpper": "Upper",
     "controlLimitsHint": "Leave blank to auto-detect (mean ± 3σ). Enter values to override per field.",
     "autoSuggest": "Auto-suggest",
