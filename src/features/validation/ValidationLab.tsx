@@ -222,7 +222,7 @@ export default function ValidationLab() {
   return (
     <Space direction="vertical" style={{ width: '100%' }} size={16}>
       {contextHolder}
-      <Card title={t('validationLab.experimentSuggestions', { defaultValue: 'Next experiment conditions' })}>
+      <Card title={t('validationLab.experimentSuggestions')}>
         <Button disabled={!selectedModelId || !datasetId} onClick={() => void loadNextConditions()}>{t('common.refresh')}</Button>
         {nextConditions.map((s, i) => <div key={i}><Typography.Text>{s.rationale}: {JSON.stringify(s.condition)}</Typography.Text>
           <Button onClick={() => form.setFieldsValue({ planned_inputs: s.condition })}>{t('common.confirm')}</Button></div>)}
