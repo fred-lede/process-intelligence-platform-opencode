@@ -31,6 +31,15 @@ function pctValue(n: number | null | undefined, digits = 1): string {
   return `${n.toFixed(digits)}%`
 }
 
+function recommendationLabel(key: string): string {
+  const labels: Record<string, string> = {
+    recReplicate: 'replicate center points to estimate pure error',
+    recNewFactor: 'consider adding missing input factors',
+    recRangeExpansion: 'consider expanding the factor range',
+  }
+  return labels[key] ?? key.replace(/^modelCenter\./, '')
+}
+
 export function buildDataImportContext(opts: {
   fields: FieldAssignment[]
   spec: SpecConfiguration | null
@@ -220,7 +229,7 @@ export function buildModelCenterContext(opts: {
     const dw = opts.fullValidation.residual_analysis?.durbin_watson
     if (dw) parts.push(`Residual diagnostics: Durbin-Watson=${num(dw.statistic, 3)}, interpretation=${dw.interpretation}.`)
     const recs = opts.fullValidation.experiment_recommendations?.recommendations ?? []
-    if (recs.length) parts.push(`Experiment recommendations: ${recs.map((r) => `${r.priority}:${r.key} (${(r.factors ?? []).join(', ')})`).join('; ')}.`)
+    if (recs.length) parts.push(`Experiment recommendations: ${recs.map((r) => `${r.priority}: ${recommendationLabel(r.key)}${(r.factors ?? []).length ? ` [factors: ${(r.factors ?? []).join(', ')}]` : ''}`).join('; ')}.`)
   }
   if (opts.governanceWarnings?.length) parts.push(`Governance warnings: ${opts.governanceWarnings.join('; ')}.`)
   if (opts.recommendedInputs?.length) parts.push(`Recommended inputs: ${opts.recommendedInputs.join(', ')}.`)
