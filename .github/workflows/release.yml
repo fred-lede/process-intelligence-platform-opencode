@@ -42,6 +42,11 @@ jobs:
       - name: install frontend dependencies
         run: npm ci
 
+      - name: verify synchronized project version
+        run: |
+          npm run version:sync
+          git diff --exit-code
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
