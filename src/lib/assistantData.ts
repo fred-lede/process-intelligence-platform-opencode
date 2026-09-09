@@ -158,6 +158,7 @@ export function buildModelCenterContext(opts: {
   doeStats: DoeStatisticsResult | null
   governanceWarnings?: string[]
   recommendedInputs?: string[]
+  readiness?: { status: string; columns: Array<{ column: string; role: string; status: string; best_distribution: string | null; issues: Array<unknown> }> }
 }): string {
   const parts: string[] = []
   const interactions = opts.interactions
@@ -219,6 +220,7 @@ export function buildModelCenterContext(opts: {
   }
   if (opts.governanceWarnings?.length) parts.push(`Governance warnings: ${opts.governanceWarnings.join('; ')}.`)
   if (opts.recommendedInputs?.length) parts.push(`Recommended inputs: ${opts.recommendedInputs.join(', ')}.`)
+  if (opts.readiness) parts.push(`Pre-model readiness: status=${opts.readiness.status}; ${opts.readiness.columns.map(c => `${c.role} ${c.column}: ${c.status}, distribution=${c.best_distribution ?? 'N/A'}, issues=${c.issues.length}`).join('; ')}.`)
   return parts.join('\n')
 }
 

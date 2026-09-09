@@ -88,9 +88,9 @@ export default function ModelCenter() {
   useEffect(() => {
     setContext(
       'modelCenter',
-      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governanceWarnings: governance, recommendedInputs: recommended }),
+      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governanceWarnings: governance, recommendedInputs: recommended, readiness: readiness ?? undefined }),
     )
-  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governance, recommended, setContext])
+  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governance, recommended, readiness, setContext])
 
   const datasetId = importResult?.dataset_id
   useEffect(() => {
