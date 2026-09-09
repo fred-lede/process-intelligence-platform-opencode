@@ -57,7 +57,7 @@ export function buildExplorationContext(opts: {
   filterValue?: string
 }): string {
   const parts: string[] = []
-  if (opts.filterColumn) parts.push(`Filter: ${opts.filterColumn}=${opts.filterValue ?? ''}.`)
+  if (opts.filterColumn) parts.push(`Filter: ${opts.filterColumn}=${opts.filterValue ?? ''}; analyzed rows=${opts.series?.values.length ?? 'N/A'}.`)
   if (opts.fits && opts.fits.length) {
     const top = opts.fits[0]
     parts.push(

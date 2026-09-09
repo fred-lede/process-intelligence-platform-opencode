@@ -735,6 +735,11 @@ export default function Exploration() {
         }}
         filterable={activeTab === 'distribution' || activeTab === 'trend'}
       />
+      {nodeFilterColumn && nodeFilterValue && series && (
+        <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+          篩選後樣本數：{series.values.length}
+        </Typography.Text>
+      )}
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
