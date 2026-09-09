@@ -157,8 +157,8 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
     if (!importResult || !fields.length) return
     const selected = fields.filter(f => f.role === 'input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))
     if (!selected.length) return
-    runReadiness(importResult.dataset_id, selected).then(setReadiness).catch(() => setReadiness(null))
-  }, [importResult, fields])
+    runReadiness(importResult.dataset_id, selected, spec ? (spec as unknown as Record<string, unknown>) : undefined).then(setReadiness).catch(() => setReadiness(null))
+  }, [importResult, fields, spec])
 
   useEffect(() => {
     setContext(
@@ -169,6 +169,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
         rowCount: importResult?.row_count ?? null,
         columnCount: importResult?.column_count ?? null,
         readiness: readiness ?? undefined,
+        quality: quality ?? undefined,
       }),
     )
   }, [fields, spec, importResult, readiness, setContext])

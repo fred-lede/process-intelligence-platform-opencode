@@ -5,7 +5,7 @@ from process_intelligence_engine.data.readiness import analyze_readiness
 
 def test_readiness_reports_distribution_and_summary_for_input_output_fixture():
     df = pd.DataFrame({"input_load": [1.0, 1.2, 1.1, 1.3], "output": [10.0, 10.2, 9.9, 10.1]})
-    result = analyze_readiness(df, [{"name": "input_load", "role": "input"}, {"name": "output", "role": "output"}])
+    result = analyze_readiness(df, [{"name": "input_load", "role": "input"}, {"name": "output", "role": "output"}], {"outputField": "output", "lsl": 9.0, "usl": 11.0})
     assert result["status"] == "info"
     assert {item["column"] for item in result["columns"]} == {"input_load", "output"}
     assert result["columns"][0]["best_distribution"] == "empirical"
@@ -20,7 +20,7 @@ def test_readiness_flags_missing_and_constant_columns():
     assert by_name["input"]["status"] == "warning"
     assert by_name["output"]["status"] == "warning"
     assert {"missing_values", "constant_column"}.issubset({issue["code"] for issue in by_name["input"]["issues"]})
-    assert {issue["code"] for issue in by_name["output"]["issues"]} == {"constant_column"}
+    assert {"constant_column", "missing_spec"}.issubset({issue["code"] for issue in by_name["output"]["issues"]})
 
 
 def test_readiness_blocks_column_without_numeric_values():

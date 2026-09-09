@@ -7,7 +7,7 @@ import pandas as pd
 from process_intelligence_engine.data.distribution import fit_best_distribution
 
 
-def analyze_readiness(df: pd.DataFrame, fields: list[dict]) -> dict:
+def analyze_readiness(df: pd.DataFrame, fields: list[dict], spec: dict | None = None) -> dict:
     diagnostics = []
     for field in fields:
         column, role = str(field.get("name", "")), field.get("role", "")
@@ -25,6 +25,9 @@ def analyze_readiness(df: pd.DataFrame, fields: list[dict]) -> dict:
         if missing:
             rate = missing / max(len(series), 1)
             issues.append({"severity": "critical" if rate > 0.5 else "warning", "code": "missing_values", "message": f"{missing} missing values ({rate:.1%})."})
+        configured = ((spec or {}).get(column) or ((spec or {}).get("output_field") == column or (spec or {}).get("outputField") == column) and ((spec or {}).get("lsl") is not None or (spec or {}).get("usl") is not None))
+        if role == "output" and not configured:
+            issues.append({"severity": "warning", "code": "missing_spec", "message": f"Output column '{column}' has no specification limits set."})
         fits = fit_best_distribution(valid.tolist(), top_n=3) if not valid.empty else []
         best = fits[0] if fits else None
         diagnostics.append({

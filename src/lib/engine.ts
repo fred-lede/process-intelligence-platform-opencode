@@ -155,8 +155,8 @@ export interface ReadinessColumn {
   issues: Array<{ severity: string; code: string; message: string }>; status: string
 }
 export interface ReadinessResult { status: string; row_count: number; columns: ReadinessColumn[] }
-export async function runReadiness(dataset_id: string, fields: Array<{ name: string; role: string }>): Promise<ReadinessResult> {
-  return engineCall<ReadinessResult>('data/readiness', { dataset_id, fields })
+export async function runReadiness(dataset_id: string, fields: Array<{ name: string; role: string }>, spec?: Record<string, unknown>): Promise<ReadinessResult> {
+  return engineCall<ReadinessResult>('data/readiness', { dataset_id, fields, spec })
 }
 
 /** A single registered data asset (an imported dataset in the engine registry). */

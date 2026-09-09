@@ -37,6 +37,7 @@ export function buildDataImportContext(opts: {
   rowCount: number | null
   columnCount: number | null
   readiness?: { status: string; columns: Array<{ column: string; role: string; status: string; best_distribution: string | null; issues: Array<{ message: string }> }> }
+  quality?: { issues: Array<{ check: string; column: string | null; severity: string; message: string }> }
 }): string {
   if (!opts.fields.length && opts.rowCount === null) return ''
   const inputs = opts.fields.filter((f) => f.role === 'input').map((f) => f.originalName)
@@ -53,6 +54,9 @@ export function buildDataImportContext(opts: {
   }
   if (opts.readiness) {
     lines.push(`Pre-model readiness: status=${opts.readiness.status}; ${opts.readiness.columns.map(c => `${c.role} ${c.column}: ${c.status}, best_distribution=${c.best_distribution ?? 'N/A'}, issues=${c.issues.length}`).join('; ')}.`)
+  }
+  if (opts.quality) {
+    lines.push(`Data quality report: ${opts.quality.issues.length} issue(s): ${opts.quality.issues.map(i => `${i.severity}:${i.check}${i.column ? ` (${i.column})` : ''}`).join('; ') || 'none'}.`)
   }
   return lines.join('\n')
 }

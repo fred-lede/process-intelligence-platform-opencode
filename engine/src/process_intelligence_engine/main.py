@@ -506,7 +506,7 @@ def _handle_quality(params: dict) -> dict:
 
 def _handle_readiness(params: dict) -> dict:
     df = REGISTRY.get(params["dataset_id"])
-    return analyze_readiness(df, params.get("fields", []))
+    return analyze_readiness(df, params.get("fields", []), params.get("spec"))
 
 
 def _df_from_rows(params: dict) -> pd.DataFrame:
