@@ -1128,7 +1128,13 @@ def _handle_report_generate(params: dict) -> dict:
         parent_ids=[e.entity_id for e in evidence],
         content_hash=hashlib.sha256(snapshot.encode()).hexdigest(),
     )
-    REPORT_REGISTRY.register(project_name, operator, output_format, report_id=rep_chain_id)
+    REPORT_REGISTRY.register(project_name, operator, output_format, report_id=rep_chain_id,
+                             metadata={"dataset_id": dataset_id, "grain": {
+                                 "filter_column": report_filter_column,
+                                 "filter_value": report_filter_value,
+                                 "source_row_count": source_row_count,
+                                 "analyzed_row_count": len(df),
+                             }})
     path = _VERSION_CHAIN._project_root / "reports" / f"{rep_chain_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(snapshot, encoding="utf-8")

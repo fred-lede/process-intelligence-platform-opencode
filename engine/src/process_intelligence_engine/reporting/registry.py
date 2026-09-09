@@ -24,6 +24,7 @@ class ReportRegistry:
         operator: str = "Unknown",
         output_format: str = "html",
         report_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         report_id = report_id or str(uuid.uuid4())
         rec = {
@@ -33,6 +34,8 @@ class ReportRegistry:
             "format": output_format,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+        if metadata:
+            rec.update(metadata)
         with self._lock:
             self._records[report_id] = rec
         return report_id
