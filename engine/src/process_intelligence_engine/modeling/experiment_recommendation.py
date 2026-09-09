@@ -95,6 +95,7 @@ def recommend_experiments(
         })
 
     # Generate a human-readable summary; never expose internal translation keys
+    summary_key = recommendations[0]["key"] if recommendations else None
     if recommendations:
         first = recommendations[0]
         labels = {
@@ -111,4 +112,5 @@ def recommend_experiments(
     return {
         "recommendations": recommendations[:n_recommendations],
         "summary": summary,
+        "summary_key": summary_key,
     }

@@ -542,6 +542,7 @@ export interface FullValidationResult {
   experiment_recommendations: {
     recommendations: ExperimentRecommendation[]
     summary: string
+    summary_key?: string | null
   }
   credibility: Record<string, {
     data_coverage: number

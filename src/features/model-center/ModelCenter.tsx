@@ -893,7 +893,9 @@ export default function ModelCenter() {
                     />
                   ))}
                   <div style={{ marginTop: 4, fontSize: 12, color: '#6b7280' }}>
-                    {fullValidation.experiment_recommendations.summary}
+                    {fullValidation.experiment_recommendations.summary_key
+                      ? t((fullValidation.experiment_recommendations.summary_key.includes('.') ? fullValidation.experiment_recommendations.summary_key : `modelCenter.${fullValidation.experiment_recommendations.summary_key}`) as any)
+                      : fullValidation.experiment_recommendations.summary}
                   </div>
                 </div>
               </Space>
