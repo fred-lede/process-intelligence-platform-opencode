@@ -8,6 +8,7 @@ export interface SpecConfiguration {
   usl: number | null
   target: number | null
   inputUnits: Record<string, string>
+  inputRanges: Record<string, { lower: number | null; nominal: number | null; upper: number | null }>
 }
 
 export type ConfirmStatus = 'notStarted' | 'pendingConfirm' | 'confirmed'

@@ -72,6 +72,7 @@ export default function ProcessDefine() {
   const [usl, setUsl] = useState<number | null>(spec?.usl ?? null)
   const [target, setTarget] = useState<number | null>(spec?.target ?? null)
   const [inputUnits, setInputUnits] = useState<Record<string, string>>(spec?.inputUnits ?? {})
+  const [inputRanges, setInputRanges] = useState<SpecConfiguration['inputRanges']>(spec?.inputRanges ?? {})
   const [error, setError] = useState<string | null>(null)
   const [operator, setOperator] = useState('')
   const updateScenario = (id: string, changes: Partial<AnomalyScenario>) => {
@@ -139,6 +140,7 @@ export default function ProcessDefine() {
       usl,
       target,
       inputUnits,
+      inputRanges,
     }
     setSpec(cfg)
     void runSpecQuality(cfg)
@@ -151,12 +153,11 @@ export default function ProcessDefine() {
     setSpecQualityLoading(true)
     setSpecQualityError(null)
     try {
-      // Use user-entered control limits (where both bounds set) as ranges.
       const ranges: Record<string, [number | null, number | null]> = {}
       for (const name of inputs) {
-        const lim = controlLimits[name]
-        if (lim && lim.lcl != null && lim.ucl != null) {
-          ranges[name] = [lim.lcl, lim.ucl]
+        const range = inputRanges[name]
+        if (range && range.lower != null && range.upper != null) {
+          ranges[name] = [range.lower, range.upper]
         }
       }
       const report = await runQualityChecks({
@@ -251,6 +252,14 @@ export default function ProcessDefine() {
         />
       ),
     },
+  ]
+
+  const inputRangeColumns: ColumnsType<{ name: string }> = [
+    { title: t('processDefine.inputName'), dataIndex: 'name', key: 'name' },
+    ...([['lower', 'inputLower'], ['nominal', 'inputNominal'], ['upper', 'inputUpper']] as const).map(([field, label]) => ({
+      title: t(`processDefine.${label}`), key: field, width: 130,
+      render: (_: unknown, record: { name: string }) => <InputNumber size="small" style={{ width: '100%' }} value={inputRanges[record.name]?.[field] ?? undefined} onChange={(v) => setInputRanges((prev) => ({ ...prev, [record.name]: { lower: prev[record.name]?.lower ?? null, nominal: prev[record.name]?.nominal ?? null, upper: prev[record.name]?.upper ?? null, [field]: v ?? null } }))} />,
+    })),
   ]
 
   const limitColumns: ColumnsType<{ name: string }> = [
@@ -499,6 +508,7 @@ export default function ProcessDefine() {
 
       {/* Control Limits */}
       {spec && inputs.length > 0 && (
+        <>
         <Card title={t('processDefine.controlLimitsTitle')} extra={<Tag color="volcano">{t('processDefine.input')}</Tag>}>
           <Alert
             type="info"
@@ -514,6 +524,12 @@ export default function ProcessDefine() {
             pagination={false}
           />
         </Card>
+
+        <Card title={t('processDefine.inputRangesTitle')} extra={<Tag color="blue">{t('processDefine.input')}</Tag>}>
+          <Alert type="info" showIcon message={t('processDefine.inputRangesHint')} />
+          <Table size="small" rowKey="name" pagination={false} columns={inputRangeColumns} dataSource={inputs.map(name => ({ name }))} />
+        </Card>
+        </>
       )}
 
       {/* Error display */}
