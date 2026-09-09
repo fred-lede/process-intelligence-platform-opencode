@@ -137,6 +137,7 @@ export default function MonteCarlo() {
             setNodeFilterValue(undefined)
           }}
         />
+        {(result as MonteCarloResult & { grain?: { analyzed_row_count?: number } })?.grain && <Typography.Text type="secondary">篩選後樣本數：{(result as MonteCarloResult & { grain: { analyzed_row_count?: number } }).grain.analyzed_row_count}</Typography.Text>}
         <Space wrap style={{ marginBottom: 12 }}>
           <Form.Item label={t('monteCarlo.selectModel')} style={{ margin: 0 }}>
             <Select

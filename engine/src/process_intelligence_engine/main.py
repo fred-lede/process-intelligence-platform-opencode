@@ -1610,6 +1610,7 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     did = params["dataset_id"]
     model_id = params["model_id"]
     df = REGISTRY.get(did)
+    source_row_count = len(df)
     df = _apply_row_filter(df, params)
     fit = MODEL_REGISTRY.get(model_id)
 
@@ -1649,6 +1650,7 @@ def _handle_monte_carlo_run(params: dict) -> dict:
         created_by=params.get("operator", "anonymous"),
     )
     result["chain_entity_id"] = sim_chain_id
+    result["grain"] = {"filter_column": params.get("filter_column"), "filter_value": params.get("filter_value"), "source_row_count": source_row_count, "analyzed_row_count": len(df)}
     GATE_MANAGER.reset("monte_carlo", "Simulation changed")
     return {"success": True, "result": result}
 
