@@ -57,6 +57,9 @@ export function buildExplorationContext(opts: {
   filterValue?: string
   trendControlLimits?: { ucl?: number; lcl?: number }
   timeSeriesColumn?: string
+  grrMeasurementColumn?: string
+  grrPartColumn?: string
+  grrOperatorColumn?: string
 }): string {
   const parts: string[] = []
   if (opts.filterColumn) parts.push(`Filter: ${opts.filterColumn}=${opts.filterValue ?? ''}; analyzed rows=${opts.series?.values.length ?? 'N/A'}.`)
@@ -89,7 +92,9 @@ export function buildExplorationContext(opts: {
   }
   if (opts.grrResult) {
     parts.push(
-      `GRR (Gage R&R): %GRR=${pct(opts.grrResult.pct_grr)}, %part=${pct(opts.grrResult.pct_part)}, ` +
+      `GRR (Gage R&R) using measurement="${opts.grrMeasurementColumn ?? 'selected measurement column'}", ` +
+        `part="${opts.grrPartColumn ?? 'selected part column'}", operator="${opts.grrOperatorColumn ?? 'selected operator column'}": ` +
+        `%GRR=${pct(opts.grrResult.pct_grr)}, %part=${pct(opts.grrResult.pct_part)}, ` +
         `verdict=${opts.grrResult.verdict}. Reason: ${opts.grrResult.verdict_reason}.`,
     )
   }

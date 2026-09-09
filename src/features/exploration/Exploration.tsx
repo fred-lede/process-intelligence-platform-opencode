@@ -162,8 +162,11 @@ export default function Exploration() {
       filterValue: nodeFilterValue,
       trendControlLimits: activeTab === 'trend' ? trendCtrl ?? undefined : undefined,
       timeSeriesColumn: activeTab === 'timeseries' ? tsColumn : undefined,
+      grrMeasurementColumn: activeTab === 'grr' ? grrMeasurementCol : undefined,
+      grrPartColumn: activeTab === 'grr' ? grrPartCol : undefined,
+      grrOperatorColumn: activeTab === 'grr' ? grrOperatorCol : undefined,
     }))
-  }, [activeTab, fits, series, tsFeatures, grrResult, nodeFilterColumn, nodeFilterValue, setContext])
+  }, [activeTab, fits, series, tsFeatures, grrResult, grrMeasurementCol, grrPartCol, grrOperatorCol, nodeFilterColumn, nodeFilterValue, setContext])
 
   const filterArgs =
     nodeFilterColumn && nodeFilterValue
