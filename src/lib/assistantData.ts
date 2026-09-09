@@ -56,6 +56,7 @@ export function buildExplorationContext(opts: {
   filterColumn?: string
   filterValue?: string
   trendControlLimits?: { ucl?: number; lcl?: number }
+  timeSeriesColumn?: string
 }): string {
   const parts: string[] = []
   if (opts.filterColumn) parts.push(`Filter: ${opts.filterColumn}=${opts.filterValue ?? ''}; analyzed rows=${opts.series?.values.length ?? 'N/A'}.`)
@@ -82,7 +83,8 @@ export function buildExplorationContext(opts: {
   }
   if (opts.tsFeatures) {
     parts.push(
-      `Time-series features computed: ${opts.tsFeatures.feature_columns.length} features across ${opts.tsFeatures.n_rows} rows.`,
+      `Time-series features for "${opts.timeSeriesColumn ?? 'selected value column'}": ` +
+        `${opts.tsFeatures.feature_columns.length} features across ${opts.tsFeatures.n_rows} rows.`,
     )
   }
   if (opts.grrResult) {

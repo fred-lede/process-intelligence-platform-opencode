@@ -161,6 +161,7 @@ export default function Exploration() {
       filterColumn: nodeFilterColumn,
       filterValue: nodeFilterValue,
       trendControlLimits: activeTab === 'trend' ? trendCtrl ?? undefined : undefined,
+      timeSeriesColumn: activeTab === 'timeseries' ? tsColumn : undefined,
     }))
   }, [activeTab, fits, series, tsFeatures, grrResult, nodeFilterColumn, nodeFilterValue, setContext])
 
