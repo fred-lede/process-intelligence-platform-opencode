@@ -40,8 +40,6 @@ export function buildDataImportContext(opts: {
     `Input fields: ${inputs.join(', ') || 'none'}.`,
     `Output fields: ${outputs.join(', ') || 'none'}.`,
   ]
-  const grain = (result as MonteCarloResult & { grain?: { filter_column?: string; filter_value?: string; analyzed_row_count?: number } }).grain
-  if (grain?.filter_column) lines.push(`Filter: ${grain.filter_column}=${grain.filter_value}; analyzed rows=${grain.analyzed_row_count ?? 'N/A'}.`)
   if (opts.spec) {
     lines.push(
       `Spec: output="${opts.spec.outputField}", LSL=${opts.spec.lsl ?? 'N/A'}, USL=${opts.spec.usl ?? 'N/A'}, target=${opts.spec.target ?? 'N/A'}.`,
@@ -55,8 +53,11 @@ export function buildExplorationContext(opts: {
   series: ColumnSeries | null
   tsFeatures: TimeSeriesFeatures | null
   grrResult: GrrResult | null
+  filterColumn?: string
+  filterValue?: string
 }): string {
   const parts: string[] = []
+  if (opts.filterColumn) parts.push(`Filter: ${opts.filterColumn}=${opts.filterValue ?? ''}.`)
   if (opts.fits && opts.fits.length) {
     const top = opts.fits[0]
     parts.push(

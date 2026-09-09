@@ -149,8 +149,8 @@ export default function Exploration() {
 
 
   useEffect(() => {
-    setContext('exploration', buildExplorationContext({ fits, series, tsFeatures, grrResult }))
-  }, [fits, series, tsFeatures, grrResult, setContext])
+    setContext('exploration', buildExplorationContext({ fits, series, tsFeatures, grrResult, filterColumn: nodeFilterColumn, filterValue: nodeFilterValue }))
+  }, [fits, series, tsFeatures, grrResult, nodeFilterColumn, nodeFilterValue, setContext])
 
   const filterArgs =
     nodeFilterColumn && nodeFilterValue
