@@ -98,7 +98,15 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
       const raw = String(error)
       const message = raw.includes('TimeoutError')
         ? '雲端模型回覆逾時，模型可能仍在推理中，請稍後重試。'
-        : raw
+        : raw.includes('cloud_model_unavailable')
+          ? '雲端模型目前無法使用，請檢查 provider、端點與模型設定。'
+          : raw.includes('invalid_assistant_response')
+            ? '模型回覆格式無法解析，請重試或更換模型。'
+            : raw.includes('Cloud assistant provider is not enabled')
+              ? '雲端 AI provider 尚未啟用，請至系統設定開啟並測試連線。'
+              : raw.includes('dataset') && raw.includes('not loaded')
+                ? '此操作需要的資料集尚未載入，請重新開啟專案後再試。'
+                : raw
       if (stillCurrent(context.project_id)) setMessages(prev => [...prev, { role: 'assistant', content: message }])
     } finally {
       setLoading(false)
