@@ -254,6 +254,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
         output_columns: finalFields
           .filter((f) => f.role === 'output')
           .map((f) => f.originalName),
+        spec: spec ? { [spec.outputField]: { lsl: spec.lsl, usl: spec.usl, target: spec.target } } : undefined,
       })
       setQuality(report)
     } catch (err) {
@@ -262,6 +263,10 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (importResult && fields.length > 0 && spec) void handleRunQuality(fields)
+  }, [spec])
 
   const hasOutputField = () => fields.some((f) => f.role === 'output')
 
