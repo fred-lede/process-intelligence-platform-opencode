@@ -21,6 +21,7 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import Plot from '../../components/PlotChart'
 import { pickDataFile } from '../../lib/filePicker'
 import {
   importDataFile,
@@ -532,6 +533,12 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
       {readiness && (
         <Card title={t('dataImport.readinessTitle')} size="small">
           <Alert type={readiness.status === 'critical' ? 'error' : readiness.status === 'warning' ? 'warning' : 'success'} showIcon message={t('dataImport.readinessSummary', { status: readiness.status, columns: readiness.columns.length })} />
+          <Plot
+            data={[{ x: [t('dataImport.readinessInfo'), t('dataImport.readinessWarning'), t('dataImport.readinessCritical')], y: [readiness.columns.filter(c => c.status === 'info').length, readiness.columns.filter(c => c.status === 'warning').length, readiness.columns.filter(c => c.status === 'critical').length], type: 'bar', marker: { color: ['#52c41a', '#faad14', '#ff4d4f'] } }]}
+            layout={{ height: 220, margin: { l: 40, r: 20, t: 20, b: 50 }, yaxis: { dtick: 1 }, xaxis: { title: { text: t('dataImport.readinessStatus') } } }}
+            config={{ displayModeBar: false, responsive: true }}
+            style={{ width: '100%' }}
+          />
           <Table size="small" rowKey="column" pagination={false} dataSource={readiness.columns} columns={[
             { title: t('dataImport.readinessColumn'), dataIndex: 'column', key: 'column' },
             { title: t('dataImport.readinessRole'), dataIndex: 'role', key: 'role' },
