@@ -66,9 +66,16 @@ export function buildExplorationContext(opts: {
     )
   }
   if (opts.series) {
+    const numeric = opts.series.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+    const first = numeric[0]
+    const last = numeric[numeric.length - 1]
+    const min = numeric.length ? Math.min(...numeric) : null
+    const max = numeric.length ? Math.max(...numeric) : null
+    const direction = first != null && last != null ? (last > first ? 'increasing' : last < first ? 'decreasing' : 'flat') : 'unknown'
     parts.push(
       `Trend for column "${opts.series.column}": ${opts.series.values.length} data points, ` +
-        `numeric=${opts.series.numeric ? 'yes' : 'no'}.`,
+        `numeric=${opts.series.numeric ? 'yes' : 'no'}, min=${num(min)}, max=${num(max)}, ` +
+        `first=${num(first)}, last=${num(last)}, direction=${direction}.`,
     )
   }
   if (opts.tsFeatures) {
