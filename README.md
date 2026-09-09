@@ -401,6 +401,12 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.7.0（開發中）
+
+- 建立單一 `VERSION` 來源與 `npm run version:sync`，同步前端、Tauri 與 Python 版本。
+- 報告 API 統一回傳 dataset、grain/filter、格式與狀態 metadata。
+- AI 助手針對 timeout、provider unavailable、回覆格式錯誤與資料集未載入提供可操作提示。
+
 ### v0.6.0（2026-09-09）
 
 **多層級資料模型（可選）**
