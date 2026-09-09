@@ -55,6 +55,7 @@ export function buildExplorationContext(opts: {
   grrResult: GrrResult | null
   filterColumn?: string
   filterValue?: string
+  trendControlLimits?: { ucl?: number; lcl?: number }
 }): string {
   const parts: string[] = []
   if (opts.filterColumn) parts.push(`Filter: ${opts.filterColumn}=${opts.filterValue ?? ''}; analyzed rows=${opts.series?.values.length ?? 'N/A'}.`)
@@ -77,6 +78,7 @@ export function buildExplorationContext(opts: {
         `numeric=${opts.series.numeric ? 'yes' : 'no'}, min=${num(min)}, max=${num(max)}, ` +
         `first=${num(first)}, last=${num(last)}, direction=${direction}.`,
     )
+    if (opts.trendControlLimits) parts.push(`Control limits: UCL=${num(opts.trendControlLimits.ucl)}, LCL=${num(opts.trendControlLimits.lcl)}.`)
   }
   if (opts.tsFeatures) {
     parts.push(

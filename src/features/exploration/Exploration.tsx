@@ -156,6 +156,7 @@ export default function Exploration() {
       grrResult: activeTab === 'grr' ? grrResult : null,
       filterColumn: nodeFilterColumn,
       filterValue: nodeFilterValue,
+      trendControlLimits: activeTab === 'trend' ? trendCtrl ?? undefined : undefined,
     }))
   }, [activeTab, fits, series, tsFeatures, grrResult, nodeFilterColumn, nodeFilterValue, setContext])
 
