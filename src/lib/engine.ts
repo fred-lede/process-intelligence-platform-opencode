@@ -344,6 +344,22 @@ export interface DoeStatisticsApiResponse {
   statistics: DoeStatisticsResult
 }
 
+export interface SensitivityEffectItem {
+  input: string
+  sensitivity: number
+  effect_size: number
+}
+
+export interface SensitivityEffectResult {
+  method: string
+  baseline_rmse: number
+  items: SensitivityEffectItem[]
+}
+
+export async function computeSensitivity(model_id: string, dataset_id: string): Promise<{ success: boolean; analysis: SensitivityEffectResult }> {
+  return engineCall('modeling/sensitivity', { model_id, dataset_id })
+}
+
 export interface ModelFitDTO {
   model_id: string
   model_type: ModelType

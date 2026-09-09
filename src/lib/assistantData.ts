@@ -169,6 +169,7 @@ export function buildModelCenterContext(opts: {
   validationResult: ValidationResult | null
   fullValidation: FullValidationResult | null
   doeStats: DoeStatisticsResult | null
+  sensitivity?: { items: Array<{ input: string; sensitivity: number; effect_size: number }> } | null
   governanceWarnings?: string[]
   recommendedInputs?: string[]
   readiness?: { status: string; columns: Array<{ column: string; role: string; status: string; best_distribution: string | null; issues: Array<unknown> }> }
@@ -215,6 +216,9 @@ export function buildModelCenterContext(opts: {
     } else if (opts.doeStats.note) {
       parts.push(`DOE stats: ${opts.doeStats.note}`)
     }
+  }
+  if (opts.sensitivity?.items?.length) {
+    parts.push(`Sensitivity (permutation RMSE) and standardized effect size: ${opts.sensitivity.items.slice(0, 5).map((item) => `"${item.input}" sensitivity=${num(item.sensitivity, 4)}, effect_size=${num(item.effect_size, 4)}`).join('; ')}.`)
   }
   if (opts.fullValidation && opts.fullValidation.models.length) {
     const ranking = opts.fullValidation.models

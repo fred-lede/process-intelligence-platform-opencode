@@ -4,4 +4,4 @@ This package contains the data import, analysis, modeling, simulation
 and reporting modules that power the platform's statistical engine.
 """
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"

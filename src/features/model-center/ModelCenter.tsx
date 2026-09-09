@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, runReadiness, type DoeStatisticsResult } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, type DoeStatisticsResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -76,6 +76,8 @@ export default function ModelCenter() {
   const [fullValidationLoading, setFullValidationLoading] = useState(false)
   const [doeStats, setDoeStats] = useState<DoeStatisticsResult | null>(null)
   const [doeStatsLoading, setDoeStatsLoading] = useState(false)
+  const [sensitivity, setSensitivity] = useState<SensitivityEffectResult | null>(null)
+  const [sensitivityLoading, setSensitivityLoading] = useState(false)
   const [nEstimators, setNEstimators] = useState(200)
   const [maxDepth, setMaxDepth] = useState(10)
   const [minSamplesLeaf, setMinSamplesLeaf] = useState(3)
@@ -88,9 +90,9 @@ export default function ModelCenter() {
   useEffect(() => {
     setContext(
       'modelCenter',
-      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governanceWarnings: governance, recommendedInputs: recommended, readiness: readiness ?? undefined }),
+      buildModelCenterContext({ interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, sensitivity, governanceWarnings: governance, recommendedInputs: recommended, readiness: readiness ?? undefined }),
     )
-  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, governance, recommended, readiness, setContext])
+  }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, sensitivity, governance, recommended, readiness, setContext])
 
   const datasetId = importResult?.dataset_id
   useEffect(() => {
@@ -224,6 +226,19 @@ export default function ModelCenter() {
       messageApi.error(t('modelCenter.shapError'))
     } finally {
       setShapLoading(false)
+    }
+  }
+
+  const handleComputeSensitivity = async () => {
+    if (!models.length || !datasetId) return
+    setSensitivityLoading(true)
+    try {
+      const result = await computeSensitivity(models[models.length - 1].model_id, datasetId)
+      setSensitivity(result.analysis)
+    } catch {
+      messageApi.error(t('modelCenter.sensitivityError'))
+    } finally {
+      setSensitivityLoading(false)
     }
   }
 
@@ -620,6 +635,17 @@ export default function ModelCenter() {
               <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
             )}
           </Space>
+        </Card>
+
+        <Card title={t('modelCenter.sensitivityTitle')} size="small">
+          <Button type="primary" loading={sensitivityLoading} onClick={handleComputeSensitivity} disabled={!models.length || !datasetId}>
+            {sensitivityLoading ? t('modelCenter.computing') : t('modelCenter.computeSensitivity')}
+          </Button>
+          {sensitivity && <Table size="small" pagination={false} rowKey="input" dataSource={sensitivity.items} columns={[
+            { title: t('modelCenter.input'), dataIndex: 'input', key: 'input' },
+            { title: t('modelCenter.sensitivity'), dataIndex: 'sensitivity', key: 'sensitivity', render: (v: number) => `${(v * 100).toFixed(1)}%` },
+            { title: t('modelCenter.effectSize'), dataIndex: 'effect_size', key: 'effect_size', render: (v: number) => v.toFixed(3) },
+          ]} />}
         </Card>
 
         <Card title={t('modelCenter.extrapTitle')} size="small">

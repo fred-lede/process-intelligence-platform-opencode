@@ -297,6 +297,16 @@ class HTMLReportGenerator(ReportGenerator):
             body += heatmap_svg(matrix=matrix, labels=list(factors), title="交互作用強度熱圖")
         return self._section("重要因素與交互作用", body)
 
+    def _render_sensitivity_effects(self) -> str:
+        data = self.data.sensitivity_effects or {}
+        items = data.get("items") or []
+        if not items:
+            return ""
+        body = "<table><tr><th>輸入欄位</th><th>敏感度</th><th>效應量</th></tr>"
+        for item in items:
+            body += f"<tr><td>{self._e(item.get('input'))}</td><td>{self._pct(item.get('sensitivity'))}</td><td>{self._fmt(item.get('effect_size'))}</td></tr>"
+        return self._section("敏感度與效應量", body + "</table>")
+
     def _render_monte_carlo(self) -> str:
         mc = self.data.monte_carlo
         if not mc:
@@ -502,6 +512,7 @@ class HTMLReportGenerator(ReportGenerator):
             self._render_model_comparison(),
             self._render_best_model(),
             self._render_interactions(),
+            self._render_sensitivity_effects(),
             self._render_monte_carlo(),
             self._render_spc(),
             self._render_credibility(),

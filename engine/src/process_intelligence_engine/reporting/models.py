@@ -36,6 +36,7 @@ class ReportData:
     
     # Interactions
     interactions: dict[str, Any] = field(default_factory=dict)
+    sensitivity_effects: dict[str, Any] = field(default_factory=dict)
     
     # Monte Carlo
     monte_carlo: dict[str, Any] = field(default_factory=dict)

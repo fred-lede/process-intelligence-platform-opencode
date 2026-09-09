@@ -5,6 +5,7 @@ import pytest
 
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.fitters import fit_doe_quadratic
+from process_intelligence_engine.modeling.validation import compute_sensitivity_effect_sizes
 
 
 def _make_df(n=100):
@@ -55,3 +56,12 @@ def test_matrix_is_symmetric():
     for i in range(n):
         for j in range(n):
             assert abs(result["matrix"][i][j] - result["matrix"][j][i]) < 1e-10
+
+
+def test_sensitivity_and_effect_sizes_rank_driver():
+    df = _make_df()
+    fit = fit_doe_quadratic(df, target="Y", inputs=["A", "B", "C"])
+    result = compute_sensitivity_effect_sizes(fit, df)
+    assert result["method"] == "permutation_rmse"
+    assert result["items"][0]["input"] in {"A", "B"}
+    assert all("effect_size" in item and "sensitivity" in item for item in result["items"])

@@ -130,6 +130,43 @@ def cross_validate(fit, df: pd.DataFrame, k: int = 5) -> dict[str, Any]:
     }
 
 
+def compute_sensitivity_effect_sizes(
+    fit, df: pd.DataFrame, n_repeats: int = 8
+) -> dict[str, Any]:
+    """Compute global permutation sensitivity and standardized effect sizes.
+
+    Sensitivity is the mean increase in RMSE after independently permuting an
+    input, normalized to the sum across inputs.  Effect size is the absolute
+    standardized DOE coefficient when available, otherwise the RMSE increase
+    divided by the observed output standard deviation.
+    """
+    y = df[fit.target].to_numpy(dtype=float)
+    baseline_pred = _predict_from_fit(fit, df)
+    baseline_rmse = float(np.sqrt(np.mean((y - baseline_pred) ** 2)))
+    y_std = float(np.std(y, ddof=1)) if len(y) > 1 else 1.0
+    rng = np.random.default_rng(42)
+    rows: list[dict[str, Any]] = []
+    for column in fit.inputs:
+        deltas = []
+        for _ in range(max(1, n_repeats)):
+            permuted = df.copy()
+            permuted[column] = rng.permutation(permuted[column].to_numpy())
+            pred = _predict_from_fit(fit, permuted)
+            deltas.append(max(0.0, float(np.sqrt(np.mean((y - pred) ** 2))) - baseline_rmse))
+        delta = float(np.mean(deltas))
+        coefficient = None
+        if fit.model_type in ("doe_linear", "doe_quadratic"):
+            coefficient = float((fit.coefficients or {}).get(column, 0.0))
+        x_std = float(np.std(df[column].to_numpy(dtype=float), ddof=1)) if len(df) > 1 else 1.0
+        effect_size = abs(coefficient * x_std / y_std) if coefficient is not None else delta / max(y_std, 1e-12)
+        rows.append({"input": column, "sensitivity": delta, "effect_size": float(effect_size)})
+    total = sum(row["sensitivity"] for row in rows)
+    for row in rows:
+        row["sensitivity"] = float(row["sensitivity"] / total) if total > 0 else 0.0
+    rows.sort(key=lambda row: (-row["sensitivity"], row["input"]))
+    return {"method": "permutation_rmse", "baseline_rmse": baseline_rmse, "items": rows}
+
+
 def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
     """Analyze residuals for normality and patterns.
 

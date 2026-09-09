@@ -50,7 +50,7 @@ from process_intelligence_engine.project.manifest import ProjectEngine, _PROCESS
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
-from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments, compute_credibility, compute_doe_statistics
+from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments, compute_credibility, compute_doe_statistics, compute_sensitivity_effect_sizes
 from process_intelligence_engine.modeling.model_selection import compare_models
 from process_intelligence_engine.modeling.experiment_recommendation import recommend_experiments as recommend_experiments_full
 from process_intelligence_engine.modeling.fitters import (
@@ -778,6 +778,12 @@ def _handle_stats_compute(params: dict) -> dict:
     return {"success": True, "statistics": result}
 
 
+def _handle_sensitivity_compute(params: dict) -> dict:
+    fit = MODEL_REGISTRY.get(params["model_id"])
+    df = REGISTRY.get(params["dataset_id"])
+    return {"success": True, "analysis": compute_sensitivity_effect_sizes(fit, df)}
+
+
 def _handle_validation_full(params: dict) -> dict:
     """Full validation: model comparison + experiment recommendation."""
     dataset_id = params["dataset_id"]
@@ -963,6 +969,7 @@ def _handle_report_generate(params: dict) -> dict:
         pass
 
     interactions = {}
+    sensitivity_effects = {}
     credibility = {}
     recommendations = []
     process_window = {}
@@ -970,6 +977,10 @@ def _handle_report_generate(params: dict) -> dict:
     if best_model:
         try:
             interactions = compute_interactions(MODEL_REGISTRY._get_unlocked(best_model["model_id"]), df)
+        except Exception:
+            pass
+        try:
+            sensitivity_effects = compute_sensitivity_effect_sizes(MODEL_REGISTRY._get_unlocked(best_model["model_id"]), df)
         except Exception:
             pass
         try:
@@ -1094,6 +1105,7 @@ def _handle_report_generate(params: dict) -> dict:
         model_comparison=model_comparison,
         best_model=best_model,
         interactions=interactions,
+        sensitivity_effects=sensitivity_effects,
         monte_carlo=monte_carlo_result,
         credibility=credibility,
         recommendations=recommendations,
@@ -1929,6 +1941,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_validation_analyze(params)
     if method == "modeling/stats":
         return _handle_stats_compute(params)
+    if method == "modeling/sensitivity":
+        return _handle_sensitivity_compute(params)
 
     if method == "modeling/validation/full":
         return _handle_validation_full(params)
