@@ -33,6 +33,7 @@ export default function NodeSourceFilter({
   const hierarchicalColumns = columns.filter(name =>
     /(^|[_ -])(product|part|lot|batch|machine|equipment|station|process|step|subgroup)([_ -]|$)/i.test(name),
   )
+  const filterColumns = hierarchicalColumns.length ? hierarchicalColumns : columns
   if (!sourcedFromNode) return null
 
   return (
@@ -50,7 +51,7 @@ export default function NodeSourceFilter({
                   setFilterColumn(val)
                   setFilterValue(undefined)
                 }}
-                options={hierarchicalColumns.map(name => ({ value: name, label: name }))}
+                options={filterColumns.map(name => ({ value: name, label: name }))}
                 allowClear
                 placeholder={t(`${section}.filterByNode`)}
                 style={{ width: 160 }}
