@@ -543,6 +543,11 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
             { title: t('dataImport.readinessColumn'), dataIndex: 'column', key: 'column' },
             { title: t('dataImport.readinessRole'), dataIndex: 'role', key: 'role' },
             { title: t('dataImport.readinessDistribution'), dataIndex: 'best_distribution', key: 'best_distribution', render: (v: string | null) => v ?? '—' },
+            { title: 'n', dataIndex: 'valid_count', key: 'valid_count' },
+            { title: 'min', key: 'min', render: (_: unknown, row: ReadinessResult['columns'][number]) => row.summary.min?.toFixed(4) ?? '—' },
+            { title: 'max', key: 'max', render: (_: unknown, row: ReadinessResult['columns'][number]) => row.summary.max?.toFixed(4) ?? '—' },
+            { title: 'mean', key: 'mean', render: (_: unknown, row: ReadinessResult['columns'][number]) => row.summary.mean?.toFixed(4) ?? '—' },
+            { title: 'std', key: 'std', render: (_: unknown, row: ReadinessResult['columns'][number]) => row.summary.std.toFixed(4) },
             { title: t('dataImport.readinessStatus'), dataIndex: 'status', key: 'status' },
             { title: t('dataImport.readinessIssues'), key: 'issues', render: (_: unknown, row: ReadinessResult['columns'][number]) => row.issues.length },
           ]} />
