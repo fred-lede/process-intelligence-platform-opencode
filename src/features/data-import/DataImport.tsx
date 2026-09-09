@@ -167,9 +167,10 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
         spec,
         rowCount: importResult?.row_count ?? null,
         columnCount: importResult?.column_count ?? null,
+        readiness: readiness ?? undefined,
       }),
     )
-  }, [fields, spec, importResult, setContext])
+  }, [fields, spec, importResult, readiness, setContext])
 
   const handlePickFile = async () => {
     setError(null)

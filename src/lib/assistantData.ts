@@ -36,6 +36,7 @@ export function buildDataImportContext(opts: {
   spec: SpecConfiguration | null
   rowCount: number | null
   columnCount: number | null
+  readiness?: { status: string; columns: Array<{ column: string; role: string; status: string; best_distribution: string | null; issues: Array<{ message: string }> }> }
 }): string {
   if (!opts.fields.length && opts.rowCount === null) return ''
   const inputs = opts.fields.filter((f) => f.role === 'input').map((f) => f.originalName)
@@ -49,6 +50,9 @@ export function buildDataImportContext(opts: {
     lines.push(
       `Spec: output="${opts.spec.outputField}", LSL=${opts.spec.lsl ?? 'N/A'}, USL=${opts.spec.usl ?? 'N/A'}, target=${opts.spec.target ?? 'N/A'}.`,
     )
+  }
+  if (opts.readiness) {
+    lines.push(`Pre-model readiness: status=${opts.readiness.status}; ${opts.readiness.columns.map(c => `${c.role} ${c.column}: ${c.status}, best_distribution=${c.best_distribution ?? 'N/A'}, issues=${c.issues.length}`).join('; ')}.`)
   }
   return lines.join('\n')
 }
