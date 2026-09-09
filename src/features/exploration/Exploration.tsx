@@ -130,6 +130,10 @@ export default function Exploration() {
     () => new Set(fields.filter((f) => f.confirmed).map((f) => f.originalName)),
     [fields],
   )
+  const confirmedOutputs = useMemo(
+    () => new Set(fields.filter((f) => f.confirmed && f.role === 'output').map((f) => f.originalName)),
+    [fields],
+  )
 
   useEffect(() => {
     if (!timeColumn && timestampColumns.length > 0) {
@@ -359,7 +363,7 @@ export default function Exploration() {
             setSeries(null)
           }}
           options={numericColumns
-            .filter((name) => confirmedInputs.has(name) || name === spec?.outputField)
+            .filter((name) => confirmedInputs.has(name) || confirmedOutputs.has(name))
             .map((name) => ({ value: name, label: name }))}
         />
         <Button
