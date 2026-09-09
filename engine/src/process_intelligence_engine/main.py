@@ -1142,6 +1142,14 @@ def _render_saved_report(data, output_format, entity_id):
         raise ValueError(f"Unsupported format: {output_format}")
     content = generators[output_format](data).generate()
     result = {"format": output_format, "chain_entity_id": entity_id, "report_status": data.report_status}
+    entity = _VERSION_CHAIN.get_entity(entity_id)
+    if entity is not None:
+        result["report_metadata"] = {
+            "dataset_id": entity.metadata.get("dataset_id"),
+            "grain": entity.metadata.get("grain"),
+            "format": output_format,
+            "status": data.report_status,
+        }
     result["content" if output_format == "html" else "content_base64"] = content if output_format == "html" else base64.b64encode(content).decode("ascii")
     return result
 
