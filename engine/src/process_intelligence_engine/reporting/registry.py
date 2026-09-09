@@ -25,6 +25,7 @@ class ReportRegistry:
         output_format: str = "html",
         report_id: str | None = None,
         metadata: dict[str, Any] | None = None,
+        timestamp: str | None = None,
     ) -> str:
         report_id = report_id or str(uuid.uuid4())
         rec = {
@@ -32,7 +33,7 @@ class ReportRegistry:
             "project_name": project_name,
             "operator": operator,
             "format": output_format,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": timestamp or datetime.now(timezone.utc).isoformat(),
         }
         if metadata:
             rec.update(metadata)

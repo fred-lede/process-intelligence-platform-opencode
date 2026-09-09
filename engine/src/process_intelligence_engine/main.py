@@ -1129,7 +1129,8 @@ def _handle_report_generate(params: dict) -> dict:
         content_hash=hashlib.sha256(snapshot.encode()).hexdigest(),
     )
     REPORT_REGISTRY.register(project_name, operator, output_format, report_id=rep_chain_id,
-                             metadata={"dataset_id": dataset_id, "grain": {
+                             timestamp=report_data.created_at.isoformat(),
+                             metadata={"dataset_id": dataset_id, "report_timestamp": report_data.created_at.isoformat(), "grain": {
                                  "filter_column": report_filter_column,
                                  "filter_value": report_filter_value,
                                  "source_row_count": source_row_count,
@@ -2628,10 +2629,18 @@ def _reload_chain_for_project(root: str) -> dict:
     for item in chain.get_chain_summary():
         if item["entity_type"] == "report":
             entity = chain.get_entity(item["entity_id"])
-            if not (chain._project_root / "reports" / f"{entity.entity_id}.json").exists():
+            report_path = chain._project_root / "reports" / f"{entity.entity_id}.json"
+            if not report_path.exists():
                 continue
+            report_timestamp = entity.metadata.get("report_timestamp")
+            if not report_timestamp:
+                try:
+                    report_timestamp = json.loads(report_path.read_text(encoding="utf-8")).get("created_at")
+                except (OSError, json.JSONDecodeError):
+                    report_timestamp = None
             reports.register(entity.metadata.get("project_name", "Report"), entity.created_by,
-                                     entity.metadata.get("format", "html"), entity.entity_id)
+                                     entity.metadata.get("format", "html"), entity.entity_id,
+                                     timestamp=report_timestamp)
     ui_path = chain._project_root / "registry" / "ui_state.json"
     ui_state = json.loads(ui_path.read_text(encoding="utf-8")) if ui_path.exists() else None
     _VERSION_CHAIN = chain
