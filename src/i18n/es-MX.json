@@ -426,8 +426,8 @@
     "bestModel": "Mejor modelo",
     "residualDiagnostics": "Diagnóstico de residuos",
     "experimentRecommendations": "Recomendaciones de experimento",
-    "experimentSuggestions": "Condiciones del siguiente experimento",
     "fullValidationError": "Error al ejecutar validación completa",
+    "experimentSuggestions": "Condiciones del siguiente experimento",
     "column": {
       "type": "Tipo",
       "status": "Estado",
