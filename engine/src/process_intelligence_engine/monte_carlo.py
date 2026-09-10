@@ -272,11 +272,13 @@ def run_monte_carlo(
     """
     rng = np.random.default_rng(seed)
 
-    # Sample input distributions from historical data
+    # Bootstrap complete historical rows to preserve correlations between inputs.
+    # Independent per-column draws can create impossible combinations for
+    # quadratic/interacting DOE models and extreme artificial outputs.
     sampled_inputs: dict[str, np.ndarray] = {}
+    row_indices = rng.integers(0, len(df), size=n_simulations)
     for col in input_columns:
-        col_data = df[col].to_numpy(dtype=float)
-        sampled_inputs[col] = np.array(sample_from_distribution(col_data.tolist(), n=n_simulations, seed=rng.integers(0, 2**31)))
+        sampled_inputs[col] = df[col].to_numpy(dtype=float)[row_indices]
 
     # Apply anomalies to each input column
     copula_result: CopulaResult | None = None
