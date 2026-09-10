@@ -426,6 +426,8 @@
     "bestModel": "Mejor modelo",
     "residualDiagnostics": "Diagnóstico de residuos",
     "experimentRecommendations": "Recomendaciones de experimento",
+    "experimentSuggestions": "Condiciones del siguiente experimento",
+    "fullValidationError": "Error al ejecutar validación completa",
     "fullValidationError": "Error al ejecutar validación completa",
     "experimentSuggestions": "Condiciones del siguiente experimento",
     "column": {
@@ -499,6 +501,8 @@
     "fullValidationSuccess": "Validación completa completada",
     "fullValidationInfo": "La validación completa compara todos los modelos y recomienda experimentos",
     "fullValidationDesc": "Haz clic en 'Ejecutar validación completa' para comparar modelos y obtener recomendaciones.",
+    "experimentSuggestions": "Condiciones del siguiente experimento",
+    "fullValidationError": "Error al ejecutar validación completa",
     "bestModel": "Mejor modelo",
     "totalModels": "Total de modelos",
     "residualNormal": "Residuo normal",

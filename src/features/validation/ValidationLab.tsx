@@ -105,8 +105,8 @@ export default function ValidationLab() {
       const result = await runFullValidation({ dataset_id: datasetId })
       setFullValidation(result)
       messageApi.success(t('validationLab.fullValidationSuccess'))
-    } catch {
-      messageApi.error(t('validationLab.fullValidationError'))
+    } catch (err) {
+      messageApi.error(`${t('validationLab.fullValidationError')}: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setFullValidationLoading(false)
     }
