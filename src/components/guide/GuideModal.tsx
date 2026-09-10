@@ -7,8 +7,9 @@ interface Props { open: boolean; tab: AppTab; subtab?: string; onClose: () => vo
 export default function GuideModal({ open, tab, subtab, onClose }: Props) {
   const { t } = useTranslation()
   const key = subtab === 'distribution' && tab === 'exploration' ? 'guideDistribution' : `guide.${tab}${subtab ? `.${subtab}` : ''}`
+  const pageName = t(`nav.${tab}`, { defaultValue: tab })
   return <Modal open={open} title={t(`${key}.title`, { defaultValue: t('guide.generic.title') })} onCancel={onClose} onOk={onClose} width={720}>
-    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{t(`${key}.purpose`, { defaultValue: t('guide.generic.purpose') })}</Typography.Paragraph>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{t(`${key}.purpose`, { defaultValue: `${pageName}: ${t('guide.generic.purpose')}` })}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.principle')}</Typography.Text><br />{t(`${key}.principle`, { defaultValue: t('guide.generic.principle') })}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.formula')}</Typography.Text><br />{t(`${key}.formula`, { defaultValue: t('guide.generic.formula') })}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.interpretation')}</Typography.Text><br />{t(`${key}.interpretation`, { defaultValue: t('guide.generic.interpretation') })}</Typography.Paragraph>
