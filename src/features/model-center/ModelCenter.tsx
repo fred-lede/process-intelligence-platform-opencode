@@ -530,6 +530,7 @@ export default function ModelCenter() {
               {interactionsLoading ? t('modelCenter.computing') : t('modelCenter.computeInteractions')}
             </Button>
             {interactions ? (
+              <>
               <Table
                 size="small"
                 pagination={false}
@@ -577,6 +578,8 @@ export default function ModelCenter() {
                 ]}
                 rowKey="factor"
               />
+              <Alert type="info" showIcon message={t('modelCenter.interactionSummary')} description={t('modelCenter.interactionAdvice')} />
+              </>
             ) : (
               <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
             )}
@@ -630,6 +633,7 @@ export default function ModelCenter() {
                   useResizeHandler
                   style={{ width: '100%', height: 300 }}
                 />
+                <Alert type="info" showIcon message={t('modelCenter.shapSummary')} description={t('modelCenter.shapAdvice')} />
               </Space>
             ) : (
               <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />

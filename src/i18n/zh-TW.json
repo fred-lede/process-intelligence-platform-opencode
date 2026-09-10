@@ -364,6 +364,7 @@
     "nodeFilterCleared": "清除節點篩選"
   },
   "modelCenter": {
+    "interactionSummary": "交互作用摘要", "interactionAdvice": "數值越大表示聯合作用越強，建議優先檢視高值組合並以實驗確認。",
     "shapSummary": "SHAP 解讀摘要", "shapAdvice": "長條圖比較平均影響幅度；正負值表示推高或降低輸出，不能單獨視為因果關係。", "sensitivitySummary": "敏感度與效應量摘要", "sensitivityAdvice": "敏感度反映全域影響排序，效應量反映標準化影響大小；建議結合模型驗證與 DOE 實驗確認。",
     "title": "模型中心",
     "noData": "請先匯入資料集再進行模型配適。",
