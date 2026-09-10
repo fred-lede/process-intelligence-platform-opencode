@@ -1674,7 +1674,15 @@ def _handle_monte_carlo_run(params: dict) -> dict:
         lsl=lsl,
         usl=usl,
         model=fit.model,
-        sampling_method=params.get("sampling_method", "bootstrap"),
+        sampling_method=params.get("sampling_method", "auto"),
+        input_distributions={
+            col: {
+                "name": (fit_best_distribution(df[col].dropna().tolist(), top_n=1)[0].name
+                         if fit_best_distribution(df[col].dropna().tolist(), top_n=1) else "empirical")
+            }
+            for col in fit.inputs
+            if col in df.columns and len(df[col].dropna()) >= 5
+        },
     )
     sim_chain_id = _VERSION_CHAIN.register_entity(
         entity_type="simulation",

@@ -1073,7 +1073,7 @@ export interface MonteCarloParams {
   model_id: string
   n_simulations?: number
   seed?: number
-  sampling_method?: 'bootstrap' | 'normal'
+  sampling_method?: 'auto' | 'bootstrap' | 'normal'
   enable_anomalies?: boolean
   anomalies?: Array<{
     anomaly_id: string

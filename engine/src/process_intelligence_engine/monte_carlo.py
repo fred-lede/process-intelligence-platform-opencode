@@ -255,6 +255,7 @@ def run_monte_carlo(
     usl: float | None = None,
     model: Any = None,
     sampling_method: str = "bootstrap",
+    input_distributions: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Run a full Monte Carlo simulation.
 
@@ -295,7 +296,30 @@ def run_monte_carlo(
     # Independent per-column draws can create impossible combinations for
     # quadratic/interacting DOE models and extreme artificial outputs.
     sampled_inputs: dict[str, np.ndarray] = {}
-    if sampling_method == "normal":
+    applied_distributions: dict[str, dict[str, Any]] = {}
+    if sampling_method == "auto" and input_distributions:
+        for col in input_columns:
+            values = df[col].to_numpy(dtype=float)
+            spec = input_distributions.get(col, {})
+            name = str(spec.get("name", "empirical")).lower()
+            if name in ("normal", "norm") and len(values) > 1:
+                mu, sigma = float(np.mean(values)), float(np.std(values, ddof=1))
+                sampled_inputs[col] = rng.normal(mu, sigma, n_simulations)
+                applied_distributions[col] = {"name": "normal", "mean": mu, "std": sigma}
+            elif name in ("uniform", "triangular", "triangle"):
+                lo, hi = float(np.min(values)), float(np.max(values))
+                if name == "uniform":
+                    sampled_inputs[col] = rng.uniform(lo, hi, n_simulations)
+                    applied_distributions[col] = {"name": "uniform", "min": lo, "max": hi}
+                else:
+                    mode = float(spec.get("params", [lo, (lo + hi) / 2, hi])[1]) if spec.get("params") else (lo + hi) / 2
+                    sampled_inputs[col] = rng.triangular(lo, mode, hi, n_simulations)
+                    applied_distributions[col] = {"name": "triangular", "min": lo, "mode": mode, "max": hi}
+            else:
+                row_indices = rng.integers(0, len(df), size=n_simulations)
+                sampled_inputs[col] = values[row_indices]
+                applied_distributions[col] = {"name": "empirical"}
+    elif sampling_method == "normal":
         for col in input_columns:
             values = df[col].to_numpy(dtype=float)
             sigma = float(np.std(values, ddof=1)) if len(values) > 1 else 0.0
@@ -444,6 +468,7 @@ def run_monte_carlo(
         "n_simulations": n_simulations,
         "seed": seed,
         "sampling_method": sampling_method,
+        "input_distributions": applied_distributions,
         "ng_count": ng_count,
         "ng_probability": ng_probability,
         "output_mean": output_mean,

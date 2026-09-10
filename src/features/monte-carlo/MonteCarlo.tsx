@@ -60,7 +60,7 @@ export default function MonteCarlo() {
   const [nSimulations, setNSimulations] = useState<number>(10000)
   const [seed, setSeed] = useState<number>(42)
   const [enableAnomalies, setEnableAnomalies] = useState<boolean>(false)
-  const [samplingMethod, setSamplingMethod] = useState<'bootstrap' | 'normal'>('bootstrap')
+  const [samplingMethod, setSamplingMethod] = useState<'auto' | 'bootstrap' | 'normal'>('auto')
   const [result, setResult] = useState<MonteCarloResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -191,6 +191,7 @@ export default function MonteCarlo() {
               value={samplingMethod}
               onChange={setSamplingMethod}
               options={[
+                { value: 'auto', label: t('monteCarlo.autoDistribution', { defaultValue: '依最佳分布自動抽樣' }) },
                 { value: 'bootstrap', label: t('monteCarlo.bootstrap', { defaultValue: '歷史資料 Bootstrap' }) },
                 { value: 'normal', label: t('monteCarlo.normalSampling', { defaultValue: '各欄位常態分佈' }) },
               ]}
