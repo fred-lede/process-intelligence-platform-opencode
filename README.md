@@ -554,6 +554,14 @@ data/test_dataset.csv
 - 初始版本：Data Import、Process Definition、Exploration、Model Center、Validation、Monte Carlo、SPC、Reports
 - 三語支援（en / zh-TW / es-MX）
 
+### v0.8.2（2026-09-10）
+
+**蒙地卡羅抽樣分布**
+- 預設可依資料健檢的 `best_distribution` 自動選擇抽樣方式。
+- 支援 `uniform`、`triangular`、`normal` 與 `empirical`（Bootstrap）。
+- 仍可手動選擇歷史資料 Bootstrap 或各欄位常態抽樣。
+- 模擬結果記錄實際抽樣方式、輸入分布參數與外推風險。
+
 ## 開發者
 
 - **作者**: Fred Wang
