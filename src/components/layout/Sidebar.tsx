@@ -129,6 +129,9 @@ export default function Sidebar({ activeTab, activeProject, onTabChange }: Sideb
             { value: 'es-MX', label: 'Español (México)' },
           ]}
         />
+        <Button type="text" size="small" icon={<InfoCircleOutlined />} style={{ width: '100%', textAlign: 'left' }} onClick={() => setGuideOpen(true)}>
+          {t('nav.userGuide')}
+        </Button>
         <Button
           type="text"
           size="small"
@@ -137,9 +140,6 @@ export default function Sidebar({ activeTab, activeProject, onTabChange }: Sideb
           onClick={() => setAboutOpen(true)}
         >
           {t('nav.about')}
-        </Button>
-        <Button type="text" size="small" icon={<InfoCircleOutlined />} style={{ width: '100%', textAlign: 'left' }} onClick={() => setGuideOpen(true)}>
-          {t('nav.userGuide')}
         </Button>
       </div>
 
