@@ -1,19 +1,19 @@
 import { Modal, Typography } from 'antd'
 import { useTranslation } from 'react-i18next'
 import type { AppTab } from '../../types'
+import { getGuideSection } from './guideContent'
 
 interface Props { open: boolean; tab: AppTab; subtab?: string; onClose: () => void }
 
 export default function GuideModal({ open, tab, subtab, onClose }: Props) {
-  const { t } = useTranslation()
-  const key = subtab === 'distribution' && tab === 'exploration' ? 'guideDistribution' : `guide.${tab}${subtab ? `.${subtab}` : ''}`
-  const pageName = t(`nav.${tab}`, { defaultValue: tab })
-  return <Modal open={open} title={t(`${key}.title`, { defaultValue: t('guide.generic.title') })} onCancel={onClose} onOk={onClose} width={720}>
-    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{t(`${key}.purpose`, { defaultValue: `${pageName}: ${t('guide.generic.purpose')}` })}</Typography.Paragraph>
-    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.principle')}</Typography.Text><br />{t(`${key}.principle`, { defaultValue: t('guide.generic.principle') })}</Typography.Paragraph>
-    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.formula')}</Typography.Text><br />{t(`${key}.formula`, { defaultValue: t('guide.generic.formula') })}</Typography.Paragraph>
-    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.interpretation')}</Typography.Text><br />{t(`${key}.interpretation`, { defaultValue: t('guide.generic.interpretation') })}</Typography.Paragraph>
-    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.limits')}</Typography.Text><br />{t(`${key}.limits`, { defaultValue: t('guide.generic.limits') })}</Typography.Paragraph>
-    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.recommendation')}</Typography.Text><br />{t(`${key}.recommendation`, { defaultValue: t('guide.generic.recommendation') })}</Typography.Paragraph>
+  const { t, i18n } = useTranslation()
+  const section = getGuideSection(tab, subtab, i18n.language)
+  return <Modal open={open} title={t(`nav.${tab}`, { defaultValue: t('guide.generic.title') })} onCancel={onClose} onOk={onClose} width={720}>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{section.purpose}</Typography.Paragraph>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.principle')}</Typography.Text><br />{section.principle}</Typography.Paragraph>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.formula')}</Typography.Text><br />{section.formula}</Typography.Paragraph>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.interpretation')}</Typography.Text><br />{section.interpretation}</Typography.Paragraph>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.limits')}</Typography.Text><br />{section.limits}</Typography.Paragraph>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.recommendation')}</Typography.Text><br />{section.recommendation}</Typography.Paragraph>
   </Modal>
 }
