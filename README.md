@@ -554,6 +554,11 @@ data/test_dataset.csv
 - 初始版本：Data Import、Process Definition、Exploration、Model Center、Validation、Monte Carlo、SPC、Reports
 - 三語支援（en / zh-TW / es-MX）
 
+### v0.8.3（2026-09-11）
+
+- 新增依目前頁面切換的使用說明視窗，涵蓋功能目的、統計原理、公式、圖表判讀、限制與工程建議。
+- 使用說明支援繁體中文、英文、西班牙文。
+
 ### v0.8.2（2026-09-10）
 
 **蒙地卡羅抽樣分布**
