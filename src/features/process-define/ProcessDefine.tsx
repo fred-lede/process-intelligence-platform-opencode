@@ -234,7 +234,7 @@ export default function ProcessDefine() {
       title: t('processDefine.inputName'),
       dataIndex: 'name',
       key: 'name',
-      width: 460,
+      width: 320,
       ellipsis: true,
       render: (name: string) => <Typography.Text strong>{name}</Typography.Text>,
     },
@@ -626,7 +626,8 @@ export default function ProcessDefine() {
                 columns={scenarioColumns}
                 dataSource={anomalyScenarios}
                 pagination={false}
-                scroll={{ x: 1550 }}
+                scroll={{ x: 1800 }}
+                className="anomaly-scenarios-table"
                 rowClassName={(record) => (record.user_confirmed ? '' : 'ant-table-row-warning')}
               />
               <div style={{ marginTop: 12 }}>

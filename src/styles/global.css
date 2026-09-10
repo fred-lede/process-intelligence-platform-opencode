@@ -50,3 +50,11 @@ body {
   background: #9aa3ad;
 }
 
+/* Keep the wide anomaly table's horizontal scrollbar discoverable. */
+.anomaly-scenarios-table .ant-table-content::-webkit-scrollbar {
+  height: 12px;
+}
+.anomaly-scenarios-table .ant-table-content::-webkit-scrollbar-thumb {
+  background: #bfbfbf;
+  border-radius: 6px;
+}
