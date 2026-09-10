@@ -342,6 +342,17 @@ export default function ProcessDefine() {
       title: t('processDefine.anomalyName'),
       dataIndex: 'name',
       key: 'name',
+      render: (name: string, row) => {
+        if (row.type === 'spec') {
+          const key = row.direction === 'above' ? 'specAbove' : 'specBelow'
+          return t(`processDefine.${key}`, { field: row.target_input, limit: row.threshold })
+        }
+        if (row.type === 'control') {
+          const key = row.direction === 'run' ? 'controlRun' : 'controlDeviation'
+          return t(`processDefine.${key}`, { field: row.target_input })
+        }
+        return name
+      },
     },
     {
       title: t('processDefine.scenarioType'),
