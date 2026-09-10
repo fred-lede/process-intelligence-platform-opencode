@@ -351,6 +351,8 @@
     "rowAxis": "Índice de fila",
     "trendChartTitle": "Gráfica de Tendencia",
     "fitName": "Distribución",
+    "bestFitSummary": "Mejor distribución para {{column}}: {{distribution}}",
+    "bestFitReason": "Entre los candidatos: AIC={{aic}}, BIC={{bic}} y p-value KS={{p}}. Normalmente se prefieren AIC/BIC más bajos; verifica también el p-value, el gráfico y la plausibilidad de ingeniería.",
     "params": "Parámetros ajustados",
     "noFit": "Selecciona una columna y ejecuta el ajuste.",
     "noTrend": "Selecciona una columna y dibuja la tendencia.",

@@ -349,6 +349,16 @@ export default function Exploration() {
             dataSource={fits}
             pagination={false}
           />
+          <Alert
+            type="info"
+            showIcon
+            message={t('exploration.bestFitSummary', { column, distribution: fits[0].name })}
+            description={t('exploration.bestFitReason', {
+              aic: fits[0].aic.toFixed(2),
+              bic: fits[0].bic.toFixed(2),
+              p: fits[0].ks_p_value.toFixed(4),
+            })}
+          />
         </>
       ) : (
         !loading && <Empty description={t('exploration.noFit')} />
