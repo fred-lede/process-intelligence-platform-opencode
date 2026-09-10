@@ -234,7 +234,7 @@ export default function ProcessDefine() {
       title: t('processDefine.inputName'),
       dataIndex: 'name',
       key: 'name',
-      width: 380,
+      width: 460,
       ellipsis: true,
       render: (name: string) => <Typography.Text strong>{name}</Typography.Text>,
     },
@@ -322,7 +322,7 @@ export default function ProcessDefine() {
     {
       title: '',
       key: 'auto',
-      width: 90,
+      width: 120,
       render: (_: unknown, __: unknown) => (
         <Tooltip title={t('processDefine.auto3sigma')}>
           <Tag color="default" style={{ cursor: 'pointer' }}>
@@ -382,19 +382,19 @@ export default function ProcessDefine() {
       render: (p: number) => `${(p * 100).toFixed(1)}%`,
     },
     {
-      title: t('processDefine.scenarioConfidence'),
+      title: <span style={{ whiteSpace: 'nowrap' }}>{t('processDefine.scenarioConfidence')}</span>,
       dataIndex: 'confidence',
       key: 'confidence',
-      width: 90,
+      width: 120,
       render: (c: number, row) => <InputNumber min={0} max={1} step={0.05} value={c} onChange={v => updateScenario(row.anomaly_id, { confidence: v ?? 0 })} />,
     },
     {
       title: t('processDefine.scenarioSource'),
       dataIndex: 'source',
       key: 'source',
-      width: 160,
+      width: 220,
       ellipsis: true,
-      render: (source: string, row) => <Select value={source} style={{ width: 155 }} options={['historical_observation', 'fitted_distribution', 'engineering_input', 'ai_estimate', 'user_override'].map(value => ({ value, label: t(`processDefine.source_${value}`) }))} onChange={value => updateScenario(row.anomaly_id, { source: value as AnomalyScenario['source'] })} />,
+      render: (source: string, row) => <Select value={source} style={{ width: 205 }} options={['historical_observation', 'fitted_distribution', 'engineering_input', 'ai_estimate', 'user_override'].map(value => ({ value, label: t(`processDefine.source_${value}`) }))} onChange={value => updateScenario(row.anomaly_id, { source: value as AnomalyScenario['source'] })} />,
     },
     {
       title: t('processDefine.anomalyAction'),
@@ -626,7 +626,7 @@ export default function ProcessDefine() {
                 columns={scenarioColumns}
                 dataSource={anomalyScenarios}
                 pagination={false}
-                scroll={{ x: 1400 }}
+                scroll={{ x: 1550 }}
                 rowClassName={(record) => (record.user_confirmed ? '' : 'ant-table-row-warning')}
               />
               <div style={{ marginTop: 12 }}>
