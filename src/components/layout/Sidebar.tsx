@@ -23,6 +23,7 @@ import {
 import type { AppTab } from '../../types'
 import { useEffect, useState } from 'react'
 import GuideModal from '../guide/GuideModal'
+import { useGuideContextStore } from '../../stores/guideContextStore'
 
 const { Sider } = Layout
 
@@ -55,6 +56,7 @@ export default function Sidebar({ activeTab, activeProject, onTabChange }: Sideb
   const { t, i18n } = useTranslation()
   const [aboutOpen, setAboutOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
+  const guideSubtab = useGuideContextStore((s) => s.subtab)
   const [appVersion, setAppVersion] = useState<string | null>(null)
 
   useEffect(() => {
@@ -141,7 +143,7 @@ export default function Sidebar({ activeTab, activeProject, onTabChange }: Sideb
         </Button>
       </div>
 
-      <GuideModal open={guideOpen} tab={activeTab} onClose={() => setGuideOpen(false)} />
+      <GuideModal open={guideOpen} tab={activeTab} subtab={guideSubtab} onClose={() => setGuideOpen(false)} />
 
       <Modal
         open={aboutOpen}

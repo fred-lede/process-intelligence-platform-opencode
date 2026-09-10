@@ -19,6 +19,7 @@ import {
 } from '../../lib/engine'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
+import { useGuideContextStore } from '../../stores/guideContextStore'
 import {
   consumeNodeContext,
   dataSourceLoaded,
@@ -75,6 +76,8 @@ export default function Exploration() {
   const [grrPartCol, setGrrPartCol] = useState<string | undefined>()
   const [grrOperatorCol, setGrrOperatorCol] = useState<string | undefined>()
   const [activeTab, setActiveTab] = useState('distribution')
+  const setGuideSubtab = useGuideContextStore((s) => s.setSubtab)
+  useEffect(() => { setGuideSubtab(activeTab); return () => setGuideSubtab(undefined) }, [activeTab, setGuideSubtab])
 
   const numericColumns = useMemo(() => {
     if (!importResult) return []
