@@ -295,7 +295,7 @@
     "scenarioSource": "Fuente",
     "specAbove": "{{field}} supera el límite superior (>{{limit}})",
     "specBelow": "{{field}} por debajo del límite inferior (<{{limit}})",
-    "controlRun": "{{field}} corrida ascendente consecutiva",
+    "controlRun": "{{field}} tendencia ascendente consecutiva",
     "controlDeviation": "{{field}} desviación de control",
     "source_historical_observation": "Observación histórica",
     "source_fitted_distribution": "Distribución ajustada",

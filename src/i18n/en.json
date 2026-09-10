@@ -292,7 +292,7 @@
     "scenarioSource": "Source",
     "specAbove": "{{field}} above upper limit (>{{limit}})",
     "specBelow": "{{field}} below lower limit (<{{limit}})",
-    "controlRun": "{{field}} consecutive upward run",
+    "controlRun": "{{field}} consecutive upward trend",
     "controlDeviation": "{{field}} control deviation",
     "source_historical_observation": "Historical observation",
     "source_fitted_distribution": "Fitted distribution",
