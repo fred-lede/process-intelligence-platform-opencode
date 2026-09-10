@@ -218,6 +218,23 @@ def test_run_monte_carlo_no_bounds():
     assert result["ng_probability"] == 0.0
 
 
+def test_sampling_method_is_applied():
+    rng = np.random.default_rng(7)
+    df = _make_simple_dataset(rng)
+    common = dict(
+        df=df, model_type="doe_linear",
+        coefficients={"_intercept": 10.0, "x1": 2.0, "x2": -1.5},
+        input_columns=["x1", "x2"], output_column="y",
+        n_simulations=100, seed=42, enable_anomalies=False,
+        lsl=None, usl=None,
+    )
+    bootstrap = run_monte_carlo(**common, sampling_method="bootstrap")
+    normal = run_monte_carlo(**common, sampling_method="normal")
+    assert bootstrap["sampling_method"] == "bootstrap"
+    assert normal["sampling_method"] == "normal"
+    assert bootstrap["output_values"] != normal["output_values"]
+
+
 def test_sample_distribution_unknown_type():
     values = [1.0, 2.0, 3.0, 4.0, 5.0]
     samples = sample_from_distribution(values, dist_name="unknown_type", n=10, seed=42)

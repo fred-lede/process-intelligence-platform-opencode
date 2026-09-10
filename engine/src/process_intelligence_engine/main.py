@@ -1674,6 +1674,7 @@ def _handle_monte_carlo_run(params: dict) -> dict:
         lsl=lsl,
         usl=usl,
         model=fit.model,
+        sampling_method=params.get("sampling_method", "bootstrap"),
     )
     sim_chain_id = _VERSION_CHAIN.register_entity(
         entity_type="simulation",
