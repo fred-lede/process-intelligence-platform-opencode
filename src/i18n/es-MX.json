@@ -355,6 +355,8 @@
     "bestFitReason": "Entre los candidatos: AIC={{aic}}, BIC={{bic}} y p-value KS={{p}}. Normalmente se prefieren AIC/BIC más bajos; verifica también el p-value, el gráfico y la plausibilidad de ingeniería.",
     "trendSummary": "Resumen de tendencia de {{column}}: {{count}} puntos, primero {{first}}, último {{last}}.",
     "trendAdvice": "Interpreta la tendencia con los límites de control y especificación; una tendencia no implica causalidad.",
+    "timeSeriesSummary": "Serie temporal de {{column}}: {{features}} características calculadas ({{rows}} filas de vista previa).",
+    "timeSeriesAdvice": "Revisa retardos, diferencias, media móvil y volatilidad; son indicadores descriptivos y no implican causalidad.",
     "params": "Parámetros ajustados",
     "noFit": "Selecciona una columna y ejecuta el ajuste.",
     "noTrend": "Selecciona una columna y dibuja la tendencia.",

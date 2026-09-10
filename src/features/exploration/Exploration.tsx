@@ -627,6 +627,7 @@ export default function Exploration() {
             pagination={{ pageSize: 10, showSizeChanger: false }}
             rowKey={(r) => String(r[timeColumn ?? ''])}
           />
+          <Alert type="info" showIcon message={t('exploration.timeSeriesSummary', { column: tsColumn, features: tsFeatures.n_features, rows: tsFeatures.preview.length })} description={t('exploration.timeSeriesAdvice')} />
         </>
       ) : (
         !tsLoading && <Empty description={t('exploration.noTsData')} />
