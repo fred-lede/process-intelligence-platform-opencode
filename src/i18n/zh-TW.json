@@ -1051,4 +1051,5 @@
     "notStarted": "未開始"
   },
   "guide": { "labels": { "purpose": "功能目的", "principle": "統計原理", "formula": "主要公式", "interpretation": "圖表判讀", "limits": "限制", "recommendation": "工程建議" }, "generic": { "title": "使用說明", "purpose": "協助理解目前分析頁面的功能與結果。", "principle": "以頁面顯示的資料與統計假設作為判讀基礎。", "formula": "請參考目前頁面的指標標籤與圖表註記。", "interpretation": "綜合數值、圖表與工程知識判讀。", "limits": "結果描述所選樣本，不代表母體或因果結論。", "recommendation": "做出製程決策前，先確認資料品質與分析假設。" } }
+  ,"guideDistribution": { "title": "分布配適", "purpose": "比較所選欄位的候選分布。", "principle": "AIC／BIC 比較相對配適；KS 檢定檢查一致性。", "formula": "AIC=2k−2ln(L)；BIC=kln(n)−2ln(L)。", "interpretation": "AIC／BIC 越低通常越佳；KS p-value 越大表示本樣本未拒絕。", "limits": "樣本配適不代表母體一定服從該分布。", "recommendation": "確認參數、圖形與工程合理性後再用於模擬。" }
 }

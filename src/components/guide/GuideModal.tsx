@@ -6,7 +6,7 @@ interface Props { open: boolean; tab: AppTab; subtab?: string; onClose: () => vo
 
 export default function GuideModal({ open, tab, subtab, onClose }: Props) {
   const { t } = useTranslation()
-  const key = `guide.${tab}${subtab ? `.${subtab}` : ''}`
+  const key = subtab === 'distribution' && tab === 'exploration' ? 'guideDistribution' : `guide.${tab}${subtab ? `.${subtab}` : ''}`
   return <Modal open={open} title={t(`${key}.title`, { defaultValue: t('guide.generic.title') })} onCancel={onClose} onOk={onClose} width={720}>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{t(`${key}.purpose`, { defaultValue: t('guide.generic.purpose') })}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.principle')}</Typography.Text><br />{t(`${key}.principle`, { defaultValue: t('guide.generic.principle') })}</Typography.Paragraph>
