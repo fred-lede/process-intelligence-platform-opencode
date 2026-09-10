@@ -351,6 +351,8 @@
     "fitName": "分布",
     "bestFitSummary": "{{column}} 的最佳配適分布：{{distribution}}",
     "bestFitReason": "依目前候選模型，AIC={{aic}}、BIC={{bic}}，KS p-value={{p}}。AIC/BIC 越低通常越佳，但仍應搭配 p-value、圖形與工程合理性判斷。",
+    "trendSummary": "{{column}} 趨勢摘要：{{count}} 個點，首值 {{first}}，末值 {{last}}。",
+    "trendAdvice": "請搭配控制界線與規格限判讀趨勢；趨勢不代表因果關係。",
     "params": "配適參數",
     "noFit": "請選擇欄位並執行配適。",
     "noTrend": "請選擇欄位並繪製趨勢。",

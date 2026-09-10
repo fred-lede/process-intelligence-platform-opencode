@@ -351,6 +351,8 @@
     "fitName": "Distribution",
     "bestFitSummary": "Best-fit distribution for {{column}}: {{distribution}}",
     "bestFitReason": "Among the candidates, AIC={{aic}}, BIC={{bic}}, and KS p-value={{p}}. Lower AIC/BIC is generally preferred; also check the p-value, plot, and engineering plausibility.",
+    "trendSummary": "{{column}} trend summary: {{count}} points, first {{first}}, last {{last}}.",
+    "trendAdvice": "Interpret the trend with control and specification limits; a trend does not imply causation.",
     "params": "Fitted params",
     "noFit": "Select a column and run the fit.",
     "noTrend": "Select a column and draw the trend.",

@@ -394,6 +394,7 @@ export default function Exploration() {
       {error && <Alert type="error" showIcon message={error} />}
 
       {scatterData ? (
+        <>
         <Card size="small" title={t('exploration.trendChartTitle')}>
           <Plot
             data={[
@@ -448,6 +449,8 @@ export default function Exploration() {
             config={{ responsive: true }}
           />
         </Card>
+        <Alert type="info" showIcon message={t('exploration.trendSummary', { column: trendColumn, count: scatterData.y.length, first: scatterData.y[0]?.toFixed(4), last: scatterData.y[scatterData.y.length - 1]?.toFixed(4) })} description={t('exploration.trendAdvice')} />
+        </>
       ) : (
         !loading && <Empty description={t('exploration.noTrend')} />
       )}
