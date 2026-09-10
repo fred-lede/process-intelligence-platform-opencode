@@ -10,6 +10,7 @@ export default function GuideModal({ open, tab, subtab, onClose }: Props) {
   const section = getGuideSection(tab, subtab, i18n.language)
   return <Modal open={open} title={t(`nav.${tab}`, { defaultValue: t('guide.generic.title') })} onCancel={onClose} onOk={onClose} width={720}>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{section.purpose}</Typography.Paragraph>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.steps', { defaultValue: '操作步驟' })}</Typography.Text><br />{section.steps}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.principle')}</Typography.Text><br />{section.principle}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.formula')}</Typography.Text><br />{section.formula}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.interpretation')}</Typography.Text><br />{section.interpretation}</Typography.Paragraph>
