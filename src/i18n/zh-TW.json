@@ -17,6 +17,7 @@
     "spc": "SPC 管制圖",
     "settings": "系統設定",
     "about": "關於",
+    "userGuide": "使用說明",
     "processFlow": "製程流程",
     "dataAssets": "資料資產"
   },
@@ -1048,5 +1049,6 @@
     "confirmed": "已確認",
     "pending": "待確認",
     "notStarted": "未開始"
-  }
+  },
+  "guide": { "labels": { "purpose": "功能目的", "principle": "統計原理", "formula": "主要公式", "interpretation": "圖表判讀", "limits": "限制", "recommendation": "工程建議" }, "generic": { "title": "使用說明", "purpose": "協助理解目前分析頁面的功能與結果。", "principle": "以頁面顯示的資料與統計假設作為判讀基礎。", "formula": "請參考目前頁面的指標標籤與圖表註記。", "interpretation": "綜合數值、圖表與工程知識判讀。", "limits": "結果描述所選樣本，不代表母體或因果結論。", "recommendation": "做出製程決策前，先確認資料品質與分析假設。" } }
 }

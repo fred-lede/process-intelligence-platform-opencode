@@ -22,6 +22,7 @@ import {
 } from '@ant-design/icons'
 import type { AppTab } from '../../types'
 import { useEffect, useState } from 'react'
+import GuideModal from '../guide/GuideModal'
 
 const { Sider } = Layout
 
@@ -53,6 +54,7 @@ const settingsItem = { key: 'settings', icon: <SettingOutlined /> }
 export default function Sidebar({ activeTab, activeProject, onTabChange }: SidebarProps) {
   const { t, i18n } = useTranslation()
   const [aboutOpen, setAboutOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
   const [appVersion, setAppVersion] = useState<string | null>(null)
 
   useEffect(() => {
@@ -134,7 +136,12 @@ export default function Sidebar({ activeTab, activeProject, onTabChange }: Sideb
         >
           {t('nav.about')}
         </Button>
+        <Button type="text" size="small" icon={<InfoCircleOutlined />} style={{ width: '100%', textAlign: 'left' }} onClick={() => setGuideOpen(true)}>
+          {t('nav.userGuide')}
+        </Button>
       </div>
+
+      <GuideModal open={guideOpen} tab={activeTab} onClose={() => setGuideOpen(false)} />
 
       <Modal
         open={aboutOpen}

@@ -17,6 +17,7 @@
     "spc": "Control SPC",
     "settings": "Configuración del Sistema",
     "about": "Acerca de",
+    "userGuide": "Guía de uso",
     "dataAssets": "Activos de Datos",
     "processFlow": "Flujo de Proceso"
   },
@@ -1044,5 +1045,6 @@
     "confirmed": "Confirmado",
     "pending": "Pendiente",
     "notStarted": "No Iniciado"
-  }
+  },
+  "guide": { "labels": { "purpose": "Propósito", "principle": "Principio", "formula": "Fórmula", "interpretation": "Interpretación", "limits": "Limitaciones", "recommendation": "Recomendación" }, "generic": { "title": "Guía de uso", "purpose": "Comprende la función y los resultados de la página actual.", "principle": "Interpreta con base en los datos y supuestos estadísticos mostrados.", "formula": "Consulta las etiquetas de métricas y anotaciones del gráfico.", "interpretation": "Combina resultados numéricos, gráficos y conocimiento del proceso.", "limits": "Los resultados describen la muestra seleccionada y no prueban población ni causalidad.", "recommendation": "Verifica la calidad de datos y los supuestos antes de decidir." } }
 }
