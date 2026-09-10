@@ -641,6 +641,7 @@
     "nSimulations": "模擬次數",
     "seed": "隨機種子",
     "samplingMethod": "抽樣方式",
+    "filteredSampleCount": "篩選後樣本數：{{count}}",
     "autoDistribution": "依最佳分布自動抽樣",
     "bootstrap": "歷史資料 Bootstrap",
     "normalSampling": "各欄位常態分佈",

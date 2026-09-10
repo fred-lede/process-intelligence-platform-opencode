@@ -641,6 +641,7 @@
     "nSimulations": "Simulation Count",
     "seed": "Random Seed",
     "samplingMethod": "Sampling Method",
+    "filteredSampleCount": "Filtered sample count: {{count}}",
     "autoDistribution": "Auto (best distribution)",
     "bootstrap": "Historical Bootstrap",
     "normalSampling": "Per-column normal",

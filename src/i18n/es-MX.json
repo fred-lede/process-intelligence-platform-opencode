@@ -637,6 +637,7 @@
     "nSimulations": "Número de simulaciones",
     "seed": "Semilla",
     "samplingMethod": "Método de muestreo",
+    "filteredSampleCount": "Muestras filtradas: {{count}}",
     "autoDistribution": "Automático (mejor distribución)",
     "bootstrap": "Bootstrap histórico",
     "normalSampling": "Normal por columna",
