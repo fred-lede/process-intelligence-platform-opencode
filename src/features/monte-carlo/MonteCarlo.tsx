@@ -73,6 +73,12 @@ export default function MonteCarlo() {
   }, [])
 
   useEffect(() => {
+    // Results are scoped to the loaded dataset as well as the model.
+    setResult(null)
+    setError(null)
+  }, [importResult?.dataset_id])
+
+  useEffect(() => {
     setContext('monteCarlo', buildMonteCarloContext(result, spec ?? undefined))
   }, [result, spec, setContext])
 
@@ -99,6 +105,14 @@ export default function MonteCarlo() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleModelChange = (modelId: string) => {
+    // A result belongs to the model used for that run; never show it under a
+    // newly selected model before the user runs the simulation again.
+    setSelectedModel(modelId)
+    setResult(null)
+    setError(null)
   }
 
   const histogramTrace = result ? {
@@ -142,7 +156,7 @@ export default function MonteCarlo() {
           <Form.Item label={t('monteCarlo.selectModel')} style={{ margin: 0 }}>
             <Select
               value={selectedModel}
-              onChange={setSelectedModel}
+              onChange={handleModelChange}
               options={models.map(m => ({
                 value: m.model_id,
                 label: `${m.model_type} — ${m.equation.slice(0, 50)}...`,
