@@ -652,7 +652,7 @@ export default function Exploration() {
             pagination={{ pageSize: 10, showSizeChanger: false }}
             rowKey={(r) => String(r[timeColumn ?? ''])}
           />
-          <Alert type="info" showIcon message={t('exploration.timeSeriesSummary', { column: tsColumn, features: tsFeatures.n_features, rows: tsFeatures.preview.length })} description={t('exploration.timeSeriesAdvice')} />
+          <Alert type="info" showIcon message={t('exploration.timeSeriesSummary', { column: tsColumn, features: tsFeatures.n_features, rows: tsFeatures.preview.length })} description={t('exploration.timeSeriesAdvice', { time: timeColumn || '—', windows: '3, 5, 10' })} />
         </>
       ) : (
         !tsLoading && <Empty description={t('exploration.noTsData')} />
@@ -774,7 +774,7 @@ export default function Exploration() {
             if (grrResult.verdict === 'marginal') return t('grr.reasonMarginal', { pct: pctText })
             return t('grr.reasonUnacceptable', { pct: pctText })
           })()}</Typography.Text>
-          <Alert type="info" showIcon message={t('grr.summaryTitle')} description={t('grr.summaryAdvice')} />
+          <Alert type="info" showIcon message={t('grr.summaryTitle')} description={t('grr.summaryAdvice', { pct: grrResult.pct_grr.toFixed(1), part: grrResult.pct_part.toFixed(1), repeatability: grrResult.repeatability_std.toFixed(4), reproducibility: grrResult.reproducibility_std.toFixed(4) })} />
         </Space>
       ) : null}
     </Space>

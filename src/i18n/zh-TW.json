@@ -355,7 +355,7 @@
     "trendAdvice": "若有控制界線外點，請優先檢查量測校正、單位與時間排序；連續同向變化可能代表漂移，建議分批／機台追蹤並確認資料時間戳。趨勢不代表因果關係。",
     "trendDirection": { "up": "上升", "down": "下降", "flat": "持平" },
     "timeSeriesSummary": "{{column}} 時間序列已計算 {{features}} 個特徵（目前顯示 {{rows}} 筆預覽資料）。",
-    "timeSeriesAdvice": "請檢視延遲、差分、移動平均與波動特徵；特徵是描述性指標，不代表因果關係。",
+    "timeSeriesAdvice": "已使用時間欄位 {{time}} 計算延遲、差分與移動視窗（{{windows}}）；請檢查時間戳是否排序、間隔是否一致，以及缺值或重複時間。若漂移或自相關明顯，建議依批次／機台分層並補充足夠觀測後再建模。這些特徵是描述性指標，不代表因果關係。",
     "params": "配適參數",
     "noFit": "請選擇欄位並執行配適。",
     "noTrend": "請選擇欄位並繪製趨勢。",
@@ -904,7 +904,7 @@
     "noResultRows": "沒有可顯示的聯合機率配對。"
   },
   "grr": {
-    "summaryTitle": "GRR 結果摘要", "summaryAdvice": "%GRR 越低表示量測系統相對於製程變異越穩定；若為邊界或不可接受，建議改善量具固定、操作員訓練並重新量測。",
+    "summaryTitle": "GRR 結果摘要", "summaryAdvice": "%GRR={{pct}}%，零件間變異={{part}}%；重複性標準差={{repeatability}}、再現性標準差={{reproducibility}}。請依判定區間決定是否接受；若邊界或不可接受，優先檢查量具固定與校正，再檢視操作員一致性並重新量測。GRR 結果受零件範圍與抽樣設計影響，不宜脫離應用規格解讀。",
     "title": "量測系統分析 (GRR)",
     "measurementColumn": "測量欄位",
     "partColumn": "零件欄位",

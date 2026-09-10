@@ -357,7 +357,7 @@
     "trendAdvice": "Si hay puntos fuera de los límites de control, verifica primero la calibración, las unidades y el orden de las marcas de tiempo. Una racha sostenida puede indicar deriva; segmenta por lote o máquina y valida las marcas de tiempo. Una tendencia no implica causalidad.",
     "trendDirection": { "up": "ascendente", "down": "descendente", "flat": "estable" },
     "timeSeriesSummary": "Serie temporal de {{column}}: {{features}} características calculadas ({{rows}} filas de vista previa).",
-    "timeSeriesAdvice": "Revisa retardos, diferencias, media móvil y volatilidad; son indicadores descriptivos y no implican causalidad.",
+    "timeSeriesAdvice": "Con la columna de tiempo {{time}} se calcularon retardos, diferencias y ventanas móviles ({{windows}}). Verifica el orden de las marcas de tiempo, la regularidad de los intervalos, valores faltantes y tiempos duplicados. Si hay deriva o autocorrelación, segmenta por lote o máquina y reúne suficientes observaciones antes de modelar. Son indicadores descriptivos y no implican causalidad.",
     "params": "Parámetros ajustados",
     "noFit": "Selecciona una columna y ejecuta el ajuste.",
     "noTrend": "Selecciona una columna y dibuja la tendencia.",
@@ -900,7 +900,7 @@
     "noResultRows": "No hay pares de probabilidad conjunta disponibles."
   },
   "grr": {
-    "summaryTitle": "Resumen GRR", "summaryAdvice": "Un %GRR menor indica un sistema de medición más estable frente a la variación del proceso; mejora la fijación y la capacitación y vuelve a medir si el resultado es marginal o inaceptable.",
+    "summaryTitle": "Resumen GRR", "summaryAdvice": "%GRR={{pct}}%, pieza a pieza={{part}}%; DE de repetibilidad={{repeatability}}, DE de reproducibilidad={{reproducibility}}. Usa el veredicto junto con los requisitos de la aplicación; si es marginal o inaceptable, revisa primero la fijación y calibración, luego la consistencia del operador y vuelve a medir. El GRR depende del rango de piezas y del diseño del estudio.",
     "title": "Gage R&R",
     "measurementColumn": "Columna de medición",
     "partColumn": "Columna de pieza",
