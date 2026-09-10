@@ -630,6 +630,9 @@ export default function ProcessDefine() {
                 className="anomaly-scenarios-table"
                 rowClassName={(record) => (record.user_confirmed ? '' : 'ant-table-row-warning')}
               />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {t('processDefine.horizontalScrollHint')}
+              </Typography.Text>
               <div style={{ marginTop: 12 }}>
                 <Popconfirm
                   title={t('processDefine.confirmAll')}

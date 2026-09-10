@@ -318,6 +318,7 @@
     "anomalyId": "ID",
     "anomalyName": "Name",
     "anomalyAction": "Action",
+    "horizontalScrollHint": "If columns exceed the view, use horizontal trackpad scrolling, Shift+wheel, or arrow keys.",
     "statusConfirmed": "Confirmed",
     "engineeringScenarioTitle": "Add Engineering Scenario",
     "engineeringName": "Scenario name",

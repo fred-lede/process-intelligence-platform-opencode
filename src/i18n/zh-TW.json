@@ -318,6 +318,7 @@
     "anomalyId": "編號",
     "anomalyName": "名稱",
     "anomalyAction": "操作",
+    "horizontalScrollHint": "若欄位超出畫面，可使用觸控板水平滑動、Shift+滾輪或方向鍵捲動。",
     "statusConfirmed": "已確認",
     "engineeringScenarioTitle": "新增工程情境",
     "engineeringName": "情境名稱",

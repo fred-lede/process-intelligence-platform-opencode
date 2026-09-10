@@ -320,6 +320,7 @@
     "anomalyId": "ID",
     "anomalyName": "Nombre",
     "anomalyAction": "Acción",
+    "horizontalScrollHint": "Si las columnas exceden la vista, usa desplazamiento horizontal, Shift+rueda o las flechas.",
     "statusConfirmed": "Confirmado",
     "engineeringScenarioTitle": "Agregar Escenario de Ingeniería",
     "engineeringName": "Nombre del escenario",
