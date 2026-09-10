@@ -646,6 +646,7 @@ export default function ModelCenter() {
             { title: t('modelCenter.sensitivity'), dataIndex: 'sensitivity', key: 'sensitivity', render: (v: number) => `${(v * 100).toFixed(1)}%` },
             { title: t('modelCenter.effectSize'), dataIndex: 'effect_size', key: 'effect_size', render: (v: number) => v.toFixed(3) },
           ]} />}
+          {sensitivity && <Alert type="info" showIcon message={t('modelCenter.sensitivitySummary')} description={t('modelCenter.sensitivityAdvice')} />}
         </Card>
 
         <Card title={t('modelCenter.extrapTitle')} size="small">

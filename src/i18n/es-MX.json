@@ -366,6 +366,7 @@
     "nodeFilterCleared": "Limpiar filtro de nodo"
   },
   "modelCenter": {
+    "shapSummary": "Resumen SHAP", "shapAdvice": "Se muestra la magnitud media; los signos indican la dirección y no prueban causalidad.", "sensitivitySummary": "Resumen de sensibilidad y tamaño del efecto", "sensitivityAdvice": "La sensibilidad ordena la influencia y el tamaño del efecto cuantifica el impacto; confirma con validación y DOE.",
     "title": "Centro de Modelos",
     "noData": "Importa un conjunto de datos antes de ajustar modelos.",
     "fitTitle": "Ajustar Modelo",

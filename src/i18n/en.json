@@ -364,6 +364,7 @@
     "nodeFilterCleared": "Clear node filter"
   },
   "modelCenter": {
+    "shapSummary": "SHAP interpretation summary", "shapAdvice": "Mean impact magnitude is shown; signs indicate output direction and do not prove causality.", "sensitivitySummary": "Sensitivity and effect-size summary", "sensitivityAdvice": "Sensitivity ranks global influence and effect size quantifies standardized impact; confirm with validation and DOE.",
     "title": "Model Center",
     "noData": "Import a dataset before fitting models.",
     "fitTitle": "Fit Model",
