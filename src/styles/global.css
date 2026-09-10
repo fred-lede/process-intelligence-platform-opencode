@@ -54,6 +54,10 @@ body {
 .anomaly-scenarios-table .ant-table-content::-webkit-scrollbar {
   height: 12px;
 }
+.anomaly-scenarios-table .ant-table-content {
+  overflow-x: scroll !important;
+  scrollbar-gutter: stable;
+}
 .anomaly-scenarios-table .ant-table-content::-webkit-scrollbar-thumb {
   background: #bfbfbf;
   border-radius: 6px;
