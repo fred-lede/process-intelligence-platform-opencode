@@ -718,6 +718,9 @@ def _handle_modeling_delete(params: dict) -> dict:
     """Delete a model from the registry."""
     model_id = params["model_id"]
     MODEL_REGISTRY.delete(model_id)
+    _VERSION_CHAIN.register_entity(
+        "model_deleted", "default", {"model_id": model_id}, created_by=params.get("operator", "anonymous")
+    )
     return {"success": True, "model_id": model_id}
 
 
@@ -2652,9 +2655,15 @@ def _reload_chain_for_project(root: str) -> dict:
             record = dict(entity.metadata["record"])
             record.pop("prediction_error", None)
             experiments.record(ExperimentRecord(**record))
+    deleted_model_ids = {
+        chain.get_entity(item["entity_id"]).metadata.get("model_id")
+        for item in chain.get_chain_summary()
+        if item["entity_type"] == "model_deleted"
+    }
     for item in chain.get_chain_summary():
         entity = chain.get_entity(item["entity_id"])
-        if entity.entity_type == "model" and "recipe" in entity.metadata:
+        if (entity.entity_type == "model" and "recipe" in entity.metadata
+                and entity.metadata.get("model_id") not in deleted_model_ids):
             models.restore(rebuild_model(entity, datasets.get(entity.metadata["dataset_id"]), MODEL_FITTERS))
     for item in chain.get_chain_summary():
         entity = chain.get_entity(item["entity_id"])
