@@ -223,6 +223,29 @@ export default function Exploration() {
     }
   }, [series])
 
+  const trendInsights = useMemo(() => {
+    if (!scatterData?.y.length) return null
+    const values = scatterData.y.filter((v): v is number => v != null)
+    if (!values.length) return null
+    const first = values[0]
+    const last = values[values.length - 1]
+    const delta = last - first
+    let direction: 'up' | 'down' | 'flat' = Math.abs(delta) < 1e-12 ? 'flat' : delta > 0 ? 'up' : 'down'
+    let longestRun = 1
+    let run = 1
+    for (let i = 1; i < values.length; i += 1) {
+      const step = values[i] - values[i - 1]
+      const prevStep = values[i - 1] - values[i - 2]
+      if (i > 1 && step !== 0 && prevStep !== 0 && Math.sign(step) === Math.sign(prevStep)) run += 1
+      else run = 1
+      longestRun = Math.max(longestRun, run)
+    }
+    const ucl = trendCtrl?.ucl
+    const lcl = trendCtrl?.lcl
+    const beyond = values.filter(v => (ucl != null && v > ucl) || (lcl != null && v < lcl)).length
+    return { direction, delta, longestRun, beyond, ucl, lcl }
+  }, [scatterData, trendCtrl])
+
   const fitColumns: ColumnsType<DistributionFitResult> = [
     {
       title: t('exploration.fitName'),
@@ -451,7 +474,7 @@ export default function Exploration() {
             config={{ responsive: true }}
           />
         </Card>
-        <Alert type="info" showIcon message={t('exploration.trendSummary', { column: trendColumn, count: scatterData.y.length, first: scatterData.y[0]?.toFixed(4), last: scatterData.y[scatterData.y.length - 1]?.toFixed(4) })} description={t('exploration.trendAdvice')} />
+        {trendInsights && <Alert type="info" showIcon message={t('exploration.trendSummary', { column: trendColumn, count: scatterData.y.length, first: scatterData.y[0]?.toFixed(4), last: scatterData.y[scatterData.y.length - 1]?.toFixed(4), delta: trendInsights.delta.toFixed(4), direction: t(`exploration.trendDirection.${trendInsights.direction}`), run: trendInsights.longestRun, beyond: trendInsights.beyond })} description={t('exploration.trendAdvice', { direction: t(`exploration.trendDirection.${trendInsights.direction}`), run: trendInsights.longestRun, beyond: trendInsights.beyond })} />}
         </>
       ) : (
         !loading && <Empty description={t('exploration.noTrend')} />
