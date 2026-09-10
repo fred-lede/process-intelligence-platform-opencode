@@ -140,7 +140,25 @@ def predict_output(
     # Use trained model object when available (tree models)
     if model is not None:
         try:
-            input_array = np.array([[float(inputs.get(col, 0.0)) for col in sorted(inputs.keys())]])
+            if model_type in ("doe_linear", "doe_quadratic"):
+                input_names = list(inputs.keys())
+                values = [float(inputs.get(col, 0.0)) for col in input_names]
+                # Match fitters._design_matrix exactly: intercept, then each
+                # input (and its square), followed by pairwise interactions.
+                features = [1.0]
+                for value in values:
+                    features.append(value)
+                    if model_type == "doe_quadratic":
+                        features.append(value * value)
+                if model_type == "doe_quadratic":
+                    features.extend(
+                        values[i] * values[j]
+                        for i in range(len(values))
+                        for j in range(i + 1, len(values))
+                    )
+                input_array = np.array([features])
+            else:
+                input_array = np.array([[float(inputs.get(col, 0.0)) for col in sorted(inputs.keys())]])
             pred = model.predict(input_array)
             return float(pred[0])
         except Exception:

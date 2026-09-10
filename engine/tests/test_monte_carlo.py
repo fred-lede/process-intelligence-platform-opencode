@@ -227,3 +227,17 @@ def test_predict_output_missing_coefficient():
     inputs = {"x1": 5.0}
     result = predict_output("doe_linear", coeffs, inputs)
     assert result == 10.0
+
+
+def test_predict_quadratic_trained_model_uses_fitter_feature_order():
+    """A fitted DOE quadratic model must receive its expanded design matrix."""
+    class RecordingModel:
+        def predict(self, matrix):
+            self.matrix = matrix
+            return np.array([matrix[0].sum()])
+
+    inputs = {"x1": 2.5, "x2": 1.5}
+    model = RecordingModel()
+    prediction = predict_output("doe_quadratic", {}, inputs, model=model)
+    expected = float(np.array([1.0, 2.5, 2.5**2, 1.5, 1.5**2, 2.5 * 1.5]).sum())
+    assert abs(prediction - expected) < 1e-8
