@@ -8,7 +8,9 @@ interface Props { open: boolean; tab: AppTab; subtab?: string; onClose: () => vo
 export default function GuideModal({ open, tab, subtab, onClose }: Props) {
   const { t, i18n } = useTranslation()
   const section = getGuideSection(tab, subtab, i18n.language)
-  return <Modal open={open} title={t(`nav.${tab}`, { defaultValue: t('guide.generic.title') })} onCancel={onClose} onOk={onClose} width={720}>
+  const subtabLabel = tab === 'exploration' && subtab ? (subtab === 'grr' ? t('grr.title') : t(`exploration.${subtab === 'timeseries' ? 'timeSeriesTab' : `${subtab}Tab`}`, { defaultValue: subtab })) : ''
+  const title = `${t(`nav.${tab}`, { defaultValue: t('guide.generic.title') })}${subtabLabel ? ` - ${subtabLabel}` : ''}`
+  return <Modal open={open} title={title} onCancel={onClose} onOk={onClose} width={720}>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{section.purpose}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.steps', { defaultValue: '操作步驟' })}</Typography.Text><br />{section.steps}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.principle')}</Typography.Text><br />{section.principle}</Typography.Paragraph>
