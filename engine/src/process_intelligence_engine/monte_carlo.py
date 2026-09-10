@@ -254,6 +254,7 @@ def run_monte_carlo(
     lsl: float | None = None,
     usl: float | None = None,
     model: Any = None,
+    sampling_method: str = "bootstrap",
 ) -> dict[str, Any]:
     """Run a full Monte Carlo simulation.
 
@@ -294,9 +295,16 @@ def run_monte_carlo(
     # Independent per-column draws can create impossible combinations for
     # quadratic/interacting DOE models and extreme artificial outputs.
     sampled_inputs: dict[str, np.ndarray] = {}
-    row_indices = rng.integers(0, len(df), size=n_simulations)
-    for col in input_columns:
-        sampled_inputs[col] = df[col].to_numpy(dtype=float)[row_indices]
+    if sampling_method == "normal":
+        for col in input_columns:
+            values = df[col].to_numpy(dtype=float)
+            sigma = float(np.std(values, ddof=1)) if len(values) > 1 else 0.0
+            sampled_inputs[col] = rng.normal(float(np.mean(values)), sigma, n_simulations) if sigma > 0 else np.full(n_simulations, float(values[0]))
+    else:
+        sampling_method = "bootstrap"
+        row_indices = rng.integers(0, len(df), size=n_simulations)
+        for col in input_columns:
+            sampled_inputs[col] = df[col].to_numpy(dtype=float)[row_indices]
 
     # Track whether anomaly injection or a future sampling strategy produces
     # values outside the model's observed training range.
@@ -435,6 +443,7 @@ def run_monte_carlo(
     return {
         "n_simulations": n_simulations,
         "seed": seed,
+        "sampling_method": sampling_method,
         "ng_count": ng_count,
         "ng_probability": ng_probability,
         "output_mean": output_mean,

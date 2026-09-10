@@ -60,6 +60,7 @@ export default function MonteCarlo() {
   const [nSimulations, setNSimulations] = useState<number>(10000)
   const [seed, setSeed] = useState<number>(42)
   const [enableAnomalies, setEnableAnomalies] = useState<boolean>(false)
+  const [samplingMethod, setSamplingMethod] = useState<'bootstrap' | 'normal'>('bootstrap')
   const [result, setResult] = useState<MonteCarloResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -92,6 +93,7 @@ export default function MonteCarlo() {
         model_id: selectedModel,
         n_simulations: nSimulations,
         seed,
+        sampling_method: samplingMethod,
         enable_anomalies: enableAnomalies,
         lsl: spec?.lsl ?? undefined,
         usl: spec?.usl ?? undefined,
@@ -182,6 +184,17 @@ export default function MonteCarlo() {
               value={seed}
               onChange={e => setSeed(Number(e.target.value))}
               style={{ width: 80 }}
+            />
+          </Form.Item>
+          <Form.Item label={t('monteCarlo.samplingMethod', { defaultValue: '抽樣方式' })} style={{ margin: 0 }}>
+            <Select
+              value={samplingMethod}
+              onChange={setSamplingMethod}
+              options={[
+                { value: 'bootstrap', label: t('monteCarlo.bootstrap', { defaultValue: '歷史資料 Bootstrap' }) },
+                { value: 'normal', label: t('monteCarlo.normalSampling', { defaultValue: '各欄位常態分佈' }) },
+              ]}
+              style={{ width: 170 }}
             />
           </Form.Item>
           <Form.Item label={t('monteCarlo.enableAnomalies')} style={{ margin: 0 }}>
