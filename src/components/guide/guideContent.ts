@@ -24,8 +24,10 @@ const topics: Record<string, Partial<Record<keyof typeof common, Partial<GuideSe
   reports: { 'zh-TW': { purpose: '產生可追溯的分析報告與版本紀錄。', recommendation: '檢查報告 metadata、資料集版本與模型版本後再分享。' }, en: { purpose: 'Generate traceable analysis reports and version records.', recommendation: 'Check report metadata, dataset version, and model version before sharing.' }, 'es-MX': { purpose: 'Genera informes de análisis y registros de versión trazables.', recommendation: 'Revisa metadatos, versión de datos y modelo antes de compartir.' } },
 }
 export function getGuideSection(tab: string, subtab: string | undefined, language: string): GuideSection {
-  const lang = (language in common ? language : 'en') as keyof typeof common
+  const normalized = language.toLowerCase().startsWith('zh') ? 'zh-TW' : language.toLowerCase().startsWith('es') ? 'es-MX' : 'en'
+  const lang = normalized as keyof typeof common
   const base = { ...common[lang], title: '' }
-  const topic = topics[subtab && tab === 'exploration' ? subtab : tab]?.[lang]
+  const topicKey = tab === 'exploration' ? (subtab || 'distribution') : tab
+  const topic = topics[topicKey]?.[lang] ?? topics[topicKey]?.en
   return { ...base, ...topic, title: '' }
 }
