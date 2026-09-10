@@ -381,7 +381,7 @@ export default function ProcessDefine() {
       key: 'source',
       width: 160,
       ellipsis: true,
-      render: (source: string, row) => <Select value={source} style={{ width: 155 }} options={['historical_observation', 'fitted_distribution', 'engineering_input', 'ai_estimate', 'user_override'].map(value => ({ value, label: value }))} onChange={value => updateScenario(row.anomaly_id, { source: value as AnomalyScenario['source'] })} />,
+      render: (source: string, row) => <Select value={source} style={{ width: 155 }} options={['historical_observation', 'fitted_distribution', 'engineering_input', 'ai_estimate', 'user_override'].map(value => ({ value, label: t(`processDefine.source_${value}`) }))} onChange={value => updateScenario(row.anomaly_id, { source: value as AnomalyScenario['source'] })} />,
     },
     {
       title: t('processDefine.anomalyAction'),
