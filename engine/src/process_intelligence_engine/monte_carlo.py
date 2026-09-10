@@ -298,6 +298,16 @@ def run_monte_carlo(
     for col in input_columns:
         sampled_inputs[col] = df[col].to_numpy(dtype=float)[row_indices]
 
+    # Track whether anomaly injection or a future sampling strategy produces
+    # values outside the model's observed training range.
+    training_ranges = {
+        col: {
+            "min": float(df[col].min()),
+            "max": float(df[col].max()),
+        }
+        for col in input_columns
+    }
+
     # Apply anomalies to each input column
     copula_result: CopulaResult | None = None
     if enable_anomalies and anomalies:
@@ -328,6 +338,13 @@ def run_monte_carlo(
             sampled_inputs[col] = np.array(
                 apply_anomalies(sampled_inputs[col].tolist(), anomalies, rng, copula_result)
             )
+
+    extrapolation_mask = np.zeros(n_simulations, dtype=bool)
+    for col, limits in training_ranges.items():
+        extrapolation_mask |= (
+            (sampled_inputs[col] < limits["min"])
+            | (sampled_inputs[col] > limits["max"])
+        )
 
     # Predict outputs
     output_values = np.array([
@@ -433,4 +450,7 @@ def run_monte_carlo(
         "capability": compute_capability(output_values, lsl=lsl, usl=usl, subgroup_size=1),
         "output_values": output_values.tolist(),
         "copula": copula_result.to_dict() if copula_result else None,
+        "training_input_ranges": training_ranges,
+        "extrapolation_count": int(np.sum(extrapolation_mask)),
+        "extrapolation_rate": float(np.mean(extrapolation_mask)) if n_simulations else 0.0,
     }

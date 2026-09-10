@@ -163,6 +163,8 @@ def test_run_monte_carlo_small_n():
         usl=None,
     )
     assert result["n_simulations"] == 10
+    assert result["extrapolation_count"] == 0
+    assert result["extrapolation_rate"] == 0.0
 
 
 def test_run_monte_carlo_quadratic():
