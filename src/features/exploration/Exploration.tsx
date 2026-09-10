@@ -352,11 +352,13 @@ export default function Exploration() {
           <Alert
             type="info"
             showIcon
-            message={t('exploration.bestFitSummary', { column, distribution: fits[0].name })}
+            message={t('exploration.bestFitSummary', { column, distribution: fits[0].name, n: fits[0].histogram.counts.reduce((a, b) => a + b, 0) })}
             description={t('exploration.bestFitReason', {
               aic: fits[0].aic.toFixed(2),
               bic: fits[0].bic.toFixed(2),
               p: fits[0].ks_p_value.toFixed(4),
+              params: Object.entries(fits[0].params).map(([k, v]) => `${k}=${Number(v).toFixed(4)}`).join(', '),
+              compared: fits.slice(1).map(f => `${f.name} AIC=${f.aic.toFixed(2)}, BIC=${f.bic.toFixed(2)}`).join('; ') || '—',
             })}
           />
         </>
