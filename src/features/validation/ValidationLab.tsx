@@ -57,6 +57,7 @@ export default function ValidationLab() {
   const [nextConditions, setNextConditions] = useState<Array<{ condition: Record<string, number>; rationale: string }>>([])
 
   const datasetId = importResult?.dataset_id
+  const eligibleModels = models.filter((m) => m.status === 'validated' || m.status === 'approved')
 
   useEffect(() => {
     loadModels()
@@ -223,6 +224,7 @@ export default function ValidationLab() {
     <Space direction="vertical" style={{ width: '100%' }} size={16}>
       {contextHolder}
       <Card title={t('validationLab.experimentSuggestions')}>
+        <Alert type="info" showIcon message={t('validationLab.fullValidationGuide')} description={t('validationLab.fullValidationSteps')} style={{ marginBottom: 12 }} />
         <Button disabled={!selectedModelId || !datasetId} onClick={() => void loadNextConditions()}>{t('common.refresh')}</Button>
         {nextConditions.map((s, i) => <div key={i}><Typography.Text>{s.rationale}: {JSON.stringify(s.condition)}</Typography.Text>
           <Button onClick={() => form.setFieldsValue({ planned_inputs: s.condition })}>{t('common.confirm')}</Button></div>)}
@@ -274,6 +276,7 @@ export default function ValidationLab() {
           </Button>
         }
       >
+        {datasetId && eligibleModels.length === 0 && <Alert type="warning" showIcon message={t('validationLab.noEligibleModels')} style={{ marginBottom: 12 }} />}
         {fullValidation ? (
           <Space direction="vertical" style={{ width: '100%' }} size={8}>
             <Row gutter={[16, 16]}>
