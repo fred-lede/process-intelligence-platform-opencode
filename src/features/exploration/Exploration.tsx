@@ -749,6 +749,7 @@ export default function Exploration() {
             if (grrResult.verdict === 'marginal') return t('grr.reasonMarginal', { pct: pctText })
             return t('grr.reasonUnacceptable', { pct: pctText })
           })()}</Typography.Text>
+          <Alert type="info" showIcon message={t('grr.summaryTitle')} description={t('grr.summaryAdvice')} />
         </Space>
       ) : null}
     </Space>

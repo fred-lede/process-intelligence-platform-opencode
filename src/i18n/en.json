@@ -350,7 +350,7 @@
     "trendChartTitle": "Run/Trend Chart",
     "fitName": "Distribution",
     "bestFitSummary": "Best-fit distribution for {{column}}: {{distribution}}",
-    "bestFitReason": "Among the candidates, AIC={{aic}}, BIC={{bic}}, and KS p-value={{p}}. Lower AIC/BIC is generally preferred; also check the p-value, plot, and engineering plausibility.",
+    "bestFitReason": "The KS test found no significant difference from this distribution (p={{p}}); AIC={{aic}} and BIC={{bic}} support comparison with other candidates. This is a reasonable candidate for the sample, not proof of the population distribution.",
     "trendSummary": "{{column}} trend summary: {{count}} points, first {{first}}, last {{last}}.",
     "trendAdvice": "Interpret the trend with control and specification limits; a trend does not imply causation.",
     "timeSeriesSummary": "{{column}} time series: {{features}} features computed ({{rows}} preview rows shown).",
@@ -903,6 +903,7 @@
     "noResultRows": "No joint probability pairs available."
   },
   "grr": {
+    "summaryTitle": "GRR result summary", "summaryAdvice": "Lower %GRR indicates a more stable measurement system relative to process variation; for marginal or unacceptable results, improve fixture stability and operator training, then remeasure.",
     "title": "Gage R&R",
     "measurementColumn": "Measurement Column",
     "partColumn": "Part Column",

@@ -350,7 +350,7 @@
     "trendChartTitle": "趨勢圖",
     "fitName": "分布",
     "bestFitSummary": "{{column}} 的最佳配適分布：{{distribution}}",
-    "bestFitReason": "依目前候選模型，AIC={{aic}}、BIC={{bic}}，KS p-value={{p}}。AIC/BIC 越低通常越佳，但仍應搭配 p-value、圖形與工程合理性判斷。",
+    "bestFitReason": "KS 檢定未發現資料與此分布有顯著差異（p={{p}}）；AIC={{aic}}、BIC={{bic}} 可用於候選模型比較。這表示目前可視為合理候選，不代表母體一定服從此分布。",
     "trendSummary": "{{column}} 趨勢摘要：{{count}} 個點，首值 {{first}}，末值 {{last}}。",
     "trendAdvice": "請搭配控制界線與規格限判讀趨勢；趨勢不代表因果關係。",
     "timeSeriesSummary": "{{column}} 時間序列已計算 {{features}} 個特徵（目前顯示 {{rows}} 筆預覽資料）。",
@@ -903,6 +903,7 @@
     "noResultRows": "沒有可顯示的聯合機率配對。"
   },
   "grr": {
+    "summaryTitle": "GRR 結果摘要", "summaryAdvice": "%GRR 越低表示量測系統相對於製程變異越穩定；若為邊界或不可接受，建議改善量具固定、操作員訓練並重新量測。",
     "title": "量測系統分析 (GRR)",
     "measurementColumn": "測量欄位",
     "partColumn": "零件欄位",
