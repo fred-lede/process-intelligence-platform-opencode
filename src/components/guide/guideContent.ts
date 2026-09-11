@@ -29,5 +29,15 @@ export function getGuideSection(tab: string, subtab: string | undefined, languag
   const base = { ...common[lang], title: '' }
   const topicKey = tab === 'exploration' ? (subtab || 'distribution') : tab
   const topic = topics[topicKey]?.[lang] ?? topics[topicKey]?.en
-  return { ...base, ...topic, title: '' }
+  const distributionSteps = lang === 'zh-TW'
+    ? '1. 選擇要分析的 input 或 output 欄位。 2. 按「分布適配」。 3. 檢查樣本數、範圍、平均值與標準差。 4. 比較直方圖、密度圖與 CDF。 5. 比較候選分布的 AIC、BIC、KS p-value。 6. 查看 loc、scale、shape 等配適參數。 7. 確認工程合理性後，才將最佳分布供蒙地卡羅或模型配適使用。 8. 若結果異常，回資料匯入檢查缺值、離群值、單位與樣本量。'
+    : lang === 'es-MX'
+      ? '1. Selecciona una columna de entrada o salida. 2. Pulsa «Ajustar distribución». 3. Revisa n, rango, media y desviación. 4. Compara histograma, densidad y CDF. 5. Compara AIC, BIC y p-value KS. 6. Revisa parámetros loc, scale y shape. 7. Usa la distribución en Monte Carlo o modelos solo tras validar su plausibilidad. 8. Si es anómala, revisa faltantes, atípicos, unidades y tamaño de muestra en Importación.'
+      : '1. Select an input or output column. 2. Click “Fit distribution”. 3. Check n, range, mean, and standard deviation. 4. Compare histogram, density, and CDF. 5. Compare candidate AIC, BIC, and KS p-values. 6. Review loc, scale, and shape parameters. 7. Use the distribution for Monte Carlo or modeling only after engineering review. 8. If unexpected, check missing values, outliers, units, and sample size in Data Import.'
+  const distributionNotes = topicKey === 'distribution' ? (lang === 'zh-TW'
+    ? { interpretation: 'AIC／BIC 越低通常越佳，但只能在同一資料與候選集合內比較；KS p-value 較大表示樣本未拒絕該分布，不代表已證明正確。配適參數必須落在資料範圍與工程意義內。', recommendation: '若最佳分布合理且候選差異明顯，可作為蒙地卡羅起始分布；若差異小或 KS 不佳，請保留多個情境並回查資料品質。' }
+    : lang === 'es-MX'
+      ? { interpretation: 'Un AIC/BIC menor suele ser mejor solo dentro del mismo conjunto de candidatos; un p-value KS mayor indica que la muestra no rechaza la distribución, no que esté probada. Valida los parámetros contra el rango y el proceso.', recommendation: 'Usa la distribución como inicio de Monte Carlo solo si es plausible; si las diferencias son pequeñas, conserva escenarios alternativos y revisa la calidad de datos.' }
+      : { interpretation: 'Lower AIC/BIC is preferable only within the same candidate set; a larger KS p-value means the sample does not reject the distribution, not that it is proven. Validate parameters against the data range and process meaning.', recommendation: 'Use it as a Monte Carlo starting distribution only when plausible; if candidates are close, retain alternatives and recheck data quality.' }) : {}
+  return { ...base, ...topic, ...distributionNotes, ...(topicKey === 'distribution' ? { steps: distributionSteps } : {}), title: '' }
 }
