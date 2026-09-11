@@ -22,7 +22,7 @@
 
 ### 資料特性
 
-- **樣本數**：45 筆
+- **樣本數**：60 筆
 - **輸入變數**：5 個（input_temperature, input_voltage, input_pressure, input_speed, input_load）
 - **連續輸出**：1 個（output_thickness）
 - **二元標籤**：1 個（result：OK/NG）
@@ -67,7 +67,8 @@
 
 ### 預期結果
 
-- DOE 二次模型在連續輸出上應表現良好（資料含線性效應）
+- DOE 線性與 DOE 二次模型可直接比較；新增資料含受控的曲率訊號，二次模型應能捕捉非線性，兩者模擬結果不必完全相同
+- 增加樣本後，模型係數與模擬百分位數應較 45 筆基準穩定
 - Logistic 迴歸在 result 上的 AUC 應可接受（NG 比例約 2%）
 - Weibull 迴歸可估計平均失效時間
 
