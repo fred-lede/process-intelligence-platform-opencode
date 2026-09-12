@@ -2434,6 +2434,7 @@ def _handle_time_series_fit(params: dict) -> dict:
         train_ratio=float(params.get("train_ratio", 0.8)),
         modeling_timezone=params.get("modeling_timezone"),
         window_days=window_days,
+        evaluation_protocol=params.get("evaluation_protocol", "observed_feature_holdout"),
     )
     if window:
         result["quality"]["missing_timestamps"] = window["excluded_undated_rows"]
