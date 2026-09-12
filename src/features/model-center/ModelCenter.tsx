@@ -190,6 +190,16 @@ export default function ModelCenter() {
     }
   }
 
+  const timeSeriesModelLabel = (name: string) => t(`modelCenter.timeSeries.models.${name}`, { defaultValue: name })
+  const timeSeriesReason = (reason?: string | null) => {
+    if (!reason) return '—'
+    if (reason.includes('statsmodels')) return t('modelCenter.timeSeries.reasons.statsmodels')
+    if (reason.includes('xgboost')) return t('modelCenter.timeSeries.reasons.xgboost')
+    if (reason.includes('lightgbm')) return t('modelCenter.timeSeries.reasons.lightgbm')
+    if (reason.includes('insufficient')) return t('modelCenter.timeSeries.reasons.insufficient')
+    return reason
+  }
+
   useEffect(() => {
     invalidateTimeSeriesRun()
   }, [datasetId])
@@ -715,19 +725,23 @@ export default function ModelCenter() {
                   <Button
                     onClick={handleFitTimeSeriesLadder}
                     loading={timeSeriesLadderLoading}
-                    disabled={!timeColumn || !target || selectedInputs.length === 0}
+                    disabled={!timeColumn || !target || selectedInputs.length === 0 || readiness?.status === 'critical'}
                   >
                     {timeSeriesLadderLoading ? t('modelCenter.timeSeries.ladderRunning') : t('modelCenter.timeSeries.fitLadder')}
                   </Button>
                   {(importResult?.row_count ?? 0) < 7 && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.warning.tooFewRows')} />}
                   {timeSeriesLadder && <Card title={t('modelCenter.timeSeries.ladderTitle')} size="small">
                     <Table size="small" pagination={false} rowKey="model_type" dataSource={timeSeriesLadder.results} columns={[
-                      { title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model_type', key: 'model_type' },
+                      { title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model_type', key: 'model_type', render: (value: string) => timeSeriesModelLabel(value) },
                       { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (value: string) => <Tag color={value === 'available' ? 'success' : 'warning'}>{value === 'available' ? t('modelCenter.timeSeries.available') : t('modelCenter.timeSeries.unavailable')}</Tag> },
                       { title: 'MAE', key: 'mae', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.mae.toFixed(4) ?? '—' },
                       { title: 'RMSE', key: 'rmse', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.rmse.toFixed(4) ?? '—' },
                       { title: 'R²', key: 'r2', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.r2.toFixed(4) ?? '—' },
-                      { title: t('modelCenter.timeSeries.reason'), dataIndex: 'error', key: 'error', render: (value?: string | null) => value || '—' },
+                      { title: t('modelCenter.timeSeries.validationStrategy'), key: 'validation', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.validation?.strategy || '—' },
+                      { title: t('modelCenter.timeSeries.trainTestRange'), key: 'range', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.validation?.train_end && row.validation?.test_start ? `${row.validation.train_end} → ${row.validation.test_start}` : '—' },
+                      { title: t('modelCenter.timeSeries.leakageStatus'), key: 'leakage', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.leakage_check ? t(`modelCenter.timeSeries.leakage.${row.leakage_check.status === 'passed' ? 'passed' : 'notChecked'}`) : '—' },
+                      { title: t('modelCenter.timeSeries.persistence'), key: 'persisted', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.persisted == null ? '—' : row.persisted ? t('modelCenter.timeSeries.persisted') : t('modelCenter.timeSeries.notPersisted') },
+                      { title: t('modelCenter.timeSeries.reason'), dataIndex: 'error', key: 'error', render: (value?: string | null) => timeSeriesReason(value) },
                     ]} />
                     <Alert type="info" showIcon message={t('modelCenter.timeSeries.ladderAdvice')} />
                   </Card>}
