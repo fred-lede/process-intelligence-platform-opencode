@@ -50,7 +50,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     fixed_horizon = evaluation_protocol == "fixed_horizon_forecast"
     # Naive uses previous observed target; fixed horizon recursively uses its
     # own prior forecast and therefore never reads test-period targets.
-    pred = usable[target].shift(1).to_numpy(float)
+    pred = np.array(usable[target].shift(1).to_numpy(float), dtype=float, copy=True)
     if fixed_horizon:
         previous = float(y[split - 1])
         for index in range(split, len(y)):
@@ -59,7 +59,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     mask = np.arange(len(usable)) >= split
     valid = mask & np.isfinite(pred)
     results.append({"model_type":"naive", "status":"available", "features":[f"{target}_lag_1"], "validation":validation, "metrics":_metrics(y[valid], pred[valid]), "_eval_rows":int(valid.sum()), "_eval_indices":np.flatnonzero(valid).tolist(), "evaluation_protocol":evaluation_protocol})
-    lag = usable[target].shift(seasonal_period).to_numpy(float)
+    lag = np.array(usable[target].shift(seasonal_period).to_numpy(float), dtype=float, copy=True)
     if fixed_horizon:
         history = list(y[:split])
         for index in range(split, len(y)):
