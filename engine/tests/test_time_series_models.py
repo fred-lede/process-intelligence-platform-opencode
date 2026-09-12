@@ -67,3 +67,15 @@ def test_fixed_horizon_seasonal_naive_reports_insufficient_history_without_index
         assert seasonal["reason_code"] == "insufficient_history"
         assert seasonal["evaluation"]["rows"] == 0
         assert seasonal["evaluation"]["protocol"] == "fixed_horizon_forecast"
+
+
+def test_fixed_horizon_train_boundary_is_not_changed_by_test_target_values():
+    frame = pd.DataFrame({"ts": pd.date_range("2026-01-01", periods=60, freq="h"), "y": [float(i) for i in range(60)]})
+    first = REGISTRY.register(frame, {})
+    changed = frame.copy(); changed.loc[50:, "y"] += 1000
+    second = REGISTRY.register(changed, {})
+    params = {"time_column": "ts", "target": "y", "inputs": [], "evaluation_protocol": "fixed_horizon_forecast"}
+    left = handle_request("features/time_series/fit", {"dataset_id": first, **params})
+    right = handle_request("features/time_series/fit", {"dataset_id": second, **params})
+    assert left["validation"]["train_rows"] == right["validation"]["train_rows"]
+    assert left["validation"]["train_end"] == right["validation"]["train_end"]

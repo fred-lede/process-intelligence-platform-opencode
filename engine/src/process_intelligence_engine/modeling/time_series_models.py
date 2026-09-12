@@ -30,7 +30,8 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     prepared = prepare_time_series(df, time_column)
     if prepared["quality"]["duplicate_timestamps"]:
         raise ValueError("duplicate timestamps are not allowed for time-series modeling")
-    ordered = prepared["data"].dropna(subset=[target]).reset_index(drop=True)
+    base_ordered = prepared["data"].reset_index(drop=True)
+    ordered = base_ordered.dropna(subset=[target]).reset_index(drop=True)
     n = len(ordered)
     if n < 5:
         raise ValueError("time-series modeling requires at least 5 dated rows")
@@ -44,7 +45,15 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     # feature builder returns target lags too; exclude current target/input values and retain derived history.
     xcols = [c for c in feature_names if c in usable.columns]
     y = usable[target].to_numpy(float)
-    split = max(1, min(len(usable)-1, int(len(usable)*train_ratio)))
+    if evaluation_protocol == "fixed_horizon_forecast":
+        # Anchor the boundary to the raw chronological rows.  Feature warmup,
+        # or rows removed for missing targets, must not move the train end.
+        raw_split = max(1, min(len(base_ordered) - 1, int(len(base_ordered) * train_ratio)))
+        boundary = base_ordered[time_column].iloc[raw_split]
+        split = int((usable[time_column] < boundary).sum())
+        split = max(1, min(len(usable) - 1, split))
+    else:
+        split = max(1, min(len(usable)-1, int(len(usable)*train_ratio)))
     validation = {"strategy": "chronological_holdout", "train_rows": split, "test_rows": len(usable)-split, "train_end": usable[time_column].iloc[split-1], "test_start": usable[time_column].iloc[split], "modeling_timezone": modeling_timezone or "UTC"}
     results = []
     fixed_horizon = evaluation_protocol == "fixed_horizon_forecast"
