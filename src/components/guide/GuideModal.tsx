@@ -15,13 +15,16 @@ export default function GuideModal({ open, tab, subtab, onClose }: Props) {
   const contractTitle = isZh ? '建議的資料契約' : isEs ? 'Contrato de datos sugerido' : 'Suggested data contract'
   const contractHeaders = isZh ? ['類型', '範本基礎', '額外要求'] : isEs ? ['Tipo', 'Plantilla base', 'Requisitos adicionales'] : ['Type', 'Template basis', 'Additional requirements']
   const contractData = (section.contract ?? []).map(([type, template, requirement], index) => ({ key: index, type, template, requirement }))
+  const interpretation = tab === 'dataImport'
+    ? (isZh ? '查看各欄位的 n、最小值、最大值、平均值、標準差、最佳分布與問題數。warning 需人工判斷，blocked 或嚴重問題應先處理；最佳分布只是樣本配適結果。' : isEs ? 'Revisa n, mínimo, máximo, media, desviación estándar, mejor distribución y problemas de cada campo. warning requiere revisión; blocked o problemas críticos deben resolverse. La mejor distribución es solo un ajuste muestral.' : 'Review n, min, max, mean, standard deviation, best distribution, and issue count for each field. warning requires review; blocked or critical issues should be resolved first. A best distribution is only a sample fit.')
+    : section.interpretation
   return <Modal open={open} title={title} onCancel={onClose} onOk={onClose} width={720}>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{section.purpose}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{i18n.language.toLowerCase().startsWith('zh') ? '操作步驟' : i18n.language.toLowerCase().startsWith('es') ? 'Pasos' : 'Steps'}</Typography.Text><br />{section.steps}</Typography.Paragraph>
     {contractData.length > 0 && <Typography.Paragraph><Typography.Text strong>{contractTitle}</Typography.Text><Table size="small" pagination={false} dataSource={contractData} columns={[{ title: contractHeaders[0], dataIndex: 'type', key: 'type' }, { title: contractHeaders[1], dataIndex: 'template', key: 'template' }, { title: contractHeaders[2], dataIndex: 'requirement', key: 'requirement' }]} /></Typography.Paragraph>}
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.principle')}</Typography.Text><br />{section.principle}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.formula')}</Typography.Text><br />{section.formula}</Typography.Paragraph>
-    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.interpretation')}</Typography.Text><br />{section.interpretation}</Typography.Paragraph>
+    <Typography.Paragraph><Typography.Text strong>{t('guide.labels.interpretation')}</Typography.Text><br />{interpretation}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.limits')}</Typography.Text><br />{section.limits}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.recommendation')}</Typography.Text><br />{section.recommendation}</Typography.Paragraph>
   </Modal>
