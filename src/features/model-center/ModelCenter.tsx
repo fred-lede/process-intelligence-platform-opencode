@@ -429,6 +429,9 @@ export default function ModelCenter() {
     ...(timeSeriesRun.model.quality.missing_timestamps > 0
       ? [t('modelCenter.timeSeries.warning.missingTimestamps', { count: timeSeriesRun.model.quality.missing_timestamps })]
       : []),
+    ...(timeSeriesRun.model.quality.excluded_undated_rows > 0
+      ? [t('modelCenter.timeSeries.warning.excludedUndatedRows', { count: timeSeriesRun.model.quality.excluded_undated_rows })]
+      : []),
     ...(timeSeriesRun.model.quality.duplicate_timestamps > 0
       ? [t('modelCenter.timeSeries.warning.duplicateTimestamps', { count: timeSeriesRun.model.quality.duplicate_timestamps })]
       : []),

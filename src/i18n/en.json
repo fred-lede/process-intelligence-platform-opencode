@@ -433,6 +433,7 @@
       },
       "warning": {
         "missingTimestamps": "{{count}} timestamp rows are missing.",
+        "excludedUndatedRows": "{{count}} undated row(s) were excluded from the selected time window.",
         "duplicateTimestamps": "{{count}} duplicate timestamps were found; split boundaries may be restricted.",
         "timezone": "Mixed timezone evidence was found: {{zones}}.",
         "irregularIntervals": "The time intervals are irregular; confirm the sampling cadence before modeling.",

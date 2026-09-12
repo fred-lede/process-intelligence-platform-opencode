@@ -1218,6 +1218,7 @@ export interface TimeSeriesFeatures {
 export interface TimeSeriesQuality {
   duplicate_timestamps: number
   missing_timestamps: number
+  excluded_undated_rows: number
   interval_summary: {
     count: number
     min_seconds: number | null

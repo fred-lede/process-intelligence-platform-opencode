@@ -101,6 +101,7 @@ def test_time_series_model_handler_reports_missing_timestamps_and_row_count():
 
     assert result["sorted_row_count"] == 3
     assert result["quality"]["missing_timestamps"] == 1
+    assert result["quality"]["excluded_undated_rows"] == 0
     assert result["dataset_id"] == dataset_id
     assert result["time_column"] == "ts"
     assert result["target"] == "target"
@@ -427,6 +428,47 @@ def test_time_series_model_handler_reports_quality_for_selected_window_only():
     assert result["sorted_row_count"] == 3
     assert result["quality"]["duplicate_timestamps"] == 0
     assert result["quality"]["interval_summary"]["count"] == 2
+
+
+def test_time_series_model_window_reports_excluded_undated_rows():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame(
+            {
+                "ts": [
+                    None,
+                    "2026-01-01",
+                    "2026-01-01",
+                    "2026-02-01",
+                    "2026-02-02",
+                    "2026-02-03",
+                ],
+                "target": [0, 1, 2, 3, 4, 5],
+                "input": [10, 11, 12, 13, 14, 15],
+            }
+        ),
+        {},
+    )
+    params = {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "target",
+        "inputs": ["input"],
+        "lags": [1],
+        "rolling_windows": [2],
+    }
+
+    without_window = handle_request("features/time_series/model", params)
+    with_window = handle_request(
+        "features/time_series/model", {**params, "window_days": 3}
+    )
+
+    assert without_window["quality"]["missing_timestamps"] == 1
+    assert without_window["quality"]["excluded_undated_rows"] == 0
+    assert without_window["quality"]["duplicate_timestamps"] == 1
+    assert with_window["sorted_row_count"] == 3
+    assert with_window["quality"]["missing_timestamps"] == 1
+    assert with_window["quality"]["excluded_undated_rows"] == 1
+    assert with_window["quality"]["duplicate_timestamps"] == 0
 
 
 def test_time_series_validation_window_returns_normalized_timestamps_for_split_labels():

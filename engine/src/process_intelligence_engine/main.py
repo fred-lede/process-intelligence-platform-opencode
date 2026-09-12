@@ -2365,6 +2365,11 @@ def _handle_time_series_model(params: dict) -> dict:
     )
     feature_df = window["data"] if window else df
     prepared = prepare_time_series(feature_df, time_column)
+    if window:
+        prepared["quality"]["missing_timestamps"] = window["excluded_undated_rows"]
+        prepared["quality"]["excluded_undated_rows"] = window[
+            "excluded_undated_rows"
+        ]
     feature_columns = list(dict.fromkeys([params["target"], *params["inputs"]]))
     suggested = suggest_time_feature_configuration(
         prepared["quality"]["interval_summary"], feature_columns
@@ -2426,6 +2431,11 @@ def _handle_time_series_validation(params: dict) -> dict:
     )
     validation_df = window["data"] if window else df
     prepared = prepare_time_series(validation_df, time_column)
+    if window:
+        prepared["quality"]["missing_timestamps"] = window["excluded_undated_rows"]
+        prepared["quality"]["excluded_undated_rows"] = window[
+            "excluded_undated_rows"
+        ]
 
     if strategy == "holdout":
         configuration = {

@@ -127,3 +127,32 @@ test result above.
   frontend unit/component test runner is configured in this repository.
 - CodeGraph is not initialized for this checkout, so structural inspection used
   local file reads instead.
+
+## Review4 P2 fix
+
+### Changes
+
+- Preserved missing timestamp evidence when a trailing `window_days` filter is
+  applied. Windowed model and validation responses now keep
+  `quality.missing_timestamps` for source rows without timestamps and report
+  `quality.excluded_undated_rows` for the rows excluded from the selected
+  time window because they cannot be placed on the time axis.
+- Kept duplicate timestamp and interval quality scoped to the selected dated
+  window, so old out-of-window duplicates do not contaminate the active window's
+  cadence evidence.
+- Added frontend type coverage and localized warnings for rows excluded because
+  they have no timestamp.
+
+### Verification evidence
+
+- `engine/.venv/bin/pytest engine/tests/test_time_series_modeling.py -q`
+  - Exit 0; `30 passed in 2.34s`.
+- `npm run build`
+  - Exit 0; TypeScript compiled and Vite built 3,139 modules in 9.57 seconds.
+- `git diff --check`
+  - Exit 0; no output.
+
+### Remaining concerns
+
+- This remains an engine-contract and build-level UI verification. No frontend
+  component test runner is configured for interactive warning rendering.

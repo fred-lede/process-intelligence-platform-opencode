@@ -433,6 +433,7 @@
       },
       "warning": {
         "missingTimestamps": "有 {{count}} 列缺少時間戳。",
+        "excludedUndatedRows": "有 {{count}} 列缺少時間戳，已從所選時間視窗排除。",
         "duplicateTimestamps": "發現 {{count}} 個重複時間戳，可能限制切分邊界。",
         "timezone": "發現混合時區證據：{{zones}}。",
         "irregularIntervals": "時間間隔不規則，建模前請確認取樣節奏。",

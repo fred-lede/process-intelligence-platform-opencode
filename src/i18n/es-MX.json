@@ -435,6 +435,7 @@
       },
       "warning": {
         "missingTimestamps": "Faltan marcas de tiempo en {{count}} filas.",
+        "excludedUndatedRows": "{{count}} fila(s) sin fecha se excluyeron de la ventana temporal seleccionada.",
         "duplicateTimestamps": "Se encontraron {{count}} marcas duplicadas; pueden limitar los cortes.",
         "timezone": "Se encontró evidencia de zonas horarias mixtas: {{zones}}.",
         "irregularIntervals": "Los intervalos son irregulares; confirma la cadencia antes de modelar.",

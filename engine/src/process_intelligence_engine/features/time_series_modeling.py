@@ -113,6 +113,7 @@ def prepare_time_series(df: pd.DataFrame, time_column: str) -> dict[str, Any]:
         "quality": {
             "duplicate_timestamps": int(valid_timestamps.duplicated().sum()),
             "missing_timestamps": int(missing_mask.sum()),
+            "excluded_undated_rows": 0,
             "interval_summary": interval_summary,
             "timezone": (
                 source_timezones[0]
@@ -314,6 +315,7 @@ def select_time_window(
     selected_timestamps = timestamps.loc[selected].reset_index(drop=True)
     return {
         "data": df.loc[selected].reset_index(drop=True),
+        "excluded_undated_rows": int(timestamps.isna().sum()),
         "normalized_timestamps": [
             timestamp.isoformat().replace("+00:00", "Z")
             for timestamp in selected_timestamps
