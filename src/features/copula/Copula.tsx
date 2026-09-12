@@ -39,9 +39,9 @@ export default function Copula() {
     () =>
       anomalyScenarios.map((s) => ({
         value: s.anomaly_id,
-        label: `${s.name || s.anomaly_id} (${(s.occurrence_probability * 100).toFixed(1)}%)`,
+        label: `${s.target_input} · ${s.direction === 'above' ? t('copula.above') : s.direction === 'below' ? t('copula.below') : s.direction === 'run' ? t('copula.run') : t('copula.deviation')} (${(s.occurrence_probability * 100).toFixed(1)}%)`,
       })),
-    [anomalyScenarios],
+    [anomalyScenarios, t],
   )
 
   useEffect(() => {
@@ -323,10 +323,9 @@ export default function Copula() {
             <Alert
               type="info"
               showIcon
-              message={t('copula.summaryTitle', { defaultValue: '聯合異常機率摘要' })}
+              message={t('copula.summaryTitle')}
               description={t('copula.summary', {
-                defaultValue: '本次以 {{mode}} 分析 {{count}} 個異常情境。請比較每組聯合機率與獨立假設期望值；高於期望值代表共同發生風險增加，低於期望值則代表共同發生較少。若高聯合機率組合會同時推高 NG，建議將其納入蒙地卡羅異常情境並依批次、機台、操作者與時間追查共同原因。結果受樣本量、異常定義與相關矩陣影響，相關性不代表因果。',
-                mode: mode === 'gaussian_copula' ? 'Gaussian Copula' : mode === 'direct' ? '直接聯合機率' : '獨立假設',
+                mode: mode === 'gaussian_copula' ? t('copula.gaussianCopula') : mode === 'direct' ? t('copula.direct') : t('copula.independent'),
                 count: selected.length,
               })}
               style={{ marginTop: 12 }}

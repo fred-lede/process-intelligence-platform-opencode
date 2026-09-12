@@ -294,9 +294,8 @@ export default function MonteCarlo() {
           <Alert
             type={result.ng_probability > 0.05 ? 'warning' : 'info'}
             showIcon
-            message={t('monteCarlo.resultSummaryTitle', { defaultValue: '模擬結果摘要' })}
+            message={t('monteCarlo.resultSummaryTitle')}
             description={t('monteCarlo.resultSummary', {
-              defaultValue: '本次使用 {{n}} 次模擬，NG {{ng}} 次（{{ngPct}}%）；輸出平均值 {{mean}}、中位數 {{median}}、標準差 {{std}}，P1–P99 為 {{p1}}–{{p99}}。{{capability}}請將輸出分布與 LSL／USL／中心值比較；若尾端接近規格或不同抽樣方式差異明顯，應檢查輸入分布、欄位相關性、模型適用範圍與規格設定。模擬結果依賴模型、抽樣參數與隨機種子，不等同實際生產證據。',
               n: result.n_simulations, ng: result.ng_count, ngPct: (result.ng_probability * 100).toFixed(2),
               mean: result.output_mean.toFixed(4), median: result.output_median.toFixed(4), std: result.output_std.toFixed(4),
               p1: result.percentiles.p1.toFixed(4), p99: result.percentiles.p99.toFixed(4),
