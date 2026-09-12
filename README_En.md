@@ -14,13 +14,13 @@ An explainable and traceable process-analysis platform with traditional DOE and 
 
 - Frontend: React 18, TypeScript, Ant Design 5, Zustand, i18next
 - Desktop: Tauri 2.0 (Rust)
-- Analysis engine: Python 3.12 managed by `uv` (numpy, pandas, scikit-learn, scipy, shap)
+- Analysis engine: Python 3.11 or 3.12 managed by `uv` (Python 3.13+ is unsupported; numpy, pandas, scikit-learn, scipy, shap)
 - Charts: Plotly.js
 - Storage: in-memory `DatasetRegistry`; raw data stays local by default
 
 ## Quick start
 
-Requirements: Rust 1.77+, Node.js 18+, Python 3.12, and a system WebView. On macOS install OpenMP with `brew install libomp`. PDF export also requires the system dependencies in [docs/deployment.md](docs/deployment.md).
+Requirements: Rust 1.77+, Node.js 18+, Python 3.11 or 3.12, and a system WebView. On macOS install OpenMP with `brew install libomp`. PDF export also requires the system dependencies in [docs/deployment.md](docs/deployment.md).
 
 ```bash
 npm install

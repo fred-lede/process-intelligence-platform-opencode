@@ -18,7 +18,7 @@
 
 - **前端**: React 18 + TypeScript + Ant Design 5 + Zustand + i18next
 - **桌面框架**: Tauri 2.0 (Rust)
-- **分析引擎**: Python 3.11（不支援 3.12+） (numpy, pandas, scikit-learn, scipy, shap)
+- **分析引擎**: Python 3.11 或 3.12（不支援 3.13+） (numpy, pandas, scikit-learn, scipy, shap)
 - **圖表庫**: Plotly.js
 - **資料儲存**: 記憶體 DatasetRegistry (原始資料不上雲)
 
