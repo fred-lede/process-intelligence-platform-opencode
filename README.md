@@ -395,6 +395,8 @@ v0.6.0 以 CSV／Excel 表格列為主要輸入，支援單層量測與可選的
 
 專案提供預存測試資料：
 
+測試資料說明：[繁體中文](data/test_dataset_README.md) · [English](data/test_dataset_README_En.md)
+
 ```
 data/test_dataset.csv
 ```

@@ -64,7 +64,7 @@ docs/         Specifications and deployment documentation
 
 ## Test datasets
 
-Multiple scenario fixtures are provided. See [`data/test_dataset_README_En.md`](data/test_dataset_README_En.md) for column contracts, sample-size guidance, workflows, and the test matrix.
+Multiple scenario fixtures are provided. See the test-data guides: [繁體中文](data/test_dataset_README.md) · [English](data/test_dataset_README_En.md).
 
 - `test_dataset.csv`: 60-row end-to-end baseline
 - `test_dataset_linear.csv`: 60-row linear DOE scenario
