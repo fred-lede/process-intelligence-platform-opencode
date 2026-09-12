@@ -1294,6 +1294,7 @@ export interface TimeSeriesLadderModel {
   model_type: string
   status: 'available' | 'unavailable'
   error?: string | null
+  reason_code?: string | null
   features: string[]
   validation: { strategy: string; train_rows: number; test_rows: number; train_end?: string; test_start?: string }
   metrics: { mae: number; rmse: number; r2: number } | null

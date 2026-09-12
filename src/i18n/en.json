@@ -412,7 +412,7 @@
       "persisted": "Saved",
       "notPersisted": "Not saved",
       "models": { "naive": "Naive", "seasonal_naive": "Seasonal Naive", "dynamic_regression": "Dynamic Regression", "time_feature_random_forest": "Time-Feature Random Forest", "arima": "ARIMA", "xgboost": "XGBoost", "lightgbm": "LightGBM" },
-      "reasons": { "statsmodels": "statsmodels is not installed", "xgboost": "XGBoost is not installed", "lightgbm": "LightGBM is not installed", "insufficient": "Insufficient complete chronological rows" },
+      "reasons": { "dependency_missing": "Required dependency is not installed", "adapter_error": "Model adapter failed", "not_implemented": "Model adapter is not enabled", "insufficient_history": "Insufficient history for this seasonal period", "unknown": "Unavailable: see engine details" },
       "running": "Preparing...",
       "runSuccess": "Time-series preparation and validation completed",
       "runError": "Time-series preparation failed",

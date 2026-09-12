@@ -194,13 +194,10 @@ export default function ModelCenter() {
   }
 
   const timeSeriesModelLabel = (name: string) => t(`modelCenter.timeSeries.models.${name}`, { defaultValue: name })
-  const timeSeriesReason = (reason?: string | null) => {
-    if (!reason) return '—'
-    if (reason.includes('statsmodels')) return t('modelCenter.timeSeries.reasons.statsmodels')
-    if (reason.includes('xgboost')) return t('modelCenter.timeSeries.reasons.xgboost')
-    if (reason.includes('lightgbm')) return t('modelCenter.timeSeries.reasons.lightgbm')
-    if (reason.includes('insufficient')) return t('modelCenter.timeSeries.reasons.insufficient')
-    return reason
+  const timeSeriesReason = (reason?: string | null, code?: string | null) => {
+    if (!reason && !code) return '—'
+    if (code) return t(`modelCenter.timeSeries.reasons.${code}`, { defaultValue: t('modelCenter.timeSeries.reasons.unknown') })
+    return t('modelCenter.timeSeries.reasons.unknown')
   }
 
   useEffect(() => {
@@ -744,7 +741,7 @@ export default function ModelCenter() {
                       { title: t('modelCenter.timeSeries.trainTestRange'), key: 'range', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.evaluation?.test_start && row.evaluation?.test_end ? `${row.evaluation.test_start} → ${row.evaluation.test_end}` : row.validation?.train_end && row.validation?.test_start ? `${row.validation.train_end} → ${row.validation.test_start}` : '—' },
                       { title: t('modelCenter.timeSeries.leakageStatus'), key: 'leakage', render: () => timeSeriesLadder.provenance?.leakage_check ? t('modelCenter.timeSeries.leakage.passed') : '—' },
                       { title: t('modelCenter.timeSeries.persistence'), key: 'persisted', render: () => timeSeriesLadder.provenance?.persisted == null ? '—' : timeSeriesLadder.provenance.persisted ? t('modelCenter.timeSeries.persisted') : t('modelCenter.timeSeries.notPersisted') },
-                      { title: t('modelCenter.timeSeries.reason'), dataIndex: 'error', key: 'error', render: (value?: string | null) => timeSeriesReason(value) },
+                      { title: t('modelCenter.timeSeries.reason'), key: 'error', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => timeSeriesReason(row.error, row.reason_code) },
                     ]} />
                     <Alert type="info" showIcon message={t('modelCenter.timeSeries.ladderAdvice')} />
                   </Card>}
