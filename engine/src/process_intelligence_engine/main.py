@@ -2421,8 +2421,10 @@ def _handle_time_series_model(params: dict) -> dict:
 def _handle_time_series_fit(params: dict) -> dict:
     """Execute the Phase 2 chronological model ladder."""
     df = REGISTRY.get(params["dataset_id"])
+    window_days = params.get("window_days")
+    window = select_time_window(df, params["time_column"], window_days, params.get("modeling_timezone")) if window_days is not None else None
     result = fit_time_series_ladder(
-        df,
+        window["data"] if window else df,
         params["time_column"],
         params["target"],
         list(params.get("inputs", [])),
@@ -2430,7 +2432,13 @@ def _handle_time_series_fit(params: dict) -> dict:
         rolling_windows=params.get("rolling_windows"),
         seasonal_period=int(params.get("seasonal_period", 24)),
         train_ratio=float(params.get("train_ratio", 0.8)),
+        modeling_timezone=params.get("modeling_timezone"),
+        window_days=window_days,
     )
+    if window:
+        result["quality"]["missing_timestamps"] = window["excluded_undated_rows"]
+        result["quality"]["excluded_undated_rows"] = window["excluded_undated_rows"]
+        result["feature_configuration"].update({"window_start": window["window_start"], "window_end": window["window_end"]})
     return _plain_types({"dataset_id": params["dataset_id"], **result})
 
 
