@@ -2347,6 +2347,10 @@ def _handle_time_series_model(params: dict) -> dict:
     prepared = prepare_time_series(df, params["time_column"])
     return _plain_types(
         {
+            "dataset_id": params["dataset_id"],
+            "time_column": params["time_column"],
+            "target": params["target"],
+            "inputs": list(params["inputs"]),
             "quality": prepared["quality"],
             "sorted_row_count": len(prepared["data"]),
         }
