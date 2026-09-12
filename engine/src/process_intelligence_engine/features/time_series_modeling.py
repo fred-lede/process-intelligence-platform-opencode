@@ -229,12 +229,17 @@ def suggest_time_feature_configuration(
 
 
 def _timestamp_values(
-    df: pd.DataFrame, column: str, *, allow_missing: bool
-) -> pd.Series:
+    df: pd.DataFrame,
+    column: str,
+    *,
+    allow_missing: bool,
+    modeling_timezone: str | None = None,
+) -> tuple[pd.Series, set[str]]:
     if column not in df.columns:
         raise ValueError(f"Unknown time column: {column}")
 
     parsed: list[Any] = []
+    awareness: set[str] = set()
     for value in df[column]:
         if pd.isna(value):
             if not allow_missing:
@@ -250,17 +255,46 @@ def _timestamp_values(
                 f"Time column '{column}' contains a non-datetime value"
             ) from exc
         if timestamp.tzinfo is None:
-            timestamp = timestamp.tz_localize("UTC")
+            awareness.add("naive")
         else:
-            timestamp = timestamp.tz_convert("UTC")
+            awareness.add("aware")
         parsed.append(timestamp)
-    return pd.Series(parsed, index=df.index, dtype="datetime64[ns, UTC]")
+
+    if len(awareness) > 1 and modeling_timezone is None:
+        raise ValueError(
+            "Mixed naive and aware timestamps require an explicit modeling_timezone"
+        )
+    try:
+        naive_timezone = (
+            ZoneInfo(modeling_timezone) if modeling_timezone else ZoneInfo("UTC")
+        )
+    except ZoneInfoNotFoundError as exc:
+        raise ValueError(f"Unknown modeling timezone: {modeling_timezone}") from exc
+    normalized: list[Any] = []
+    for timestamp in parsed:
+        if pd.isna(timestamp):
+            normalized.append(pd.NaT)
+        elif timestamp.tzinfo is None:
+            normalized.append(
+                timestamp.tz_localize(naive_timezone).tz_convert("UTC")
+            )
+        else:
+            normalized.append(timestamp.tz_convert("UTC"))
+    return (
+        pd.Series(normalized, index=df.index, dtype="datetime64[ns, UTC]"),
+        awareness,
+    )
 
 
 def _chronological_positions(
-    df: pd.DataFrame, time_column: str
+    df: pd.DataFrame, time_column: str, modeling_timezone: str | None = None
 ) -> tuple[list[int], list[Any]]:
-    timestamps = _timestamp_values(df, time_column, allow_missing=False)
+    timestamps, _ = _timestamp_values(
+        df,
+        time_column,
+        allow_missing=False,
+        modeling_timezone=modeling_timezone,
+    )
     ordering = pd.DataFrame(
         {
             "timestamp": timestamps.to_numpy(),
@@ -287,6 +321,7 @@ def time_split(
     time_column: str,
     train_ratio: float,
     validation_ratio: float,
+    modeling_timezone: str | None = None,
 ) -> dict[str, list[int]]:
     """Return deterministic iloc positions for chronological train/validation/test."""
     if (
@@ -300,7 +335,9 @@ def time_split(
             "train_ratio and validation_ratio must be positive and sum to less than 1"
         )
 
-    positions, timestamps = _chronological_positions(df, time_column)
+    positions, timestamps = _chronological_positions(
+        df, time_column, modeling_timezone
+    )
     train_end = int(len(positions) * train_ratio)
     validation_end = train_end + int(len(positions) * validation_ratio)
     if (
@@ -326,6 +363,7 @@ def walk_forward_splits(
     initial_train_size: int,
     horizon: int,
     step: int,
+    modeling_timezone: str | None = None,
 ) -> list[dict[str, list[int]]]:
     """Return expanding-window rolling-origin folds as deterministic iloc positions."""
     for value, name in (
@@ -336,7 +374,9 @@ def walk_forward_splits(
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
             raise ValueError(f"{name} must be a positive integer")
 
-    positions, timestamps = _chronological_positions(df, time_column)
+    positions, timestamps = _chronological_positions(
+        df, time_column, modeling_timezone
+    )
     folds: list[dict[str, list[int]]] = []
     train_end = initial_train_size
     while train_end + horizon <= len(positions):
@@ -358,15 +398,32 @@ def check_feature_timestamp_leakage(
     df: pd.DataFrame,
     prediction_time_column: str,
     feature_source_time_columns: list[str],
+    modeling_timezone: str | None = None,
 ) -> dict[str, Any]:
     """Fail when a feature uses information newer than its prediction timestamp."""
-    prediction_timestamps = _timestamp_values(
-        df, prediction_time_column, allow_missing=False
+    prediction_timestamps, timestamp_awareness = _timestamp_values(
+        df,
+        prediction_time_column,
+        allow_missing=False,
+        modeling_timezone=modeling_timezone,
     )
     source_columns = list(dict.fromkeys(feature_source_time_columns))
     for column in source_columns:
-        source_timestamps = _timestamp_values(df, column, allow_missing=True)
-        leaking = source_timestamps.notna() & source_timestamps.gt(prediction_timestamps)
+        source_timestamps, source_awareness = _timestamp_values(
+            df,
+            column,
+            allow_missing=True,
+            modeling_timezone=modeling_timezone,
+        )
+        timestamp_awareness.update(source_awareness)
+        if len(timestamp_awareness) > 1 and modeling_timezone is None:
+            raise ValueError(
+                "Mixed naive and aware timestamps require an explicit "
+                "modeling_timezone"
+            )
+        leaking = source_timestamps.notna() & source_timestamps.gt(
+            prediction_timestamps
+        )
         if leaking.any():
             row_position = int(np.flatnonzero(leaking.to_numpy())[0])
             raise ValueError(

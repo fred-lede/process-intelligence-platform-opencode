@@ -95,8 +95,11 @@ from process_intelligence_engine.features.time_series import (
 )
 from process_intelligence_engine.features.time_series_modeling import (
     build_time_features,
+    check_feature_timestamp_leakage,
     prepare_time_series,
     suggest_time_feature_configuration,
+    time_split,
+    walk_forward_splits,
 )
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
@@ -2122,6 +2125,8 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "features/time_series/model":
         return _handle_time_series_model(params)
+    if method == "features/time_series/validation":
+        return _handle_time_series_validation(params)
     if method == "features/time_series":
         return _handle_time_series(params)
     if method == "features/consecutive_exceedance":
@@ -2377,6 +2382,73 @@ def _handle_time_series_model(params: dict) -> dict:
             "dropped_warmup_rows": features["dropped_warmup_rows"],
             "dropped_invalid_rows": features["dropped_invalid_rows"],
             "feature_warnings": features["warnings"],
+        }
+    )
+
+
+def _handle_time_series_validation(params: dict) -> dict:
+    """Build reproducible chronological validation splits for a dataset."""
+    dataset_id = params["dataset_id"]
+    time_column = params["time_column"]
+    strategy = params["strategy"]
+    modeling_timezone = params.get("modeling_timezone")
+    df = REGISTRY.get(dataset_id)
+    prepared = prepare_time_series(df, time_column)
+
+    if strategy == "holdout":
+        configuration = {
+            "train_ratio": params["train_ratio"],
+            "validation_ratio": params["validation_ratio"],
+        }
+        splits = [
+            time_split(
+                df,
+                time_column,
+                configuration["train_ratio"],
+                configuration["validation_ratio"],
+                modeling_timezone=modeling_timezone,
+            )
+        ]
+    elif strategy == "walk_forward":
+        configuration = {
+            "initial_train_size": params["initial_train_size"],
+            "horizon": params["horizon"],
+            "step": params["step"],
+        }
+        splits = walk_forward_splits(
+            df,
+            time_column,
+            configuration["initial_train_size"],
+            configuration["horizon"],
+            configuration["step"],
+            modeling_timezone=modeling_timezone,
+        )
+    else:
+        raise ValueError("strategy must be 'holdout' or 'walk_forward'")
+
+    source_columns = params.get("feature_source_time_columns", [])
+    if source_columns:
+        leakage_check = check_feature_timestamp_leakage(
+            df,
+            params.get("prediction_time_column", time_column),
+            source_columns,
+            modeling_timezone=modeling_timezone,
+        )
+    else:
+        leakage_check = {
+            "status": "not_checked",
+            "checked_rows": 0,
+            "feature_source_time_columns": [],
+        }
+    return _plain_types(
+        {
+            "dataset_id": dataset_id,
+            "time_column": time_column,
+            "strategy": strategy,
+            "configuration": configuration,
+            "splits": splits,
+            "quality": prepared["quality"],
+            "leakage_check": leakage_check,
         }
     )
 

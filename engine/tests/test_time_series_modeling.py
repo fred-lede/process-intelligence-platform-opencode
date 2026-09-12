@@ -459,3 +459,144 @@ def test_feature_timestamp_leakage_check_fails_for_future_source():
             "prediction_ts",
             ["sensor_source_ts"],
         )
+
+
+def test_time_series_validation_handler_returns_holdout_schema():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame(
+            {
+                "ts": [
+                    "2026-01-05",
+                    "2026-01-01",
+                    "2026-01-04",
+                    "2026-01-02",
+                    "2026-01-03",
+                ],
+                "source_ts": [
+                    "2026-01-04",
+                    "2025-12-31",
+                    "2026-01-03",
+                    "2026-01-01",
+                    "2026-01-02",
+                ],
+            }
+        ),
+        {},
+    )
+
+    result = handle_request(
+        "features/time_series/validation",
+        {
+            "dataset_id": dataset_id,
+            "time_column": "ts",
+            "strategy": "holdout",
+            "train_ratio": 0.6,
+            "validation_ratio": 0.2,
+            "feature_source_time_columns": ["source_ts"],
+        },
+    )
+
+    assert result["dataset_id"] == dataset_id
+    assert result["time_column"] == "ts"
+    assert result["strategy"] == "holdout"
+    assert result["configuration"] == {
+        "train_ratio": 0.6,
+        "validation_ratio": 0.2,
+    }
+    assert result["splits"] == [
+        {
+            "train_indices": [1, 3, 4],
+            "validation_indices": [2],
+            "test_indices": [0],
+        }
+    ]
+    assert result["quality"]["duplicate_timestamps"] == 0
+    assert result["leakage_check"] == {
+        "status": "passed",
+        "checked_rows": 5,
+        "feature_source_time_columns": ["source_ts"],
+    }
+
+
+def test_time_series_validation_handler_returns_walk_forward_schema():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame(
+            {
+                "ts": pd.date_range("2026-01-01", periods=8, freq="D"),
+            }
+        ),
+        {},
+    )
+
+    result = handle_request(
+        "features/time_series/validation",
+        {
+            "dataset_id": dataset_id,
+            "time_column": "ts",
+            "strategy": "walk_forward",
+            "initial_train_size": 4,
+            "horizon": 2,
+            "step": 2,
+        },
+    )
+
+    assert result["configuration"] == {
+        "initial_train_size": 4,
+        "horizon": 2,
+        "step": 2,
+    }
+    assert result["splits"] == [
+        {
+            "train_indices": [0, 1, 2, 3],
+            "validation_indices": [4, 5],
+        },
+        {
+            "train_indices": [0, 1, 2, 3, 4, 5],
+            "validation_indices": [6, 7],
+        },
+    ]
+    assert result["leakage_check"] == {
+        "status": "not_checked",
+        "checked_rows": 0,
+        "feature_source_time_columns": [],
+    }
+
+
+def test_time_series_validation_handler_propagates_leakage_failure():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame(
+            {
+                "ts": pd.date_range("2026-01-01", periods=5, freq="D"),
+                "source_ts": pd.date_range("2026-01-02", periods=5, freq="D"),
+            }
+        ),
+        {},
+    )
+
+    with pytest.raises(ValueError, match="Feature timestamp leakage"):
+        handle_request(
+            "features/time_series/validation",
+            {
+                "dataset_id": dataset_id,
+                "time_column": "ts",
+                "strategy": "holdout",
+                "train_ratio": 0.6,
+                "validation_ratio": 0.2,
+                "feature_source_time_columns": ["source_ts"],
+            },
+        )
+
+
+def test_time_split_rejects_mixed_naive_and_aware_timestamps():
+    df = pd.DataFrame(
+        {
+            "ts": [
+                "2026-01-01T00:00:00",
+                "2026-01-02T00:00:00Z",
+                "2026-01-03T00:00:00",
+            ]
+        }
+    )
+
+    with pytest.raises(ValueError, match="Mixed naive and aware timestamps"):
+        time_split(df, "ts", train_ratio=0.34, validation_ratio=0.33)
