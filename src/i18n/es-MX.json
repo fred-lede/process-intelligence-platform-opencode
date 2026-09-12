@@ -163,7 +163,7 @@
   "dataImport": {
     "downloadTemplate": "Descargar plantilla CSV",
     "downloadEngineeringTemplate": "Descargar plantilla de ingeniería",
-    "sampleSizeHint": "• Análisis general: al menos 30 filas\n• DOE lineal: al menos 10–15 filas por entrada\n• DOE cuadrático/interacciones: se recomiendan 60–100 filas\n• GRR: al menos 5 piezas × 3 operadores × 2–3 repeticiones\n• Muestrea entradas en el rango operativo real y la variación por lote; ajusta según complejidad y objetivo de validación",
+    "sampleSizeHint": "• Análisis general: al menos 30 filas\n• DOE lineal: filas totales ≈ 10–15× el número de entradas\n• DOE cuadrático/interacciones: se recomiendan 60–100+ filas para todo el conjunto\n• GRR: al menos 5 piezas × 3 operadores × 2–3 repeticiones\n• Muestrea entradas en el rango operativo real y la variación por lote; ajusta según complejidad y objetivo de validación",
     "downloadTemplateDesc": "Descarga un CSV de ejemplo con 5 entradas + salida continua + resultado binario, compatible con los 8 modelos (DOE, RF, XGBoost, LightGBM, Híbrido, Logística, Weibull).",
     "errNoOutput": "Asigna al menos un campo como salida (métrica de calidad) antes de continuar.",
     "previewTitle": "Vista previa de datos",
