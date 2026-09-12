@@ -96,7 +96,9 @@ from process_intelligence_engine.features.time_series import (
 from process_intelligence_engine.features.time_series_modeling import (
     build_time_features,
     check_feature_timestamp_leakage,
+    normalize_time_values,
     prepare_time_series,
+    select_time_window,
     suggest_time_feature_configuration,
     time_split,
     walk_forward_splits,
@@ -2353,7 +2355,16 @@ def _handle_time_series_model(params: dict) -> dict:
     if missing_columns:
         raise ValueError(f"Unknown column(s): {', '.join(missing_columns)}")
 
-    prepared = prepare_time_series(df, params["time_column"])
+    time_column = params["time_column"]
+    modeling_timezone = params.get("modeling_timezone")
+    window_days = params.get("window_days")
+    window = (
+        select_time_window(df, time_column, window_days, modeling_timezone)
+        if window_days is not None
+        else None
+    )
+    feature_df = window["data"] if window else df
+    prepared = prepare_time_series(feature_df, time_column)
     feature_columns = list(dict.fromkeys([params["target"], *params["inputs"]]))
     suggested = suggest_time_feature_configuration(
         prepared["quality"]["interval_summary"], feature_columns
@@ -2361,13 +2372,26 @@ def _handle_time_series_model(params: dict) -> dict:
     lags = params.get("lags", suggested["lags"])
     rolling_windows = params.get("rolling_windows", suggested["rolling_windows"])
     features = build_time_features(
-        df,
-        params["time_column"],
+        feature_df,
+        time_column,
         feature_columns,
         lags,
         rolling_windows,
-        modeling_timezone=params.get("modeling_timezone"),
+        modeling_timezone=modeling_timezone,
     )
+    feature_configuration = {
+        **features["configuration"],
+        "target": params["target"],
+        "inputs": list(params["inputs"]),
+    }
+    if window:
+        feature_configuration.update(
+            {
+                "window_days": window_days,
+                "window_start": window["window_start"],
+                "window_end": window["window_end"],
+            }
+        )
     return _plain_types(
         {
             "dataset_id": params["dataset_id"],
@@ -2375,8 +2399,8 @@ def _handle_time_series_model(params: dict) -> dict:
             "target": params["target"],
             "inputs": list(params["inputs"]),
             "quality": prepared["quality"],
-            "sorted_row_count": len(prepared["data"]),
-            "feature_configuration": features["configuration"],
+            "sorted_row_count": len(feature_df),
+            "feature_configuration": feature_configuration,
             "feature_names": features["feature_names"],
             "feature_row_count": len(features["data"]),
             "dropped_warmup_rows": features["dropped_warmup_rows"],
@@ -2394,7 +2418,14 @@ def _handle_time_series_validation(params: dict) -> dict:
     modeling_timezone = params.get("modeling_timezone")
     prediction_time_column = params.get("prediction_time_column", time_column)
     df = REGISTRY.get(dataset_id)
-    prepared = prepare_time_series(df, time_column)
+    window_days = params.get("window_days")
+    window = (
+        select_time_window(df, time_column, window_days, modeling_timezone)
+        if window_days is not None
+        else None
+    )
+    validation_df = window["data"] if window else df
+    prepared = prepare_time_series(validation_df, time_column)
 
     if strategy == "holdout":
         configuration = {
@@ -2403,7 +2434,7 @@ def _handle_time_series_validation(params: dict) -> dict:
         }
         splits = [
             time_split(
-                df,
+                validation_df,
                 time_column,
                 configuration["train_ratio"],
                 configuration["validation_ratio"],
@@ -2417,7 +2448,7 @@ def _handle_time_series_validation(params: dict) -> dict:
             "step": params["step"],
         }
         splits = walk_forward_splits(
-            df,
+            validation_df,
             time_column,
             configuration["initial_train_size"],
             configuration["horizon"],
@@ -2432,11 +2463,19 @@ def _handle_time_series_validation(params: dict) -> dict:
             "prediction_time_column": prediction_time_column,
         }
     )
+    if window:
+        configuration.update(
+            {
+                "window_days": window_days,
+                "window_start": window["window_start"],
+                "window_end": window["window_end"],
+            }
+        )
 
     source_columns = params.get("feature_source_time_columns", [])
     if source_columns:
         leakage_check = check_feature_timestamp_leakage(
-            df,
+            validation_df,
             prediction_time_column,
             source_columns,
             modeling_timezone=modeling_timezone,
@@ -2456,6 +2495,11 @@ def _handle_time_series_validation(params: dict) -> dict:
             "splits": splits,
             "quality": prepared["quality"],
             "leakage_check": leakage_check,
+            "normalized_timestamps": (
+                window["normalized_timestamps"]
+                if window
+                else normalize_time_values(df, time_column, modeling_timezone)
+            ),
         }
     )
 

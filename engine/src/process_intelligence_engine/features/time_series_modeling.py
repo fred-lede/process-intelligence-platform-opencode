@@ -286,6 +286,63 @@ def _timestamp_values(
     )
 
 
+def select_time_window(
+    df: pd.DataFrame,
+    time_column: str,
+    window_days: int,
+    modeling_timezone: str | None = None,
+) -> dict[str, Any]:
+    """Select a trailing wall-clock window and retain normalized timestamps."""
+    if (
+        isinstance(window_days, bool)
+        or not isinstance(window_days, int)
+        or window_days < 1
+    ):
+        raise ValueError("window_days must be a positive integer")
+    timestamps, _ = _timestamp_values(
+        df,
+        time_column,
+        allow_missing=True,
+        modeling_timezone=modeling_timezone,
+    )
+    valid = timestamps.dropna()
+    if valid.empty:
+        raise ValueError(f"Time column '{time_column}' contains no timestamps")
+    window_end = valid.max()
+    cutoff = window_end - pd.Timedelta(days=window_days)
+    selected = timestamps.gt(cutoff) & timestamps.le(window_end)
+    selected_timestamps = timestamps.loc[selected].reset_index(drop=True)
+    return {
+        "data": df.loc[selected].reset_index(drop=True),
+        "normalized_timestamps": [
+            timestamp.isoformat().replace("+00:00", "Z")
+            for timestamp in selected_timestamps
+        ],
+        "window_start": selected_timestamps.min()
+        .isoformat()
+        .replace("+00:00", "Z"),
+        "window_end": window_end.isoformat().replace("+00:00", "Z"),
+    }
+
+
+def normalize_time_values(
+    df: pd.DataFrame,
+    time_column: str,
+    modeling_timezone: str | None = None,
+) -> list[str | None]:
+    """Return source-order timestamps normalized to UTC for API display."""
+    timestamps, _ = _timestamp_values(
+        df,
+        time_column,
+        allow_missing=True,
+        modeling_timezone=modeling_timezone,
+    )
+    return [
+        None if pd.isna(timestamp) else timestamp.isoformat().replace("+00:00", "Z")
+        for timestamp in timestamps
+    ]
+
+
 def _chronological_positions(
     df: pd.DataFrame, time_column: str, modeling_timezone: str | None = None
 ) -> tuple[list[int], list[Any]]:

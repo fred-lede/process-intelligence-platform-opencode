@@ -233,6 +233,8 @@ def test_time_series_model_handler_uses_daily_defaults_and_accepts_explicit_list
 
     assert defaults["feature_configuration"] == {
         "columns": ["target", "input"],
+        "target": "target",
+        "inputs": ["input"],
         "lags": [1, 7],
         "rolling_windows": [7],
         "frequency": "daily",
@@ -240,6 +242,8 @@ def test_time_series_model_handler_uses_daily_defaults_and_accepts_explicit_list
     }
     assert explicit["feature_configuration"] == {
         "columns": ["target", "input"],
+        "target": "target",
+        "inputs": ["input"],
         "lags": [2],
         "rolling_windows": [3],
         "frequency": "daily",
@@ -344,11 +348,115 @@ def test_time_series_model_handler_uses_minute_frequency_defaults():
 
     assert result["feature_configuration"] == {
         "columns": ["target", "input"],
+        "target": "target",
+        "inputs": ["input"],
         "lags": [1, 60],
         "rolling_windows": [60],
         "frequency": "minute",
         "calendar_timezone": "source_local_naive",
     }
+
+
+def test_time_series_model_handler_applies_trailing_day_window_and_snapshots_inputs():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame(
+            {
+                "ts": pd.date_range("2026-01-01", periods=100, freq="D"),
+                "target": range(100),
+                "input": range(100, 200),
+            }
+        ),
+        {},
+    )
+    params = {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "target",
+        "inputs": ["input"],
+        "lags": [1],
+        "rolling_windows": [2],
+    }
+
+    seven_days = handle_request(
+        "features/time_series/model", {**params, "window_days": 7}
+    )
+    ninety_days = handle_request(
+        "features/time_series/model", {**params, "window_days": 90}
+    )
+
+    assert seven_days["sorted_row_count"] == 7
+    assert ninety_days["sorted_row_count"] == 90
+    assert seven_days["feature_configuration"]["target"] == "target"
+    assert seven_days["feature_configuration"]["inputs"] == ["input"]
+    assert seven_days["feature_configuration"]["window_days"] == 7
+    assert seven_days["feature_configuration"]["window_start"] == "2026-04-04T00:00:00Z"
+    assert seven_days["feature_configuration"]["window_end"] == "2026-04-10T00:00:00Z"
+
+
+def test_time_series_model_handler_reports_quality_for_selected_window_only():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame(
+            {
+                "ts": [
+                    "2026-01-01",
+                    "2026-01-01",
+                    "2026-02-01",
+                    "2026-02-02",
+                    "2026-02-03",
+                ],
+                "target": [1, 2, 3, 4, 5],
+                "input": [11, 12, 13, 14, 15],
+            }
+        ),
+        {},
+    )
+
+    result = handle_request(
+        "features/time_series/model",
+        {
+            "dataset_id": dataset_id,
+            "time_column": "ts",
+            "target": "target",
+            "inputs": ["input"],
+            "lags": [1],
+            "rolling_windows": [2],
+            "window_days": 3,
+        },
+    )
+
+    assert result["sorted_row_count"] == 3
+    assert result["quality"]["duplicate_timestamps"] == 0
+    assert result["quality"]["interval_summary"]["count"] == 2
+
+
+def test_time_series_validation_window_returns_normalized_timestamps_for_split_labels():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame(
+            {
+                "ts": pd.date_range(
+                    "2026-01-01 00:00", periods=10, freq="h", tz="Asia/Bangkok"
+                )
+            }
+        ),
+        {},
+    )
+
+    result = handle_request(
+        "features/time_series/validation",
+        {
+            "dataset_id": dataset_id,
+            "time_column": "ts",
+            "window_days": 7,
+            "strategy": "holdout",
+            "train_ratio": 0.6,
+            "validation_ratio": 0.2,
+            "modeling_timezone": "Asia/Bangkok",
+        },
+    )
+
+    assert result["configuration"]["window_days"] == 7
+    assert result["normalized_timestamps"][0] == "2025-12-31T17:00:00Z"
+    assert result["normalized_timestamps"][-1] == "2026-01-01T02:00:00Z"
 
 
 def test_time_split_returns_chronological_original_row_positions():

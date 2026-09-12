@@ -1240,10 +1240,15 @@ export interface TimeSeriesModelResult {
   sorted_row_count: number
   feature_configuration: {
     columns: string[]
+    target: string
+    inputs: string[]
     lags: number[]
     rolling_windows: number[]
     frequency: string
     calendar_timezone: string
+    window_days?: number
+    window_start?: string
+    window_end?: string
   }
   feature_names: string[]
   feature_row_count: number
@@ -1270,6 +1275,7 @@ export interface TimeSeriesValidationResult {
     checked_rows: number
     feature_source_time_columns: string[]
   }
+  normalized_timestamps: (string | null)[]
 }
 
 export interface TimeSeriesModelParams {
@@ -1280,6 +1286,7 @@ export interface TimeSeriesModelParams {
   lags?: number[]
   rolling_windows?: number[]
   modeling_timezone?: string
+  window_days?: number
 }
 
 export type TimeSeriesValidationParams = {
@@ -1288,6 +1295,7 @@ export type TimeSeriesValidationParams = {
   modeling_timezone?: string
   prediction_time_column?: string
   feature_source_time_columns?: string[]
+  window_days?: number
 } & (
   | { strategy: 'holdout'; train_ratio: number; validation_ratio: number }
   | { strategy: 'walk_forward'; initial_train_size: number; horizon: number; step: number }
