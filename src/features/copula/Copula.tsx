@@ -319,6 +319,19 @@ export default function Copula() {
           ) : (
             <Empty description={t('copula.noResultRows')} />
           )}
+          {jointRows.length > 0 && (
+            <Alert
+              type="info"
+              showIcon
+              message={t('copula.summaryTitle', { defaultValue: '聯合異常機率摘要' })}
+              description={t('copula.summary', {
+                defaultValue: '本次以 {{mode}} 分析 {{count}} 個異常情境。請比較每組聯合機率與獨立假設期望值；高於期望值代表共同發生風險增加，低於期望值則代表共同發生較少。若高聯合機率組合會同時推高 NG，建議將其納入蒙地卡羅異常情境並依批次、機台、操作者與時間追查共同原因。結果受樣本量、異常定義與相關矩陣影響，相關性不代表因果。',
+                mode: mode === 'gaussian_copula' ? 'Gaussian Copula' : mode === 'direct' ? '直接聯合機率' : '獨立假設',
+                count: selected.length,
+              })}
+              style={{ marginTop: 12 }}
+            />
+          )}
         </Space>
       )}
     </Card>
