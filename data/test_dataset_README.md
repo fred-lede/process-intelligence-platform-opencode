@@ -77,3 +77,26 @@
 - 嘗試互動預測：調整 input_temperature=95，查看 output_thickness 預測值
 - 嘗試蒙地卡羅模擬：選擇已配適模型，執行 10000 次模擬
 - 嘗試 SPC 分析：選擇 input_temperature 或 output_thickness，查看管制圖與離群值
+
+## 情境測試資料
+
+以下檔案是程式測試用 fixture，不是資料匯入頁提供給使用者下載的收集範本。一般情境沿用一般 CSV 的 13 欄結構；GRR 使用工程多層級結構。
+
+| 檔案 | 資料特性 | 主要驗證功能 | 使用方式 |
+|------|----------|--------------|----------|
+| `test_dataset.csv` | 60 筆綜合基準資料 | 匯入、健檢、製程定義、一般模型與報告 | 依本文件完整流程匯入 |
+| `test_dataset_linear.csv` | 10 筆，輸出近似線性組合 | DOE 線性、互動預測 | 配適 DOE 線性並檢查係數 |
+| `test_dataset_quadratic.csv` | 10 筆，輸出含曲率 | DOE 二次、模型比較 | 同時配適線性與二次 |
+| `test_dataset_interaction.csv` | 10 筆，輸出含交互作用 | 交互作用、SHAP、敏感度與效應量 | 配適後檢查交互作用與排名 |
+| `test_dataset_quality_issues.csv` | 8 筆，含缺值、重複、錯序與格式差異 | 資料品質報告與 readiness | 匯入後先檢查 warning |
+| `test_dataset_grr.csv` | 工程欄位，含零件、操作者與重複量測 | GRR | 指定測量、零件與操作者欄位 |
+| `test_dataset_timeseries.csv` | 12 筆有序時間與週期變化 | 趨勢、時間序列、SPC | 指定 `datetime` 與數值欄位 |
+| `test_dataset_out_of_spec.csv` | 8 筆，輸出跨越 LSL／USL | SPC、規格判定、蒙地卡羅 NG 風險 | 設定規格後檢查超限 |
+
+### 測試注意事項
+
+- 情境檔案供快速驗證功能；正式統計結論仍需足量且具代表性的資料。
+- DOE 情境使用相同核心欄位，但輸出關係不同，因此模型與模擬結果應有可解釋差異。
+- 比較模型或蒙地卡羅情境時，固定規格、模擬次數與隨機種子。
+- `test_dataset_quality_issues.csv` 的問題是刻意設計，預期由資料品質檢查偵測。
+- `test_dataset_grr.csv` 使用工程多層級欄位，不能直接套用一般 CSV 的欄位角色假設。

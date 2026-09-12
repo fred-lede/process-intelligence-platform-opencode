@@ -1,0 +1,10 @@
+measurement_id,product_id,lot_id,machine_id,station_id,process_step,timestamp,subgroup_id,input_temperature,input_voltage,input_pressure,input_speed,input_load,output_thickness,result,operator
+M-001,P-001,GRR-01,MC-01,ST-01,coating,2026-09-01 08:00:00,SG-01,85,12.0,3.2,120,68,1.620,OK,O-01
+M-002,P-001,GRR-01,MC-01,ST-01,coating,2026-09-01 08:05:00,SG-01,85,12.0,3.2,120,68.001,OK,O-01
+M-003,P-001,GRR-01,MC-01,ST-01,coating,2026-09-01 08:10:00,SG-01,85,12.0,3.2,120,1.619,OK,O-01
+M-004,P-001,GRR-01,MC-01,ST-01,coating,2026-09-01 08:15:00,SG-01,85,12.0,3.2,120,1.621,OK,O-02
+M-005,P-001,GRR-01,MC-01,ST-01,coating,2026-09-01 08:20:00,SG-01,85,12.0,3.2,120,1.620,OK,O-02
+M-006,P-001,GRR-01,MC-01,ST-01,coating,2026-09-01 08:25:00,SG-01,85,12.0,3.2,120,1.619,OK,O-02
+M-007,P-002,GRR-01,MC-01,ST-01,coating,2026-09-01 08:30:00,SG-02,85,12.0,3.2,120,1.630,OK,O-01
+M-008,P-002,GRR-01,MC-01,ST-01,coating,2026-09-01 08:35:00,SG-02,85,12.0,3.2,120,1.631,OK,O-01
+M-009,P-002,GRR-01,MC-01,ST-01,coating,2026-09-01 08:40:00,SG-02,85,12.0,3.2,120,1.629,OK,O-02
