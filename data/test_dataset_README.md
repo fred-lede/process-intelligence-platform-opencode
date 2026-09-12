@@ -85,12 +85,12 @@
 | 檔案 | 資料特性 | 主要驗證功能 | 使用方式 |
 |------|----------|--------------|----------|
 | `test_dataset.csv` | 60 筆綜合基準資料 | 匯入、健檢、製程定義、一般模型與報告 | 依本文件完整流程匯入 |
-| `test_dataset_linear.csv` | 10 筆，輸出近似線性組合 | DOE 線性、互動預測 | 配適 DOE 線性並檢查係數 |
-| `test_dataset_quadratic.csv` | 10 筆，輸出含曲率 | DOE 二次、模型比較 | 同時配適線性與二次 |
-| `test_dataset_interaction.csv` | 10 筆，輸出含交互作用 | 交互作用、SHAP、敏感度與效應量 | 配適後檢查交互作用與排名 |
+| `test_dataset_linear.csv` | 60 筆，輸出近似線性組合 | DOE 線性、互動預測 | 配適 DOE 線性並檢查係數 |
+| `test_dataset_quadratic.csv` | 80 筆，輸出含曲率 | DOE 二次、模型比較 | 同時配適線性與二次 |
+| `test_dataset_interaction.csv` | 80 筆，輸出含交互作用 | 交互作用、SHAP、敏感度與效應量 | 配適後檢查交互作用與排名 |
 | `test_dataset_quality_issues.csv` | 8 筆，含缺值、重複、錯序與格式差異 | 資料品質報告與 readiness | 匯入後先檢查 warning |
-| `test_dataset_grr.csv` | 工程欄位，含零件、操作者與重複量測 | GRR | 指定測量、零件與操作者欄位 |
-| `test_dataset_timeseries.csv` | 12 筆有序時間與週期變化 | 趨勢、時間序列、SPC | 指定 `datetime` 與數值欄位 |
+| `test_dataset_grr.csv` | 45 筆（5 零件 × 3 操作者 × 3 重複） | GRR | 指定測量、零件與操作者欄位 |
+| `test_dataset_timeseries.csv` | 45 筆有序時間與週期變化 | 趨勢、時間序列、SPC | 指定 `datetime` 與數值欄位 |
 | `test_dataset_out_of_spec.csv` | 8 筆，輸出跨越 LSL／USL | SPC、規格判定、蒙地卡羅 NG 風險 | 設定規格後檢查超限 |
 
 ### 測試注意事項
