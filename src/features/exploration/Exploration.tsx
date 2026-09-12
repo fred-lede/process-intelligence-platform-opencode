@@ -704,13 +704,14 @@ export default function Exploration() {
             onClick={async () => {
               if (!importResult || !grrMeasurementCol || !grrPartCol || !grrOperatorCol) return
               setGrrLoading(true)
+              setError(null)
+              setGrrResult(null)
               try {
                 const result = await analyzeGRR({
                   dataset_id: importResult.dataset_id,
                   measurement_column: grrMeasurementCol,
                   part_column: grrPartCol,
                   operator_column: grrOperatorCol,
-                  ...filterArgs,
                 })
                 setGrrResult(result)
               } catch (err) {
