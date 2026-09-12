@@ -367,7 +367,7 @@
     "nodeFilterCleared": "Clear node filter"
   },
   "modelCenter": {
-    "interactionSummary": "Interaction summary", "interactionAdvice": "Larger values indicate stronger joint effects; prioritize high-value pairs for experimental confirmation.",
+    "interactionSummary": "Interaction summary", "interactionAdvice": "Larger absolute values indicate stronger joint effects; prioritize high-value pairs for experimental confirmation. Values are shown to six decimal places so small effects are not hidden by rounding.",
     "shapSummary": "SHAP interpretation summary", "shapAdvice": "Mean impact magnitude is shown; signs indicate output direction and do not prove causality.", "sensitivitySummary": "Sensitivity and effect-size summary", "sensitivityAdvice": "Sensitivity ranks global influence and effect size quantifies standardized impact; confirm with validation and DOE.",
     "title": "Model Center",
     "noData": "Import a dataset before fitting models.",
@@ -694,7 +694,9 @@
     "predictedCapability": "Predicted Capability (simulation)",
     "pp": "Pp",
     "ppk": "Ppk",
-    "sigmaOverall": "σ overall"
+    "sigmaOverall": "σ overall",
+    "resultSummaryTitle": "Simulation Result Summary",
+    "resultSummary": "This simulation used {{n}} trials and produced {{ng}} NG results ({{ngPct}}%). Output mean={{mean}}, median={{median}}, standard deviation={{std}}, and P1–P99={{p1}}–{{p99}}. {{capability}}Compare the output distribution with LSL, USL, and the center value; if the tails approach a limit or sampling methods differ materially, review input distributions, dependence, model applicability, and specifications. Results depend on model, sampling parameters, and seed and are not production evidence."
   },
   "prediction": {
     "title": "Interactive Prediction (What-if)",
@@ -903,7 +905,10 @@
     "directJoints": "Pair-wise joint probabilities (direct mode)",
     "results": "Joint Probability Results",
     "pair": "Anomaly Pair",
-    "noResultRows": "No joint probability pairs available."
+    "noResultRows": "No joint probability pairs available.",
+    "above": "Above limit", "below": "Below limit", "run": "Consecutive trend", "deviation": "Deviation",
+    "summaryTitle": "Joint Anomaly Probability Summary",
+    "summary": "This analysis used {{mode}} for {{count}} anomaly scenarios. Compare each joint probability with the independent expectation: a higher value indicates increased co-occurrence risk, while a lower value indicates less co-occurrence. If a high-probability combination can increase NG, include it in Monte Carlo scenarios and investigate common causes by batch, machine, operator, and time. Results depend on sample size, anomaly definitions, and the correlation matrix; correlation is not causation."
   },
   "grr": {
     "summaryTitle": "GRR result summary", "summaryAdvice": "%GRR={{pct}}%, part-to-part={{part}}%; repeatability SD={{repeatability}}, reproducibility SD={{reproducibility}}. Use the verdict and application requirements together; for marginal or unacceptable results, check fixture stability and calibration first, then operator consistency and remeasure. GRR depends on part range and study design.",

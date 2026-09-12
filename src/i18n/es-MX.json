@@ -369,7 +369,7 @@
     "nodeFilterCleared": "Limpiar filtro de nodo"
   },
   "modelCenter": {
-    "interactionSummary": "Resumen de interacciones", "interactionAdvice": "Valores mayores indican efectos conjuntos más fuertes; prioriza esos pares para confirmación experimental.",
+    "interactionSummary": "Resumen de interacciones", "interactionAdvice": "Los valores absolutos mayores indican efectos conjuntos más fuertes; prioriza esos pares para confirmación experimental. Se muestran seis decimales para no ocultar efectos pequeños por redondeo.",
     "shapSummary": "Resumen SHAP", "shapAdvice": "Se muestra la magnitud media; los signos indican la dirección y no prueban causalidad.", "sensitivitySummary": "Resumen de sensibilidad y tamaño del efecto", "sensitivityAdvice": "La sensibilidad ordena la influencia y el tamaño del efecto cuantifica el impacto; confirma con validación y DOE.",
     "title": "Centro de Modelos",
     "noData": "Importa un conjunto de datos antes de ajustar modelos.",
@@ -690,7 +690,9 @@
     "predictedCapability": "Capacidad prevista (simulación)",
     "pp": "Pp",
     "ppk": "Ppk",
-    "sigmaOverall": "σ general"
+    "sigmaOverall": "σ general",
+    "resultSummaryTitle": "Resumen de la simulación",
+    "resultSummary": "La simulación usó {{n}} pruebas y produjo {{ng}} resultados NG ({{ngPct}}%). Media={{mean}}, mediana={{median}}, desviación estándar={{std}} y P1–P99={{p1}}–{{p99}}. {{capability}}Compara la distribución con LSL, USL y el centro; si las colas se acercan a un límite o los métodos difieren, revisa distribuciones, dependencia, aplicabilidad del modelo y especificaciones. El resultado depende del modelo, parámetros y semilla; no es evidencia de producción."
   },
   "prediction": {
     "title": "Predicción Interactiva (What-if)",
@@ -899,7 +901,10 @@
     "directJoints": "Probabilidades conjuntas por pares (modo directo)",
     "results": "Resultados de probabilidad conjunta",
     "pair": "Par de anomalías",
-    "noResultRows": "No hay pares de probabilidad conjunta disponibles."
+    "noResultRows": "No hay pares de probabilidad conjunta disponibles.",
+    "above": "Sobre el límite", "below": "Bajo el límite", "run": "Tendencia consecutiva", "deviation": "Desviación",
+    "summaryTitle": "Resumen de probabilidad conjunta de anomalías",
+    "summary": "Este análisis usó {{mode}} para {{count}} escenarios de anomalía. Compara cada probabilidad conjunta con la expectativa independiente: un valor mayor indica mayor riesgo de ocurrencia conjunta y uno menor, menor coocurrencia. Si una combinación probable puede aumentar NG, inclúyela en Monte Carlo e investiga causas comunes por lote, máquina, operador y tiempo. El resultado depende del tamaño de muestra, las definiciones y la matriz de correlación; correlación no implica causalidad."
   },
   "grr": {
     "summaryTitle": "Resumen GRR", "summaryAdvice": "%GRR={{pct}}%, pieza a pieza={{part}}%; DE de repetibilidad={{repeatability}}, DE de reproducibilidad={{reproducibility}}. Usa el veredicto junto con los requisitos de la aplicación; si es marginal o inaceptable, revisa primero la fijación y calibración, luego la consistencia del operador y vuelve a medir. El GRR depende del rango de piezas y del diseño del estudio.",

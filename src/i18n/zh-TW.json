@@ -367,7 +367,7 @@
     "nodeFilterCleared": "清除節點篩選"
   },
   "modelCenter": {
-    "interactionSummary": "交互作用摘要", "interactionAdvice": "數值越大表示聯合作用越強，建議優先檢視高值組合並以實驗確認。",
+    "interactionSummary": "交互作用摘要", "interactionAdvice": "絕對值越大表示聯合作用越強，建議優先檢視高值組合並以實驗確認。數值顯示至小數點後六位，避免小幅效果被四捨五入成 0。",
     "shapSummary": "SHAP 解讀摘要", "shapAdvice": "長條圖比較平均影響幅度；正負值表示推高或降低輸出，不能單獨視為因果關係。", "sensitivitySummary": "敏感度與效應量摘要", "sensitivityAdvice": "敏感度反映全域影響排序，效應量反映標準化影響大小；建議結合模型驗證與 DOE 實驗確認。",
     "title": "模型中心",
     "noData": "請先匯入資料集再進行模型配適。",
@@ -694,7 +694,9 @@
     "predictedCapability": "預測能力指數（模擬）",
     "pp": "Pp",
     "ppk": "Ppk",
-    "sigmaOverall": "σ 整體"
+    "sigmaOverall": "σ 整體",
+    "resultSummaryTitle": "模擬結果摘要",
+    "resultSummary": "本次使用 {{n}} 次模擬，NG {{ng}} 次（{{ngPct}}%）；輸出平均值 {{mean}}、中位數 {{median}}、標準差 {{std}}，P1–P99 為 {{p1}}–{{p99}}。{{capability}}請將輸出分布與 LSL／USL／中心值比較；若尾端接近規格或不同抽樣方式差異明顯，應檢查輸入分布、欄位相關性、模型適用範圍與規格設定。模擬結果依賴模型、抽樣參數與隨機種子，不等同實際生產證據。"
   },
   "prediction": {
     "title": "互動預測 (What-if)",
@@ -903,7 +905,10 @@
     "directJoints": "成對聯合機率（直接指定）",
     "results": "聯合機率結果",
     "pair": "異常配對",
-    "noResultRows": "沒有可顯示的聯合機率配對。"
+    "noResultRows": "沒有可顯示的聯合機率配對。",
+    "above": "超過上限", "below": "低於下限", "run": "連續趨勢", "deviation": "偏離",
+    "summaryTitle": "聯合異常機率摘要",
+    "summary": "本次以 {{mode}} 分析 {{count}} 個異常情境。請比較每組聯合機率與獨立假設期望值；高於期望值代表共同發生風險增加，低於期望值則代表共同發生較少。若高聯合機率組合會同時推高 NG，建議將其納入蒙地卡羅異常情境並依批次、機台、操作者與時間追查共同原因。結果受樣本量、異常定義與相關矩陣影響，相關性不代表因果。"
   },
   "grr": {
     "summaryTitle": "GRR 結果摘要", "summaryAdvice": "%GRR={{pct}}%，零件間變異={{part}}%；重複性標準差={{repeatability}}、再現性標準差={{reproducibility}}。請依判定區間決定是否接受；若邊界或不可接受，優先檢查量具固定與校正，再檢視操作員一致性並重新量測。GRR 結果受零件範圍與抽樣設計影響，不宜脫離應用規格解讀。",

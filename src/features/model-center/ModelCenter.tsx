@@ -570,7 +570,7 @@ export default function ModelCenter() {
                             fontSize: 11,
                           }}
                         >
-                          {strength > 0 ? strength.toFixed(2) : ''}
+                          {strength !== 0 ? strength.toFixed(6) : '0.000000'}
                         </div>
                       )
                     },
@@ -578,7 +578,7 @@ export default function ModelCenter() {
                 ]}
                 rowKey="factor"
               />
-              <Alert type="info" showIcon message={t('modelCenter.interactionSummary')} description={t('modelCenter.interactionAdvice')} />
+              <Alert type="info" showIcon message={t('modelCenter.interactionSummary')} description={t('modelCenter.interactionAdvice', { pair: '—', strength: '0.000000' })} />
               </>
             ) : (
               <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
