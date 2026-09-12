@@ -1299,6 +1299,7 @@ export interface TimeSeriesLadderModel {
   metrics: { mae: number; rmse: number; r2: number } | null
   leakage_check?: { status: 'passed' | 'not_checked' }
   persisted?: boolean
+  evaluation?: { rows?: number; validation_strategy?: string; test_start?: string | null; test_end?: string | null }
 }
 
 export interface TimeSeriesLadderResult {
@@ -1312,6 +1313,7 @@ export interface TimeSeriesLadderResult {
   validation: TimeSeriesLadderModel['validation']
   training_time_range: { start: string; end?: string }
   feature_configuration: Record<string, unknown>
+  provenance?: { leakage_check?: string; persisted?: boolean }
 }
 
 export type TimeSeriesValidationParams = {

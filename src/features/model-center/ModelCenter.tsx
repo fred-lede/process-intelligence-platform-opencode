@@ -170,6 +170,7 @@ export default function ModelCenter() {
     setTimeSeriesRun(null)
     setTimeSeriesLadder(null)
     setTimeSeriesLoading(false)
+    setTimeSeriesLadderLoading(false)
   }
 
   const handleFitTimeSeriesLadder = async () => {
@@ -738,9 +739,9 @@ export default function ModelCenter() {
                       { title: 'RMSE', key: 'rmse', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.rmse.toFixed(4) ?? '—' },
                       { title: 'R²', key: 'r2', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.r2.toFixed(4) ?? '—' },
                       { title: t('modelCenter.timeSeries.validationStrategy'), key: 'validation', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.validation?.strategy || '—' },
-                      { title: t('modelCenter.timeSeries.trainTestRange'), key: 'range', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.validation?.train_end && row.validation?.test_start ? `${row.validation.train_end} → ${row.validation.test_start}` : '—' },
-                      { title: t('modelCenter.timeSeries.leakageStatus'), key: 'leakage', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.leakage_check ? t(`modelCenter.timeSeries.leakage.${row.leakage_check.status === 'passed' ? 'passed' : 'notChecked'}`) : '—' },
-                      { title: t('modelCenter.timeSeries.persistence'), key: 'persisted', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.persisted == null ? '—' : row.persisted ? t('modelCenter.timeSeries.persisted') : t('modelCenter.timeSeries.notPersisted') },
+                      { title: t('modelCenter.timeSeries.trainTestRange'), key: 'range', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.evaluation?.test_start && row.evaluation?.test_end ? `${row.evaluation.test_start} → ${row.evaluation.test_end}` : row.validation?.train_end && row.validation?.test_start ? `${row.validation.train_end} → ${row.validation.test_start}` : '—' },
+                      { title: t('modelCenter.timeSeries.leakageStatus'), key: 'leakage', render: () => timeSeriesLadder.provenance?.leakage_check ? t('modelCenter.timeSeries.leakage.passed') : '—' },
+                      { title: t('modelCenter.timeSeries.persistence'), key: 'persisted', render: () => timeSeriesLadder.provenance?.persisted == null ? '—' : timeSeriesLadder.provenance.persisted ? t('modelCenter.timeSeries.persisted') : t('modelCenter.timeSeries.notPersisted') },
                       { title: t('modelCenter.timeSeries.reason'), dataIndex: 'error', key: 'error', render: (value?: string | null) => timeSeriesReason(value) },
                     ]} />
                     <Alert type="info" showIcon message={t('modelCenter.timeSeries.ladderAdvice')} />
