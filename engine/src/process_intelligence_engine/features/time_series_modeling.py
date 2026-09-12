@@ -226,3 +226,154 @@ def suggest_time_feature_configuration(
     """Return reproducible lag/window defaults derived from the median interval."""
     suggestions = _frequency_suggestions(interval_summary.get("median_seconds"))
     return {"columns": list(columns), **suggestions}
+
+
+def _timestamp_values(
+    df: pd.DataFrame, column: str, *, allow_missing: bool
+) -> pd.Series:
+    if column not in df.columns:
+        raise ValueError(f"Unknown time column: {column}")
+
+    parsed: list[Any] = []
+    for value in df[column]:
+        if pd.isna(value):
+            if not allow_missing:
+                raise ValueError(f"Time column '{column}' contains missing timestamps")
+            parsed.append(pd.NaT)
+            continue
+        try:
+            timestamp = pd.Timestamp(value)
+            if pd.isna(timestamp):
+                raise ValueError
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(
+                f"Time column '{column}' contains a non-datetime value"
+            ) from exc
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.tz_localize("UTC")
+        else:
+            timestamp = timestamp.tz_convert("UTC")
+        parsed.append(timestamp)
+    return pd.Series(parsed, index=df.index, dtype="datetime64[ns, UTC]")
+
+
+def _chronological_positions(
+    df: pd.DataFrame, time_column: str
+) -> tuple[list[int], list[Any]]:
+    timestamps = _timestamp_values(df, time_column, allow_missing=False)
+    ordering = pd.DataFrame(
+        {
+            "timestamp": timestamps.to_numpy(),
+            "position": np.arange(len(df)),
+        }
+    ).sort_values("timestamp", kind="stable")
+    return ordering["position"].tolist(), ordering["timestamp"].tolist()
+
+
+def _require_strict_boundary(
+    timestamps: list[Any], boundary: int, boundary_name: str
+) -> None:
+    if (
+        0 < boundary < len(timestamps)
+        and timestamps[boundary - 1] >= timestamps[boundary]
+    ):
+        raise ValueError(
+            f"{boundary_name} must not split rows with the same timestamp"
+        )
+
+
+def time_split(
+    df: pd.DataFrame,
+    time_column: str,
+    train_ratio: float,
+    validation_ratio: float,
+) -> dict[str, list[int]]:
+    """Return deterministic iloc positions for chronological train/validation/test."""
+    if (
+        isinstance(train_ratio, bool)
+        or isinstance(validation_ratio, bool)
+        or not 0 < train_ratio < 1
+        or not 0 < validation_ratio < 1
+        or train_ratio + validation_ratio >= 1
+    ):
+        raise ValueError(
+            "train_ratio and validation_ratio must be positive and sum to less than 1"
+        )
+
+    positions, timestamps = _chronological_positions(df, time_column)
+    train_end = int(len(positions) * train_ratio)
+    validation_end = train_end + int(len(positions) * validation_ratio)
+    if (
+        train_end == 0
+        or validation_end == train_end
+        or validation_end == len(positions)
+    ):
+        raise ValueError(
+            "time split must produce non-empty train, validation, and test sets"
+        )
+    _require_strict_boundary(timestamps, train_end, "train/validation boundary")
+    _require_strict_boundary(timestamps, validation_end, "validation/test boundary")
+    return {
+        "train_indices": positions[:train_end],
+        "validation_indices": positions[train_end:validation_end],
+        "test_indices": positions[validation_end:],
+    }
+
+
+def walk_forward_splits(
+    df: pd.DataFrame,
+    time_column: str,
+    initial_train_size: int,
+    horizon: int,
+    step: int,
+) -> list[dict[str, list[int]]]:
+    """Return expanding-window rolling-origin folds as deterministic iloc positions."""
+    for value, name in (
+        (initial_train_size, "initial_train_size"),
+        (horizon, "horizon"),
+        (step, "step"),
+    ):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+
+    positions, timestamps = _chronological_positions(df, time_column)
+    folds: list[dict[str, list[int]]] = []
+    train_end = initial_train_size
+    while train_end + horizon <= len(positions):
+        validation_end = train_end + horizon
+        _require_strict_boundary(timestamps, train_end, "train/validation boundary")
+        folds.append(
+            {
+                "train_indices": positions[:train_end],
+                "validation_indices": positions[train_end:validation_end],
+            }
+        )
+        train_end += step
+    if not folds:
+        raise ValueError("initial_train_size and horizon do not produce any folds")
+    return folds
+
+
+def check_feature_timestamp_leakage(
+    df: pd.DataFrame,
+    prediction_time_column: str,
+    feature_source_time_columns: list[str],
+) -> dict[str, Any]:
+    """Fail when a feature uses information newer than its prediction timestamp."""
+    prediction_timestamps = _timestamp_values(
+        df, prediction_time_column, allow_missing=False
+    )
+    source_columns = list(dict.fromkeys(feature_source_time_columns))
+    for column in source_columns:
+        source_timestamps = _timestamp_values(df, column, allow_missing=True)
+        leaking = source_timestamps.notna() & source_timestamps.gt(prediction_timestamps)
+        if leaking.any():
+            row_position = int(np.flatnonzero(leaking.to_numpy())[0])
+            raise ValueError(
+                f"Feature timestamp leakage in '{column}' at row {row_position}"
+            )
+    return {
+        "status": "passed",
+        "checked_rows": len(df),
+        "feature_source_time_columns": source_columns,
+    }

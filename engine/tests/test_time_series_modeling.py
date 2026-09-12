@@ -4,7 +4,10 @@ import pytest
 
 from process_intelligence_engine.features.time_series_modeling import (
     build_time_features,
+    check_feature_timestamp_leakage,
     prepare_time_series,
+    time_split,
+    walk_forward_splits,
 )
 from process_intelligence_engine.main import REGISTRY, handle_request
 
@@ -346,3 +349,113 @@ def test_time_series_model_handler_uses_minute_frequency_defaults():
         "frequency": "minute",
         "calendar_timezone": "source_local_naive",
     }
+
+
+def test_time_split_returns_chronological_original_row_positions():
+    df = pd.DataFrame(
+        {
+            "ts": [
+                "2026-01-05",
+                "2026-01-01",
+                "2026-01-04",
+                "2026-01-02",
+                "2026-01-03",
+            ]
+        },
+        index=[50, 10, 40, 20, 30],
+    )
+
+    result = time_split(df, "ts", train_ratio=0.6, validation_ratio=0.2)
+
+    assert result == {
+        "train_indices": [1, 3, 4],
+        "validation_indices": [2],
+        "test_indices": [0],
+    }
+    train_times = df.iloc[result["train_indices"]]["ts"]
+    validation_times = df.iloc[result["validation_indices"]]["ts"]
+    test_times = df.iloc[result["test_indices"]]["ts"]
+    assert pd.to_datetime(train_times).max() < pd.to_datetime(validation_times).min()
+    assert pd.to_datetime(validation_times).max() < pd.to_datetime(test_times).min()
+
+
+def test_walk_forward_splits_use_expanding_train_and_fixed_horizon():
+    df = pd.DataFrame(
+        {
+            "ts": [
+                "2026-01-03",
+                "2026-01-01",
+                "2026-01-02",
+                "2026-01-06",
+                "2026-01-04",
+                "2026-01-05",
+                "2026-01-08",
+                "2026-01-07",
+            ]
+        }
+    )
+
+    folds = walk_forward_splits(
+        df,
+        "ts",
+        initial_train_size=4,
+        horizon=2,
+        step=2,
+    )
+
+    assert folds == [
+        {
+            "train_indices": [1, 2, 0, 4],
+            "validation_indices": [5, 3],
+        },
+        {
+            "train_indices": [1, 2, 0, 4, 5, 3],
+            "validation_indices": [7, 6],
+        },
+    ]
+    for fold in folds:
+        train_times = pd.to_datetime(df.iloc[fold["train_indices"]]["ts"])
+        validation_times = pd.to_datetime(
+            df.iloc[fold["validation_indices"]]["ts"]
+        )
+        assert train_times.max() < validation_times.min()
+
+
+def test_feature_timestamp_leakage_check_accepts_same_or_earlier_sources():
+    result = check_feature_timestamp_leakage(
+        pd.DataFrame(
+            {
+                "prediction_ts": ["2026-01-02", "2026-01-03"],
+                "sensor_source_ts": ["2026-01-01", "2026-01-03"],
+                "batch_source_ts": [None, "2026-01-02"],
+            }
+        ),
+        "prediction_ts",
+        ["sensor_source_ts", "batch_source_ts"],
+    )
+
+    assert result == {
+        "status": "passed",
+        "checked_rows": 2,
+        "feature_source_time_columns": [
+            "sensor_source_ts",
+            "batch_source_ts",
+        ],
+    }
+
+
+def test_feature_timestamp_leakage_check_fails_for_future_source():
+    with pytest.raises(
+        ValueError,
+        match="Feature timestamp leakage.*sensor_source_ts.*row 1",
+    ):
+        check_feature_timestamp_leakage(
+            pd.DataFrame(
+                {
+                    "prediction_ts": ["2026-01-02", "2026-01-03"],
+                    "sensor_source_ts": ["2026-01-01", "2026-01-04"],
+                }
+            ),
+            "prediction_ts",
+            ["sensor_source_ts"],
+        )
