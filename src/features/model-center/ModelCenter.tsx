@@ -95,6 +95,15 @@ export default function ModelCenter() {
   }, [interactions, shapResult, extrapResult, validationResult, fullValidation, doeStats, sensitivity, governance, recommended, readiness, setContext])
 
   const datasetId = importResult?.dataset_id
+  const latestModel = models[models.length - 1]
+  const interactionModelType = latestModel?.model_type ?? modelType
+  const interactionMode = interactionModelType === 'doe_linear'
+    ? 'notModeled'
+    : interactionModelType === 'doe_quadratic'
+      ? 'explicit'
+      : ['random_forest', 'xgboost', 'lightgbm'].includes(interactionModelType)
+        ? 'implicit'
+        : interactionModelType === 'residual_hybrid' ? 'hybrid' : 'notModeled'
   useEffect(() => {
     if (!datasetId || !fields.length) return
     runReadiness(datasetId, fields.filter(f => f.role === 'input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))).then(setReadiness).catch(() => setReadiness(null))
@@ -521,6 +530,12 @@ export default function ModelCenter() {
 
         <Card title={t('modelCenter.interactionsTitle')} size="small">
           <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Alert
+              type={interactionMode === 'notModeled' ? 'warning' : 'info'}
+              showIcon
+              message={t(`modelCenter.interactionMode.${interactionMode}.title`)}
+              description={t(`modelCenter.interactionMode.${interactionMode}.description`)}
+            />
             <Button
               type="primary"
               loading={interactionsLoading}
@@ -561,12 +576,14 @@ export default function ModelCenter() {
                         <div
                           style={{
                             height: 24,
-                            backgroundColor: `rgba(220, 38, 38, ${intensity * 0.8})`,
+                            backgroundColor: interactionMode === 'notModeled'
+                              ? '#f3f4f6'
+                              : `rgba(220, 38, 38, ${intensity * 0.8})`,
                             borderRadius: 2,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: intensity > 0.3 ? '#fff' : '#000',
+                            color: interactionMode === 'notModeled' ? '#6b7280' : intensity > 0.3 ? '#fff' : '#000',
                             fontSize: 11,
                           }}
                         >

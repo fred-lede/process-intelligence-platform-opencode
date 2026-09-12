@@ -368,6 +368,7 @@
   },
   "modelCenter": {
     "interactionSummary": "交互作用摘要", "interactionAdvice": "絕對值越大表示聯合作用越強，建議優先檢視高值組合並以實驗確認。數值顯示至小數點後六位，避免小幅效果被四捨五入成 0。",
+    "interactionMode": { "notModeled": { "title": "交互作用未建模", "description": "目前模型只包含主效應。此處顯示 0 代表未估計交互項，不代表製程沒有交互作用；請改用 DOE 二次或含交互項模型檢定。" }, "explicit": { "title": "已明確估計交互作用", "description": "DOE 二次模型會估計成對交互項。請檢視較強的組合，並以針對性實驗確認。" }, "implicit": { "title": "模型隱含捕捉交互作用", "description": "樹模型可以不使用顯式項目捕捉交互作用；請用 SHAP interaction 或 PDP／ALE 驗證重要組合。" }, "hybrid": { "title": "交互作用取決於混合模型", "description": "請分別檢視 DOE 基礎模型與殘差模型的交互作用，並以實驗確認重要組合。" } },
     "shapSummary": "SHAP 解讀摘要", "shapAdvice": "長條圖比較平均影響幅度；正負值表示推高或降低輸出，不能單獨視為因果關係。", "sensitivitySummary": "敏感度與效應量摘要", "sensitivityAdvice": "敏感度反映全域影響排序，效應量反映標準化影響大小；建議結合模型驗證與 DOE 實驗確認。",
     "title": "模型中心",
     "noData": "請先匯入資料集再進行模型配適。",
