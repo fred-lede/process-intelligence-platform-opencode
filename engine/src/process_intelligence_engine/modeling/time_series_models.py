@@ -85,7 +85,8 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     if window_days is not None: config["window_days"] = window_days
     for item in results:
         indices = item.pop("_eval_indices", [])
-        item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "test_start": usable[time_column].iloc[indices[0]] if indices else None, "test_end": usable[time_column].iloc[indices[-1]] if indices else None, "protocol": item.pop("evaluation_protocol", "observed_feature_holdout")}
+        protocol = item.pop("evaluation_protocol", "observed_feature_holdout")
+        item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "train_start": usable[time_column].iloc[0] if split else None, "train_end": usable[time_column].iloc[split - 1] if split else None, "test_start": usable[time_column].iloc[indices[0]] if indices else None, "test_end": usable[time_column].iloc[indices[-1]] if indices else None, "protocol": protocol, "uses_observed_target": protocol == "observed_feature_holdout"}
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False
     return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}

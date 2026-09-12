@@ -1300,7 +1300,7 @@ export interface TimeSeriesLadderModel {
   metrics: { mae: number; rmse: number; r2: number } | null
   leakage_check?: { status: 'passed' | 'not_checked' }
   persisted?: boolean
-  evaluation?: { rows?: number; protocol?: string; validation_strategy?: string; test_start?: string | null; test_end?: string | null }
+  evaluation?: { rows?: number; protocol?: string; validation_strategy?: string; train_start?: string | null; train_end?: string | null; test_start?: string | null; test_end?: string | null; uses_observed_target?: boolean }
 }
 
 export interface TimeSeriesLadderResult {
