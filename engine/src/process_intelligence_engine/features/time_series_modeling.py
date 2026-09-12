@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import warnings
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+import numpy as np
 import pandas as pd
 
 
@@ -20,11 +22,40 @@ def _validate_positive_steps(values: list[int], name: str) -> list[int]:
 def _frequency_suggestions(interval_seconds: float | None) -> dict[str, Any]:
     if interval_seconds is None:
         return {"frequency": "unknown", "lags": [1], "rolling_windows": [3]}
+    if interval_seconds < 3600:
+        return {"frequency": "minute", "lags": [1, 60], "rolling_windows": [60]}
     if interval_seconds <= 3600:
         return {"frequency": "hourly", "lags": [1, 24], "rolling_windows": [24]}
     if interval_seconds <= 86400:
         return {"frequency": "daily", "lags": [1, 7], "rolling_windows": [7]}
     return {"frequency": "coarse", "lags": [1], "rolling_windows": [3]}
+
+
+def _calendar_timezone(
+    values: pd.Series, modeling_timezone: str | None
+) -> tuple[str, Any | None]:
+    parsed = [pd.Timestamp(value) for value in values.dropna()]
+    timezones = {str(timestamp.tzinfo) for timestamp in parsed if timestamp.tzinfo}
+    has_naive = any(timestamp.tzinfo is None for timestamp in parsed)
+    if modeling_timezone is not None:
+        try:
+            requested_timezone = ZoneInfo(modeling_timezone)
+        except ZoneInfoNotFoundError as exc:
+            raise ValueError(f"Unknown modeling timezone: {modeling_timezone}") from exc
+        if has_naive and timezones:
+            raise ValueError("Mixed naive and aware timestamps are not supported")
+        return modeling_timezone, None if has_naive else requested_timezone
+
+    if has_naive and timezones or len(timezones) > 1:
+        raise ValueError(
+            "Mixed source timezones require an explicit modeling_timezone"
+        )
+    if timezones:
+        source_timezone = next(
+            timestamp.tzinfo for timestamp in parsed if timestamp.tzinfo
+        )
+        return next(iter(timezones)), source_timezone
+    return "source_local_naive", None
 
 
 def prepare_time_series(df: pd.DataFrame, time_column: str) -> dict[str, Any]:
@@ -102,6 +133,7 @@ def build_time_features(
     columns: list[str],
     lags: list[int],
     rolling_windows: list[int],
+    modeling_timezone: str | None = None,
 ) -> dict[str, Any]:
     """Build deterministic historical features without reading the current/future value."""
     missing_columns = [column for column in columns if column not in df.columns]
@@ -110,7 +142,12 @@ def build_time_features(
 
     normalized_lags = _validate_positive_steps(lags, "lags")
     normalized_windows = _validate_positive_steps(rolling_windows, "rolling_windows")
+    if any(window < 2 for window in normalized_windows):
+        raise ValueError("rolling_windows must be at least 2 for rolling std")
     prepared = prepare_time_series(df, time_column)
+    calendar_timezone, calendar_tzinfo = _calendar_timezone(
+        df[time_column], modeling_timezone
+    )
     featured = prepared["data"].copy()
     feature_names: list[str] = []
 
@@ -132,11 +169,14 @@ def build_time_features(
         rate_name = f"{column}_rate_of_change"
         previous = shifted.shift(1)
         featured[difference_name] = shifted - previous
-        featured[rate_name] = shifted.div(previous).sub(1)
+        featured[rate_name] = shifted.div(previous.where(previous.ne(0))).sub(1)
         feature_names.extend([difference_name, rate_name])
 
-    featured["hour"] = featured[time_column].dt.hour
-    featured["weekday"] = featured[time_column].dt.weekday
+    calendar_timestamps = featured[time_column]
+    if calendar_tzinfo is not None:
+        calendar_timestamps = calendar_timestamps.dt.tz_convert(calendar_tzinfo)
+    featured["hour"] = calendar_timestamps.dt.hour
+    featured["weekday"] = calendar_timestamps.dt.weekday
     feature_names.extend(["hour", "weekday"])
 
     warnings_found: list[str] = []
@@ -149,20 +189,33 @@ def build_time_features(
         f"missing_values:{column}" for column in columns if featured[column].isna().any()
     )
 
-    complete_mask = featured[feature_names].notna().all(axis=1)
+    warmup_rows = min(
+        max([2, *normalized_lags, *normalized_windows]),
+        len(featured),
+    )
+    warmup_mask = pd.Series(False, index=featured.index)
+    warmup_mask.iloc[:warmup_rows] = True
+    finite_mask = pd.Series(
+        np.isfinite(featured[feature_names].to_numpy(dtype=float)).all(axis=1),
+        index=featured.index,
+    )
+    invalid_mask = ~warmup_mask & ~finite_mask
+    complete_mask = ~warmup_mask & finite_mask
     complete_data = featured.loc[complete_mask].reset_index(drop=True)
     median_interval = prepared["quality"]["interval_summary"]["median_seconds"]
     suggestions = _frequency_suggestions(median_interval)
     return {
         "data": complete_data,
         "feature_names": feature_names,
-        "dropped_warmup_rows": int((~complete_mask).sum()),
+        "dropped_warmup_rows": warmup_rows,
+        "dropped_invalid_rows": int(invalid_mask.sum()),
         "warnings": warnings_found,
         "configuration": {
             "columns": list(columns),
             "lags": normalized_lags,
             "rolling_windows": normalized_windows,
             "frequency": suggestions["frequency"],
+            "calendar_timezone": calendar_timezone,
         },
     }
 

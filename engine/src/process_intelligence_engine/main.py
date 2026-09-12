@@ -2356,11 +2356,12 @@ def _handle_time_series_model(params: dict) -> dict:
     lags = params.get("lags", suggested["lags"])
     rolling_windows = params.get("rolling_windows", suggested["rolling_windows"])
     features = build_time_features(
-        prepared["data"],
+        df,
         params["time_column"],
         feature_columns,
         lags,
         rolling_windows,
+        modeling_timezone=params.get("modeling_timezone"),
     )
     return _plain_types(
         {
@@ -2374,6 +2375,7 @@ def _handle_time_series_model(params: dict) -> dict:
             "feature_names": features["feature_names"],
             "feature_row_count": len(features["data"]),
             "dropped_warmup_rows": features["dropped_warmup_rows"],
+            "dropped_invalid_rows": features["dropped_invalid_rows"],
             "feature_warnings": features["warnings"],
         }
     )

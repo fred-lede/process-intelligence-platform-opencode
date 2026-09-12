@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -232,10 +233,116 @@ def test_time_series_model_handler_uses_daily_defaults_and_accepts_explicit_list
         "lags": [1, 7],
         "rolling_windows": [7],
         "frequency": "daily",
+        "calendar_timezone": "source_local_naive",
     }
     assert explicit["feature_configuration"] == {
         "columns": ["target", "input"],
         "lags": [2],
         "rolling_windows": [3],
         "frequency": "daily",
+        "calendar_timezone": "source_local_naive",
+    }
+
+
+def test_build_time_features_rejects_rolling_window_one():
+    df = pd.DataFrame(
+        {"ts": pd.date_range("2026-01-01", periods=3, freq="D"), "x": [1, 2, 3]}
+    )
+
+    with pytest.raises(ValueError, match="rolling_windows must be at least 2"):
+        build_time_features(df, "ts", ["x"], [1], [1])
+
+
+def test_build_time_features_reports_warmup_and_invalid_drops_separately():
+    result = build_time_features(
+        pd.DataFrame(
+            {
+                "ts": pd.date_range("2026-01-01", periods=5, freq="D"),
+                "x": [1.0, 2.0, None, 4.0, 5.0],
+            }
+        ),
+        "ts",
+        ["x"],
+        [1],
+        [2],
+    )
+
+    assert result["dropped_warmup_rows"] == 2
+    assert result["dropped_invalid_rows"] == 2
+
+
+def test_build_time_features_drops_zero_denominator_rate_as_non_finite():
+    result = build_time_features(
+        pd.DataFrame(
+            {
+                "ts": pd.date_range("2026-01-01", periods=4, freq="D"),
+                "x": [0.0, 1.0, 2.0, 3.0],
+            }
+        ),
+        "ts",
+        ["x"],
+        [1],
+        [2],
+    )
+
+    assert result["dropped_warmup_rows"] == 2
+    assert result["dropped_invalid_rows"] == 1
+    assert np.isfinite(result["data"]["x_rate_of_change"]).all()
+
+
+def test_build_time_features_uses_source_local_calendar_and_explicit_timezone():
+    df = pd.DataFrame(
+        {
+            "ts": pd.date_range(
+                "2026-01-01 08:00", periods=4, freq="h", tz="Asia/Bangkok"
+            ),
+            "x": [1.0, 2.0, 3.0, 4.0],
+        }
+    )
+
+    source_local = build_time_features(df, "ts", ["x"], [1], [2])
+    new_york = build_time_features(
+        df,
+        "ts",
+        ["x"],
+        [1],
+        [2],
+        modeling_timezone="America/New_York",
+    )
+
+    assert source_local["data"]["hour"].tolist() == [10, 11]
+    assert source_local["configuration"]["calendar_timezone"] == "Asia/Bangkok"
+    assert new_york["data"]["hour"].tolist() == [22, 23]
+    assert new_york["data"]["weekday"].tolist() == [2, 2]
+    assert new_york["configuration"]["calendar_timezone"] == "America/New_York"
+
+
+def test_time_series_model_handler_uses_minute_frequency_defaults():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame(
+            {
+                "ts": pd.date_range("2026-01-01", periods=65, freq="min"),
+                "target": range(65),
+                "input": range(65),
+            }
+        ),
+        {},
+    )
+
+    result = handle_request(
+        "features/time_series/model",
+        {
+            "dataset_id": dataset_id,
+            "time_column": "ts",
+            "target": "target",
+            "inputs": ["input"],
+        },
+    )
+
+    assert result["feature_configuration"] == {
+        "columns": ["target", "input"],
+        "lags": [1, 60],
+        "rolling_windows": [60],
+        "frequency": "minute",
+        "calendar_timezone": "source_local_naive",
     }
