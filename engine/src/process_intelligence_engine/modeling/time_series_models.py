@@ -34,7 +34,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         raise ValueError("time-series modeling requires at least 5 dated rows")
     cut = max(1, min(n - 1, int(n * train_ratio)))
     feature_cols = [target, *inputs]
-    feat = build_time_features(ordered, time_column, feature_cols, lags or [1], rolling_windows or [3])
+    feat = build_time_features(ordered, time_column, feature_cols, lags or [1], rolling_windows or [3], modeling_timezone=modeling_timezone)
     usable = feat["data"].dropna(subset=[target]).reset_index(drop=True)
     if len(usable) < 5:
         raise ValueError("insufficient complete rows after time features")
@@ -49,10 +49,10 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     pred = usable[target].shift(1).to_numpy(float)
     mask = np.arange(len(usable)) >= split
     valid = mask & np.isfinite(pred)
-    results.append({"model_type":"naive", "status":"available", "features":[f"{target}_lag_1"], "validation":validation, "metrics":_metrics(y[valid], pred[valid])})
+    results.append({"model_type":"naive", "status":"available", "features":[f"{target}_lag_1"], "validation":validation, "metrics":_metrics(y[valid], pred[valid]), "_eval_rows":int(valid.sum())})
     lag = usable[target].shift(seasonal_period).to_numpy(float)
     valid = mask & np.isfinite(lag)
-    results.append({"model_type":"seasonal_naive", "status":"available" if valid.any() else "unavailable", "features":[f"{target}_lag_{seasonal_period}"], "validation":validation, "metrics":_metrics(y[valid], lag[valid]) if valid.any() else None, "error":None if valid.any() else "seasonal period exceeds available history"})
+    results.append({"model_type":"seasonal_naive", "status":"available" if valid.any() else "unavailable", "features":[f"{target}_lag_{seasonal_period}"], "validation":validation, "metrics":_metrics(y[valid], lag[valid]) if valid.any() else None, "_eval_rows":int(valid.sum()), "error":None if valid.any() else "seasonal period exceeds available history"})
     X = usable[xcols].to_numpy(float)
     valid_rows = np.isfinite(X).all(axis=1) & np.isfinite(y)
     train = valid_rows & (np.arange(len(usable)) < split); test = valid_rows & (np.arange(len(usable)) >= split)
@@ -60,11 +60,31 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         if not train.any() or not test.any():
             results.append(_unavailable(name, "insufficient complete chronological train/test rows", xcols, validation)); continue
         estimator.fit(X[train], y[train]); pred = estimator.predict(X[test])
-        results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(y[test], pred)})
+        results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(y[test], pred), "_eval_rows":int(test.sum())})
     for name, package in (("arima", "statsmodels"), ("xgboost", "xgboost"), ("lightgbm", "lightgbm")):
-        results.append(_unavailable(name, f"{package} is not installed", xcols, validation) if importlib.util.find_spec(package) is None else _unavailable(name, f"{name} adapter is not enabled for this runtime", xcols, validation))
+        if importlib.util.find_spec(package) is None:
+            results.append(_unavailable(name, f"{package} is not installed", xcols, validation))
+        else:
+            try:
+                if name == "arima":
+                    from statsmodels.tsa.arima.model import ARIMA
+                    model = ARIMA(y[:split], order=(1, 0, 0)).fit()
+                    forecast = model.forecast(steps=len(y)-split)
+                elif name == "xgboost":
+                    import xgboost as xgb
+                    model = xgb.XGBRegressor(n_estimators=100, max_depth=3, random_state=42, n_jobs=1).fit(X[train], y[train])
+                    forecast = model.predict(X[test])
+                else:
+                    import lightgbm as lgb
+                    model = lgb.LGBMRegressor(n_estimators=100, verbosity=-1, random_state=42).fit(X[train], y[train])
+                    forecast = model.predict(X[test])
+                results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(y[split:], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast))})
+            except Exception as exc:
+                results.append(_unavailable(name, f"adapter failed: {exc}", xcols, validation))
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}
     if window_days is not None: config["window_days"] = window_days
     for item in results:
-        item["evaluation"] = {"rows": validation["test_rows"] if item["metrics"] is not None else 0, "validation_strategy": "chronological_holdout", "test_start": validation["test_start"] if item["metrics"] is not None else None, "test_end": usable[time_column].iloc[-1] if item["metrics"] is not None else None}
+        item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "test_start": validation["test_start"] if item["metrics"] is not None else None, "test_end": usable[time_column].iloc[-1] if item["metrics"] is not None else None}
+        item["leakage_check"] = "passed_by_historical_features"
+        item["persisted"] = False
     return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}

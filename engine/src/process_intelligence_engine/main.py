@@ -2430,7 +2430,7 @@ def _handle_time_series_fit(params: dict) -> dict:
         list(params.get("inputs", [])),
         lags=params.get("lags"),
         rolling_windows=params.get("rolling_windows"),
-        seasonal_period=int(params.get("seasonal_period", 24)),
+        seasonal_period=params.get("seasonal_period", 24),
         train_ratio=float(params.get("train_ratio", 0.8)),
         modeling_timezone=params.get("modeling_timezone"),
         window_days=window_days,
