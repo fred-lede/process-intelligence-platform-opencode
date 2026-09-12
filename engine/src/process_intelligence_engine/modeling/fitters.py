@@ -193,6 +193,7 @@ def _fit_linear_on_matrix(df, target, inputs, degree, test_size, random_state) -
         n_train=len(X_tr),
         n_test=len(X_te),
         created_at=_now(),
+        model=model,
     )
     return fit
 

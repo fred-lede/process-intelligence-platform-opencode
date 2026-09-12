@@ -185,7 +185,11 @@ def predict_output(
                     break
             for xj in input_names[i + 1:]:
                 xj_val = inputs[xj]
-                for key in (f"{xi}_x_{xj}", f"{xi}*{xj}", f"{xi}{xj}"):
+                for key in (
+                    f"{xi}_x_{xj}", f"{xj}_x_{xi}",
+                    f"{xi}*{xj}", f"{xj}*{xi}",
+                    f"{xi}{xj}", f"{xj}{xi}",
+                ):
                     if key in coefficients:
                         result += coefficients[key] * xi_val * xj_val
                         break
