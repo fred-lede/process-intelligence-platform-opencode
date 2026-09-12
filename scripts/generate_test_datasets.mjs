@@ -11,5 +11,8 @@ write('test_dataset_interaction.csv', Array.from({ length: 80 }, (_, i) => row('
 write('test_dataset_timeseries.csv', Array.from({ length: 45 }, (_, i) => row('TS', i, 1.62 + 0.004 * Math.sin(i / 3) + 0.00008 * i + 0.0005 * Math.sin(i / 9))))
 const grr = []
 let measurementIndex = 1
-for (let p = 0; p < 5; p++) for (let o = 0; o < 3; o++) for (let r = 0; r < 3; r++) grr.push([`M-${String(measurementIndex++).padStart(3, '0')}`, `P-${String(p + 1).padStart(3, '0')}`, 'GRR-01', 'MC-01', 'ST-01', 'coating', `2026-09-${String(1 + p).padStart(2, '0')} ${String(8 + o).padStart(2, '0')}:${String(r * 10).padStart(2, '0')}:00`, `SG-${p + 1}`, '85', '12.0', '3.2', '120', '68', (1.61 + p * 0.004 + o * 0.0008 + r * 0.0004).toFixed(4), 'OK', `O-0${o + 1}`])
+for (let p = 0; p < 5; p++) for (let o = 0; o < 3; o++) for (let r = 0; r < 3; r++) {
+  const repeatNoise = r * 0.01
+  grr.push([`M-${String(measurementIndex++).padStart(3, '0')}`, `P-${String(p + 1).padStart(3, '0')}`, 'GRR-01', 'MC-01', 'ST-01', 'coating', `2026-09-${String(1 + p).padStart(2, '0')} ${String(8 + o).padStart(2, '0')}:${String(r * 10).padStart(2, '0')}:00`, `SG-${p + 1}`, (84 + p * 0.6 + o * 0.03 + repeatNoise).toFixed(3), (11.8 + p * 0.08 + o * 0.005 + repeatNoise * 0.01).toFixed(3), (3.1 + p * 0.025 + o * 0.002 + repeatNoise * 0.01).toFixed(3), (118 + p * 0.8 + o * 0.1 + repeatNoise).toFixed(3), (66 + p * 1.2 + o * 0.1 + repeatNoise).toFixed(3), (1.61 + p * 0.004 + o * 0.0008 + r * 0.0004).toFixed(4), 'OK', `O-0${o + 1}`])
+}
 fs.writeFileSync(new URL('test_dataset_grr.csv', dir), [['measurement_id','product_id','lot_id','machine_id','station_id','process_step','timestamp','subgroup_id','input_temperature','input_voltage','input_pressure','input_speed','input_load','output_thickness','result','operator'], ...grr].map(r => r.join(',')).join('\n') + '\n')
