@@ -21,7 +21,13 @@ def _unavailable(name, reason, features, validation):
 def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *, lags: list[int] | None = None, rolling_windows: list[int] | None = None, seasonal_period: int = 24, train_ratio: float = .8, modeling_timezone: str | None = None, window_days: int | None = None) -> dict[str, Any]:
     """Fit comparable chronological models; never uses random K-fold."""
     from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
+    if isinstance(seasonal_period, bool) or not isinstance(seasonal_period, int) or seasonal_period < 1:
+        raise ValueError("seasonal_period must be a positive integer")
+    if not 0 < train_ratio < 1:
+        raise ValueError("train_ratio must be between 0 and 1")
     prepared = prepare_time_series(df, time_column)
+    if prepared["quality"]["duplicate_timestamps"]:
+        raise ValueError("duplicate timestamps are not allowed for time-series modeling")
     ordered = prepared["data"].dropna(subset=[target]).reset_index(drop=True)
     n = len(ordered)
     if n < 5:
@@ -59,4 +65,6 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         results.append(_unavailable(name, f"{package} is not installed", xcols, validation) if importlib.util.find_spec(package) is None else _unavailable(name, f"{name} adapter is not enabled for this runtime", xcols, validation))
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}
     if window_days is not None: config["window_days"] = window_days
-    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
+    for item in results:
+        item["evaluation"] = {"rows": validation["test_rows"] if item["metrics"] is not None else 0, "validation_strategy": "chronological_holdout", "test_start": validation["test_start"] if item["metrics"] is not None else None, "test_end": usable[time_column].iloc[-1] if item["metrics"] is not None else None}
+    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
