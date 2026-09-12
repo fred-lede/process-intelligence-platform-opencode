@@ -174,14 +174,20 @@ export default function ModelCenter() {
 
   const handleFitTimeSeriesLadder = async () => {
     if (!datasetId || !timeColumn || !target || selectedInputs.length === 0) return
+    const requestId = timeSeriesRequestId.current + 1
+    timeSeriesRequestId.current = requestId
     setTimeSeriesLadderLoading(true)
     try {
       const result = await fitTimeSeriesLadder({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays })
+      if (requestId !== timeSeriesRequestId.current) return
       setTimeSeriesLadder(result)
       messageApi.success(t('modelCenter.timeSeries.ladderSuccess'))
     } catch (err) {
+      if (requestId !== timeSeriesRequestId.current) return
       messageApi.error(`${t('modelCenter.timeSeries.ladderError')}: ${err instanceof Error ? err.message : String(err)}`)
-    } finally { setTimeSeriesLadderLoading(false) }
+    } finally {
+      if (requestId === timeSeriesRequestId.current) setTimeSeriesLadderLoading(false)
+    }
   }
 
   useEffect(() => {
