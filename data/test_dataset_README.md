@@ -41,11 +41,11 @@
 | logistic_regression | result | 二元分類（OK/NG）|
 | weibull_regression | output_thickness | 可靠度/壽命分析 |
 
-### 建議測試流程
+### 建議測試流程（依情境檔案選用）
 
 1. **匯入資料**
    - 開啟「資料匯入」TAB
-   - 上傳 `data/test_dataset.csv`（或點擊「下載 CSV 範本」取得相同格式）
+   - 先上傳 `data/test_dataset.csv` 建立基準，再依情境測試表改用對應檔案；「下載 CSV 範本」是使用者收集資料用的範本
    - 確認欄位角色：5 個 input、output_thickness 為 output、result 為 quality_label
 
 2. **製程定義**
@@ -65,18 +65,32 @@
    - 查看交互作用熱圖
    - 查看實驗建議
 
+### 情境檔案與測試流程對照
+
+| 情境檔案 | 建議起始頁面 | 主要驗證內容 |
+|---|---|---|
+| `test_dataset.csv` | 資料匯入 | 全流程基準 |
+| `test_dataset_linear.csv` | 模型中心 | DOE 線性與互動預測 |
+| `test_dataset_quadratic.csv` | 模型中心 | DOE 線性／二次比較 |
+| `test_dataset_interaction.csv` | 模型中心 | 交互作用、SHAP、敏感度與效應量 |
+| `test_dataset_quality_issues.csv` | 資料匯入 | 品質警告與 readiness |
+| `test_dataset_grr.csv` | 探索分析－GRR | EV、AV、%GRR |
+| `test_dataset_timeseries.csv` | 探索分析－時間序列 | 趨勢、週期、自相關與特徵 |
+| `test_dataset_out_of_spec.csv` | 製程定義／SPC／模擬 | 規格超限與 NG 風險 |
+
 ### 預期結果
 
 - DOE 線性與 DOE 二次模型可直接比較；新增資料含受控的曲率訊號，二次模型應能捕捉非線性，兩者模擬結果不必完全相同
-- 增加樣本後，模型係數與模擬百分位數應較 45 筆基準穩定
+- 使用 60–80 筆情境資料後，模型係數與模擬百分位數應較小樣本測試穩定
 - Logistic 迴歸在 result 上的 AUC 應可接受（NG 比例約 2%）
 - Weibull 迴歸可估計平均失效時間
 
-### 進階測試
+### 進階測試（依情境檔案）
 
-- 嘗試互動預測：調整 input_temperature=95，查看 output_thickness 預測值
-- 嘗試蒙地卡羅模擬：選擇已配適模型，執行 10000 次模擬
-- 嘗試 SPC 分析：選擇 input_temperature 或 output_thickness，查看管制圖與離群值
+- 一般／DOE 檔案：調整 `input_temperature=95`，查看 `output_thickness` 預測值
+- 一般／DOE 檔案：選擇已配適模型，執行 10000 次蒙地卡羅模擬
+- 一般／時間序列／超規檔案：選擇 `input_temperature` 或 `output_thickness`，查看 SPC 管制圖與離群值
+- GRR 檔案：指定測量、零件與操作者欄位後執行 GRR
 
 ## 情境測試資料
 
