@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, type DoeStatisticsResult } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, fitTimeSeriesLadder, type DoeStatisticsResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -95,6 +95,8 @@ export default function ModelCenter() {
   const [rollingWindows, setRollingWindows] = useState<number[]>([7])
   const [timeValidationStrategy, setTimeValidationStrategy] = useState<'holdout' | 'walk_forward'>('holdout')
   const [timeSeriesLoading, setTimeSeriesLoading] = useState(false)
+  const [timeSeriesLadder, setTimeSeriesLadder] = useState<TimeSeriesLadderResult | null>(null)
+  const [timeSeriesLadderLoading, setTimeSeriesLadderLoading] = useState(false)
   const timeSeriesRequestId = useRef(0)
   const [timeSeriesRun, setTimeSeriesRun] = useState<{
     model: TimeSeriesModelResult
@@ -166,7 +168,20 @@ export default function ModelCenter() {
   const invalidateTimeSeriesRun = () => {
     timeSeriesRequestId.current += 1
     setTimeSeriesRun(null)
+    setTimeSeriesLadder(null)
     setTimeSeriesLoading(false)
+  }
+
+  const handleFitTimeSeriesLadder = async () => {
+    if (!datasetId || !timeColumn || !target || selectedInputs.length === 0) return
+    setTimeSeriesLadderLoading(true)
+    try {
+      const result = await fitTimeSeriesLadder({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays })
+      setTimeSeriesLadder(result)
+      messageApi.success(t('modelCenter.timeSeries.ladderSuccess'))
+    } catch (err) {
+      messageApi.error(`${t('modelCenter.timeSeries.ladderError')}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally { setTimeSeriesLadderLoading(false) }
   }
 
   useEffect(() => {
@@ -691,7 +706,25 @@ export default function ModelCenter() {
                   >
                     {timeSeriesLoading ? t('modelCenter.timeSeries.running') : t('modelCenter.timeSeries.run')}
                   </Button>
+                  <Button
+                    onClick={handleFitTimeSeriesLadder}
+                    loading={timeSeriesLadderLoading}
+                    disabled={!timeColumn || !target || selectedInputs.length === 0}
+                  >
+                    {timeSeriesLadderLoading ? t('modelCenter.timeSeries.ladderRunning') : t('modelCenter.timeSeries.fitLadder')}
+                  </Button>
                   {(importResult?.row_count ?? 0) < 7 && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.warning.tooFewRows')} />}
+                  {timeSeriesLadder && <Card title={t('modelCenter.timeSeries.ladderTitle')} size="small">
+                    <Table size="small" pagination={false} rowKey="model_type" dataSource={timeSeriesLadder.results} columns={[
+                      { title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model_type', key: 'model_type' },
+                      { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (value: string) => <Tag color={value === 'available' ? 'success' : 'warning'}>{value === 'available' ? t('modelCenter.timeSeries.available') : t('modelCenter.timeSeries.unavailable')}</Tag> },
+                      { title: 'MAE', key: 'mae', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.mae.toFixed(4) ?? '—' },
+                      { title: 'RMSE', key: 'rmse', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.rmse.toFixed(4) ?? '—' },
+                      { title: 'R²', key: 'r2', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.r2.toFixed(4) ?? '—' },
+                      { title: t('modelCenter.timeSeries.reason'), dataIndex: 'error', key: 'error', render: (value?: string | null) => value || '—' },
+                    ]} />
+                    <Alert type="info" showIcon message={t('modelCenter.timeSeries.ladderAdvice')} />
+                  </Card>}
                   {timeSeriesRun && (
                     <Space direction="vertical" style={{ width: '100%' }}>
                       {timeSeriesWarnings.length === 0

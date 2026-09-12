@@ -1290,6 +1290,28 @@ export interface TimeSeriesModelParams {
   window_days?: number
 }
 
+export interface TimeSeriesLadderModel {
+  model_type: string
+  status: 'available' | 'unavailable'
+  error?: string | null
+  features: string[]
+  validation: { strategy: string; train_rows: number; test_rows: number; train_end?: string; test_start?: string }
+  metrics: { mae: number; rmse: number; r2: number } | null
+}
+
+export interface TimeSeriesLadderResult {
+  dataset_id: string
+  status: string
+  target: string
+  inputs: string[]
+  time_column: string
+  results: TimeSeriesLadderModel[]
+  quality: TimeSeriesQuality
+  validation: TimeSeriesLadderModel['validation']
+  training_time_range: { start: string; end?: string }
+  feature_configuration: Record<string, unknown>
+}
+
 export type TimeSeriesValidationParams = {
   dataset_id: string
   time_column: string
@@ -1338,6 +1360,10 @@ export async function getTimeSeriesFeatures(params: TimeSeriesParams): Promise<T
 
 export async function prepareTimeSeriesModel(params: TimeSeriesModelParams): Promise<TimeSeriesModelResult> {
   return engineCall<TimeSeriesModelResult>('features/time_series/model', params as unknown as Record<string, unknown>)
+}
+
+export async function fitTimeSeriesLadder(params: TimeSeriesModelParams & { seasonal_period?: number; train_ratio?: number }): Promise<TimeSeriesLadderResult> {
+  return engineCall<TimeSeriesLadderResult>('features/time_series/fit', params as unknown as Record<string, unknown>)
 }
 
 export async function validateTimeSeries(params: TimeSeriesValidationParams): Promise<TimeSeriesValidationResult> {
