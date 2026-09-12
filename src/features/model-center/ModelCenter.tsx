@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, InputNumber, Typography } from 'antd'
+import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, InputNumber, Typography, Descriptions } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from '../../components/PlotChart'
@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, type DoeStatisticsResult } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, getColumnSeries, prepareTimeSeriesModel, validateTimeSeries, type DoeStatisticsResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -49,7 +49,7 @@ const STATUS_COLORS: Record<ModelStatus, string> = {
 }
 
 export default function ModelCenter() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [messageApi, contextHolder] = message.useMessage()
   const { importResult, fields, spec } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
@@ -86,6 +86,22 @@ export default function ModelCenter() {
   const [governance, setGovernance] = useState<string[]>([])
   const [recommended, setRecommended] = useState<string[]>([])
   const [readiness, setReadiness] = useState<ReadinessResult | null>(null)
+  const [modelingMode, setModelingMode] = useState<'standard' | 'time_series'>('standard')
+  const [timeColumn, setTimeColumn] = useState<string | undefined>(
+    fields.find((field) => field.role === 'timestamp')?.originalName,
+  )
+  const [timeWindowDays, setTimeWindowDays] = useState(30)
+  const [timeLags, setTimeLags] = useState<number[]>([1, 7])
+  const [rollingWindows, setRollingWindows] = useState<number[]>([7])
+  const [timeValidationStrategy, setTimeValidationStrategy] = useState<'holdout' | 'walk_forward'>('holdout')
+  const [timeSeriesLoading, setTimeSeriesLoading] = useState(false)
+  const [timeSeriesRun, setTimeSeriesRun] = useState<{
+    model: TimeSeriesModelResult
+    validation: TimeSeriesValidationResult | null
+    timeValues: (number | string | null)[]
+    windowDays: number
+    validationFailed: boolean
+  } | null>(null)
 
   useEffect(() => {
     setContext(
@@ -137,8 +153,20 @@ export default function ModelCenter() {
       ? binaryTargetOptions
       : outputOptions
     : outputOptions
+  const timeColumnOptions = (importResult?.columns ?? []).map((name) => ({
+    label: fields.find((field) => field.originalName === name)?.role === 'timestamp'
+      ? `${name} (${t('modelCenter.timeSeries.detectedTimestamp')})`
+      : name,
+    value: name,
+  }))
 
   useEffect(() => { loadModels() }, [])
+
+  useEffect(() => {
+    if (!timeColumn) {
+      setTimeColumn(fields.find((field) => field.role === 'timestamp')?.originalName)
+    }
+  }, [fields, timeColumn])
 
   const handleFit = async () => {
     if (!datasetId || !target || selectedInputs.length === 0) return
@@ -181,6 +209,60 @@ export default function ModelCenter() {
         messageApi.info(t('modelCenter.featureSelected', { count: result.selected_inputs.length }))
       }
       messageApi.success(t('modelCenter.fitSuccess'))
+    }
+  }
+
+  const handlePrepareTimeSeries = async () => {
+    if (!datasetId || !timeColumn || !target || selectedInputs.length === 0) return
+    const rowCount = importResult?.row_count ?? 0
+    setTimeSeriesLoading(true)
+    try {
+      const validationParams = timeValidationStrategy === 'holdout'
+        ? {
+            dataset_id: datasetId,
+            time_column: timeColumn,
+            strategy: 'holdout' as const,
+            train_ratio: 0.7,
+            validation_ratio: 0.15,
+            prediction_time_column: timeColumn,
+            feature_source_time_columns: [timeColumn],
+          }
+        : {
+            dataset_id: datasetId,
+            time_column: timeColumn,
+            strategy: 'walk_forward' as const,
+            initial_train_size: Math.max(1, Math.floor(rowCount * 0.6)),
+            horizon: Math.max(1, Math.floor(rowCount * 0.2)),
+            step: Math.max(1, Math.floor(rowCount * 0.2)),
+            prediction_time_column: timeColumn,
+            feature_source_time_columns: [timeColumn],
+          }
+      const [model, series] = await Promise.all([
+        prepareTimeSeriesModel({
+          dataset_id: datasetId,
+          time_column: timeColumn,
+          target,
+          inputs: selectedInputs,
+          lags: timeLags,
+          rolling_windows: rollingWindows,
+          modeling_timezone: 'UTC',
+        }),
+        getColumnSeries(datasetId, timeColumn),
+      ])
+      setTimeSeriesRun({ model, validation: null, timeValues: series.values, windowDays: timeWindowDays, validationFailed: false })
+      try {
+        const validation = await validateTimeSeries({ ...validationParams, modeling_timezone: 'UTC' })
+        setTimeSeriesRun({ model, validation, timeValues: series.values, windowDays: timeWindowDays, validationFailed: false })
+        messageApi.success(t('modelCenter.timeSeries.runSuccess'))
+      } catch {
+        setTimeSeriesRun({ model, validation: null, timeValues: series.values, windowDays: timeWindowDays, validationFailed: true })
+        messageApi.warning(t('modelCenter.timeSeries.validationUnavailable'))
+      }
+    } catch (err) {
+      setTimeSeriesRun(null)
+      messageApi.error(`${t('modelCenter.timeSeries.runError')}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setTimeSeriesLoading(false)
     }
   }
 
@@ -307,6 +389,51 @@ export default function ModelCenter() {
     return higher ? Math.max(...vals) : Math.min(...vals)
   }
 
+  const formatSplitRange = (indices: number[]) => {
+    if (!timeSeriesRun || indices.length === 0) return '—'
+    const timestamps = indices
+      .map((index) => timeSeriesRun.timeValues[index])
+      .filter((value): value is string | number => value !== null && value !== undefined)
+      .map((value) => new Date(value))
+      .filter((value) => !Number.isNaN(value.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime())
+    if (timestamps.length === 0) return '—'
+    const locale = i18n.resolvedLanguage ?? i18n.language
+    const first = timestamps[0].toLocaleDateString(locale)
+    const last = timestamps[timestamps.length - 1].toLocaleDateString(locale)
+    return first === last ? first : `${first} → ${last}`
+  }
+
+  const timeSeriesWarnings = timeSeriesRun ? [
+    ...(timeSeriesRun.model.quality.missing_timestamps > 0
+      ? [t('modelCenter.timeSeries.warning.missingTimestamps', { count: timeSeriesRun.model.quality.missing_timestamps })]
+      : []),
+    ...(timeSeriesRun.model.quality.duplicate_timestamps > 0
+      ? [t('modelCenter.timeSeries.warning.duplicateTimestamps', { count: timeSeriesRun.model.quality.duplicate_timestamps })]
+      : []),
+    ...(timeSeriesRun.model.quality.timezone_errors > 0
+      ? [t('modelCenter.timeSeries.warning.timezone', { zones: timeSeriesRun.model.quality.timezone_representations.join(', ') })]
+      : []),
+    ...(timeSeriesRun.model.quality.interval_summary.count > 1
+      && timeSeriesRun.model.quality.interval_summary.min_seconds !== timeSeriesRun.model.quality.interval_summary.max_seconds
+      ? [t('modelCenter.timeSeries.warning.irregularIntervals')]
+      : []),
+    ...timeSeriesRun.model.feature_warnings
+      .filter((warning) => warning.startsWith('missing_values:'))
+      .map((warning) => t('modelCenter.timeSeries.warning.missingValues', { column: warning.split(':')[1] })),
+  ] : []
+
+  const timeSplitRows = timeSeriesRun?.validation?.splits.map((split, index) => ({
+    key: index,
+    fold: index + 1,
+    trainRows: split.train_indices.length,
+    trainDates: formatSplitRange(split.train_indices),
+    validationRows: split.validation_indices.length,
+    validationDates: formatSplitRange(split.validation_indices),
+    testRows: split.test_indices?.length ?? 0,
+    testDates: formatSplitRange(split.test_indices ?? []),
+  })) ?? []
+
   if (!datasetId) {
     return (
       <Card title={t('modelCenter.title')}>
@@ -373,6 +500,18 @@ export default function ModelCenter() {
           <Space>{recommended.map(name => <Tag key={name}>{name}</Tag>)}</Space>
           <Space direction="vertical" style={{ width: '100%' }}>
             <div>
+              <label>{t('modelCenter.mode.label')}</label>
+              <Select
+                style={{ width: 240, marginLeft: 8 }}
+                value={modelingMode}
+                onChange={(value) => setModelingMode(value)}
+                options={[
+                  { value: 'standard', label: t('modelCenter.mode.standard') },
+                  { value: 'time_series', label: t('modelCenter.mode.timeSeries') },
+                ]}
+              />
+            </div>
+            {modelingMode === 'standard' && <div>
               <label>{t('modelCenter.modelType.label')}</label>
               <Select
                 style={{ width: 240, marginLeft: 8 }}
@@ -383,7 +522,7 @@ export default function ModelCenter() {
               <Typography.Text type="secondary" style={{ marginLeft: 12, fontSize: 12 }}>
                 {t(`modelCenter.modelType.desc.${MODEL_DESC_KEY[modelType]}`)}
               </Typography.Text>
-            </div>
+            </div>}
             <div>
               <label>{t('modelCenter.target.label')}</label>
               <Select
@@ -405,7 +544,7 @@ export default function ModelCenter() {
                 placeholder={t('modelCenter.inputs.placeholder')}
               />
             </div>
-            {['random_forest', 'xgboost', 'lightgbm'].includes(modelType) && (
+            {modelingMode === 'standard' && ['random_forest', 'xgboost', 'lightgbm'].includes(modelType) && (
               <Card title={t('modelCenter.treeModelAdvanced')} size="small">
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <div>
@@ -467,9 +606,117 @@ export default function ModelCenter() {
               </Card>
             )}
             {readiness?.status === 'critical' && <Alert type="error" showIcon message={t('modelCenter.readinessBlocked')} />}
-            <Button type="primary" loading={fitting} onClick={handleFit} disabled={!datasetId || !target || selectedInputs.length === 0 || readiness?.status === 'critical'}>
-              {t('modelCenter.fitButton')}
-            </Button>
+            {modelingMode === 'standard' ? (
+              <Button type="primary" loading={fitting} onClick={handleFit} disabled={!datasetId || !target || selectedInputs.length === 0 || readiness?.status === 'critical'}>
+                {t('modelCenter.fitButton')}
+              </Button>
+            ) : (
+              <Card title={t('modelCenter.timeSeries.title')} size="small">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Alert type="info" showIcon message={t('modelCenter.timeSeries.foundationNotice')} />
+                  <Space wrap>
+                    <label>{t('modelCenter.timeSeries.timeColumn')}</label>
+                    <Select
+                      style={{ width: 220 }}
+                      value={timeColumn}
+                      onChange={(value) => { setTimeColumn(value); setTimeSeriesRun(null) }}
+                      options={timeColumnOptions}
+                      placeholder={t('modelCenter.timeSeries.selectTimeColumn')}
+                    />
+                    <label>{t('modelCenter.timeSeries.window')}</label>
+                    <Select
+                      style={{ width: 140 }}
+                      value={timeWindowDays}
+                      onChange={(value) => { setTimeWindowDays(value); setTimeSeriesRun(null) }}
+                      options={[7, 30, 60, 90].map((days) => ({ value: days, label: t('modelCenter.timeSeries.days', { count: days }) }))}
+                    />
+                    <label>{t('modelCenter.timeSeries.validationStrategy')}</label>
+                    <Select
+                      style={{ width: 190 }}
+                      value={timeValidationStrategy}
+                      onChange={(value) => { setTimeValidationStrategy(value); setTimeSeriesRun(null) }}
+                      options={[
+                        { value: 'holdout', label: t('modelCenter.timeSeries.holdout') },
+                        { value: 'walk_forward', label: t('modelCenter.timeSeries.walkForward') },
+                      ]}
+                    />
+                  </Space>
+                  <Space wrap>
+                    <label>{t('modelCenter.timeSeries.lags')}</label>
+                    <Select
+                      mode="multiple"
+                      style={{ minWidth: 260 }}
+                      value={timeLags}
+                      onChange={(value) => { setTimeLags(value); setTimeSeriesRun(null) }}
+                      options={[1, 2, 3, 7, 14, 24, 30, 60, 90].map((value) => ({ value, label: String(value) }))}
+                    />
+                    <label>{t('modelCenter.timeSeries.rollingWindows')}</label>
+                    <Select
+                      mode="multiple"
+                      style={{ minWidth: 260 }}
+                      value={rollingWindows}
+                      onChange={(value) => { setRollingWindows(value); setTimeSeriesRun(null) }}
+                      options={[2, 3, 7, 14, 24, 30, 60, 90].map((value) => ({ value, label: String(value) }))}
+                    />
+                  </Space>
+                  <Button
+                    type="primary"
+                    loading={timeSeriesLoading}
+                    onClick={handlePrepareTimeSeries}
+                    disabled={!timeColumn || !target || selectedInputs.length === 0 || timeLags.length === 0 || rollingWindows.length === 0 || (importResult?.row_count ?? 0) < 7 || readiness?.status === 'critical'}
+                  >
+                    {timeSeriesLoading ? t('modelCenter.timeSeries.running') : t('modelCenter.timeSeries.run')}
+                  </Button>
+                  {(importResult?.row_count ?? 0) < 7 && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.warning.tooFewRows')} />}
+                  {timeSeriesRun && (
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                      {timeSeriesWarnings.length === 0
+                        ? <Alert type="success" showIcon message={t('modelCenter.timeSeries.qualityPassed')} />
+                        : timeSeriesWarnings.map((warning, index) => <Alert key={index} type="warning" showIcon message={warning} />)}
+                      <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} title={t('modelCenter.timeSeries.featureConfiguration')}>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.requestedWindow')}>{t('modelCenter.timeSeries.days', { count: timeSeriesRun.windowDays })}</Descriptions.Item>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.frequency')}>{timeSeriesRun.model.feature_configuration.frequency}</Descriptions.Item>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.calendarTimezone')}>{timeSeriesRun.model.feature_configuration.calendar_timezone}</Descriptions.Item>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.lags')}>{timeSeriesRun.model.feature_configuration.lags.join(', ')}</Descriptions.Item>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.rollingWindows')}>{timeSeriesRun.model.feature_configuration.rolling_windows.join(', ')}</Descriptions.Item>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.generatedFeatures')}>{timeSeriesRun.model.feature_names.length}</Descriptions.Item>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.usableRows')}>{timeSeriesRun.model.feature_row_count}</Descriptions.Item>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.warmupRows')}>{timeSeriesRun.model.dropped_warmup_rows}</Descriptions.Item>
+                        <Descriptions.Item label={t('modelCenter.timeSeries.invalidRows')}>{timeSeriesRun.model.dropped_invalid_rows}</Descriptions.Item>
+                      </Descriptions>
+                      {timeSeriesRun.validationFailed && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.validationUnavailable')} />}
+                      {timeSeriesRun.validation && <>
+                        <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }} title={t('modelCenter.timeSeries.timeOutMetrics')}>
+                          <Descriptions.Item label={t('modelCenter.timeSeries.strategy')}>{t(`modelCenter.timeSeries.${timeSeriesRun.validation.strategy === 'holdout' ? 'holdout' : 'walkForward'}`)}</Descriptions.Item>
+                          <Descriptions.Item label={t('modelCenter.timeSeries.foldCount')}>{timeSeriesRun.validation.splits.length}</Descriptions.Item>
+                          <Descriptions.Item label={t('modelCenter.timeSeries.leakageStatus')}>
+                            <Tag color={timeSeriesRun.validation.leakage_check.status === 'passed' ? 'success' : 'warning'}>
+                              {t(`modelCenter.timeSeries.leakage.${timeSeriesRun.validation.leakage_check.status === 'passed' ? 'passed' : 'notChecked'}`)}
+                            </Tag>
+                          </Descriptions.Item>
+                        </Descriptions>
+                        <Table
+                          size="small"
+                          pagination={false}
+                          dataSource={timeSplitRows}
+                          columns={[
+                            { title: t('modelCenter.timeSeries.fold'), dataIndex: 'fold', key: 'fold', width: 70 },
+                            { title: t('modelCenter.timeSeries.trainRows'), dataIndex: 'trainRows', key: 'trainRows', width: 100 },
+                            { title: t('modelCenter.timeSeries.trainDates'), dataIndex: 'trainDates', key: 'trainDates' },
+                            { title: t('modelCenter.timeSeries.validationRows'), dataIndex: 'validationRows', key: 'validationRows', width: 110 },
+                            { title: t('modelCenter.timeSeries.validationDates'), dataIndex: 'validationDates', key: 'validationDates' },
+                            ...(timeSeriesRun.validation.strategy === 'holdout' ? [
+                              { title: t('modelCenter.timeSeries.testRows'), dataIndex: 'testRows', key: 'testRows', width: 90 },
+                              { title: t('modelCenter.timeSeries.testDates'), dataIndex: 'testDates', key: 'testDates' },
+                            ] : []),
+                          ]}
+                        />
+                      </>}
+                    </Space>
+                  )}
+                </Space>
+              </Card>
+            )}
           </Space>
         </Card>
 

@@ -1215,6 +1215,84 @@ export interface TimeSeriesFeatures {
   preview: Record<string, unknown>[]
 }
 
+export interface TimeSeriesQuality {
+  duplicate_timestamps: number
+  missing_timestamps: number
+  interval_summary: {
+    count: number
+    min_seconds: number | null
+    median_seconds: number | null
+    max_seconds: number | null
+  }
+  timezone: string | null
+  timezone_representations: string[]
+  normalized_timezone: string
+  timezone_errors: number
+  parse_errors: number
+}
+
+export interface TimeSeriesModelResult {
+  dataset_id: string
+  time_column: string
+  target: string
+  inputs: string[]
+  quality: TimeSeriesQuality
+  sorted_row_count: number
+  feature_configuration: {
+    columns: string[]
+    lags: number[]
+    rolling_windows: number[]
+    frequency: string
+    calendar_timezone: string
+  }
+  feature_names: string[]
+  feature_row_count: number
+  dropped_warmup_rows: number
+  dropped_invalid_rows: number
+  feature_warnings: string[]
+}
+
+export interface TimeSeriesSplit {
+  train_indices: number[]
+  validation_indices: number[]
+  test_indices?: number[]
+}
+
+export interface TimeSeriesValidationResult {
+  dataset_id: string
+  time_column: string
+  strategy: 'holdout' | 'walk_forward'
+  configuration: Record<string, string | number>
+  splits: TimeSeriesSplit[]
+  quality: TimeSeriesQuality
+  leakage_check: {
+    status: 'passed' | 'not_checked'
+    checked_rows: number
+    feature_source_time_columns: string[]
+  }
+}
+
+export interface TimeSeriesModelParams {
+  dataset_id: string
+  time_column: string
+  target: string
+  inputs: string[]
+  lags?: number[]
+  rolling_windows?: number[]
+  modeling_timezone?: string
+}
+
+export type TimeSeriesValidationParams = {
+  dataset_id: string
+  time_column: string
+  modeling_timezone?: string
+  prediction_time_column?: string
+  feature_source_time_columns?: string[]
+} & (
+  | { strategy: 'holdout'; train_ratio: number; validation_ratio: number }
+  | { strategy: 'walk_forward'; initial_train_size: number; horizon: number; step: number }
+)
+
 export interface ConsecutiveExceedance {
   column: string
   direction: string
@@ -1247,6 +1325,14 @@ export interface ConsecutiveExceedanceParams {
 
 export async function getTimeSeriesFeatures(params: TimeSeriesParams): Promise<TimeSeriesFeatures> {
   return engineCall<TimeSeriesFeatures>('features/time_series', params as unknown as Record<string, unknown>)
+}
+
+export async function prepareTimeSeriesModel(params: TimeSeriesModelParams): Promise<TimeSeriesModelResult> {
+  return engineCall<TimeSeriesModelResult>('features/time_series/model', params as unknown as Record<string, unknown>)
+}
+
+export async function validateTimeSeries(params: TimeSeriesValidationParams): Promise<TimeSeriesValidationResult> {
+  return engineCall<TimeSeriesValidationResult>('features/time_series/validation', params as unknown as Record<string, unknown>)
 }
 
 export async function getConsecutiveExceedance(params: ConsecutiveExceedanceParams): Promise<ConsecutiveExceedance> {
