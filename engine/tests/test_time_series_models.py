@@ -1,0 +1,32 @@
+import pandas as pd
+
+from process_intelligence_engine.main import REGISTRY, handle_request
+
+
+def test_time_series_fit_returns_model_ladder_and_unavailable_states():
+    dataset_id = REGISTRY.register(
+        pd.DataFrame({
+            "ts": pd.date_range("2026-01-01", periods=40, freq="h"),
+            "x": range(40),
+            "y": [10 + i * 0.1 for i in range(40)],
+        }), {}
+    )
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "ts", "target": "y",
+        "inputs": ["x"], "lags": [1], "rolling_windows": [3],
+    })
+    names = {item["model_type"] for item in result["results"]}
+    assert {"naive", "seasonal_naive", "dynamic_regression", "time_feature_random_forest"} <= names
+    assert all(item["status"] in {"available", "unavailable"} for item in result["results"])
+    assert result["validation"]["strategy"] == "chronological_holdout"
+    assert result["training_time_range"]["end"] < result["validation"]["test_start"]
+
+
+def test_time_series_fit_rejects_too_few_rows():
+    dataset_id = REGISTRY.register(pd.DataFrame({"ts": pd.date_range("2026-01-01", periods=3), "y": [1, 2, 3]}), {})
+    try:
+        handle_request("features/time_series/fit", {"dataset_id": dataset_id, "time_column": "ts", "target": "y", "inputs": []})
+    except ValueError as exc:
+        assert "at least 5" in str(exc)
+    else:
+        raise AssertionError("expected small dataset error")
