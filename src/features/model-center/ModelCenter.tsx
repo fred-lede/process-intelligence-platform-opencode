@@ -94,6 +94,7 @@ export default function ModelCenter() {
   const [timeLags, setTimeLags] = useState<number[]>([1, 7])
   const [rollingWindows, setRollingWindows] = useState<number[]>([7])
   const [timeValidationStrategy, setTimeValidationStrategy] = useState<'holdout' | 'walk_forward'>('holdout')
+  const [timeEvaluationProtocol, setTimeEvaluationProtocol] = useState<'fixed_horizon_forecast' | 'observed_feature_holdout'>('fixed_horizon_forecast')
   const [timeSeriesLoading, setTimeSeriesLoading] = useState(false)
   const [timeSeriesLadder, setTimeSeriesLadder] = useState<TimeSeriesLadderResult | null>(null)
   const [timeSeriesLadderLoading, setTimeSeriesLadderLoading] = useState(false)
@@ -181,7 +182,7 @@ export default function ModelCenter() {
     timeSeriesLadderRequestId.current = requestId
     setTimeSeriesLadderLoading(true)
     try {
-      const result = await fitTimeSeriesLadder({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays })
+      const result = await fitTimeSeriesLadder({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays, evaluation_protocol: timeEvaluationProtocol })
       if (requestId !== timeSeriesLadderRequestId.current) return
       setTimeSeriesLadder(result)
       messageApi.success(t('modelCenter.timeSeries.ladderSuccess'))
@@ -697,6 +698,16 @@ export default function ModelCenter() {
                         { value: 'walk_forward', label: t('modelCenter.timeSeries.walkForward') },
                       ]}
                     />
+                    <label>{t('modelCenter.timeSeries.evaluationProtocol')}</label>
+                    <Select
+                      style={{ width: 250 }}
+                      value={timeEvaluationProtocol}
+                      onChange={(value) => { setTimeEvaluationProtocol(value); invalidateTimeSeriesRun() }}
+                      options={[
+                        { value: 'fixed_horizon_forecast', label: t('modelCenter.timeSeries.fixedHorizon') },
+                        { value: 'observed_feature_holdout', label: t('modelCenter.timeSeries.observedFeatureHoldout') },
+                      ]}
+                    />
                   </Space>
                   <Space wrap>
                     <label>{t('modelCenter.timeSeries.lags')}</label>
@@ -748,7 +759,7 @@ export default function ModelCenter() {
                       { title: t('modelCenter.timeSeries.observedTarget'), key: 'observedTarget', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.evaluation?.uses_observed_target == null ? '—' : row.evaluation.uses_observed_target ? t('modelCenter.timeSeries.yes') : t('modelCenter.timeSeries.no') },
                       { title: t('modelCenter.timeSeries.leakageStatus'), key: 'leakage', render: () => timeSeriesLadder.provenance?.leakage_check ? t('modelCenter.timeSeries.leakage.passed') : '—' },
                       { title: t('modelCenter.timeSeries.persistence'), key: 'persisted', render: () => timeSeriesLadder.provenance?.persisted == null ? '—' : timeSeriesLadder.provenance.persisted ? t('modelCenter.timeSeries.persisted') : t('modelCenter.timeSeries.notPersisted') },
-                      { title: t('modelCenter.timeSeries.reason'), key: 'error', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => timeSeriesReason(row.error, row.reason_code) },
+                      { title: t('modelCenter.timeSeries.reason'), key: 'error', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.status === 'unavailable' ? timeSeriesReason(row.error, row.reason_code) : '—' },
                     ]} />
                     <Alert type="info" showIcon message={t('modelCenter.timeSeries.ladderAdvice')} />
                   </Card>}

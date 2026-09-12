@@ -1288,6 +1288,7 @@ export interface TimeSeriesModelParams {
   rolling_windows?: number[]
   modeling_timezone?: string
   window_days?: number
+  evaluation_protocol?: 'fixed_horizon_forecast' | 'observed_feature_holdout'
 }
 
 export interface TimeSeriesLadderModel {
