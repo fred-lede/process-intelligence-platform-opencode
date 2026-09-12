@@ -14,8 +14,8 @@ def _metrics(y, pred):
     return {"mae": mean_absolute_error(y, pred), "rmse": root_mean_squared_error(y, pred), "r2": r2_score(y, pred)}
 
 
-def _unavailable(name, reason, features, validation):
-    return {"model_type": name, "status": "unavailable", "error": reason, "features": features, "validation": validation, "metrics": None}
+def _unavailable(name, reason, features, validation, reason_code="not_implemented"):
+    return {"model_type": name, "status": "unavailable", "error": reason, "reason_code": reason_code, "features": features, "validation": validation, "metrics": None}
 
 
 def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *, lags: list[int] | None = None, rolling_windows: list[int] | None = None, seasonal_period: int = 24, train_ratio: float = .8, modeling_timezone: str | None = None, window_days: int | None = None) -> dict[str, Any]:
@@ -52,18 +52,18 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     results.append({"model_type":"naive", "status":"available", "features":[f"{target}_lag_1"], "validation":validation, "metrics":_metrics(y[valid], pred[valid]), "_eval_rows":int(valid.sum()), "_eval_indices":np.flatnonzero(valid).tolist()})
     lag = usable[target].shift(seasonal_period).to_numpy(float)
     valid = mask & np.isfinite(lag)
-    results.append({"model_type":"seasonal_naive", "status":"available" if valid.any() else "unavailable", "features":[f"{target}_lag_{seasonal_period}"], "validation":validation, "metrics":_metrics(y[valid], lag[valid]) if valid.any() else None, "_eval_rows":int(valid.sum()), "_eval_indices":np.flatnonzero(valid).tolist(), "error":None if valid.any() else "seasonal period exceeds available history"})
+    results.append({"model_type":"seasonal_naive", "status":"available" if valid.any() else "unavailable", "features":[f"{target}_lag_{seasonal_period}"], "validation":validation, "metrics":_metrics(y[valid], lag[valid]) if valid.any() else None, "_eval_rows":int(valid.sum()), "_eval_indices":np.flatnonzero(valid).tolist(), "error":None if valid.any() else "seasonal period exceeds available history", "reason_code":None if valid.any() else "insufficient_history"})
     X = usable[xcols].to_numpy(float)
     valid_rows = np.isfinite(X).all(axis=1) & np.isfinite(y)
     train = valid_rows & (np.arange(len(usable)) < split); test = valid_rows & (np.arange(len(usable)) >= split)
     for name, estimator in [("dynamic_regression", LinearRegression()), ("time_feature_random_forest", RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=1, min_samples_leaf=2))]:
         if not train.any() or not test.any():
-            results.append(_unavailable(name, "insufficient complete chronological train/test rows", xcols, validation)); continue
+            results.append(_unavailable(name, "insufficient complete chronological train/test rows", xcols, validation, "insufficient_history")); continue
         estimator.fit(X[train], y[train]); pred = estimator.predict(X[test])
         results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(y[test], pred), "_eval_rows":int(test.sum()), "_eval_indices":np.flatnonzero(test).tolist()})
     for name, package in (("arima", "statsmodels"), ("xgboost", "xgboost"), ("lightgbm", "lightgbm")):
         if importlib.util.find_spec(package) is None:
-            results.append(_unavailable(name, f"{package} is not installed", xcols, validation))
+            results.append(_unavailable(name, f"{package} is not installed", [] if name == "arima" else xcols, validation, "dependency_missing"))
         else:
             try:
                 if name == "arima":
@@ -80,7 +80,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     forecast = model.predict(X[test])
                 results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(y[split:], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast)), "_eval_indices":list(range(split, len(y))), "evaluation_protocol":"fixed_horizon_forecast" if name == "arima" else "observed_feature_holdout"})
             except Exception as exc:
-                results.append(_unavailable(name, f"adapter failed: {exc}", xcols, validation))
+                results.append(_unavailable(name, f"adapter failed: {exc}", [] if name == "arima" else xcols, validation, "adapter_error"))
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}
     if window_days is not None: config["window_days"] = window_days
     for item in results:
