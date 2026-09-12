@@ -419,7 +419,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
               <Button type="link" icon={<DownloadOutlined />} onClick={handleDownloadEngineeringTemplate}>
                 {t('dataImport.downloadEngineeringTemplate')}
               </Button>
-              <Typography.Text type="secondary" style={{ maxWidth: 520, display: 'inline-block' }}>
+              <Typography.Text type="secondary" style={{ maxWidth: 560, whiteSpace: 'pre-line' }}>
                 {t('dataImport.sampleSizeHint')}
               </Typography.Text>
             </Space>

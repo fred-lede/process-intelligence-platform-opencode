@@ -169,7 +169,7 @@
     "importDescription": "Select an Excel (.xlsx, .xls) or CSV file to begin analysis.",
     "downloadTemplate": "Download CSV Template",
     "downloadEngineeringTemplate": "Download Engineering Template",
-    "sampleSizeHint": "Suggested sample size: at least 30 rows for general analysis; 10–15 rows per input for linear DOE; 60–100 rows for quadratic DOE or interactions; GRR: at least 5 parts × 3 operators × 2–3 repeats. Adjust for process complexity and validation goals.",
+    "sampleSizeHint": "• General analysis: at least 30 rows\n• Linear DOE: at least 10–15 rows per input\n• Quadratic DOE/interactions: recommend 60–100 rows\n• GRR: at least 5 parts × 3 operators × 2–3 repeats\n• Sample inputs across the real operating range and batch variation; adjust for process complexity and validation goals",
     "downloadTemplateDesc": "Download a sample CSV with 5 inputs + continuous output + binary result, supporting all 8 models (DOE, RF, XGBoost, LightGBM, Residual Hybrid, Logistic, Weibull).",
     "errNoOutput": "Assign at least one field as an output (quality metric) before continuing.",
     "pickFile": "Select File",
