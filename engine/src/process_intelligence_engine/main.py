@@ -93,7 +93,11 @@ from process_intelligence_engine.features.time_series import (
     compute_time_features,
     compute_consecutive_exceedance,
 )
-from process_intelligence_engine.features.time_series_modeling import prepare_time_series
+from process_intelligence_engine.features.time_series_modeling import (
+    build_time_features,
+    prepare_time_series,
+    suggest_time_feature_configuration,
+)
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 from process_intelligence_engine.versioning.chain import VersionChain
@@ -2345,6 +2349,19 @@ def _handle_time_series_model(params: dict) -> dict:
         raise ValueError(f"Unknown column(s): {', '.join(missing_columns)}")
 
     prepared = prepare_time_series(df, params["time_column"])
+    feature_columns = list(dict.fromkeys([params["target"], *params["inputs"]]))
+    suggested = suggest_time_feature_configuration(
+        prepared["quality"]["interval_summary"], feature_columns
+    )
+    lags = params.get("lags", suggested["lags"])
+    rolling_windows = params.get("rolling_windows", suggested["rolling_windows"])
+    features = build_time_features(
+        prepared["data"],
+        params["time_column"],
+        feature_columns,
+        lags,
+        rolling_windows,
+    )
     return _plain_types(
         {
             "dataset_id": params["dataset_id"],
@@ -2353,6 +2370,11 @@ def _handle_time_series_model(params: dict) -> dict:
             "inputs": list(params["inputs"]),
             "quality": prepared["quality"],
             "sorted_row_count": len(prepared["data"]),
+            "feature_configuration": features["configuration"],
+            "feature_names": features["feature_names"],
+            "feature_row_count": len(features["data"]),
+            "dropped_warmup_rows": features["dropped_warmup_rows"],
+            "feature_warnings": features["warnings"],
         }
     )
 
