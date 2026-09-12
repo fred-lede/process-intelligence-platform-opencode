@@ -93,6 +93,7 @@ from process_intelligence_engine.features.time_series import (
     compute_time_features,
     compute_consecutive_exceedance,
 )
+from process_intelligence_engine.features.time_series_modeling import prepare_time_series
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 from process_intelligence_engine.versioning.chain import VersionChain
@@ -2115,6 +2116,8 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "prediction/scenario/delete":
         return _handle_prediction_scenario_delete(params)
 
+    if method == "features/time_series/model":
+        return _handle_time_series_model(params)
     if method == "features/time_series":
         return _handle_time_series(params)
     if method == "features/consecutive_exceedance":
@@ -2331,6 +2334,23 @@ def _handle_prediction_scenario_delete(params: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Time series features
 # ---------------------------------------------------------------------------
+
+
+def _handle_time_series_model(params: dict) -> dict:
+    """Validate and prepare a registered dataset for time-series modeling."""
+    df = REGISTRY.get(params["dataset_id"])
+    required_columns = [params["time_column"], params["target"], *params["inputs"]]
+    missing_columns = [column for column in required_columns if column not in df.columns]
+    if missing_columns:
+        raise ValueError(f"Unknown column(s): {', '.join(missing_columns)}")
+
+    prepared = prepare_time_series(df, params["time_column"])
+    return _plain_types(
+        {
+            "quality": prepared["quality"],
+            "sorted_row_count": len(prepared["data"]),
+        }
+    )
 
 
 def _handle_time_series(params: dict) -> dict:
