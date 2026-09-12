@@ -1293,7 +1293,7 @@ export interface TimeSeriesModelParams {
 
 export interface TimeSeriesLadderModel {
   model_type: string
-  status: 'available' | 'unavailable'
+  status: 'available' | 'unavailable' | 'not_supported' | 'not_applicable'
   error?: string | null
   reason_code?: string | null
   features: string[]

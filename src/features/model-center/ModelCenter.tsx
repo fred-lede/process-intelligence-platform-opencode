@@ -200,7 +200,9 @@ export default function ModelCenter() {
     if (code) return t(`modelCenter.timeSeries.reasons.${code}`, { defaultValue: t('modelCenter.timeSeries.reasons.unknown') })
     return t('modelCenter.timeSeries.reasons.unknown')
   }
-  const ladderProtocols = timeSeriesLadder?.results.map((row) => row.evaluation?.protocol).filter(Boolean) ?? []
+  const ladderProtocols = timeSeriesLadder?.results
+    .filter((row) => row.status === 'available' && row.evaluation?.protocol !== 'not_supported' && row.evaluation?.protocol !== 'not_applicable')
+    .map((row) => row.evaluation?.protocol).filter(Boolean) ?? []
   const hasMixedLadderProtocols = new Set(ladderProtocols).size > 1
 
   useEffect(() => {
@@ -747,7 +749,7 @@ export default function ModelCenter() {
                     {hasMixedLadderProtocols && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.mixedProtocols')} />}
                     <Table size="small" pagination={false} rowKey="model_type" dataSource={timeSeriesLadder.results} columns={[
                       { title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model_type', key: 'model_type', render: (value: string) => timeSeriesModelLabel(value) },
-                      { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (value: string) => <Tag color={value === 'available' ? 'success' : 'warning'}>{value === 'available' ? t('modelCenter.timeSeries.available') : t('modelCenter.timeSeries.unavailable')}</Tag> },
+                      { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (value: string) => <Tag color={value === 'available' ? 'success' : 'warning'}>{value === 'available' ? t('modelCenter.timeSeries.available') : value === 'not_supported' ? t('modelCenter.timeSeries.notSupported') : value === 'not_applicable' ? t('modelCenter.timeSeries.notApplicable') : t('modelCenter.timeSeries.unavailable')}</Tag> },
                       { title: 'MAE', key: 'mae', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.mae.toFixed(4) ?? '—' },
                       { title: 'RMSE', key: 'rmse', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.rmse.toFixed(4) ?? '—' },
                       { title: 'R²', key: 'r2', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.r2.toFixed(4) ?? '—' },
