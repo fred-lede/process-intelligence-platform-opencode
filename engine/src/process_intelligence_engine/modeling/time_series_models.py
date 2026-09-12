@@ -78,7 +78,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     import lightgbm as lgb
                     model = lgb.LGBMRegressor(n_estimators=100, verbosity=-1, random_state=42).fit(X[train], y[train])
                     forecast = model.predict(X[test])
-                results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(y[split:], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast)), "_eval_indices":list(range(split, len(y))), "evaluation_protocol":"fixed_horizon_forecast" if name == "arima" else "observed_feature_holdout"})
+                results.append({"model_type":name, "status":"available", "features":[] if name == "arima" else xcols, "validation":validation, "metrics":_metrics(y[split:], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast)), "_eval_indices":list(range(split, len(y))), "evaluation_protocol":"fixed_horizon_forecast" if name == "arima" else "observed_feature_holdout"})
             except Exception as exc:
                 results.append(_unavailable(name, f"adapter failed: {exc}", [] if name == "arima" else xcols, validation, "adapter_error"))
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}
