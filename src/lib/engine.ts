@@ -392,8 +392,8 @@ export async function fitModel(params: {
   return engineCall<ModelFitDTO>('modeling/fit', params as unknown as Record<string, unknown>)
 }
 
-export async function listModels(): Promise<{ models: ModelFitDTO[] }> {
-  return engineCall<{ models: ModelFitDTO[] }>('modeling/list', {})
+export async function listModels(dataset_id?: string): Promise<{ models: ModelFitDTO[] }> {
+  return engineCall<{ models: ModelFitDTO[] }>('modeling/list', dataset_id ? { dataset_id } : {})
 }
 
 export async function transitionModel(

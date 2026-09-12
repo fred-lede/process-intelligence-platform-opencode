@@ -703,8 +703,18 @@ def _handle_modeling_fit(params: dict) -> dict:
 
 
 def _handle_modeling_list(params: dict) -> dict:
+    dataset_id = params.get("dataset_id")
+    models = [MODEL_REGISTRY.get(mid) for mid in MODEL_REGISTRY.list_ids()]
+    if dataset_id:
+        models = [fit for fit in models if any(
+            entity.metadata.get("model_id") == fit.model_id
+            and entity.metadata.get("dataset_id") == dataset_id
+            for item in _VERSION_CHAIN.get_chain_summary()
+            for entity in [_VERSION_CHAIN.get_entity(item["entity_id"])]
+            if entity.entity_type == "model"
+        )]
     return {
-        "models": [MODEL_REGISTRY.get(mid).to_dto() for mid in MODEL_REGISTRY.list_ids()]
+        "models": [fit.to_dto() for fit in models]
     }
 
 
@@ -1653,6 +1663,17 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     source_row_count = len(df)
     df = _apply_row_filter(df, params)
     fit = MODEL_REGISTRY.get(model_id)
+
+    # A model fitted on another dataset can have incompatible scales/ranges;
+    # fail explicitly instead of producing misleading simulation statistics.
+    model_entities = [
+        _VERSION_CHAIN.get_entity(item["entity_id"])
+        for item in _VERSION_CHAIN.get_chain_summary()
+        if _VERSION_CHAIN.get_entity(item["entity_id"]).entity_type == "model"
+        and _VERSION_CHAIN.get_entity(item["entity_id"]).metadata.get("model_id") == model_id
+    ]
+    if model_entities and model_entities[-1].metadata.get("dataset_id") != did:
+        raise ValueError("Selected model was fitted on a different dataset; refit or select a model from the current dataset.")
 
     if fit.model_type not in SUPPORTED_MODELS:
         raise ValueError(f"Monte Carlo does not support model type {fit.model_type!r}")

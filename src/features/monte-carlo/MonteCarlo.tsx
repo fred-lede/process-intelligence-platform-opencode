@@ -53,7 +53,7 @@ export default function MonteCarlo() {
         }
       })()
     }
-  }, [])
+  }, [importResult?.dataset_id])
 
   const [models, setModels] = useState<Array<{ model_id: string; model_type: string; equation: string }>>([])
   const [selectedModel, setSelectedModel] = useState<string | undefined>()
@@ -66,7 +66,7 @@ export default function MonteCarlo() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    listModels().then(r => {
+    listModels(importResult?.dataset_id).then(r => {
       if (r.models) {
         setModels(r.models.map(m => ({ model_id: m.model_id, model_type: m.model_type, equation: m.equation })))
       }
