@@ -63,7 +63,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     if fixed_horizon:
         history = list(y[:split])
         for index in range(split, len(y)):
-            lag[index] = history[index - seasonal_period] if index - seasonal_period < len(history) else np.nan
+            lag[index] = history[index - seasonal_period] if 0 <= index - seasonal_period < len(history) else np.nan
             history.append(lag[index])
     valid = mask & np.isfinite(lag)
     results.append({"model_type":"seasonal_naive", "status":"available" if valid.any() else "unavailable", "features":[f"{target}_lag_{seasonal_period}"], "validation":validation, "metrics":_metrics(y[valid], lag[valid]) if valid.any() else None, "_eval_rows":int(valid.sum()), "_eval_indices":np.flatnonzero(valid).tolist(), "error":None if valid.any() else "seasonal period exceeds available history", "reason_code":None if valid.any() else "insufficient_history", "evaluation_protocol":evaluation_protocol})
@@ -105,7 +105,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     if window_days is not None: config["window_days"] = window_days
     for item in results:
         indices = item.pop("_eval_indices", [])
-        protocol = item.pop("evaluation_protocol", "observed_feature_holdout")
+        protocol = item.pop("evaluation_protocol", evaluation_protocol)
         item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "train_start": usable[time_column].iloc[0] if split else None, "train_end": usable[time_column].iloc[split - 1] if split else None, "test_start": usable[time_column].iloc[indices[0]] if indices else None, "test_end": usable[time_column].iloc[indices[-1]] if indices else None, "protocol": protocol, "uses_observed_target": protocol == "observed_feature_holdout", "observed_target_usage": "test_period" if protocol == "observed_feature_holdout" else "training_only"}
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False

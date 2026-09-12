@@ -49,3 +49,21 @@ def test_time_series_fixed_horizon_is_explicit_and_does_not_mix_protocols():
     unsupported = [item for item in result["results"] if item.get("reason_code") == "not_supported"]
     assert unsupported
     assert result["validation"]["train_end"] < result["validation"]["test_start"]
+
+
+def test_fixed_horizon_seasonal_naive_reports_insufficient_history_without_index_error():
+    for rows, period in ((10, 24), (20, 20)):
+        dataset_id = REGISTRY.register(pd.DataFrame({
+            "ts": pd.date_range("2026-01-01", periods=rows, freq="h"),
+            "y": [float(i) for i in range(rows)],
+        }), {})
+        result = handle_request("features/time_series/fit", {
+            "dataset_id": dataset_id, "time_column": "ts", "target": "y",
+            "inputs": [], "seasonal_period": period,
+            "evaluation_protocol": "fixed_horizon_forecast",
+        })
+        seasonal = next(item for item in result["results"] if item["model_type"] == "seasonal_naive")
+        assert seasonal["status"] == "unavailable"
+        assert seasonal["reason_code"] == "insufficient_history"
+        assert seasonal["evaluation"]["rows"] == 0
+        assert seasonal["evaluation"]["protocol"] == "fixed_horizon_forecast"
