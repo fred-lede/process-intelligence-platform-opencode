@@ -414,6 +414,18 @@ export default function ProcessDefine() {
   const unconfirmedCount = anomalyScenarios.filter((s) => !s.user_confirmed).length
 
   const severityColor: Record<string, string> = { info: 'default', warning: 'orange', critical: 'red' }
+  const localizeQualityIssue = (issue: QualityIssue) => {
+    const checkKey = `processDefine.qualityChecks.${issue.check}`
+    const messageKey = `processDefine.qualityMessages.${issue.check}`
+    const translatedCheck = t(checkKey)
+    const translatedMessage = t(messageKey, { column: issue.column ?? '—', count: Number(issue.message.match(/\d+/)?.[0] ?? 0), rate: issue.message.match(/\(([^)]+)\)/)?.[1] ?? '' })
+    return {
+      ...issue,
+      checkLabel: translatedCheck === checkKey ? issue.check : translatedCheck,
+      severityLabel: t(`processDefine.severity.${issue.severity}`, { defaultValue: issue.severity }),
+      messageLabel: translatedMessage === messageKey ? issue.message : translatedMessage,
+    }
+  }
 
   const specQualityColumns: ColumnsType<QualityIssue> = [
     {
@@ -421,7 +433,7 @@ export default function ProcessDefine() {
       dataIndex: 'check',
       key: 'check',
       width: 160,
-      render: (check: string) => <Tag>{check}</Tag>,
+      render: (_: string, record: QualityIssue & { checkLabel?: string }) => <Tag>{record.checkLabel ?? record.check}</Tag>,
     },
     {
       title: t('processDefine.qualityColumn'),
@@ -435,13 +447,13 @@ export default function ProcessDefine() {
       dataIndex: 'severity',
       key: 'severity',
       width: 90,
-      render: (sev: string) => <Tag color={severityColor[sev] ?? 'default'}>{sev}</Tag>,
+      render: (sev: string, record: QualityIssue & { severityLabel?: string }) => <Tag color={severityColor[sev] ?? 'default'}>{record.severityLabel ?? sev}</Tag>,
     },
     {
       title: t('processDefine.qualityMessage'),
       dataIndex: 'message',
       key: 'message',
-      render: (msg: string) => msg,
+      render: (_: string, record: QualityIssue & { messageLabel?: string }) => record.messageLabel ?? record.message,
     },
   ]
 
@@ -579,7 +591,7 @@ export default function ProcessDefine() {
               size="small"
               rowKey={(r) => `${r.check}-${r.column ?? ''}-${r.message}`}
               columns={specQualityColumns}
-              dataSource={specQuality.issues}
+              dataSource={specQuality.issues.map(localizeQualityIssue)}
               pagination={false}
             />
           ) : (
