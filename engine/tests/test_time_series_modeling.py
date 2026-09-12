@@ -502,6 +502,8 @@ def test_time_series_validation_handler_returns_holdout_schema():
     assert result["configuration"] == {
         "train_ratio": 0.6,
         "validation_ratio": 0.2,
+        "modeling_timezone": "UTC",
+        "prediction_time_column": "ts",
     }
     assert result["splits"] == [
         {
@@ -544,6 +546,8 @@ def test_time_series_validation_handler_returns_walk_forward_schema():
         "initial_train_size": 4,
         "horizon": 2,
         "step": 2,
+        "modeling_timezone": "UTC",
+        "prediction_time_column": "ts",
     }
     assert result["splits"] == [
         {

@@ -2392,6 +2392,7 @@ def _handle_time_series_validation(params: dict) -> dict:
     time_column = params["time_column"]
     strategy = params["strategy"]
     modeling_timezone = params.get("modeling_timezone")
+    prediction_time_column = params.get("prediction_time_column", time_column)
     df = REGISTRY.get(dataset_id)
     prepared = prepare_time_series(df, time_column)
 
@@ -2425,12 +2426,18 @@ def _handle_time_series_validation(params: dict) -> dict:
         )
     else:
         raise ValueError("strategy must be 'holdout' or 'walk_forward'")
+    configuration.update(
+        {
+            "modeling_timezone": modeling_timezone or "UTC",
+            "prediction_time_column": prediction_time_column,
+        }
+    )
 
     source_columns = params.get("feature_source_time_columns", [])
     if source_columns:
         leakage_check = check_feature_timestamp_leakage(
             df,
-            params.get("prediction_time_column", time_column),
+            prediction_time_column,
             source_columns,
             modeling_timezone=modeling_timezone,
         )
