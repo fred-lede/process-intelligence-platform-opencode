@@ -1,5 +1,7 @@
 # Process Intelligence Platform
 
+**Languages:** [繁體中文](README.md) · [English](README_En.md)
+
 **Author:** Fred Wang
 
 An explainable and traceable process-analysis platform with traditional DOE and AI-assisted models. Supports macOS and Windows desktop applications.
