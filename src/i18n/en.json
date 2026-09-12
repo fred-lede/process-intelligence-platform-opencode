@@ -408,6 +408,8 @@
       "reason": "Reason",
       "ladderAdvice": "Compare chronological holdout metrics. Unavailable models require the listed dependency or configuration before use.",
       "trainTestRange": "Train/Test Boundary",
+      "protocol": "Evaluation Protocol",
+      "mixedProtocols": "Evaluation protocols differ; compare metrics only within the same protocol. Fixed-horizon forecasts and observed-feature holdouts are not directly comparable.",
       "persistence": "Saved",
       "persisted": "Saved",
       "notPersisted": "Not saved",

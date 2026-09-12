@@ -199,6 +199,8 @@ export default function ModelCenter() {
     if (code) return t(`modelCenter.timeSeries.reasons.${code}`, { defaultValue: t('modelCenter.timeSeries.reasons.unknown') })
     return t('modelCenter.timeSeries.reasons.unknown')
   }
+  const ladderProtocols = timeSeriesLadder?.results.map((row) => row.evaluation?.protocol).filter(Boolean) ?? []
+  const hasMixedLadderProtocols = new Set(ladderProtocols).size > 1
 
   useEffect(() => {
     invalidateTimeSeriesRun()
@@ -731,6 +733,7 @@ export default function ModelCenter() {
                   </Button>
                   {(importResult?.row_count ?? 0) < 7 && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.warning.tooFewRows')} />}
                   {timeSeriesLadder && <Card title={t('modelCenter.timeSeries.ladderTitle')} size="small">
+                    {hasMixedLadderProtocols && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.mixedProtocols')} />}
                     <Table size="small" pagination={false} rowKey="model_type" dataSource={timeSeriesLadder.results} columns={[
                       { title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model_type', key: 'model_type', render: (value: string) => timeSeriesModelLabel(value) },
                       { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (value: string) => <Tag color={value === 'available' ? 'success' : 'warning'}>{value === 'available' ? t('modelCenter.timeSeries.available') : t('modelCenter.timeSeries.unavailable')}</Tag> },
@@ -738,6 +741,7 @@ export default function ModelCenter() {
                       { title: 'RMSE', key: 'rmse', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.rmse.toFixed(4) ?? '—' },
                       { title: 'R²', key: 'r2', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.r2.toFixed(4) ?? '—' },
                       { title: t('modelCenter.timeSeries.validationStrategy'), key: 'validation', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.validation?.strategy || '—' },
+                      { title: t('modelCenter.timeSeries.protocol'), key: 'protocol', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.evaluation?.protocol || '—' },
                       { title: t('modelCenter.timeSeries.trainTestRange'), key: 'range', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.evaluation?.test_start && row.evaluation?.test_end ? `${row.evaluation.test_start} → ${row.evaluation.test_end}` : row.validation?.train_end && row.validation?.test_start ? `${row.validation.train_end} → ${row.validation.test_start}` : '—' },
                       { title: t('modelCenter.timeSeries.leakageStatus'), key: 'leakage', render: () => timeSeriesLadder.provenance?.leakage_check ? t('modelCenter.timeSeries.leakage.passed') : '—' },
                       { title: t('modelCenter.timeSeries.persistence'), key: 'persisted', render: () => timeSeriesLadder.provenance?.persisted == null ? '—' : timeSeriesLadder.provenance.persisted ? t('modelCenter.timeSeries.persisted') : t('modelCenter.timeSeries.notPersisted') },
