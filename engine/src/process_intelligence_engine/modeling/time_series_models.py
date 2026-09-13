@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 import importlib.util
+from statistics import NormalDist
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
@@ -181,6 +182,221 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False
     return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "_estimators": estimators, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
+
+
+def validate_time_series_gate(
+    df: pd.DataFrame,
+    time_column: str,
+    target: str,
+    inputs: list[str],
+    *,
+    model_type: str,
+    evaluation_protocol: str,
+    fold_count: int,
+    horizon: int,
+    group_column: str | None = None,
+    lags: list[int] | None = None,
+    rolling_windows: list[int] | None = None,
+    seasonal_period: int = 24,
+    modeling_timezone: str | None = None,
+    prediction_interval_confidence: float = .95,
+    minimum_prediction_interval_coverage: float = .8,
+    minimum_group_coverage: float = 1.0,
+) -> dict[str, Any]:
+    """Evaluate one estimator with expanding, fixed-horizon folds."""
+    from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
+
+    supported = {"naive", "seasonal_naive", "dynamic_regression", "time_feature_random_forest"}
+    if model_type not in supported:
+        raise ValueError(f"model_type must be one of: {', '.join(sorted(supported))}")
+    if evaluation_protocol not in {"observed_feature_holdout", "fixed_horizon_forecast"}:
+        raise ValueError("evaluation_protocol must be observed_feature_holdout or fixed_horizon_forecast")
+    for value, name in ((fold_count, "fold_count"), (horizon, "horizon")):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+    if not 0 < prediction_interval_confidence < 1:
+        raise ValueError("prediction_interval_confidence must be between 0 and 1")
+    for value, name in (
+        (minimum_prediction_interval_coverage, "minimum_prediction_interval_coverage"),
+        (minimum_group_coverage, "minimum_group_coverage"),
+    ):
+        if not 0 <= value <= 1:
+            raise ValueError(f"{name} must be between 0 and 1")
+
+    required = [time_column, target, *inputs]
+    if group_column:
+        required.append(group_column)
+    missing = [column for column in required if column not in df.columns]
+    if missing:
+        raise ValueError(f"Unknown column(s): {', '.join(missing)}")
+    prepared = prepare_time_series(df, time_column)
+    if prepared["quality"]["duplicate_timestamps"]:
+        raise ValueError("duplicate timestamps are not allowed for time-series validation")
+    ordered = prepared["data"].dropna(subset=[time_column, target]).reset_index(drop=True)
+    xcols: list[str] = []
+    if model_type in {"dynamic_regression", "time_feature_random_forest"}:
+        featured = build_time_features(
+            ordered, time_column, [target, *inputs], lags or [1],
+            rolling_windows or [3], modeling_timezone=modeling_timezone,
+        )
+        ordered = featured["data"].reset_index(drop=True)
+        xcols = [name for name in featured["feature_names"] if name in ordered.columns]
+
+    initial_train_size = len(ordered) - fold_count * horizon
+    leakage_status = {
+        "status": "passed" if evaluation_protocol == "fixed_horizon_forecast" else "needs_review",
+        "evaluation_protocol": evaluation_protocol,
+        "uses_observed_validation_targets": evaluation_protocol == "observed_feature_holdout",
+    }
+    not_applicable_groups = {
+        "status": "not_applicable", "group_column": None,
+        "covered_groups": 0, "total_groups": 0, "coverage_ratio": None,
+    }
+    if initial_train_size < 5:
+        return {
+            "gate_status": "insufficient_history",
+            "gate_reasons": ["insufficient_history"],
+            "folds": [],
+            "aggregate_metrics": None,
+            "prediction_interval_coverage": {
+                "status": "unavailable", "covered_rows": 0, "evaluated_rows": 0,
+                "coverage_ratio": None, "confidence": prediction_interval_confidence,
+            },
+            "window_coverage": {
+                "requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0,
+            },
+            "group_coverage": not_applicable_groups,
+            "leakage_status": leakage_status,
+        }
+
+    folds: list[dict[str, Any]] = []
+    interval_covered = 0
+    interval_rows = 0
+    validation_positions: list[int] = []
+    fixed_horizon = evaluation_protocol == "fixed_horizon_forecast"
+    y = ordered[target].to_numpy(float)
+    X = ordered[xcols].to_numpy(float) if xcols else None
+    for fold_index in range(fold_count):
+        train_end = initial_train_size + fold_index * horizon
+        validation_end = train_end + horizon
+        actual = y[train_end:validation_end]
+        if model_type == "naive":
+            predictions = (
+                np.full(horizon, y[train_end - 1], dtype=float)
+                if fixed_horizon else y[train_end - 1:validation_end - 1]
+            )
+            training_predictions = y[:train_end - 1]
+            training_actual = y[1:train_end]
+        elif model_type == "seasonal_naive":
+            if train_end < seasonal_period:
+                return {
+                    "gate_status": "insufficient_history", "gate_reasons": ["insufficient_history"],
+                    "folds": [], "aggregate_metrics": None,
+                    "prediction_interval_coverage": {"status": "unavailable", "covered_rows": 0, "evaluated_rows": 0, "coverage_ratio": None, "confidence": prediction_interval_confidence},
+                    "window_coverage": {"requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0},
+                    "group_coverage": not_applicable_groups, "leakage_status": leakage_status,
+                }
+            history = list(y[:train_end])
+            predictions_list: list[float] = []
+            for offset in range(horizon):
+                source = train_end + offset - seasonal_period
+                predictions_list.append(float(history[source] if fixed_horizon else y[source]))
+                history.append(predictions_list[-1])
+            predictions = np.asarray(predictions_list)
+            training_predictions = y[:train_end - seasonal_period]
+            training_actual = y[seasonal_period:train_end]
+        else:
+            estimator = LinearRegression() if model_type == "dynamic_regression" else RandomForestRegressor(
+                n_estimators=100, random_state=42, n_jobs=1, min_samples_leaf=2,
+            )
+            estimator.fit(X[:train_end], y[:train_end])
+            training_predictions = estimator.predict(X[:train_end])
+            training_actual = y[:train_end]
+            if fixed_horizon:
+                predictions_list = []
+                for _ in range(horizon):
+                    row = _recursive_features(
+                        ordered, time_column, [target, *inputs], xcols, train_end,
+                        lags or [1], rolling_windows or [3], predictions_list, modeling_timezone,
+                    )
+                    predictions_list.append(float(estimator.predict(row.reshape(1, -1))[0]))
+                predictions = np.asarray(predictions_list)
+            else:
+                predictions = estimator.predict(X[train_end:validation_end])
+
+        metrics = _metrics(actual, predictions)
+        residual_rmse = root_mean_squared_error(training_actual, training_predictions)
+        z_score = NormalDist().inv_cdf((1 + prediction_interval_confidence) / 2)
+        half_width = z_score * residual_rmse * np.sqrt(1 + 1 / max(len(training_actual), 1))
+        covered = int(np.sum((actual >= predictions - half_width) & (actual <= predictions + half_width)))
+        interval_covered += covered
+        interval_rows += len(actual)
+        validation_positions.extend(range(train_end, validation_end))
+        folds.append({
+            "fold": fold_index + 1,
+            "train_rows": train_end,
+            "validation_rows": horizon,
+            "train_start": ordered[time_column].iloc[0],
+            "train_end": ordered[time_column].iloc[train_end - 1],
+            "validation_start": ordered[time_column].iloc[train_end],
+            "validation_end": ordered[time_column].iloc[validation_end - 1],
+            "metrics": metrics,
+            "prediction_interval_coverage": {
+                "covered_rows": covered,
+                "evaluated_rows": len(actual),
+                "coverage_ratio": covered / len(actual),
+                "confidence": prediction_interval_confidence,
+            },
+        })
+
+    aggregate_metrics = {
+        name: float(np.mean([fold["metrics"][name] for fold in folds]))
+        for name in ("mae", "rmse", "r2")
+    }
+    prediction_interval_coverage = {
+        "status": "available",
+        "covered_rows": interval_covered,
+        "evaluated_rows": interval_rows,
+        "coverage_ratio": interval_covered / interval_rows,
+        "confidence": prediction_interval_confidence,
+    }
+    window_coverage = {
+        "requested_folds": fold_count,
+        "evaluated_folds": len(folds),
+        "coverage_ratio": len(folds) / fold_count,
+    }
+    group_coverage = not_applicable_groups
+    if group_column:
+        all_groups = set(ordered[group_column].dropna().tolist())
+        covered_groups = set(ordered.iloc[validation_positions][group_column].dropna().tolist())
+        group_coverage = {
+            "status": "available",
+            "group_column": group_column,
+            "covered_groups": len(covered_groups),
+            "total_groups": len(all_groups),
+            "coverage_ratio": len(covered_groups) / len(all_groups) if all_groups else None,
+        }
+
+    gate_reasons: list[str] = []
+    if leakage_status["status"] != "passed":
+        gate_reasons.append("observed_validation_target_usage")
+    if prediction_interval_coverage["coverage_ratio"] < minimum_prediction_interval_coverage:
+        gate_reasons.append("prediction_interval_coverage_below_threshold")
+    if group_column and (
+        group_coverage["coverage_ratio"] is None
+        or group_coverage["coverage_ratio"] < minimum_group_coverage
+    ):
+        gate_reasons.append("group_coverage_below_threshold")
+    return {
+        "gate_status": "approved" if not gate_reasons else "needs_review",
+        "gate_reasons": gate_reasons,
+        "folds": folds,
+        "aggregate_metrics": aggregate_metrics,
+        "prediction_interval_coverage": prediction_interval_coverage,
+        "window_coverage": window_coverage,
+        "group_coverage": group_coverage,
+        "leakage_status": leakage_status,
+    }
 
 
 def fit_residual_hybrid_time_series(

@@ -106,7 +106,7 @@ from process_intelligence_engine.features.time_series_modeling import (
     walk_forward_splits,
     recommend_time_windows,
 )
-from process_intelligence_engine.modeling.time_series_models import fit_time_series_ladder, fit_residual_hybrid_time_series
+from process_intelligence_engine.modeling.time_series_models import fit_time_series_ladder, fit_residual_hybrid_time_series, validate_time_series_gate
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 from process_intelligence_engine.versioning.chain import VersionChain
@@ -2141,6 +2141,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_predict(params)
     if method == "features/time_series/validation":
         return _handle_time_series_validation(params)
+    if method == "features/time_series/validation_gate":
+        return _handle_time_series_validation_gate(params)
     if method == "features/time_series/windows":
         return _handle_time_series_windows(params)
     if method == "features/time_series":
@@ -2674,6 +2676,30 @@ def _handle_time_series_validation(params: dict) -> dict:
             ),
         }
     )
+
+
+def _handle_time_series_validation_gate(params: dict) -> dict:
+    """Evaluate chronological forecast evidence for estimator approval."""
+    df = REGISTRY.get(params["dataset_id"])
+    result = validate_time_series_gate(
+        df,
+        params["time_column"],
+        params["target"],
+        list(params.get("inputs", [])),
+        model_type=params["model_type"],
+        evaluation_protocol=params.get("evaluation_protocol", "fixed_horizon_forecast"),
+        fold_count=params.get("fold_count", 3),
+        horizon=params.get("horizon", 1),
+        group_column=params.get("group_column"),
+        lags=params.get("lags"),
+        rolling_windows=params.get("rolling_windows"),
+        seasonal_period=params.get("seasonal_period", 24),
+        modeling_timezone=params.get("modeling_timezone"),
+        prediction_interval_confidence=params.get("prediction_interval_confidence", .95),
+        minimum_prediction_interval_coverage=params.get("minimum_prediction_interval_coverage", .8),
+        minimum_group_coverage=params.get("minimum_group_coverage", 1.0),
+    )
+    return _plain_types({"dataset_id": params["dataset_id"], **result})
 
 
 def _handle_time_series(params: dict) -> dict:

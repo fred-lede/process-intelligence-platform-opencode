@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 
 from process_intelligence_engine.main import REGISTRY, handle_request
@@ -171,3 +173,116 @@ def test_fixed_horizon_train_boundary_is_not_changed_by_test_target_values():
     right = handle_request("features/time_series/fit", {"dataset_id": second, **params})
     assert left["validation"]["train_rows"] == right["validation"]["train_rows"]
     assert left["validation"]["train_end"] == right["validation"]["train_end"]
+
+
+def test_time_series_validation_gate_returns_chronological_fold_metrics():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=50, freq="h"),
+        "y": [float(index) for index in range(50)],
+    }), {})
+
+    result = handle_request("features/time_series/validation_gate", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "model_type": "naive",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "fold_count": 3,
+        "horizon": 4,
+    })
+
+    assert len(result["folds"]) == 3
+    assert [fold["train_rows"] for fold in result["folds"]] == [38, 42, 46]
+    for fold in result["folds"]:
+        assert fold["train_end"] < fold["validation_start"]
+        assert fold["validation_rows"] == 4
+        assert set(fold["metrics"]) == {"mae", "rmse", "r2"}
+    assert set(result["aggregate_metrics"]) == {"mae", "rmse", "r2"}
+    assert result["window_coverage"]["coverage_ratio"] == 1.0
+
+
+def test_time_series_validation_gate_fixed_horizon_naive_does_not_use_observed_targets():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=30, freq="h"),
+        "y": [float(index) for index in range(30)],
+    }), {})
+
+    result = handle_request("features/time_series/validation_gate", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "model_type": "naive",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "fold_count": 1,
+        "horizon": 5,
+    })
+
+    assert result["folds"][0]["metrics"]["mae"] == 3.0
+    assert math.isclose(result["folds"][0]["metrics"]["rmse"], math.sqrt(11))
+    assert result["leakage_status"] == {
+        "status": "passed",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "uses_observed_validation_targets": False,
+    }
+
+
+def test_time_series_validation_gate_reports_insufficient_history_without_metrics():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=8, freq="h"),
+        "y": [float(index) for index in range(8)],
+    }), {})
+
+    result = handle_request("features/time_series/validation_gate", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "model_type": "naive",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "fold_count": 2,
+        "horizon": 2,
+    })
+
+    assert result["gate_status"] == "insufficient_history"
+    assert "insufficient_history" in result["gate_reasons"]
+    assert result["folds"] == []
+    assert result["aggregate_metrics"] is None
+    assert result["prediction_interval_coverage"]["status"] == "unavailable"
+
+
+def test_time_series_validation_gate_approval_depends_on_interval_coverage():
+    common = {
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "model_type": "naive",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "fold_count": 1,
+        "horizon": 5,
+        "minimum_prediction_interval_coverage": 0.8,
+    }
+    approved_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=30, freq="h"),
+        "group": ["A", "B"] * 15,
+        "y": [5.0] * 30,
+    }), {})
+    approved = handle_request("features/time_series/validation_gate", {
+        "dataset_id": approved_id, "group_column": "group", **common,
+    })
+    assert approved["prediction_interval_coverage"]["coverage_ratio"] == 1.0
+    assert approved["group_coverage"]["coverage_ratio"] == 1.0
+    assert approved["gate_status"] == "approved"
+    assert approved["gate_reasons"] == []
+
+    review_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=30, freq="h"),
+        "y": [0.0] * 25 + [100.0, -100.0, 50.0, -50.0, 0.0],
+    }), {})
+    review = handle_request("features/time_series/validation_gate", {
+        "dataset_id": review_id, **common,
+    })
+    assert review["prediction_interval_coverage"]["coverage_ratio"] == 0.2
+    assert review["gate_status"] == "needs_review"
+    assert "prediction_interval_coverage_below_threshold" in review["gate_reasons"]
