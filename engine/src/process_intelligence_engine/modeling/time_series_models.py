@@ -43,7 +43,11 @@ def _recursive_features(frame: pd.DataFrame, time_column: str, columns: list[str
                 break
         if matched is None:
             raise ValueError(f"unknown time feature: {name}")
-        values = history if matched == target else frame[matched].astype(float).tolist()
+        if matched == target:
+            values = history
+        else:
+            known = frame[matched].iloc[:start].astype(float).tolist()
+            values = known + [known[-1]] * len(predictions)
         previous = values[start + len(predictions) - 1]
         if suffix.startswith("lag_"):
             row_values.append(float(values[start + len(predictions) - int(suffix[4:])]))
@@ -232,16 +236,7 @@ def validate_time_series_gate(
     prepared = prepare_time_series(df, time_column)
     if prepared["quality"]["duplicate_timestamps"]:
         raise ValueError("duplicate timestamps are not allowed for time-series validation")
-    ordered = prepared["data"].dropna(subset=[time_column, target]).reset_index(drop=True)
-    xcols: list[str] = []
-    if model_type in {"dynamic_regression", "time_feature_random_forest"}:
-        featured = build_time_features(
-            ordered, time_column, [target, *inputs], lags or [1],
-            rolling_windows or [3], modeling_timezone=modeling_timezone,
-        )
-        ordered = featured["data"].reset_index(drop=True)
-        xcols = [name for name in featured["feature_names"] if name in ordered.columns]
-
+    ordered = prepared["data"].dropna(subset=[time_column]).reset_index(drop=True)
     initial_train_size = len(ordered) - fold_count * horizon
     leakage_status = {
         "status": "passed" if evaluation_protocol == "fixed_horizon_forecast" else "needs_review",
@@ -268,6 +263,51 @@ def validate_time_series_gate(
             "group_coverage": not_applicable_groups,
             "leakage_status": leakage_status,
         }
+    validation_targets = ordered[target].iloc[initial_train_size:]
+    observed_validation_targets = int(validation_targets.notna().sum())
+    if ordered[target].isna().any():
+        validation_coverage = observed_validation_targets / len(validation_targets)
+        reason = (
+            "validation_target_coverage_incomplete"
+            if validation_coverage < 1
+            else "training_target_history_incomplete"
+        )
+        return {
+            "gate_status": "needs_review",
+            "gate_reasons": [reason],
+            "folds": [],
+            "aggregate_metrics": None,
+            "prediction_interval_coverage": {
+                "status": "unavailable", "covered_rows": 0, "evaluated_rows": 0,
+                "coverage_ratio": None, "confidence": prediction_interval_confidence,
+            },
+            "window_coverage": {
+                "requested_folds": fold_count, "evaluated_folds": 0,
+                "requested_rows": len(validation_targets),
+                "evaluated_rows": observed_validation_targets,
+                "coverage_ratio": validation_coverage,
+            },
+            "group_coverage": not_applicable_groups,
+            "leakage_status": leakage_status,
+        }
+
+    xcols: list[str] = []
+    if model_type in {"dynamic_regression", "time_feature_random_forest"}:
+        featured = build_time_features(
+            ordered, time_column, [target, *inputs], lags or [1],
+            rolling_windows or [3], modeling_timezone=modeling_timezone,
+        )
+        ordered = featured["data"].reset_index(drop=True)
+        xcols = [name for name in featured["feature_names"] if name in ordered.columns]
+        initial_train_size = len(ordered) - fold_count * horizon
+        if initial_train_size < 5:
+            return {
+                "gate_status": "insufficient_history", "gate_reasons": ["insufficient_history"],
+                "folds": [], "aggregate_metrics": None,
+                "prediction_interval_coverage": {"status": "unavailable", "covered_rows": 0, "evaluated_rows": 0, "coverage_ratio": None, "confidence": prediction_interval_confidence},
+                "window_coverage": {"requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0},
+                "group_coverage": not_applicable_groups, "leakage_status": leakage_status,
+            }
 
     folds: list[dict[str, Any]] = []
     interval_covered = 0

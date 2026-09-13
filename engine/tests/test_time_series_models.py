@@ -286,3 +286,57 @@ def test_time_series_validation_gate_approval_depends_on_interval_coverage():
     assert review["prediction_interval_coverage"]["coverage_ratio"] == 0.2
     assert review["gate_status"] == "needs_review"
     assert "prediction_interval_coverage_below_threshold" in review["gate_reasons"]
+
+
+def test_validation_gate_fixed_horizon_ignores_validation_period_inputs():
+    x_values = [float((index * 17) % 23 - 11) for index in range(60)]
+    frame = pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=60, freq="h"),
+        "x": x_values,
+        "y": [0.0, *[2 * value for value in x_values[:-1]]],
+    })
+    original_id = REGISTRY.register(frame, {})
+    changed = frame.copy()
+    changed.loc[55:, "x"] = [1000.0, -1000.0, 500.0, -500.0, 250.0]
+    changed_id = REGISTRY.register(changed, {})
+    params = {
+        "time_column": "ts", "target": "y", "inputs": ["x"],
+        "model_type": "dynamic_regression",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "fold_count": 1, "horizon": 5, "lags": [1], "rolling_windows": [3],
+    }
+
+    original = handle_request(
+        "features/time_series/validation_gate", {"dataset_id": original_id, **params}
+    )
+    perturbed = handle_request(
+        "features/time_series/validation_gate", {"dataset_id": changed_id, **params}
+    )
+
+    assert perturbed["folds"] == original["folds"]
+    assert perturbed["aggregate_metrics"] == original["aggregate_metrics"]
+    assert perturbed["prediction_interval_coverage"] == original["prediction_interval_coverage"]
+
+
+def test_validation_gate_missing_latest_targets_reduce_window_coverage():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=30, freq="h"),
+        "y": [5.0] * 28 + [None, None],
+    }), {})
+
+    result = handle_request("features/time_series/validation_gate", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "model_type": "naive",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "fold_count": 1,
+        "horizon": 5,
+    })
+
+    assert result["gate_status"] == "needs_review"
+    assert "validation_target_coverage_incomplete" in result["gate_reasons"]
+    assert result["window_coverage"]["coverage_ratio"] == 0.6
+    assert result["folds"] == []
+    assert result["aggregate_metrics"] is None
