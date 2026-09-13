@@ -2469,6 +2469,7 @@ def _handle_time_series_fit(params: dict) -> dict:
         modeling_timezone=params.get("modeling_timezone"),
         window_days=window_days,
         evaluation_protocol=params.get("evaluation_protocol", "observed_feature_holdout"),
+        lstm_sequence_length=params.get("lstm_sequence_length", 24),
     )
     if window:
         result["quality"]["missing_timestamps"] = window["excluded_undated_rows"]

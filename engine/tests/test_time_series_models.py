@@ -1,9 +1,75 @@
 import math
+import importlib.util
 
 import pandas as pd
 
 from process_intelligence_engine.main import REGISTRY, handle_request
 from process_intelligence_engine.main import MODEL_REGISTRY
+
+
+def test_time_series_lstm_reports_insufficient_sequence_history(monkeypatch):
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util,
+        "find_spec",
+        lambda name: object() if name == "tensorflow" else original_find_spec(name),
+    )
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=50, freq="h"),
+        "y": [float(index) for index in range(50)],
+    }), {})
+
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "lstm_sequence_length": 24,
+    })
+
+    lstm = next(item for item in result["results"] if item["model_type"] == "lstm")
+    assert lstm["status"] == "unavailable"
+    assert lstm["reason_code"] == "insufficient_history"
+    assert result["capabilities"]["lstm"] == lstm["capability"]
+    assert lstm["capability"]["dependency"] == {"name": "tensorflow", "available": True}
+    assert lstm["capability"]["data"] == {
+        "training_rows": 37,
+        "sequence_length": 24,
+        "available_sequences": 13,
+        "minimum_sequences": 32,
+        "meets_threshold": False,
+    }
+    assert lstm["capability"]["eligible"] is False
+    assert lstm["capability"]["reason_codes"] == ["insufficient_history"]
+
+
+def test_time_series_lstm_reports_missing_optional_dependency(monkeypatch):
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util,
+        "find_spec",
+        lambda name: None if name == "tensorflow" else original_find_spec(name),
+    )
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=100, freq="h"),
+        "y": [float(index) for index in range(100)],
+    }), {})
+
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "lstm_sequence_length": 12,
+    })
+
+    lstm = next(item for item in result["results"] if item["model_type"] == "lstm")
+    assert lstm["status"] == "unavailable"
+    assert lstm["reason_code"] == "dependency_missing"
+    assert lstm["capability"]["dependency"] == {"name": "tensorflow", "available": False}
+    assert lstm["capability"]["data"]["meets_threshold"] is True
+    assert lstm["capability"]["eligible"] is False
+    assert lstm["capability"]["reason_codes"] == ["dependency_missing"]
 
 
 def test_time_series_fit_returns_model_ladder_and_unavailable_states():
@@ -200,6 +266,41 @@ def test_time_series_validation_gate_returns_chronological_fold_metrics():
         assert set(fold["metrics"]) == {"mae", "rmse", "r2"}
     assert set(result["aggregate_metrics"]) == {"mae", "rmse", "r2"}
     assert result["window_coverage"]["coverage_ratio"] == 1.0
+
+
+def test_time_series_validation_gate_returns_uncertainty_metrics_schema():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=30, freq="h"),
+        "y": [float(index) for index in range(30)],
+    }), {})
+
+    result = handle_request("features/time_series/validation_gate", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "model_type": "naive",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "fold_count": 1,
+        "horizon": 5,
+        "prediction_interval_confidence": 0.9,
+    })
+
+    uncertainty = result["uncertainty_metrics"]
+    assert set(uncertainty) == {
+        "status", "method", "confidence", "residual_scale",
+        "mean_interval_width", "calibration",
+    }
+    assert uncertainty["status"] == "available"
+    assert uncertainty["method"] == "training_residual_normal"
+    assert uncertainty["confidence"] == 0.9
+    assert uncertainty["residual_scale"] == 1.0
+    assert uncertainty["mean_interval_width"] > 0
+    assert uncertainty["calibration"] == {
+        "covered_rows": result["prediction_interval_coverage"]["covered_rows"],
+        "evaluated_rows": result["prediction_interval_coverage"]["evaluated_rows"],
+        "coverage_ratio": result["prediction_interval_coverage"]["coverage_ratio"],
+    }
 
 
 def test_time_series_validation_gate_fixed_horizon_naive_does_not_use_observed_targets():

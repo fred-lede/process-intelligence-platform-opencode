@@ -11,12 +11,30 @@ from sklearn.linear_model import LinearRegression
 from .metrics import mean_absolute_error, root_mean_squared_error, r2_score
 
 
+LSTM_MINIMUM_TRAINING_SEQUENCES = 32
+
+
 def _metrics(y, pred):
     return {"mae": mean_absolute_error(y, pred), "rmse": root_mean_squared_error(y, pred), "r2": r2_score(y, pred)}
 
 
 def _unavailable(name, reason, features, validation, reason_code="not_implemented"):
     return {"model_type": name, "status": "unavailable", "error": reason, "reason_code": reason_code, "features": features, "validation": validation, "metrics": None}
+
+
+def _unavailable_uncertainty(confidence: float) -> dict[str, Any]:
+    return {
+        "status": "unavailable",
+        "method": None,
+        "confidence": confidence,
+        "residual_scale": None,
+        "mean_interval_width": None,
+        "calibration": {
+            "covered_rows": 0,
+            "evaluated_rows": 0,
+            "coverage_ratio": None,
+        },
+    }
 
 
 def _recursive_features(frame: pd.DataFrame, time_column: str, columns: list[str],
@@ -65,7 +83,7 @@ def _recursive_features(frame: pd.DataFrame, time_column: str, columns: list[str
     return np.asarray(row_values, dtype=float)
 
 
-def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *, lags: list[int] | None = None, rolling_windows: list[int] | None = None, seasonal_period: int = 24, train_ratio: float = .8, modeling_timezone: str | None = None, window_days: int | None = None, evaluation_protocol: str = "observed_feature_holdout") -> dict[str, Any]:
+def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *, lags: list[int] | None = None, rolling_windows: list[int] | None = None, seasonal_period: int = 24, train_ratio: float = .8, modeling_timezone: str | None = None, window_days: int | None = None, evaluation_protocol: str = "observed_feature_holdout", lstm_sequence_length: int = 24) -> dict[str, Any]:
     """Fit comparable chronological models; never uses random K-fold."""
     from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
     if isinstance(seasonal_period, bool) or not isinstance(seasonal_period, int) or seasonal_period < 1:
@@ -74,6 +92,8 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         raise ValueError("train_ratio must be between 0 and 1")
     if evaluation_protocol not in {"observed_feature_holdout", "fixed_horizon_forecast"}:
         raise ValueError("evaluation_protocol must be observed_feature_holdout or fixed_horizon_forecast")
+    if isinstance(lstm_sequence_length, bool) or not isinstance(lstm_sequence_length, int) or lstm_sequence_length < 1:
+        raise ValueError("lstm_sequence_length must be a positive integer")
     prepared = prepare_time_series(df, time_column)
     if prepared["quality"]["duplicate_timestamps"]:
         raise ValueError("duplicate timestamps are not allowed for time-series modeling")
@@ -176,6 +196,74 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                 results.append({"model_type":name, "status":"available", "features":[] if name == "arima" else xcols, "validation":validation, "metrics":_metrics(y[split:] if fixed_horizon else y[test], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast)), "_eval_indices":eval_indices, "evaluation_protocol":evaluation_protocol, "_estimator": model})
             except Exception as exc:
                 results.append(_unavailable(name, f"adapter failed: {exc}", [] if name == "arima" else xcols, validation, "adapter_error"))
+    tensorflow_available = importlib.util.find_spec("tensorflow") is not None
+    available_sequences = max(split - lstm_sequence_length, 0)
+    data_eligible = available_sequences >= LSTM_MINIMUM_TRAINING_SEQUENCES
+    capability_reasons = []
+    if not data_eligible:
+        capability_reasons.append("insufficient_history")
+    if not tensorflow_available:
+        capability_reasons.append("dependency_missing")
+    lstm_capability = {
+        "eligible": not capability_reasons,
+        "dependency": {"name": "tensorflow", "available": tensorflow_available},
+        "data": {
+            "training_rows": split,
+            "sequence_length": lstm_sequence_length,
+            "available_sequences": available_sequences,
+            "minimum_sequences": LSTM_MINIMUM_TRAINING_SEQUENCES,
+            "meets_threshold": data_eligible,
+        },
+        "reason_codes": capability_reasons,
+    }
+    lstm_features = [f"{target}_sequence_{lstm_sequence_length}"]
+    if capability_reasons:
+        reason_code = capability_reasons[0]
+        reason = (
+            f"requires at least {LSTM_MINIMUM_TRAINING_SEQUENCES} training sequences"
+            if reason_code == "insufficient_history"
+            else "tensorflow is not installed"
+        )
+        lstm_result = _unavailable("lstm", reason, lstm_features, validation, reason_code)
+    else:
+        try:
+            from tensorflow import keras
+
+            train_values = np.asarray(y[:split], dtype=float)
+            center = float(np.mean(train_values))
+            scale = float(np.std(train_values)) or 1.0
+            normalized = (train_values - center) / scale
+            sequence_x = np.asarray([
+                normalized[index - lstm_sequence_length:index]
+                for index in range(lstm_sequence_length, len(normalized))
+            ], dtype=float).reshape(-1, lstm_sequence_length, 1)
+            sequence_y = normalized[lstm_sequence_length:]
+            keras.utils.set_random_seed(42)
+            model = keras.Sequential([
+                keras.layers.Input(shape=(lstm_sequence_length, 1)),
+                keras.layers.LSTM(16),
+                keras.layers.Dense(1),
+            ])
+            model.compile(optimizer="adam", loss="mse")
+            model.fit(sequence_x, sequence_y, epochs=5, batch_size=min(32, len(sequence_x)), verbose=0)
+            history = list(train_values)
+            forecasts = []
+            for index in range(split, len(y)):
+                source = history if fixed_horizon else list(y[:index])
+                sequence = (np.asarray(source[-lstm_sequence_length:], dtype=float) - center) / scale
+                forecast = float(model.predict(sequence.reshape(1, lstm_sequence_length, 1), verbose=0)[0, 0] * scale + center)
+                forecasts.append(forecast)
+                history.append(forecast)
+            lstm_result = {
+                "model_type": "lstm", "status": "available", "features": lstm_features,
+                "validation": validation, "metrics": _metrics(y[split:], np.asarray(forecasts)),
+                "_eval_rows": len(forecasts), "_eval_indices": list(range(split, len(y))),
+                "evaluation_protocol": evaluation_protocol, "_estimator": None,
+            }
+        except Exception as exc:
+            lstm_result = _unavailable("lstm", f"adapter failed: {exc}", lstm_features, validation, "adapter_error")
+    lstm_result["capability"] = lstm_capability
+    results.append(lstm_result)
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}
     if window_days is not None: config["window_days"] = window_days
     estimators = {item["model_type"]: item.pop("_estimator", None) for item in results}
@@ -185,7 +273,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "train_start": usable[time_column].iloc[0] if split else None, "train_end": usable[time_column].iloc[split - 1] if split else None, "test_start": usable[time_column].iloc[indices[0]] if indices else None, "test_end": usable[time_column].iloc[indices[-1]] if indices else None, "protocol": protocol, "uses_observed_target": protocol == "observed_feature_holdout", "observed_target_usage": "test_period" if protocol == "observed_feature_holdout" else "training_only"}
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False
-    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "_estimators": estimators, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
+    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "capabilities":{"lstm":lstm_capability}, "_estimators": estimators, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
 
 
 def validate_time_series_gate(
@@ -257,6 +345,7 @@ def validate_time_series_gate(
                 "status": "unavailable", "covered_rows": 0, "evaluated_rows": 0,
                 "coverage_ratio": None, "confidence": prediction_interval_confidence,
             },
+            "uncertainty_metrics": _unavailable_uncertainty(prediction_interval_confidence),
             "window_coverage": {
                 "requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0,
             },
@@ -281,6 +370,7 @@ def validate_time_series_gate(
                 "status": "unavailable", "covered_rows": 0, "evaluated_rows": 0,
                 "coverage_ratio": None, "confidence": prediction_interval_confidence,
             },
+            "uncertainty_metrics": _unavailable_uncertainty(prediction_interval_confidence),
             "window_coverage": {
                 "requested_folds": fold_count, "evaluated_folds": 0,
                 "requested_rows": len(validation_targets),
@@ -305,6 +395,7 @@ def validate_time_series_gate(
                 "gate_status": "insufficient_history", "gate_reasons": ["insufficient_history"],
                 "folds": [], "aggregate_metrics": None,
                 "prediction_interval_coverage": {"status": "unavailable", "covered_rows": 0, "evaluated_rows": 0, "coverage_ratio": None, "confidence": prediction_interval_confidence},
+                "uncertainty_metrics": _unavailable_uncertainty(prediction_interval_confidence),
                 "window_coverage": {"requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0},
                 "group_coverage": not_applicable_groups, "leakage_status": leakage_status,
             }
@@ -312,6 +403,8 @@ def validate_time_series_gate(
     folds: list[dict[str, Any]] = []
     interval_covered = 0
     interval_rows = 0
+    residual_scales: list[float] = []
+    interval_widths: list[float] = []
     validation_positions: list[int] = []
     fixed_horizon = evaluation_protocol == "fixed_horizon_forecast"
     y = ordered[target].to_numpy(float)
@@ -333,6 +426,7 @@ def validate_time_series_gate(
                     "gate_status": "insufficient_history", "gate_reasons": ["insufficient_history"],
                     "folds": [], "aggregate_metrics": None,
                     "prediction_interval_coverage": {"status": "unavailable", "covered_rows": 0, "evaluated_rows": 0, "coverage_ratio": None, "confidence": prediction_interval_confidence},
+                    "uncertainty_metrics": _unavailable_uncertainty(prediction_interval_confidence),
                     "window_coverage": {"requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0},
                     "group_coverage": not_applicable_groups, "leakage_status": leakage_status,
                 }
@@ -371,6 +465,8 @@ def validate_time_series_gate(
         covered = int(np.sum((actual >= predictions - half_width) & (actual <= predictions + half_width)))
         interval_covered += covered
         interval_rows += len(actual)
+        residual_scales.append(float(residual_rmse))
+        interval_widths.append(float(2 * half_width))
         validation_positions.extend(range(train_end, validation_end))
         folds.append({
             "fold": fold_index + 1,
@@ -399,6 +495,18 @@ def validate_time_series_gate(
         "evaluated_rows": interval_rows,
         "coverage_ratio": interval_covered / interval_rows,
         "confidence": prediction_interval_confidence,
+    }
+    uncertainty_metrics = {
+        "status": "available",
+        "method": "training_residual_normal",
+        "confidence": prediction_interval_confidence,
+        "residual_scale": float(np.mean(residual_scales)),
+        "mean_interval_width": float(np.mean(interval_widths)),
+        "calibration": {
+            "covered_rows": interval_covered,
+            "evaluated_rows": interval_rows,
+            "coverage_ratio": interval_covered / interval_rows,
+        },
     }
     window_coverage = {
         "requested_folds": fold_count,
@@ -433,6 +541,7 @@ def validate_time_series_gate(
         "folds": folds,
         "aggregate_metrics": aggregate_metrics,
         "prediction_interval_coverage": prediction_interval_coverage,
+        "uncertainty_metrics": uncertainty_metrics,
         "window_coverage": window_coverage,
         "group_coverage": group_coverage,
         "leakage_status": leakage_status,
