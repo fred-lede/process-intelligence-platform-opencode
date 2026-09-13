@@ -438,6 +438,31 @@
       "persistenceConfirm": "Save the selected available models to Model Center?",
       "persistenceSuccess": "Selected models saved to Model Center",
       "persistenceError": "Failed to save models",
+      "persistenceGateRequired": "Run the validation gate for every selected model and resolve all review reasons before saving.",
+      "approvalGateRequired": "A time-series model can be approved only after its validation gate passes in this session.",
+      "validationGate": "Validation Gate",
+      "runValidationGate": "Run gate",
+      "gateEvidenceTitle": "Validation-gate evidence — {{model}}",
+      "gateApproved": "The time-series validation gate passed.",
+      "gateError": "Time-series validation gate failed",
+      "gateStatus": {
+        "approved": "Approved",
+        "needs_review": "Needs review",
+        "insufficient_history": "Insufficient history",
+        "notRun": "Not run"
+      },
+      "gateReasons": {
+        "insufficient_history": "There is not enough chronological history for the requested folds and horizon.",
+        "observed_validation_target_usage": "The evaluation uses observed validation-period targets and is not leakage-safe for formal forecasting.",
+        "prediction_interval_coverage_below_threshold": "Prediction-interval coverage is below the approval threshold.",
+        "group_coverage_below_threshold": "Validation does not cover enough of the configured groups.",
+        "validation_target_coverage_incomplete": "Some targets are missing in the validation window.",
+        "training_target_history_incomplete": "The training target history contains missing values."
+      },
+      "predictionIntervalCoverage": "Prediction Interval Coverage",
+      "windowCoverage": "Window Coverage",
+      "groupCoverage": "Group Coverage",
+      "noFoldEvidence": "No fold evidence is available.",
       "checkWindowCoverage": "Check available time windows",
       "windowCoverageTitle": "Adaptive time-window stability validation",
       "windowCoverageSummary": "The data covers about {{days}} days ({{rows}} valid timestamped rows). Only windows supported by the data will be run.",
@@ -480,6 +505,7 @@
       "testDates": "Test Dates",
       "leakage": {
         "passed": "Passed",
+        "needsReview": "Needs Review",
         "notChecked": "Not Checked"
       },
       "warning": {

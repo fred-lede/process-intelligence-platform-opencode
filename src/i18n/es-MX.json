@@ -440,6 +440,31 @@
       "persistenceConfirm": "¿Guardar los modelos disponibles seleccionados en el Centro de modelos?",
       "persistenceSuccess": "Modelos seleccionados guardados en el Centro de modelos",
       "persistenceError": "No se pudieron guardar los modelos",
+      "persistenceGateRequired": "Ejecuta la puerta de validación para cada modelo seleccionado y resuelve todos los motivos de revisión antes de guardar.",
+      "approvalGateRequired": "Un modelo temporal solo puede aprobarse después de superar su puerta de validación en esta sesión.",
+      "validationGate": "Puerta de validación",
+      "runValidationGate": "Ejecutar puerta",
+      "gateEvidenceTitle": "Evidencia de la puerta de validación — {{model}}",
+      "gateApproved": "La puerta de validación temporal fue aprobada.",
+      "gateError": "Falló la puerta de validación temporal",
+      "gateStatus": {
+        "approved": "Aprobado",
+        "needs_review": "Requiere revisión",
+        "insufficient_history": "Historial insuficiente",
+        "notRun": "No ejecutada"
+      },
+      "gateReasons": {
+        "insufficient_history": "No hay historial cronológico suficiente para los pliegues y el horizonte solicitados.",
+        "observed_validation_target_usage": "La evaluación usa objetivos observados del periodo de validación y no evita fugas para un pronóstico formal.",
+        "prediction_interval_coverage_below_threshold": "La cobertura del intervalo de predicción está por debajo del umbral de aprobación.",
+        "group_coverage_below_threshold": "La validación no cubre suficientes grupos configurados.",
+        "validation_target_coverage_incomplete": "Faltan algunos objetivos en la ventana de validación.",
+        "training_target_history_incomplete": "El historial del objetivo de entrenamiento contiene valores faltantes."
+      },
+      "predictionIntervalCoverage": "Cobertura del intervalo de predicción",
+      "windowCoverage": "Cobertura de ventanas",
+      "groupCoverage": "Cobertura de grupos",
+      "noFoldEvidence": "No hay evidencia de pliegues disponible.",
       "checkWindowCoverage": "Comprobar ventanas disponibles",
       "windowCoverageTitle": "Validación adaptativa de estabilidad por ventana",
       "windowCoverageSummary": "Los datos cubren aproximadamente {{days}} días ({{rows}} filas con marca de tiempo válida). Solo se ejecutarán ventanas compatibles.",
@@ -482,6 +507,7 @@
       "testDates": "Fechas de prueba",
       "leakage": {
         "passed": "Aprobado",
+        "needsReview": "Requiere revisión",
         "notChecked": "No revisado"
       },
       "warning": {

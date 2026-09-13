@@ -1360,6 +1360,84 @@ export interface TimeSeriesWindowRecommendation {
   windows: Array<{ window_days: number; status: 'available' | 'insufficient_history'; reason: string | null }>
 }
 
+export type TimeSeriesValidationGateModelType =
+  | 'naive'
+  | 'seasonal_naive'
+  | 'dynamic_regression'
+  | 'time_feature_random_forest'
+
+export type TimeSeriesValidationGateStatus = 'approved' | 'needs_review' | 'insufficient_history'
+
+export interface TimeSeriesValidationGateParams {
+  dataset_id: string
+  time_column: string
+  target: string
+  inputs: string[]
+  model_type: TimeSeriesValidationGateModelType
+  evaluation_protocol: 'fixed_horizon_forecast' | 'observed_feature_holdout'
+  fold_count: number
+  horizon: number
+  group_column?: string
+  lags?: number[]
+  rolling_windows?: number[]
+  seasonal_period?: number
+  modeling_timezone?: string
+  prediction_interval_confidence?: number
+  minimum_prediction_interval_coverage?: number
+  minimum_group_coverage?: number
+}
+
+export interface TimeSeriesValidationGateFold {
+  fold: number
+  train_rows: number
+  validation_rows: number
+  train_start: string
+  train_end: string
+  validation_start: string
+  validation_end: string
+  metrics: { mae: number; rmse: number; r2: number }
+  prediction_interval_coverage: {
+    covered_rows: number
+    evaluated_rows: number
+    coverage_ratio: number
+    confidence: number
+  }
+}
+
+export interface TimeSeriesValidationGateResult {
+  dataset_id: string
+  gate_status: TimeSeriesValidationGateStatus
+  gate_reasons: string[]
+  folds: TimeSeriesValidationGateFold[]
+  aggregate_metrics: { mae: number; rmse: number; r2: number } | null
+  prediction_interval_coverage: {
+    status: 'available' | 'unavailable'
+    covered_rows: number
+    evaluated_rows: number
+    coverage_ratio: number | null
+    confidence: number
+  }
+  window_coverage: {
+    requested_folds: number
+    evaluated_folds: number
+    requested_rows?: number
+    evaluated_rows?: number
+    coverage_ratio: number
+  }
+  group_coverage: {
+    status: 'available' | 'not_applicable'
+    group_column: string | null
+    covered_groups: number
+    total_groups: number
+    coverage_ratio: number | null
+  }
+  leakage_status: {
+    status: 'passed' | 'needs_review'
+    evaluation_protocol: 'fixed_horizon_forecast' | 'observed_feature_holdout'
+    uses_observed_validation_targets: boolean
+  }
+}
+
 export function recommendTimeSeriesWindows(params: { dataset_id: string; time_column: string; modeling_timezone?: string; candidates?: number[] }) {
   return engineCall<TimeSeriesWindowRecommendation>('features/time_series/windows', params)
 }
@@ -1412,6 +1490,10 @@ export async function fitTimeSeriesHybrid(params: TimeSeriesModelParams & { seas
 
 export async function validateTimeSeries(params: TimeSeriesValidationParams): Promise<TimeSeriesValidationResult> {
   return engineCall<TimeSeriesValidationResult>('features/time_series/validation', params as unknown as Record<string, unknown>)
+}
+
+export async function validateTimeSeriesGate(params: TimeSeriesValidationGateParams): Promise<TimeSeriesValidationGateResult> {
+  return engineCall<TimeSeriesValidationGateResult>('features/time_series/validation_gate', params as unknown as Record<string, unknown>)
 }
 
 export async function getConsecutiveExceedance(params: ConsecutiveExceedanceParams): Promise<ConsecutiveExceedance> {

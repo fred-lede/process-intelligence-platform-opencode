@@ -438,6 +438,31 @@
       "persistenceConfirm": "確認將選定的可用模型保存至模型中心？",
       "persistenceSuccess": "選定模型已保存至模型中心",
       "persistenceError": "保存模型失敗",
+      "persistenceGateRequired": "每個選定模型都必須先通過驗證閘門並排除所有待審原因，才能保存。",
+      "approvalGateRequired": "時間序列模型必須在本次工作階段通過驗證閘門後才能核准。",
+      "validationGate": "驗證閘門",
+      "runValidationGate": "執行閘門",
+      "gateEvidenceTitle": "驗證閘門證據 — {{model}}",
+      "gateApproved": "時間序列驗證閘門已通過。",
+      "gateError": "時間序列驗證閘門執行失敗",
+      "gateStatus": {
+        "approved": "已通過",
+        "needs_review": "需要審查",
+        "insufficient_history": "歷史資料不足",
+        "notRun": "尚未執行"
+      },
+      "gateReasons": {
+        "insufficient_history": "時間順序歷史不足，無法建立指定折數與預測期。",
+        "observed_validation_target_usage": "評估使用了驗證期間的觀測目標，不符合正式預測的防洩漏要求。",
+        "prediction_interval_coverage_below_threshold": "預測區間覆蓋率低於核准門檻。",
+        "group_coverage_below_threshold": "驗證未涵蓋足夠的指定群組。",
+        "validation_target_coverage_incomplete": "驗證視窗中有目標值缺失。",
+        "training_target_history_incomplete": "訓練目標歷史中有缺失值。"
+      },
+      "predictionIntervalCoverage": "預測區間覆蓋率",
+      "windowCoverage": "視窗覆蓋率",
+      "groupCoverage": "群組覆蓋率",
+      "noFoldEvidence": "目前沒有可用的折次證據。",
       "checkWindowCoverage": "檢查可用時間視窗",
       "windowCoverageTitle": "自適應時間窗穩定性驗證",
       "windowCoverageSummary": "資料涵蓋約 {{days}} 天（{{rows}} 筆有效時間資料）。僅執行資料實際支援的視窗。",
@@ -480,6 +505,7 @@
       "testDates": "測試日期",
       "leakage": {
         "passed": "通過",
+        "needsReview": "需要審查",
         "notChecked": "未檢查"
       },
       "warning": {

@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -47,6 +47,16 @@ const STATUS_COLORS: Record<ModelStatus, string> = {
   approved: 'gold',
   retired: 'error',
 }
+
+const TIME_SERIES_GATE_MODEL_TYPES: TimeSeriesValidationGateModelType[] = [
+  'naive',
+  'seasonal_naive',
+  'dynamic_regression',
+  'time_feature_random_forest',
+]
+
+const isTimeSeriesGateModel = (modelType: string): modelType is TimeSeriesValidationGateModelType =>
+  TIME_SERIES_GATE_MODEL_TYPES.includes(modelType as TimeSeriesValidationGateModelType)
 
 export default function ModelCenter() {
   const { t, i18n } = useTranslation()
@@ -104,8 +114,12 @@ export default function ModelCenter() {
   const [selectedTimeSeriesModels, setSelectedTimeSeriesModels] = useState<string[]>([])
   const [timeWindowRecommendation, setTimeWindowRecommendation] = useState<TimeSeriesWindowRecommendation | null>(null)
   const [timeWindowRecommendationLoading, setTimeWindowRecommendationLoading] = useState(false)
+  const [timeSeriesGateResults, setTimeSeriesGateResults] = useState<Partial<Record<TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult>>>({})
+  const [activeTimeSeriesGateModel, setActiveTimeSeriesGateModel] = useState<TimeSeriesValidationGateModelType | null>(null)
+  const [timeSeriesGateLoading, setTimeSeriesGateLoading] = useState<TimeSeriesValidationGateModelType | null>(null)
   const timeSeriesRequestId = useRef(0)
   const timeSeriesLadderRequestId = useRef(0)
+  const timeSeriesGateRequestId = useRef(0)
   const [timeSeriesRun, setTimeSeriesRun] = useState<{
     model: TimeSeriesModelResult
     validation: TimeSeriesValidationResult | null
@@ -193,12 +207,16 @@ export default function ModelCenter() {
   const invalidateTimeSeriesRun = () => {
     timeSeriesRequestId.current += 1
     timeSeriesLadderRequestId.current += 1
+    timeSeriesGateRequestId.current += 1
     setTimeSeriesRun(null)
     setTimeSeriesLadder(null)
     setTimeSeriesLoading(false)
     setTimeSeriesLadderLoading(false)
     setTimeSeriesHybrid(null)
     setTimeSeriesHybridLoading(false)
+    setTimeSeriesGateResults({})
+    setActiveTimeSeriesGateModel(null)
+    setTimeSeriesGateLoading(null)
   }
 
   const handleFitTimeSeriesHybrid = async () => {
@@ -227,6 +245,10 @@ export default function ModelCenter() {
     if (!datasetId || !timeColumn || !target || selectedInputs.length === 0) return
     const requestId = timeSeriesLadderRequestId.current + 1
     timeSeriesLadderRequestId.current = requestId
+    timeSeriesGateRequestId.current += 1
+    setTimeSeriesGateResults({})
+    setActiveTimeSeriesGateModel(null)
+    setTimeSeriesGateLoading(null)
     setTimeSeriesLadderLoading(true)
     try {
       const result = await fitTimeSeriesLadder({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays, evaluation_protocol: timeEvaluationProtocol })
@@ -241,8 +263,47 @@ export default function ModelCenter() {
     }
   }
 
+  const handleValidateTimeSeriesGate = async (modelType: string) => {
+    if (!datasetId || !timeColumn || !target || !isTimeSeriesGateModel(modelType)) return
+    const requestId = timeSeriesGateRequestId.current + 1
+    timeSeriesGateRequestId.current = requestId
+    const foldCount = 3
+    const horizon = Math.max(1, Math.floor((timeSeriesLadder?.validation.test_rows ?? foldCount) / foldCount))
+    setTimeSeriesGateLoading(modelType)
+    try {
+      const result = await validateTimeSeriesGate({
+        dataset_id: datasetId,
+        time_column: timeColumn,
+        target,
+        inputs: selectedInputs,
+        model_type: modelType,
+        evaluation_protocol: timeEvaluationProtocol,
+        fold_count: foldCount,
+        horizon,
+        lags: timeLags,
+        rolling_windows: rollingWindows,
+        modeling_timezone: 'UTC',
+      })
+      if (requestId !== timeSeriesGateRequestId.current) return
+      setTimeSeriesGateResults((current) => ({ ...current, [modelType]: result }))
+      setActiveTimeSeriesGateModel(modelType)
+      if (result.gate_status === 'approved') {
+        messageApi.success(t('modelCenter.timeSeries.gateApproved'))
+      } else {
+        messageApi.warning(t(`modelCenter.timeSeries.gateStatus.${result.gate_status}`))
+      }
+    } catch (err) {
+      if (requestId !== timeSeriesGateRequestId.current) return
+      messageApi.error(`${t('modelCenter.timeSeries.gateError')}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      if (requestId === timeSeriesGateRequestId.current) setTimeSeriesGateLoading(null)
+    }
+  }
+
   const handlePersistTimeSeriesModels = async () => {
-    if (!datasetId || !timeColumn || !target || selectedInputs.length === 0 || selectedTimeSeriesModels.length === 0) return
+    const gatesApproved = selectedTimeSeriesModels.length > 0 && selectedTimeSeriesModels.every((model) =>
+      isTimeSeriesGateModel(model) && timeSeriesGateResults[model]?.gate_status === 'approved')
+    if (!datasetId || !timeColumn || !target || selectedInputs.length === 0 || !gatesApproved) return
     setTimeSeriesPersisting(true)
     try {
       const result = await fitTimeSeriesLadder({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays, evaluation_protocol: timeEvaluationProtocol, persist_models: true, persist_model_types: selectedTimeSeriesModels })
@@ -263,11 +324,19 @@ export default function ModelCenter() {
     if (code) return t(`modelCenter.timeSeries.reasons.${code}`, { defaultValue: t('modelCenter.timeSeries.reasons.unknown') })
     return t('modelCenter.timeSeries.reasons.unknown')
   }
+  const timeSeriesGateStatusColor = (status: TimeSeriesValidationGateResult['gate_status']) =>
+    status === 'approved' ? 'success' : status === 'needs_review' ? 'warning' : 'error'
+  const timeSeriesGateReason = (reason: string) =>
+    t(`modelCenter.timeSeries.gateReasons.${reason}`, { defaultValue: reason })
+  const formatCoverage = (coverage: number | null) => coverage == null ? t('modelCenter.timeSeries.unavailable') : `${(coverage * 100).toFixed(1)}%`
   const ladderProtocols = timeSeriesLadder?.results
     .filter((row) => row.status === 'available' && row.evaluation?.protocol !== 'not_supported' && row.evaluation?.protocol !== 'not_applicable')
     .map((row) => row.evaluation?.protocol).filter(Boolean) ?? []
   const hasMixedLadderProtocols = new Set(ladderProtocols).size > 1
   const unavailableLadderCount = timeSeriesLadder?.results.filter((row) => row.status !== 'available').length ?? 0
+  const activeTimeSeriesGate = activeTimeSeriesGateModel ? timeSeriesGateResults[activeTimeSeriesGateModel] : undefined
+  const timeSeriesPersistenceAllowed = selectedTimeSeriesModels.length > 0 && selectedTimeSeriesModels.every((model) =>
+    isTimeSeriesGateModel(model) && timeSeriesGateResults[model]?.gate_status === 'approved')
   const ladderRows = timeSeriesLadder
     ? [...timeSeriesLadder.results].sort((a, b) => {
         const protocolA = a.evaluation?.protocol ?? ''
@@ -604,11 +673,17 @@ export default function ModelCenter() {
         const nextStatuses = STATUS_TRANSITIONS[record.status] || []
         return (
           <Space size="small">
-            {nextStatuses.map((s) => (
-              <Popconfirm key={s} title={t('modelCenter.confirmTransition', { status: s })} onConfirm={() => handleTransition(record.model_id, s)}>
-                <Button size="small" loading={transitioning}>{s}</Button>
-              </Popconfirm>
-            ))}
+            {nextStatuses.map((s) => {
+              const ladderModelType = record.model_type.replace(/^time_series_/, '')
+              const approvalBlocked = s === 'approved'
+                && record.model_type.startsWith('time_series_')
+                && (!isTimeSeriesGateModel(ladderModelType) || timeSeriesGateResults[ladderModelType]?.gate_status !== 'approved')
+              return (
+                <Popconfirm key={s} title={t('modelCenter.confirmTransition', { status: s })} onConfirm={() => handleTransition(record.model_id, s)} disabled={approvalBlocked}>
+                  <Button size="small" loading={transitioning} disabled={approvalBlocked} title={approvalBlocked ? t('modelCenter.timeSeries.approvalGateRequired') : undefined}>{s}</Button>
+                </Popconfirm>
+              )
+            })}
             <Popconfirm
               title={t('modelCenter.confirmDeleteModel')}
               onConfirm={() => handleDeleteModel(record.model_id)}
@@ -863,13 +938,16 @@ export default function ModelCenter() {
                         onConfirm={handlePersistTimeSeriesModels}
                         okText={t('common.confirm')}
                         cancelText={t('common.cancel')}
-                        disabled={selectedTimeSeriesModels.length === 0}
+                        disabled={!timeSeriesPersistenceAllowed}
                       >
-                        <Button type="primary" loading={timeSeriesPersisting} disabled={selectedTimeSeriesModels.length === 0}>
+                        <Button type="primary" loading={timeSeriesPersisting} disabled={!timeSeriesPersistenceAllowed} title={!timeSeriesPersistenceAllowed ? t('modelCenter.timeSeries.persistenceGateRequired') : undefined}>
                           {t('modelCenter.timeSeries.persistSelected')} ({selectedTimeSeriesModels.length})
                         </Button>
                       </Popconfirm>
                     </Space>
+                    {selectedTimeSeriesModels.length > 0 && !timeSeriesPersistenceAllowed && (
+                      <Alert type="warning" showIcon message={t('modelCenter.timeSeries.persistenceGateRequired')} />
+                    )}
                     <Table size="small" pagination={false} rowKey="model_type" dataSource={ladderRows} rowSelection={{ selectedRowKeys: selectedTimeSeriesModels, onChange: (keys) => setSelectedTimeSeriesModels(keys as string[]), getCheckboxProps: (row) => ({ disabled: row.status !== 'available' || row.persisted === true }) }} columns={[
                       { title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model_type', key: 'model_type', render: (value: string) => timeSeriesModelLabel(value) },
                       { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (value: string) => <Tag color={value === 'available' ? 'success' : 'warning'}>{value === 'available' ? t('modelCenter.timeSeries.available') : value === 'not_supported' ? t('modelCenter.timeSeries.notSupported') : value === 'not_applicable' ? t('modelCenter.timeSeries.notApplicable') : t('modelCenter.timeSeries.unavailable')}</Tag> },
@@ -885,7 +963,83 @@ export default function ModelCenter() {
                       { title: t('modelCenter.timeSeries.leakageStatus'), key: 'leakage', render: () => timeSeriesLadder.provenance?.leakage_check ? t('modelCenter.timeSeries.leakage.passed') : '—' },
                       { title: t('modelCenter.timeSeries.persistence'), key: 'persisted', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.persisted ? `${t('modelCenter.timeSeries.persisted')} (${row.model_id ?? '—'})` : t('modelCenter.timeSeries.notPersisted') },
                       { title: t('modelCenter.timeSeries.reason'), key: 'error', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.status !== 'available' ? timeSeriesReason(row.error, row.reason_code) : '—' },
+                      { title: t('modelCenter.timeSeries.validationGate'), key: 'validationGate', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => {
+                        const gateModelType = row.model_type
+                        const supported = isTimeSeriesGateModel(gateModelType)
+                        const gate = supported ? timeSeriesGateResults[gateModelType] : undefined
+                        return <Space size="small">
+                          {gate
+                            ? <Tag color={timeSeriesGateStatusColor(gate.gate_status)}>{t(`modelCenter.timeSeries.gateStatus.${gate.gate_status}`)}</Tag>
+                            : <Tag>{supported ? t('modelCenter.timeSeries.gateStatus.notRun') : t('modelCenter.timeSeries.notSupported')}</Tag>}
+                          <Button size="small" onClick={() => handleValidateTimeSeriesGate(row.model_type)} loading={timeSeriesGateLoading === row.model_type} disabled={row.status !== 'available' || !supported || timeSeriesGateLoading !== null}>
+                            {t('modelCenter.timeSeries.runValidationGate')}
+                          </Button>
+                        </Space>
+                      } },
                     ]} />
+                    {activeTimeSeriesGateModel && activeTimeSeriesGate && (
+                      <Card size="small" title={t('modelCenter.timeSeries.gateEvidenceTitle', { model: timeSeriesModelLabel(activeTimeSeriesGateModel) })}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Alert
+                            type={activeTimeSeriesGate.gate_status === 'approved' ? 'success' : activeTimeSeriesGate.gate_status === 'needs_review' ? 'warning' : 'error'}
+                            showIcon
+                            message={t(`modelCenter.timeSeries.gateStatus.${activeTimeSeriesGate.gate_status}`)}
+                          />
+                          {activeTimeSeriesGate.gate_reasons.map((reason) => (
+                            <Alert key={reason} type="warning" showIcon message={timeSeriesGateReason(reason)} />
+                          ))}
+                          <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }}>
+                            <Descriptions.Item label={t('modelCenter.timeSeries.protocol')}>
+                              {t(`modelCenter.timeSeries.${activeTimeSeriesGate.leakage_status.evaluation_protocol === 'fixed_horizon_forecast' ? 'fixedHorizon' : 'observedFeatureHoldout'}`)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label={t('modelCenter.timeSeries.foldCount')}>{activeTimeSeriesGate.folds.length}</Descriptions.Item>
+                            <Descriptions.Item label={t('modelCenter.timeSeries.leakageStatus')}>
+                              <Tag color={activeTimeSeriesGate.leakage_status.status === 'passed' ? 'success' : 'warning'}>
+                                {t(`modelCenter.timeSeries.leakage.${activeTimeSeriesGate.leakage_status.status === 'passed' ? 'passed' : 'needsReview'}`)}
+                              </Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label={t('modelCenter.timeSeries.predictionIntervalCoverage')}>
+                              {formatCoverage(activeTimeSeriesGate.prediction_interval_coverage.coverage_ratio)}
+                              {activeTimeSeriesGate.prediction_interval_coverage.status === 'available'
+                                ? ` (${activeTimeSeriesGate.prediction_interval_coverage.covered_rows}/${activeTimeSeriesGate.prediction_interval_coverage.evaluated_rows})`
+                                : ''}
+                            </Descriptions.Item>
+                            <Descriptions.Item label={t('modelCenter.timeSeries.windowCoverage')}>
+                              {formatCoverage(activeTimeSeriesGate.window_coverage.coverage_ratio)} ({activeTimeSeriesGate.window_coverage.evaluated_folds}/{activeTimeSeriesGate.window_coverage.requested_folds})
+                            </Descriptions.Item>
+                            <Descriptions.Item label={t('modelCenter.timeSeries.groupCoverage')}>
+                              {activeTimeSeriesGate.group_coverage.status === 'not_applicable'
+                                ? t('modelCenter.timeSeries.notApplicable')
+                                : `${formatCoverage(activeTimeSeriesGate.group_coverage.coverage_ratio)} (${activeTimeSeriesGate.group_coverage.covered_groups}/${activeTimeSeriesGate.group_coverage.total_groups})`}
+                            </Descriptions.Item>
+                            <Descriptions.Item label={t('modelCenter.timeSeries.observedTarget')}>
+                              {activeTimeSeriesGate.leakage_status.uses_observed_validation_targets ? t('modelCenter.timeSeries.yes') : t('modelCenter.timeSeries.no')}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="MAE">{activeTimeSeriesGate.aggregate_metrics?.mae.toFixed(4) ?? '—'}</Descriptions.Item>
+                            <Descriptions.Item label="RMSE">{activeTimeSeriesGate.aggregate_metrics?.rmse.toFixed(4) ?? '—'}</Descriptions.Item>
+                            <Descriptions.Item label="R²">{activeTimeSeriesGate.aggregate_metrics?.r2.toFixed(4) ?? '—'}</Descriptions.Item>
+                          </Descriptions>
+                          <Table
+                            size="small"
+                            pagination={false}
+                            rowKey="fold"
+                            dataSource={activeTimeSeriesGate.folds}
+                            locale={{ emptyText: t('modelCenter.timeSeries.noFoldEvidence') }}
+                            columns={[
+                              { title: t('modelCenter.timeSeries.fold'), dataIndex: 'fold', key: 'fold' },
+                              { title: t('modelCenter.timeSeries.trainRows'), dataIndex: 'train_rows', key: 'trainRows' },
+                              { title: t('modelCenter.timeSeries.trainDates'), key: 'trainDates', render: (_: unknown, row) => `${row.train_start} → ${row.train_end}` },
+                              { title: t('modelCenter.timeSeries.validationRows'), dataIndex: 'validation_rows', key: 'validationRows' },
+                              { title: t('modelCenter.timeSeries.validationDates'), key: 'validationDates', render: (_: unknown, row) => `${row.validation_start} → ${row.validation_end}` },
+                              { title: 'MAE', key: 'mae', render: (_: unknown, row) => row.metrics.mae.toFixed(4) },
+                              { title: 'RMSE', key: 'rmse', render: (_: unknown, row) => row.metrics.rmse.toFixed(4) },
+                              { title: 'R²', key: 'r2', render: (_: unknown, row) => row.metrics.r2.toFixed(4) },
+                              { title: t('modelCenter.timeSeries.predictionIntervalCoverage'), key: 'coverage', render: (_: unknown, row) => `${formatCoverage(row.prediction_interval_coverage.coverage_ratio)} (${row.prediction_interval_coverage.covered_rows}/${row.prediction_interval_coverage.evaluated_rows})` },
+                            ]}
+                          />
+                        </Space>
+                      </Card>
+                    )}
                     <Alert type="info" showIcon message={unavailableLadderCount > 0 ? t('modelCenter.timeSeries.ladderAdvice') : t('modelCenter.timeSeries.allModelsAvailableAdvice')} />
                     {timeSeriesLadder.provenance?.persisted === false && (
                       <Alert type="warning" showIcon message={t('modelCenter.timeSeries.persistenceNotice')} />
