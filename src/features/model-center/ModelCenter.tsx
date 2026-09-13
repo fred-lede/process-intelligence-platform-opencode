@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, fitTimeSeriesLadder, fitTimeSeriesHybrid, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -102,6 +102,8 @@ export default function ModelCenter() {
   const [timeSeriesHybrid, setTimeSeriesHybrid] = useState<TimeSeriesHybridResult | null>(null)
   const [timeSeriesHybridLoading, setTimeSeriesHybridLoading] = useState(false)
   const [selectedTimeSeriesModels, setSelectedTimeSeriesModels] = useState<string[]>([])
+  const [timeWindowRecommendation, setTimeWindowRecommendation] = useState<TimeSeriesWindowRecommendation | null>(null)
+  const [timeWindowRecommendationLoading, setTimeWindowRecommendationLoading] = useState(false)
   const timeSeriesRequestId = useRef(0)
   const timeSeriesLadderRequestId = useRef(0)
   const [timeSeriesRun, setTimeSeriesRun] = useState<{
@@ -208,6 +210,16 @@ export default function ModelCenter() {
     } catch (err) {
       messageApi.error(`${t('modelCenter.timeSeries.hybridError')}: ${err instanceof Error ? err.message : String(err)}`)
     } finally { setTimeSeriesHybridLoading(false) }
+  }
+
+  const handleRecommendTimeWindows = async () => {
+    if (!datasetId || !timeColumn) return
+    setTimeWindowRecommendationLoading(true)
+    try {
+      setTimeWindowRecommendation(await recommendTimeSeriesWindows({ dataset_id: datasetId, time_column: timeColumn, modeling_timezone: 'UTC' }))
+    } catch (err) {
+      messageApi.error(`${t('modelCenter.timeSeries.windowRecommendationError')}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally { setTimeWindowRecommendationLoading(false) }
   }
 
   const handleFitTimeSeriesLadder = async () => {
@@ -793,6 +805,18 @@ export default function ModelCenter() {
                       options={[2, 3, 7, 14, 24, 30, 60, 90].map((value) => ({ value, label: String(value) }))}
                     />
                   </Space>
+                  <Button loading={timeWindowRecommendationLoading} onClick={handleRecommendTimeWindows} disabled={!timeColumn || !datasetId}>
+                    {t('modelCenter.timeSeries.checkWindowCoverage')}
+                  </Button>
+                  {timeWindowRecommendation && <Card size="small" title={t('modelCenter.timeSeries.windowCoverageTitle')}>
+                    <Alert type="info" showIcon message={t('modelCenter.timeSeries.windowCoverageSummary', { days: timeWindowRecommendation.observed_span_days.toFixed(1), rows: timeWindowRecommendation.valid_timestamp_rows })} />
+                    <Table size="small" pagination={false} rowKey="window_days" dataSource={timeWindowRecommendation.windows} columns={[
+                      { title: t('modelCenter.timeSeries.window'), dataIndex: 'window_days', key: 'window_days', render: (v: number) => t('modelCenter.timeSeries.days', { count: v }) },
+                      { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (v: string) => <Tag color={v === 'available' ? 'success' : 'warning'}>{v === 'available' ? t('modelCenter.timeSeries.windowAvailable') : t('modelCenter.timeSeries.windowSkipped')}</Tag> },
+                      { title: t('modelCenter.timeSeries.reason'), dataIndex: 'reason', key: 'reason', render: (v: string | null) => v || '—' },
+                    ]} />
+                    <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>{t('modelCenter.timeSeries.windowCoverageAdvice')}</Typography.Paragraph>
+                  </Card>}
                   <Button
                     type="primary"
                     loading={timeSeriesLoading}
