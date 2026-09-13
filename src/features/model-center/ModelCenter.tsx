@@ -764,6 +764,9 @@ export default function ModelCenter() {
                       { title: t('modelCenter.timeSeries.reason'), key: 'error', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.status === 'unavailable' ? timeSeriesReason(row.error, row.reason_code) : '—' },
                     ]} />
                     <Alert type="info" showIcon message={t('modelCenter.timeSeries.ladderAdvice')} />
+                    {timeSeriesLadder.provenance?.persisted === false && (
+                      <Alert type="warning" showIcon message={t('modelCenter.timeSeries.persistenceNotice')} />
+                    )}
                   </Card>}
                   {timeSeriesRun && (
                     <Space direction="vertical" style={{ width: '100%' }}>

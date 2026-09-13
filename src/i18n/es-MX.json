@@ -411,6 +411,7 @@
       "notApplicable": "No aplicable",
       "reason": "Motivo",
       "ladderAdvice": "Compare las métricas de validación cronológica. Los modelos no disponibles requieren la dependencia o configuración indicada.",
+      "persistenceNotice": "Los resultados de la escalera solo están disponibles para este análisis y aún no se han guardado en el Centro de modelos. Revisa el modelo y la evidencia de validación antes de guardarlos formalmente.",
       "trainTestRange": "Límite entrenamiento/prueba",
       "observedTarget": "Usa objetivos observados de prueba",
       "yes": "Sí",

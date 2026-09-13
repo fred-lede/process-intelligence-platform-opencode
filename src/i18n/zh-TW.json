@@ -409,6 +409,7 @@
       "notApplicable": "不適用",
       "reason": "原因",
       "ladderAdvice": "請比較按時間順序切分的驗證指標；不可用模型需先處理列出的套件或設定。",
+      "persistenceNotice": "階梯結果目前僅供本次分析檢視，尚未保存至模型中心；確認模型與驗證結果後再進行正式保存。",
       "trainTestRange": "訓練／測試分界",
       "observedTarget": "使用測試期觀測輸出",
       "yes": "是",

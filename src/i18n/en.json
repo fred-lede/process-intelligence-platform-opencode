@@ -409,6 +409,7 @@
       "notApplicable": "Not applicable",
       "reason": "Reason",
       "ladderAdvice": "Compare chronological holdout metrics. Unavailable models require the listed dependency or configuration before use.",
+      "persistenceNotice": "Ladder results are available for this analysis only and have not been saved to Model Center. Review the model and validation evidence before formal saving.",
       "trainTestRange": "Train/Test Boundary",
       "observedTarget": "Uses Observed Test Targets",
       "yes": "Yes",
