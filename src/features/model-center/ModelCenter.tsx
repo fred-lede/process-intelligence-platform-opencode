@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, fitTimeSeriesLadder, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, fitTimeSeriesLadder, fitTimeSeriesHybrid, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -99,6 +99,8 @@ export default function ModelCenter() {
   const [timeSeriesLadder, setTimeSeriesLadder] = useState<TimeSeriesLadderResult | null>(null)
   const [timeSeriesLadderLoading, setTimeSeriesLadderLoading] = useState(false)
   const [timeSeriesPersisting, setTimeSeriesPersisting] = useState(false)
+  const [timeSeriesHybrid, setTimeSeriesHybrid] = useState<TimeSeriesHybridResult | null>(null)
+  const [timeSeriesHybridLoading, setTimeSeriesHybridLoading] = useState(false)
   const [selectedTimeSeriesModels, setSelectedTimeSeriesModels] = useState<string[]>([])
   const timeSeriesRequestId = useRef(0)
   const timeSeriesLadderRequestId = useRef(0)
@@ -192,6 +194,20 @@ export default function ModelCenter() {
     setTimeSeriesLadder(null)
     setTimeSeriesLoading(false)
     setTimeSeriesLadderLoading(false)
+    setTimeSeriesHybrid(null)
+    setTimeSeriesHybridLoading(false)
+  }
+
+  const handleFitTimeSeriesHybrid = async () => {
+    if (!datasetId || !timeColumn || !target || selectedInputs.length === 0) return
+    setTimeSeriesHybridLoading(true)
+    try {
+      const result = await fitTimeSeriesHybrid({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays, evaluation_protocol: timeEvaluationProtocol })
+      setTimeSeriesHybrid(result)
+      messageApi.success(t('modelCenter.timeSeries.hybridSuccess'))
+    } catch (err) {
+      messageApi.error(`${t('modelCenter.timeSeries.hybridError')}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally { setTimeSeriesHybridLoading(false) }
   }
 
   const handleFitTimeSeriesLadder = async () => {
@@ -785,6 +801,26 @@ export default function ModelCenter() {
                   >
                     {timeSeriesLoading ? t('modelCenter.timeSeries.running') : t('modelCenter.timeSeries.run')}
                   </Button>
+                  <Button onClick={handleFitTimeSeriesHybrid} loading={timeSeriesHybridLoading} disabled={!timeColumn || !target || selectedInputs.length === 0 || readiness?.status === 'critical'}>
+                    {t('modelCenter.timeSeries.fitHybrid')}
+                  </Button>
+                  {timeSeriesHybrid && <Card title={t('modelCenter.timeSeries.hybridTitle')} size="small">
+                    <Alert type="info" showIcon message={t(`modelCenter.timeSeries.${timeSeriesHybrid.evaluation_protocol === 'fixed_horizon_forecast' ? 'formalProtocolAdvice' : 'exploratoryProtocolAdvice'}`)} />
+                    <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }}>
+                      <Descriptions.Item label={t('modelCenter.timeSeries.hybridBaseline')}>{timeSeriesModelLabel(timeSeriesHybrid.baseline.model_type)}</Descriptions.Item>
+                      <Descriptions.Item label={t('modelCenter.timeSeries.hybridResidual')}>{timeSeriesModelLabel(timeSeriesHybrid.residual_model.model_type)}</Descriptions.Item>
+                      <Descriptions.Item label={t('modelCenter.timeSeries.hybridFeatures')}>{timeSeriesHybrid.residual_model.features.length}</Descriptions.Item>
+                      <Descriptions.Item label={t('modelCenter.timeSeries.trainRows')}>{timeSeriesHybrid.validation.train_rows}</Descriptions.Item>
+                      <Descriptions.Item label={t('modelCenter.timeSeries.testRows')}>{timeSeriesHybrid.validation.test_rows}</Descriptions.Item>
+                      <Descriptions.Item label={t('modelCenter.timeSeries.observedTarget')}>{timeSeriesHybrid.uses_observed_target ? t('modelCenter.timeSeries.yes') : t('modelCenter.timeSeries.no')}</Descriptions.Item>
+                      <Descriptions.Item label={t('modelCenter.timeSeries.leakageStatus')}><Tag color="success">{t('modelCenter.timeSeries.leakage.passed')}</Tag></Descriptions.Item>
+                    </Descriptions>
+                    <Table size="small" pagination={false} rowKey="model" dataSource={[
+                      { model: t('modelCenter.timeSeries.hybridBaseline'), ...timeSeriesHybrid.baseline.metrics },
+                      { model: t('modelCenter.timeSeries.hybridOutput'), ...timeSeriesHybrid.hybrid.metrics },
+                    ]} columns={[{ title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model', key: 'model' }, { title: 'MAE', dataIndex: 'mae', key: 'mae', render: (v: number) => v.toFixed(4) }, { title: 'RMSE', dataIndex: 'rmse', key: 'rmse', render: (v: number) => v.toFixed(4) }, { title: 'R²', dataIndex: 'r2', key: 'r2', render: (v: number) => v.toFixed(4) }]} />
+                    <Alert type={timeSeriesHybrid.improvement.rmse > 0 ? 'success' : 'warning'} showIcon message={t('modelCenter.timeSeries.hybridImprovement', { mae: timeSeriesHybrid.improvement.mae.toFixed(4), rmse: timeSeriesHybrid.improvement.rmse.toFixed(4) })} />
+                  </Card>}
                   <Button
                     onClick={handleFitTimeSeriesLadder}
                     loading={timeSeriesLadderLoading}

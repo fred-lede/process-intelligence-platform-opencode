@@ -1321,6 +1321,23 @@ export interface TimeSeriesLadderResult {
   provenance?: { leakage_check?: string; persisted?: boolean }
 }
 
+export interface TimeSeriesHybridResult {
+  status: string
+  target: string
+  inputs: string[]
+  time_column: string
+  evaluation_protocol: string
+  baseline: { model_type: string; metrics: { mae: number; rmse: number; r2: number } }
+  residual_model: { model_type: string; features: string[] }
+  hybrid: { model_type: string; metrics: { mae: number; rmse: number; r2: number } }
+  improvement: { mae: number; rmse: number }
+  validation: { strategy: string; train_rows: number; test_rows: number; train_end?: string; test_start?: string }
+  leakage_check: string
+  uses_observed_target: boolean
+  provenance?: Record<string, unknown>
+  feature_configuration?: Record<string, unknown>
+}
+
 export type TimeSeriesValidationParams = {
   dataset_id: string
   time_column: string
@@ -1373,6 +1390,10 @@ export async function prepareTimeSeriesModel(params: TimeSeriesModelParams): Pro
 
 export async function fitTimeSeriesLadder(params: TimeSeriesModelParams & { seasonal_period?: number; train_ratio?: number }): Promise<TimeSeriesLadderResult> {
   return engineCall<TimeSeriesLadderResult>('features/time_series/fit', params as unknown as Record<string, unknown>)
+}
+
+export async function fitTimeSeriesHybrid(params: TimeSeriesModelParams & { seasonal_period?: number; train_ratio?: number }): Promise<TimeSeriesHybridResult> {
+  return engineCall<TimeSeriesHybridResult>('features/time_series/hybrid', params as unknown as Record<string, unknown>)
 }
 
 export async function validateTimeSeries(params: TimeSeriesValidationParams): Promise<TimeSeriesValidationResult> {
