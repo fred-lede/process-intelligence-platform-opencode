@@ -204,6 +204,20 @@ export default function ModelCenter() {
     .filter((row) => row.status === 'available' && row.evaluation?.protocol !== 'not_supported' && row.evaluation?.protocol !== 'not_applicable')
     .map((row) => row.evaluation?.protocol).filter(Boolean) ?? []
   const hasMixedLadderProtocols = new Set(ladderProtocols).size > 1
+  const unavailableLadderCount = timeSeriesLadder?.results.filter((row) => row.status !== 'available').length ?? 0
+  const ladderRows = timeSeriesLadder
+    ? [...timeSeriesLadder.results].sort((a, b) => {
+        const protocolA = a.evaluation?.protocol ?? ''
+        const protocolB = b.evaluation?.protocol ?? ''
+        if (protocolA !== protocolB) return protocolA.localeCompare(protocolB)
+        const metricA = a.metrics?.rmse
+        const metricB = b.metrics?.rmse
+        if (metricA == null && metricB == null) return 0
+        if (metricA == null) return 1
+        if (metricB == null) return -1
+        return metricA - metricB
+      })
+    : []
 
   useEffect(() => {
     invalidateTimeSeriesRun()
@@ -747,7 +761,8 @@ export default function ModelCenter() {
                   {(importResult?.row_count ?? 0) < 7 && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.warning.tooFewRows')} />}
                   {timeSeriesLadder && <Card title={t('modelCenter.timeSeries.ladderTitle')} size="small">
                     {hasMixedLadderProtocols && <Alert type="warning" showIcon message={t('modelCenter.timeSeries.mixedProtocols')} />}
-                    <Table size="small" pagination={false} rowKey="model_type" dataSource={timeSeriesLadder.results} columns={[
+                    <Alert type="info" showIcon message={timeEvaluationProtocol === 'fixed_horizon_forecast' ? t('modelCenter.timeSeries.formalProtocolAdvice') : t('modelCenter.timeSeries.exploratoryProtocolAdvice')} />
+                    <Table size="small" pagination={false} rowKey="model_type" dataSource={ladderRows} columns={[
                       { title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model_type', key: 'model_type', render: (value: string) => timeSeriesModelLabel(value) },
                       { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (value: string) => <Tag color={value === 'available' ? 'success' : 'warning'}>{value === 'available' ? t('modelCenter.timeSeries.available') : value === 'not_supported' ? t('modelCenter.timeSeries.notSupported') : value === 'not_applicable' ? t('modelCenter.timeSeries.notApplicable') : t('modelCenter.timeSeries.unavailable')}</Tag> },
                       { title: 'MAE', key: 'mae', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.mae.toFixed(4) ?? '—' },
@@ -761,9 +776,9 @@ export default function ModelCenter() {
                       { title: t('modelCenter.timeSeries.observedTarget'), key: 'observedTarget', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.evaluation?.uses_observed_target == null ? '—' : row.evaluation.uses_observed_target ? t('modelCenter.timeSeries.yes') : t('modelCenter.timeSeries.no') },
                       { title: t('modelCenter.timeSeries.leakageStatus'), key: 'leakage', render: () => timeSeriesLadder.provenance?.leakage_check ? t('modelCenter.timeSeries.leakage.passed') : '—' },
                       { title: t('modelCenter.timeSeries.persistence'), key: 'persisted', render: () => timeSeriesLadder.provenance?.persisted == null ? '—' : timeSeriesLadder.provenance.persisted ? t('modelCenter.timeSeries.persisted') : t('modelCenter.timeSeries.notPersisted') },
-                      { title: t('modelCenter.timeSeries.reason'), key: 'error', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.status === 'unavailable' ? timeSeriesReason(row.error, row.reason_code) : '—' },
+                      { title: t('modelCenter.timeSeries.reason'), key: 'error', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.status !== 'available' ? timeSeriesReason(row.error, row.reason_code) : '—' },
                     ]} />
-                    <Alert type="info" showIcon message={t('modelCenter.timeSeries.ladderAdvice')} />
+                    <Alert type="info" showIcon message={unavailableLadderCount > 0 ? t('modelCenter.timeSeries.ladderAdvice') : t('modelCenter.timeSeries.allModelsAvailableAdvice')} />
                     {timeSeriesLadder.provenance?.persisted === false && (
                       <Alert type="warning" showIcon message={t('modelCenter.timeSeries.persistenceNotice')} />
                     )}
