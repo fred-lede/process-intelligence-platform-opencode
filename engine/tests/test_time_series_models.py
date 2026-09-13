@@ -32,6 +32,7 @@ def test_time_series_windows_adapt_to_seven_day_span():
     })
     statuses = {item["window_days"]: item["status"] for item in result["windows"]}
     assert result["observed_span_days"] == 167 / 24
+    assert result["effective_span_days"] == 7
     assert statuses[3] == "available" and statuses[7] == "available"
     assert statuses[14] == "insufficient_history"
 

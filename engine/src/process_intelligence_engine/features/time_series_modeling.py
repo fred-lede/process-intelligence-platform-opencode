@@ -342,11 +342,17 @@ def recommend_time_windows(
         raise ValueError(f"Time column '{time_column}' contains no timestamps")
     start, end = valid.min(), valid.max()
     span_days = (end - start).total_seconds() / 86400
+    intervals = valid.sort_values().diff().dropna().dt.total_seconds()
+    sampling_days = float(intervals.median() / 86400) if not intervals.empty else 0.0
+    # Treat a complete set of regularly sampled points as covering its final
+    # sampling interval as well (168 hourly points represent seven calendar
+    # days even though first-to-last elapsed time is 6.958 days).
+    effective_span_days = span_days + max(sampling_days, 0.0)
     recommendations = []
     for days in candidates:
         if isinstance(days, bool) or not isinstance(days, int) or days < 1:
             raise ValueError("window candidates must be positive integers")
-        feasible = span_days >= days
+        feasible = effective_span_days >= days
         recommendations.append({
             "window_days": days,
             "status": "available" if feasible else "insufficient_history",
@@ -357,6 +363,7 @@ def recommend_time_windows(
         "observed_start": start.isoformat().replace("+00:00", "Z"),
         "observed_end": end.isoformat().replace("+00:00", "Z"),
         "observed_span_days": span_days,
+        "effective_span_days": effective_span_days,
         "valid_timestamp_rows": int(valid.size),
         "excluded_undated_rows": int(timestamps.isna().sum()),
         "windows": recommendations,
