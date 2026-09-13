@@ -62,8 +62,16 @@ def test_time_series_fixed_horizon_is_explicit_and_does_not_mix_protocols():
     assert available
     assert all(item["evaluation"]["protocol"] == "fixed_horizon_forecast" for item in available)
     assert all(item["evaluation"]["observed_target_usage"] == "training_only" for item in available)
-    unsupported = [item for item in result["results"] if item.get("reason_code") == "not_supported"]
-    assert unsupported
+    # All currently implemented ladder adapters support recursive fixed-horizon
+    # evaluation.  Optional adapters may still be unavailable when their
+    # dependency is not installed, but they must never silently use the
+    # observed test target.
+    for item in result["results"]:
+        if item["status"] == "available":
+            assert item["evaluation"]["protocol"] == "fixed_horizon_forecast"
+            assert item["evaluation"]["observed_target_usage"] == "training_only"
+        else:
+            assert item.get("reason_code") in {"dependency_missing", "adapter_error", "insufficient_history"}
     assert result["validation"]["train_end"] < result["validation"]["test_start"]
 
 
