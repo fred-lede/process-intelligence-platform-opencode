@@ -1438,6 +1438,70 @@ export interface TimeSeriesValidationGateResult {
   }
 }
 
+export interface TimeSeriesFeatureProvenance {
+  kind: string
+  source_column: string
+  lag: number | null
+  window: number | null
+  availability: 'historical_only' | 'prediction_timestamp' | 'prediction_time_input'
+}
+
+export interface TimeSeriesExplanationResult {
+  model_id: string
+  dataset_id: string
+  feature_importance: {
+    method: string
+    shap_compatible: boolean
+    expected_value: number
+    features: Array<{
+      name: string
+      importance: number
+      provenance: TimeSeriesFeatureProvenance
+    }>
+  }
+  sensitivity: {
+    method: 'chronological_block_permutation'
+    block_size: number
+    random_seed: number
+    features: Array<{
+      name: string
+      mae_increase: number
+      baseline_mae: number
+      perturbed_mae: number
+      provenance: TimeSeriesFeatureProvenance
+    }>
+  }
+  interactions: {
+    method: 'conditional_quantile_perturbation'
+    conditioning: 'within_feature_quantile_strata'
+    pairs: Array<{
+      feature: string
+      conditioning_feature: string
+      strength: number
+      stratum_contrasts: number[]
+      feature_provenance: TimeSeriesFeatureProvenance
+      conditioning_provenance: TimeSeriesFeatureProvenance
+      evidence_status: 'model_inferred'
+    }>
+  }
+  metadata: {
+    analysis_type: 'time_series_explanation'
+    evidence_status: 'model_inferred'
+    causal_claim: false
+    interpretation: 'predictive_association_only'
+    requires_experimental_confirmation: true
+    recommended_confirmation: 'targeted_doe_or_engineering_experiment'
+    evaluation_protocol: string
+  }
+}
+
+export interface TimeSeriesExplanationParams {
+  model_id: string
+  dataset_id: string
+  block_size?: number
+  random_seed?: number
+}
+
 export function recommendTimeSeriesWindows(params: { dataset_id: string; time_column: string; modeling_timezone?: string; candidates?: number[] }) {
   return engineCall<TimeSeriesWindowRecommendation>('features/time_series/windows', params)
 }
@@ -1494,6 +1558,10 @@ export async function validateTimeSeries(params: TimeSeriesValidationParams): Pr
 
 export async function validateTimeSeriesGate(params: TimeSeriesValidationGateParams): Promise<TimeSeriesValidationGateResult> {
   return engineCall<TimeSeriesValidationGateResult>('features/time_series/validation_gate', params as unknown as Record<string, unknown>)
+}
+
+export async function explainTimeSeriesModel(params: TimeSeriesExplanationParams): Promise<TimeSeriesExplanationResult> {
+  return engineCall<TimeSeriesExplanationResult>('modeling/time_series/explain', params as unknown as Record<string, unknown>)
 }
 
 export async function getConsecutiveExceedance(params: ConsecutiveExceedanceParams): Promise<ConsecutiveExceedance> {

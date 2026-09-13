@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult, TimeSeriesExplanationResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -120,6 +120,7 @@ export default function ModelCenter() {
   const timeSeriesRequestId = useRef(0)
   const timeSeriesLadderRequestId = useRef(0)
   const timeSeriesGateRequestId = useRef(0)
+  const timeSeriesExplanationRequestId = useRef(0)
   const [timeSeriesRun, setTimeSeriesRun] = useState<{
     model: TimeSeriesModelResult
     validation: TimeSeriesValidationResult | null
@@ -128,6 +129,8 @@ export default function ModelCenter() {
   } | null>(null)
   const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | null>(null)
   const [selectedModelInfoLoading, setSelectedModelInfoLoading] = useState(false)
+  const [timeSeriesExplanation, setTimeSeriesExplanation] = useState<TimeSeriesExplanationResult | null>(null)
+  const [timeSeriesExplanationLoading, setTimeSeriesExplanationLoading] = useState(false)
 
   useEffect(() => {
     setContext(
@@ -203,6 +206,12 @@ export default function ModelCenter() {
       .finally(() => { if (active) setSelectedModelInfoLoading(false) })
     return () => { active = false }
   }, [selectedModelId])
+
+  useEffect(() => {
+    timeSeriesExplanationRequestId.current += 1
+    setTimeSeriesExplanation(null)
+    setTimeSeriesExplanationLoading(false)
+  }, [datasetId, selectedModelId])
 
   const invalidateTimeSeriesRun = () => {
     timeSeriesRequestId.current += 1
@@ -318,6 +327,25 @@ export default function ModelCenter() {
     }
   }
 
+  const handleExplainTimeSeriesModel = async () => {
+    if (!datasetId || !selectedModelId || !selectedModelInfo?.model_type.startsWith('time_series_')) return
+    const requestId = timeSeriesExplanationRequestId.current + 1
+    timeSeriesExplanationRequestId.current = requestId
+    setTimeSeriesExplanationLoading(true)
+    try {
+      const result = await explainTimeSeriesModel({ model_id: selectedModelId, dataset_id: datasetId })
+      if (requestId !== timeSeriesExplanationRequestId.current) return
+      setTimeSeriesExplanation(result)
+      messageApi.success(t('modelCenter.timeSeries.explanation.success'))
+    } catch (err) {
+      if (requestId !== timeSeriesExplanationRequestId.current) return
+      setTimeSeriesExplanation(null)
+      messageApi.error(`${t('modelCenter.timeSeries.explanation.error')}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      if (requestId === timeSeriesExplanationRequestId.current) setTimeSeriesExplanationLoading(false)
+    }
+  }
+
   const timeSeriesModelLabel = (name: string) => t(`modelCenter.timeSeries.models.${name}`, { defaultValue: name })
   const timeSeriesReason = (reason?: string | null, code?: string | null) => {
     if (!reason && !code) return '—'
@@ -328,6 +356,15 @@ export default function ModelCenter() {
     status === 'approved' ? 'success' : status === 'needs_review' ? 'warning' : 'error'
   const timeSeriesGateReason = (reason: string) =>
     t(`modelCenter.timeSeries.gateReasons.${reason}`, { defaultValue: reason })
+  const timeSeriesProvenanceKind = (kind: string) =>
+    t(`modelCenter.timeSeries.explanation.provenanceKinds.${kind}`, { defaultValue: kind })
+  const timeSeriesAvailability = (availability: string) =>
+    t(`modelCenter.timeSeries.explanation.availability.${availability}`, { defaultValue: availability })
+  const timeSeriesProtocol = (protocol: string) => protocol === 'fixed_horizon_forecast'
+    ? t('modelCenter.timeSeries.fixedHorizon')
+    : protocol === 'observed_feature_holdout'
+      ? t('modelCenter.timeSeries.observedFeatureHoldout')
+      : protocol
   const formatCoverage = (coverage: number | null) => coverage == null ? t('modelCenter.timeSeries.unavailable') : `${(coverage * 100).toFixed(1)}%`
   const ladderProtocols = timeSeriesLadder?.results
     .filter((row) => row.status === 'available' && row.evaluation?.protocol !== 'not_supported' && row.evaluation?.protocol !== 'not_applicable')
@@ -1124,18 +1161,99 @@ export default function ModelCenter() {
           {selectedModelId && (
             <Card type="inner" size="small" title={t('modelCenter.selectedModel.title')} style={{ marginTop: 12 }} loading={selectedModelInfoLoading}>
               {selectedModelInfo ? (
-                <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3 }} bordered>
-                  <Descriptions.Item label={t('modelCenter.selectedModel.status')}>
-                    <Tag color="success">{t('modelCenter.selectedModel.loaded')}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label={t('modelCenter.selectedModel.type')}>{selectedModelInfo.model_type}</Descriptions.Item>
-                  <Descriptions.Item label={t('modelCenter.selectedModel.target')}>{selectedModelInfo.target}</Descriptions.Item>
-                  <Descriptions.Item label={t('modelCenter.selectedModel.inputs')}>{selectedModelInfo.inputs.join(', ') || '—'}</Descriptions.Item>
-                  <Descriptions.Item label={t('modelCenter.selectedModel.trainingRows')}>{selectedModelInfo.n_train}</Descriptions.Item>
-                  <Descriptions.Item label={t('modelCenter.selectedModel.replay')}>
-                    <Tag color="green">{t('modelCenter.selectedModel.replayReady')}</Tag>
-                  </Descriptions.Item>
-                </Descriptions>
+                <>
+                  <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3 }} bordered>
+                    <Descriptions.Item label={t('modelCenter.selectedModel.status')}>
+                      <Tag color="success">{t('modelCenter.selectedModel.loaded')}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('modelCenter.selectedModel.type')}>{selectedModelInfo.model_type}</Descriptions.Item>
+                    <Descriptions.Item label={t('modelCenter.selectedModel.target')}>{selectedModelInfo.target}</Descriptions.Item>
+                    <Descriptions.Item label={t('modelCenter.selectedModel.inputs')}>{selectedModelInfo.inputs.join(', ') || '—'}</Descriptions.Item>
+                    <Descriptions.Item label={t('modelCenter.selectedModel.trainingRows')}>{selectedModelInfo.n_train}</Descriptions.Item>
+                    <Descriptions.Item label={t('modelCenter.selectedModel.replay')}>
+                      <Tag color="green">{t('modelCenter.selectedModel.replayReady')}</Tag>
+                    </Descriptions.Item>
+                  </Descriptions>
+                  {selectedModelInfo.model_type.startsWith('time_series_') && (
+                    <Card size="small" title={t('modelCenter.timeSeries.explanation.title')} style={{ marginTop: 12 }}>
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <Button type="primary" loading={timeSeriesExplanationLoading} onClick={handleExplainTimeSeriesModel}>
+                          {timeSeriesExplanationLoading
+                            ? t('modelCenter.timeSeries.explanation.running')
+                            : t('modelCenter.timeSeries.explanation.run')}
+                        </Button>
+                        <Alert
+                          type="warning"
+                          showIcon
+                          message={t('modelCenter.timeSeries.explanation.nonCausalTitle')}
+                          description={t('modelCenter.timeSeries.explanation.nonCausalDescription')}
+                        />
+                        {timeSeriesExplanation && (
+                          <Space direction="vertical" style={{ width: '100%' }}>
+                            <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }}>
+                              <Descriptions.Item label={t('modelCenter.timeSeries.explanation.evidenceStatus')}>
+                                <Tag color="processing">{t('modelCenter.timeSeries.explanation.modelInferred')}</Tag>
+                              </Descriptions.Item>
+                              <Descriptions.Item label={t('modelCenter.timeSeries.protocol')}>{timeSeriesProtocol(timeSeriesExplanation.metadata.evaluation_protocol)}</Descriptions.Item>
+                              <Descriptions.Item label={t('modelCenter.timeSeries.explanation.expectedValue')}>{timeSeriesExplanation.feature_importance.expected_value.toFixed(4)}</Descriptions.Item>
+                              <Descriptions.Item label={t('modelCenter.timeSeries.explanation.importanceMethod')}>{t(`modelCenter.timeSeries.explanation.methods.${timeSeriesExplanation.feature_importance.method}`, { defaultValue: timeSeriesExplanation.feature_importance.method })}</Descriptions.Item>
+                              <Descriptions.Item label={t('modelCenter.timeSeries.explanation.blockSize')}>{timeSeriesExplanation.sensitivity.block_size}</Descriptions.Item>
+                              <Descriptions.Item label={t('modelCenter.timeSeries.explanation.randomSeed')}>{timeSeriesExplanation.sensitivity.random_seed}</Descriptions.Item>
+                            </Descriptions>
+
+                            <Typography.Title level={5}>{t('modelCenter.timeSeries.explanation.featureImportanceTitle')}</Typography.Title>
+                            <Table
+                              size="small"
+                              pagination={false}
+                              rowKey="name"
+                              dataSource={timeSeriesExplanation.feature_importance.features}
+                              columns={[
+                                { title: t('modelCenter.timeSeries.explanation.feature'), dataIndex: 'name', key: 'name' },
+                                { title: t('modelCenter.timeSeries.explanation.importance'), dataIndex: 'importance', key: 'importance', render: (value: number) => `${(value * 100).toFixed(2)}%` },
+                                { title: t('modelCenter.timeSeries.explanation.sourceColumn'), key: 'sourceColumn', render: (_: unknown, row: TimeSeriesExplanationResult['feature_importance']['features'][number]) => row.provenance.source_column },
+                                { title: t('modelCenter.timeSeries.explanation.derivation'), key: 'kind', render: (_: unknown, row: TimeSeriesExplanationResult['feature_importance']['features'][number]) => timeSeriesProvenanceKind(row.provenance.kind) },
+                                { title: t('modelCenter.timeSeries.lags'), key: 'lag', render: (_: unknown, row: TimeSeriesExplanationResult['feature_importance']['features'][number]) => row.provenance.lag ?? '—' },
+                                { title: t('modelCenter.timeSeries.explanation.window'), key: 'window', render: (_: unknown, row: TimeSeriesExplanationResult['feature_importance']['features'][number]) => row.provenance.window ?? '—' },
+                                { title: t('modelCenter.timeSeries.explanation.availabilityTitle'), key: 'availability', render: (_: unknown, row: TimeSeriesExplanationResult['feature_importance']['features'][number]) => timeSeriesAvailability(row.provenance.availability) },
+                              ]}
+                            />
+
+                            <Typography.Title level={5}>{t('modelCenter.timeSeries.explanation.sensitivityTitle')}</Typography.Title>
+                            <Alert type="info" showIcon message={t('modelCenter.timeSeries.explanation.sensitivityDescription')} />
+                            <Table
+                              size="small"
+                              pagination={false}
+                              rowKey="name"
+                              dataSource={timeSeriesExplanation.sensitivity.features}
+                              columns={[
+                                { title: t('modelCenter.timeSeries.explanation.feature'), dataIndex: 'name', key: 'name' },
+                                { title: t('modelCenter.timeSeries.explanation.maeIncrease'), dataIndex: 'mae_increase', key: 'maeIncrease', render: (value: number) => value.toFixed(4) },
+                                { title: t('modelCenter.timeSeries.explanation.baselineMae'), dataIndex: 'baseline_mae', key: 'baselineMae', render: (value: number) => value.toFixed(4) },
+                                { title: t('modelCenter.timeSeries.explanation.perturbedMae'), dataIndex: 'perturbed_mae', key: 'perturbedMae', render: (value: number) => value.toFixed(4) },
+                              ]}
+                            />
+
+                            <Typography.Title level={5}>{t('modelCenter.timeSeries.explanation.interactionsTitle')}</Typography.Title>
+                            <Alert type="info" showIcon message={t('modelCenter.timeSeries.explanation.interactionsDescription')} />
+                            <Table
+                              size="small"
+                              pagination={{ pageSize: 8, hideOnSinglePage: true }}
+                              rowKey={(row) => `${row.feature}:${row.conditioning_feature}`}
+                              dataSource={timeSeriesExplanation.interactions.pairs}
+                              columns={[
+                                { title: t('modelCenter.timeSeries.explanation.feature'), dataIndex: 'feature', key: 'feature' },
+                                { title: t('modelCenter.timeSeries.explanation.conditioningFeature'), dataIndex: 'conditioning_feature', key: 'conditioningFeature' },
+                                { title: t('modelCenter.timeSeries.explanation.strength'), dataIndex: 'strength', key: 'strength', render: (value: number) => value.toFixed(6) },
+                                { title: t('modelCenter.timeSeries.explanation.stratumContrasts'), dataIndex: 'stratum_contrasts', key: 'stratumContrasts', render: (values: number[]) => values.map((value) => value.toFixed(4)).join(', ') || '—' },
+                                { title: t('modelCenter.timeSeries.explanation.evidenceStatus'), key: 'evidenceStatus', render: () => <Tag color="processing">{t('modelCenter.timeSeries.explanation.modelInferred')}</Tag> },
+                              ]}
+                            />
+                          </Space>
+                        )}
+                      </Space>
+                    </Card>
+                  )}
+                </>
               ) : (
                 <Alert type="warning" showIcon message={t('modelCenter.selectedModel.unavailable')} />
               )}
