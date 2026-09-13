@@ -109,7 +109,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
             previous = pred[index]
     mask = np.arange(len(usable)) >= split
     valid = mask & np.isfinite(pred)
-    results.append({"model_type":"naive", "status":"available", "features":[f"{target}_lag_1"], "validation":validation, "metrics":_metrics(y[valid], pred[valid]), "_eval_rows":int(valid.sum()), "_eval_indices":np.flatnonzero(valid).tolist(), "evaluation_protocol":evaluation_protocol})
+    results.append({"model_type":"naive", "status":"available", "features":[f"{target}_lag_1"], "validation":validation, "metrics":_metrics(y[valid], pred[valid]), "_eval_rows":int(valid.sum()), "_eval_indices":np.flatnonzero(valid).tolist(), "evaluation_protocol":evaluation_protocol, "_estimator": None})
     lag = np.array(usable[target].shift(seasonal_period).to_numpy(float), dtype=float, copy=True)
     if fixed_horizon:
         history = list(y[:split])
@@ -135,7 +135,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         else:
             pred = estimator.predict(X[test]); eval_indices = np.flatnonzero(test).tolist()
         actual = y[split:] if fixed_horizon else y[test]
-        results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(actual, pred), "_eval_rows":int(len(pred)), "_eval_indices":eval_indices, "evaluation_protocol":evaluation_protocol})
+        results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(actual, pred), "_eval_rows":int(len(pred)), "_eval_indices":eval_indices, "evaluation_protocol":evaluation_protocol, "_estimator": estimator})
     for name, package in (("arima", "statsmodels"), ("xgboost", "xgboost"), ("lightgbm", "lightgbm")):
         if importlib.util.find_spec(package) is None:
             results.append(_unavailable(name, f"{package} is not installed", [] if name == "arima" else xcols, validation, "dependency_missing"))
@@ -168,15 +168,16 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                         forecast = np.asarray(forecast); eval_indices = list(range(split, len(y)))
                     else:
                         forecast = model.predict(X[test]); eval_indices = np.flatnonzero(test).tolist()
-                results.append({"model_type":name, "status":"available", "features":[] if name == "arima" else xcols, "validation":validation, "metrics":_metrics(y[split:] if fixed_horizon else y[test], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast)), "_eval_indices":eval_indices, "evaluation_protocol":evaluation_protocol})
+                results.append({"model_type":name, "status":"available", "features":[] if name == "arima" else xcols, "validation":validation, "metrics":_metrics(y[split:] if fixed_horizon else y[test], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast)), "_eval_indices":eval_indices, "evaluation_protocol":evaluation_protocol, "_estimator": model})
             except Exception as exc:
                 results.append(_unavailable(name, f"adapter failed: {exc}", [] if name == "arima" else xcols, validation, "adapter_error"))
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}
     if window_days is not None: config["window_days"] = window_days
+    estimators = {item["model_type"]: item.pop("_estimator", None) for item in results}
     for item in results:
         indices = item.pop("_eval_indices", [])
         protocol = item.pop("evaluation_protocol", evaluation_protocol)
         item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "train_start": usable[time_column].iloc[0] if split else None, "train_end": usable[time_column].iloc[split - 1] if split else None, "test_start": usable[time_column].iloc[indices[0]] if indices else None, "test_end": usable[time_column].iloc[indices[-1]] if indices else None, "protocol": protocol, "uses_observed_target": protocol == "observed_feature_holdout", "observed_target_usage": "test_period" if protocol == "observed_feature_holdout" else "training_only"}
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False
-    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
+    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "_estimators": estimators, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}

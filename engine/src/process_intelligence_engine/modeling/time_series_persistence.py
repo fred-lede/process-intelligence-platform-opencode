@@ -1,0 +1,67 @@
+"""Safe, project-scoped persistence for fitted time-series estimators."""
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+from typing import Any
+
+import joblib
+
+from .fitters import ModelFit
+
+
+def _schema(df) -> str:
+    payload = [(str(c), str(df[c].dtype)) for c in df.columns]
+    return hashlib.sha256(json.dumps(payload, separators=(",", ":")).encode()).hexdigest()
+
+
+def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str,
+                   df, time_column: str, feature_configuration: dict,
+                   evaluation_protocol: str, training_time_range: dict) -> dict:
+    if estimator is None or not hasattr(estimator, "predict"):
+        raise ValueError("time-series estimator is not fitted")
+    model_id = fit.model_id
+    directory = Path(root).resolve() / "models" / "time_series"
+    directory.mkdir(parents=True, exist_ok=True)
+    path = (directory / f"{model_id}.joblib").resolve()
+    if directory not in path.parents:
+        raise ValueError("invalid model artifact path")
+    joblib.dump(estimator, path)
+    metadata = {
+        "schema_version": "ts-estimator-1",
+        "model_id": model_id, "model_type": fit.model_type,
+        "dataset_id": dataset_id, "dataset_schema": _schema(df),
+        "target": fit.target, "inputs": list(fit.inputs),
+        "time_column": time_column, "feature_configuration": feature_configuration,
+        "evaluation_protocol": evaluation_protocol,
+        "training_time_range": training_time_range,
+        "artifact": str(path.relative_to(Path(root).resolve())),
+    }
+    (directory / f"{model_id}.json").write_text(json.dumps(metadata, default=str, indent=2), encoding="utf-8")
+    return metadata
+
+
+def load_estimator(root: Path, model_id: str, *, df, target: str | None = None,
+                   inputs: list[str] | None = None, time_column: str | None = None):
+    base = Path(root).resolve() / "models" / "time_series"
+    meta_path = (base / f"{model_id}.json").resolve()
+    if base not in meta_path.parents or not meta_path.is_file():
+        raise KeyError(f"Unknown persisted time-series model: {model_id}")
+    metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+    required = [metadata["target"], *metadata["inputs"], metadata["time_column"]]
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        raise ValueError(f"Incompatible dataset: missing columns {missing}")
+    if target is not None and target != metadata["target"]:
+        raise ValueError("Incompatible target column")
+    if inputs is not None and list(inputs) != metadata["inputs"]:
+        raise ValueError("Incompatible input columns")
+    if time_column is not None and time_column != metadata["time_column"]:
+        raise ValueError("Incompatible time column")
+    if _schema(df) != metadata["dataset_schema"]:
+        raise ValueError("Incompatible dataset schema")
+    artifact = (Path(root).resolve() / metadata["artifact"]).resolve()
+    if base not in artifact.parents or not artifact.is_file():
+        raise FileNotFoundError("Persisted estimator artifact is missing")
+    return joblib.load(artifact), metadata

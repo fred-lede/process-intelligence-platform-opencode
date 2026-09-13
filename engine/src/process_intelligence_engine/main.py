@@ -66,6 +66,7 @@ from process_intelligence_engine.modeling.fitters import (
 from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
 from process_intelligence_engine.modeling.fitters import ModelFit
+from process_intelligence_engine.modeling.time_series_persistence import save_estimator, load_estimator
 from process_intelligence_engine.reporting.models import ReportData
 from process_intelligence_engine.reporting.registry import _REPORT_REGISTRY as REPORT_REGISTRY
 from process_intelligence_engine.reporting.html import HTMLReportGenerator
@@ -2131,6 +2132,10 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_model(params)
     if method == "features/time_series/fit":
         return _handle_time_series_fit(params)
+    if method == "features/time_series/load":
+        return _handle_time_series_load(params)
+    if method == "features/time_series/predict":
+        return _handle_time_series_predict(params)
     if method == "features/time_series/validation":
         return _handle_time_series_validation(params)
     if method == "features/time_series":
@@ -2466,8 +2471,27 @@ def _handle_time_series_fit(params: dict) -> dict:
                 n_train=int(item.get("validation", {}).get("train_rows", 0)),
                 n_test=int(item.get("evaluation", {}).get("rows", item.get("validation", {}).get("test_rows", 0))),
                 created_at="",
+                model=result.get("_estimators", {}).get(item["model_type"]),
             )
             persisted_ids[item["model_type"]] = MODEL_REGISTRY.register(fit)
+            metadata = save_estimator(
+                _VERSION_CHAIN._project_root, fit, fit.model,
+                dataset_id=params["dataset_id"], df=df,
+                time_column=result["time_column"],
+                feature_configuration=result["feature_configuration"],
+                evaluation_protocol=item.get("evaluation", {}).get("protocol", params.get("evaluation_protocol", "observed_feature_holdout")),
+                training_time_range=result["training_time_range"],
+            ) if fit.model is not None else None
+            if metadata:
+                _VERSION_CHAIN.register_entity("model", "default", {
+                    "model_type": fit.model_type, "model_id": fit.model_id,
+                    "dataset_id": params["dataset_id"], "target": fit.target,
+                    "inputs": fit.inputs, "time_series_estimator": True,
+                    "artifact": metadata["artifact"], "fit_snapshot": fit.to_dto(),
+                })
+                # Keep the registry lightweight until an explicit load request;
+                # the executable artifact remains project-scoped on disk.
+                fit.model = None
             item["model_id"] = persisted_ids[item["model_type"]]
             item["persisted"] = True
     result["provenance"].update({
@@ -2476,7 +2500,31 @@ def _handle_time_series_fit(params: dict) -> dict:
         "persistence_reason": "metadata registered; estimator serialization/replay is not included" if persisted_ids else ("no available models matched the requested persistence selection" if persist_models else "set persist_models=true to register available ladder results"),
         "model_ids": persisted_ids,
     })
+    result.pop("_estimators", None)
     return _plain_types({"dataset_id": params["dataset_id"], **result})
+
+
+def _handle_time_series_load(params: dict) -> dict:
+    df = REGISTRY.get(params["dataset_id"])
+    estimator, metadata = load_estimator(
+        _VERSION_CHAIN._project_root, params["model_id"], df=df,
+        target=params.get("target"), inputs=params.get("inputs"),
+        time_column=params.get("time_column"),
+    )
+    fit = MODEL_REGISTRY.get(params["model_id"])
+    fit.model = estimator
+    return _plain_types({"success": True, "model_id": params["model_id"], "metadata": metadata, "status": "loaded"})
+
+
+def _handle_time_series_predict(params: dict) -> dict:
+    df = REGISTRY.get(params["dataset_id"])
+    estimator, metadata = load_estimator(_VERSION_CHAIN._project_root, params["model_id"], df=df)
+    columns = metadata["inputs"]
+    missing = [c for c in columns if c not in df.columns]
+    if missing:
+        raise ValueError(f"Incompatible dataset: missing columns {missing}")
+    values = estimator.predict(df[columns].to_numpy(dtype=float))
+    return _plain_types({"success": True, "model_id": params["model_id"], "predictions": list(values), "metadata": metadata})
 
 
 def _handle_time_series_validation(params: dict) -> dict:
@@ -2928,6 +2976,23 @@ def _reload_chain_for_project(root: str) -> dict:
     }
     for item in chain.get_chain_summary():
         entity = chain.get_entity(item["entity_id"])
+        if entity.entity_type == "model" and entity.metadata.get("time_series_estimator"):
+            try:
+                metadata = entity.metadata
+                estimator, _ = load_estimator(
+                    chain._project_root, metadata["model_id"],
+                    df=datasets.get(metadata["dataset_id"]),
+                )
+                snapshot = metadata["fit_snapshot"]
+                fit = ModelFit(model_type=snapshot["model_type"], target=snapshot["target"],
+                               inputs=list(snapshot["inputs"]), metrics=dict(snapshot.get("metrics") or {}),
+                               model_id=snapshot["model_id"], version=int(snapshot.get("version", 1)),
+                               status=snapshot.get("status", "draft"), created_at=snapshot.get("created_at", ""),
+                               model=estimator)
+                models.restore(fit)
+            except (KeyError, ValueError, FileNotFoundError) as exc:
+                raise ValueError(f"Unable to restore time-series estimator: {exc}") from exc
+            continue
         if (entity.entity_type == "model" and "recipe" in entity.metadata
                 and entity.metadata.get("model_id") not in deleted_model_ids):
             models.restore(rebuild_model(entity, datasets.get(entity.metadata["dataset_id"]), MODEL_FITTERS))
