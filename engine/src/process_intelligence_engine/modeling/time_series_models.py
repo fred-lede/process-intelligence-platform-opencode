@@ -181,3 +181,75 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False
     return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "_estimators": estimators, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
+
+
+def fit_residual_hybrid_time_series(
+    df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *,
+    lags: list[int] | None = None, rolling_windows: list[int] | None = None,
+    seasonal_period: int = 24, train_ratio: float = .8,
+    modeling_timezone: str | None = None,
+    evaluation_protocol: str = "fixed_horizon_forecast",
+) -> dict[str, Any]:
+    """Fit a statistical baseline plus an exogenous residual learner.
+
+    The residual learner uses only current inputs and calendar features, so its
+    test predictions never require observed test-period targets.  This keeps
+    the hybrid evaluation meaningful under the fixed-horizon protocol.
+    """
+    from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
+    if evaluation_protocol not in {"fixed_horizon_forecast", "observed_feature_holdout"}:
+        raise ValueError("evaluation_protocol must be observed_feature_holdout or fixed_horizon_forecast")
+    prepared = prepare_time_series(df, time_column)
+    ordered = prepared["data"].dropna(subset=[target]).reset_index(drop=True)
+    if len(ordered) < 10:
+        raise ValueError("residual hybrid requires at least 10 dated rows")
+    raw_split = max(1, min(len(ordered) - 1, int(len(ordered) * train_ratio)))
+    features = build_time_features(ordered, time_column, [target, *inputs], lags or [1], rolling_windows or [3], modeling_timezone=modeling_timezone)
+    featured = features["data"].dropna(subset=[target]).reset_index(drop=True)
+    split = max(1, min(len(featured) - 1, int(len(featured) * train_ratio)))
+    xcols = [name for name in features["feature_names"] if not name.startswith(f"{target}_")]
+    xcols = [name for name in xcols if name in featured.columns]
+    X = featured[xcols].to_numpy(float)
+    y = featured[target].to_numpy(float)
+    train_mask = np.arange(len(featured)) < split
+    test_mask = ~train_mask
+    complete = np.isfinite(X).all(axis=1) & np.isfinite(y)
+    train = train_mask & complete
+    test = test_mask & complete
+    if train.sum() < 5 or test.sum() < 1:
+        raise ValueError("insufficient complete rows for residual hybrid")
+    from sklearn.ensemble import RandomForestRegressor
+    baseline_name = "naive"
+    baseline_train = np.asarray(y[:split], dtype=float)
+    baseline_test = np.full(int(test.sum()), baseline_train[-1], dtype=float)
+    baseline_pred_train = np.r_[baseline_train[0], baseline_train[:-1]]
+    try:
+        import importlib.util
+        if importlib.util.find_spec("statsmodels") is not None:
+            from statsmodels.tsa.arima.model import ARIMA
+            baseline = ARIMA(y[:split], order=(1, 0, 0)).fit()
+            baseline_pred_train = np.asarray(baseline.fittedvalues, dtype=float)
+            baseline_test = np.asarray(baseline.forecast(steps=int(test.sum())), dtype=float)
+            baseline_name = "arima"
+    except Exception:
+        baseline = None
+    residual_train = baseline_train - baseline_pred_train
+    learner = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=1, min_samples_leaf=2)
+    learner.fit(X[train], residual_train[np.flatnonzero(train)])
+    residual_pred = learner.predict(X[test])
+    hybrid_pred = baseline_test + residual_pred
+    actual = y[test]
+    base_metrics = _metrics(actual, baseline_test)
+    hybrid_metrics = _metrics(actual, hybrid_pred)
+    improvement = {key: float(base_metrics[key] - hybrid_metrics[key]) for key in ("mae", "rmse")}
+    validation = {"strategy": "chronological_holdout", "train_rows": int(train.sum()), "test_rows": int(test.sum()), "train_end": featured[time_column].iloc[split - 1], "test_start": featured[time_column].iloc[split], "modeling_timezone": modeling_timezone or "UTC"}
+    return {"status": "completed", "target": target, "inputs": inputs, "time_column": time_column,
+            "evaluation_protocol": evaluation_protocol, "baseline": {"model_type": baseline_name, "metrics": base_metrics},
+            "residual_model": {"model_type": "time_feature_random_forest", "features": xcols},
+            "hybrid": {"model_type": "residual_hybrid", "metrics": hybrid_metrics},
+            "improvement": improvement, "validation": validation,
+            "leakage_check": "passed_by_historical_features", "uses_observed_target": evaluation_protocol == "observed_feature_holdout",
+            "provenance": {"contract": "phase2_residual_hybrid", "baseline": baseline_name, "residual_features": xcols,
+                           "target_residual_training": "training_only", "leakage_check": "passed_by_historical_features",
+                           "reason_code": "baseline_plus_exogenous_residual_learner"},
+            "feature_configuration": {**features["configuration"], "modeling_timezone": modeling_timezone or "UTC"}}

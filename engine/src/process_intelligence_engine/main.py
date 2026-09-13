@@ -105,7 +105,7 @@ from process_intelligence_engine.features.time_series_modeling import (
     time_split,
     walk_forward_splits,
 )
-from process_intelligence_engine.modeling.time_series_models import fit_time_series_ladder
+from process_intelligence_engine.modeling.time_series_models import fit_time_series_ladder, fit_residual_hybrid_time_series
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 from process_intelligence_engine.versioning.chain import VersionChain
@@ -2132,6 +2132,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_model(params)
     if method == "features/time_series/fit":
         return _handle_time_series_fit(params)
+    if method == "features/time_series/hybrid":
+        return _handle_time_series_hybrid(params)
     if method == "features/time_series/load":
         return _handle_time_series_load(params)
     if method == "features/time_series/predict":
@@ -2502,6 +2504,26 @@ def _handle_time_series_fit(params: dict) -> dict:
         "model_ids": persisted_ids,
     })
     result.pop("_estimators", None)
+    return _plain_types({"dataset_id": params["dataset_id"], **result})
+
+
+def _handle_time_series_hybrid(params: dict) -> dict:
+    """Fit and evaluate the statistical-plus-residual time-series hybrid."""
+    df = REGISTRY.get(params["dataset_id"])
+    window_days = params.get("window_days")
+    window = select_time_window(df, params["time_column"], window_days, params.get("modeling_timezone")) if window_days is not None else None
+    result = fit_residual_hybrid_time_series(
+        window["data"] if window else df,
+        params["time_column"], params["target"], list(params.get("inputs", [])),
+        lags=params.get("lags"), rolling_windows=params.get("rolling_windows"),
+        seasonal_period=params.get("seasonal_period", 24),
+        train_ratio=float(params.get("train_ratio", 0.8)),
+        modeling_timezone=params.get("modeling_timezone"),
+        evaluation_protocol=params.get("evaluation_protocol", "fixed_horizon_forecast"),
+    )
+    if window:
+        result["quality"] = {"excluded_undated_rows": window["excluded_undated_rows"]}
+        result["feature_configuration"].update({"window_start": window["window_start"], "window_end": window["window_end"]})
     return _plain_types({"dataset_id": params["dataset_id"], **result})
 
 
