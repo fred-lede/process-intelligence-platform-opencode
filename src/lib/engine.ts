@@ -1065,7 +1065,14 @@ export interface MonteCarloResult {
 
 export interface MonteCarloAnalysisResult {
   success: boolean
-  result: MonteCarloResult
+  result?: MonteCarloResult
+  error?: {
+    code: string
+    message: string
+    reason?: string
+    model_type?: string
+    suggested_model_types?: string[]
+  }
 }
 
 export interface MonteCarloParams {

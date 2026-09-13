@@ -64,6 +64,7 @@ export default function MonteCarlo() {
   const [result, setResult] = useState<MonteCarloResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const hasTimeSeriesModels = models.some(model => model.model_type.startsWith('time_series_'))
 
   useEffect(() => {
     listModels(importResult?.dataset_id).then(r => {
@@ -101,6 +102,14 @@ export default function MonteCarlo() {
           ? { filter_column: nodeFilterColumn, filter_value: nodeFilterValue }
           : {}),
       })
+      if (!res.success || !res.result) {
+        setError(
+          res.error?.code === 'MONTE_CARLO_TIME_SERIES_UNSUPPORTED'
+            ? t('monteCarlo.timeSeriesUnsupported')
+            : res.error?.message ?? t('monteCarlo.runFailed'),
+        )
+        return
+      }
       setResult(res.result)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -161,7 +170,10 @@ export default function MonteCarlo() {
               onChange={handleModelChange}
               options={models.map(m => ({
                 value: m.model_id,
-                label: `${m.model_type} — ${m.equation.slice(0, 50)}...`,
+                label: m.model_type.startsWith('time_series_')
+                  ? `${m.model_type} (${t('monteCarlo.timeSeriesUnsupportedOption')})`
+                  : `${m.model_type} — ${m.equation.slice(0, 50)}...`,
+                disabled: m.model_type.startsWith('time_series_'),
               }))}
               disabled={models.length === 0}
               style={{ width: 320 }}
@@ -205,6 +217,14 @@ export default function MonteCarlo() {
             {t('monteCarlo.runSimulation')}
           </Button>
         </Space>
+        {hasTimeSeriesModels && (
+          <Alert
+            type="info"
+            showIcon
+            message={t('monteCarlo.timeSeriesUnsupported')}
+            style={{ marginBottom: 12 }}
+          />
+        )}
         {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 12 }} />}
       </Card>
 

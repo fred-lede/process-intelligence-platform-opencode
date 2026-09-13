@@ -1,6 +1,7 @@
 """Tests for Monte Carlo IPC handlers."""
 import pytest
-from process_intelligence_engine.main import handle_request
+from process_intelligence_engine.main import MODEL_REGISTRY, handle_request
+from process_intelligence_engine.modeling.fitters import ModelFit
 
 
 def _import_csv_for_mc(tmp_path):
@@ -62,6 +63,33 @@ def test_monte_carlo_run_unknown_model_raises(tmp_path):
             "seed": 42,
             "enable_anomalies": False,
         })
+
+
+def test_monte_carlo_rejects_time_series_model_with_structured_guidance(tmp_path):
+    did = _import_csv_for_mc(tmp_path)
+    model_id = MODEL_REGISTRY.register(ModelFit(
+        model_type="time_series_naive",
+        target="y",
+        inputs=["x1"],
+    ))
+
+    result = handle_request("monte_carlo/run", {
+        "dataset_id": did,
+        "model_id": model_id,
+        "n_simulations": 100,
+        "seed": 42,
+        "enable_anomalies": False,
+    })
+
+    assert result["success"] is False
+    error = result["error"]
+    assert error["code"] == "MONTE_CARLO_TIME_SERIES_UNSUPPORTED"
+    assert error["reason"] == "missing_time_axis_and_history"
+    assert error["model_type"] == "time_series_naive"
+    assert "time axis" in error["message"]
+    assert "historical sequence" in error["message"]
+    assert "doe_linear" in error["suggested_model_types"]
+    assert all(not name.startswith("time_series_") for name in error["suggested_model_types"])
 
 
 def test_monte_carlo_run_with_anomalies(tmp_path):

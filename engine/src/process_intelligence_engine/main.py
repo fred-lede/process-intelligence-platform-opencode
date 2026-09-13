@@ -1675,9 +1675,26 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     did = params["dataset_id"]
     model_id = params["model_id"]
     df = REGISTRY.get(did)
+    fit = MODEL_REGISTRY.get(model_id)
+
+    if fit.model_type.startswith("time_series_"):
+        return {
+            "success": False,
+            "error": {
+                "code": "MONTE_CARLO_TIME_SERIES_UNSUPPORTED",
+                "message": (
+                    "Independent Monte Carlo sampling does not preserve the time axis "
+                    "or historical sequence required by time-series models. Select a "
+                    "standard regression model for this simulation."
+                ),
+                "reason": "missing_time_axis_and_history",
+                "model_type": fit.model_type,
+                "suggested_model_types": sorted(SUPPORTED_MODELS),
+            },
+        }
+
     source_row_count = len(df)
     df = _apply_row_filter(df, params)
-    fit = MODEL_REGISTRY.get(model_id)
 
     # A model fitted on another dataset can have incompatible scales/ranges;
     # fail explicitly instead of producing misleading simulation statistics.
