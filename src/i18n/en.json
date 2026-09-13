@@ -512,6 +512,7 @@
     "confirmDeleteModel": "Delete this model? This cannot be undone.",
     "continuousTarget": "The target \"{{column}}\" has {{n}} unique values (continuous). Logistic regression requires a binary target (0/1 or two distinct categories). Please select a different target or use a regression model instead.",
     "listTitle": "Fitted Models",
+    "selectedModel": { "title": "Selected Model", "status": "Load Status", "loaded": "Loaded", "unavailable": "Saved model could not be loaded for replay.", "type": "Model Type", "target": "Target", "inputs": "Inputs", "trainingRows": "Training Rows", "replay": "Prediction Replay", "replayReady": "Ready" },
     "column": {
       "type": "Type",
       "version": "Ver",

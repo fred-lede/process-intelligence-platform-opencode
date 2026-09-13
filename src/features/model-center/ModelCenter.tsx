@@ -9,7 +9,7 @@ import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
 import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, fitTimeSeriesLadder, type DoeStatisticsResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, fitTimeSeriesLadder, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -108,6 +108,8 @@ export default function ModelCenter() {
     windowDays: number
     validationFailed: boolean
   } | null>(null)
+  const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | null>(null)
+  const [selectedModelInfoLoading, setSelectedModelInfoLoading] = useState(false)
 
   useEffect(() => {
     setContext(
@@ -168,6 +170,20 @@ export default function ModelCenter() {
   }))
 
   useEffect(() => { loadModels() }, [])
+
+  useEffect(() => {
+    let active = true
+    if (!selectedModelId) {
+      setSelectedModelInfo(null)
+      return
+    }
+    setSelectedModelInfoLoading(true)
+    getModelInfo({ model_id: selectedModelId })
+      .then((info) => { if (active) setSelectedModelInfo(info) })
+      .catch(() => { if (active) setSelectedModelInfo(null) })
+      .finally(() => { if (active) setSelectedModelInfoLoading(false) })
+    return () => { active = false }
+  }, [selectedModelId])
 
   const invalidateTimeSeriesRun = () => {
     timeSeriesRequestId.current += 1
@@ -890,6 +906,26 @@ export default function ModelCenter() {
             rowClassName={(r) => (r.model_id === selectedModelId ? 'ant-table-row-selected' : '')}
             onRow={(record) => ({ onClick: () => selectModel(record.model_id) })}
           />
+          {selectedModelId && (
+            <Card type="inner" size="small" title={t('modelCenter.selectedModel.title')} style={{ marginTop: 12 }} loading={selectedModelInfoLoading}>
+              {selectedModelInfo ? (
+                <Descriptions size="small" column={{ xs: 1, sm: 2, md: 3 }} bordered>
+                  <Descriptions.Item label={t('modelCenter.selectedModel.status')}>
+                    <Tag color="success">{t('modelCenter.selectedModel.loaded')}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t('modelCenter.selectedModel.type')}>{selectedModelInfo.model_type}</Descriptions.Item>
+                  <Descriptions.Item label={t('modelCenter.selectedModel.target')}>{selectedModelInfo.target}</Descriptions.Item>
+                  <Descriptions.Item label={t('modelCenter.selectedModel.inputs')}>{selectedModelInfo.inputs.join(', ') || '—'}</Descriptions.Item>
+                  <Descriptions.Item label={t('modelCenter.selectedModel.trainingRows')}>{selectedModelInfo.n_train}</Descriptions.Item>
+                  <Descriptions.Item label={t('modelCenter.selectedModel.replay')}>
+                    <Tag color="green">{t('modelCenter.selectedModel.replayReady')}</Tag>
+                  </Descriptions.Item>
+                </Descriptions>
+              ) : (
+                <Alert type="warning" showIcon message={t('modelCenter.selectedModel.unavailable')} />
+              )}
+            </Card>
+          )}
         </Card>
 
         {compareModels.length >= 2 && (

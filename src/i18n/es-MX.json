@@ -572,6 +572,7 @@
     },
     "transitionSuccess": "Estado cambiado a {{status}}",
     "listTitle": "Modelos Ajustados",
+    "selectedModel": { "title": "Modelo seleccionado", "status": "Estado de carga", "loaded": "Cargado", "unavailable": "No se pudo cargar el modelo guardado para reproducir la predicción.", "type": "Tipo de modelo", "target": "Objetivo", "inputs": "Entradas", "trainingRows": "Filas de entrenamiento", "replay": "Reproducción de predicción", "replayReady": "Listo" },
     "confirmTransition": "¿Confirmar la transición a {{status}}?",
     "compareButton": "Comparar",
     "compareTitle": "Comparación de Modelos",
