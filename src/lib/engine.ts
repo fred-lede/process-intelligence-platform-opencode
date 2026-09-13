@@ -1350,6 +1350,20 @@ export type TimeSeriesValidationParams = {
   | { strategy: 'walk_forward'; initial_train_size: number; horizon: number; step: number }
 )
 
+export interface TimeSeriesWindowRecommendation {
+  time_column: string
+  observed_start: string
+  observed_end: string
+  observed_span_days: number
+  valid_timestamp_rows: number
+  excluded_undated_rows: number
+  windows: Array<{ window_days: number; status: 'available' | 'insufficient_history'; reason: string | null }>
+}
+
+export function recommendTimeSeriesWindows(params: { dataset_id: string; time_column: string; modeling_timezone?: string; candidates?: number[] }) {
+  return engineCall<TimeSeriesWindowRecommendation>('features/time_series/windows', params)
+}
+
 export interface ConsecutiveExceedance {
   column: string
   direction: string

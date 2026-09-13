@@ -104,6 +104,7 @@ from process_intelligence_engine.features.time_series_modeling import (
     suggest_time_feature_configuration,
     time_split,
     walk_forward_splits,
+    recommend_time_windows,
 )
 from process_intelligence_engine.modeling.time_series_models import fit_time_series_ladder, fit_residual_hybrid_time_series
 from process_intelligence_engine.copula import compute_joint_probabilities
@@ -2140,6 +2141,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_predict(params)
     if method == "features/time_series/validation":
         return _handle_time_series_validation(params)
+    if method == "features/time_series/windows":
+        return _handle_time_series_windows(params)
     if method == "features/time_series":
         return _handle_time_series(params)
     if method == "features/consecutive_exceedance":
@@ -2695,6 +2698,16 @@ def _handle_time_series(params: dict) -> dict:
 
     result = compute_time_features(df, time_column, value_columns, window_sizes)
     return _plain_types(result)
+
+
+def _handle_time_series_windows(params: dict) -> dict:
+    """Recommend validation windows based on the dataset's actual time span."""
+    df = REGISTRY.get(params["dataset_id"])
+    candidates = params.get("candidates")
+    normalized = tuple(candidates) if candidates is not None else (3, 5, 7, 14, 30, 60, 90)
+    return _plain_types(recommend_time_windows(
+        df, params["time_column"], params.get("modeling_timezone"), normalized
+    ))
 
 
 def _handle_consecutive_exceedance(params: dict) -> dict:

@@ -327,6 +327,42 @@ def select_time_window(
     }
 
 
+def recommend_time_windows(
+    df: pd.DataFrame,
+    time_column: str,
+    modeling_timezone: str | None = None,
+    candidates: tuple[int, ...] = (3, 5, 7, 14, 30, 60, 90),
+) -> dict[str, Any]:
+    """Return only trailing windows supported by the observed timestamp span."""
+    timestamps, _ = _timestamp_values(
+        df, time_column, allow_missing=True, modeling_timezone=modeling_timezone
+    )
+    valid = timestamps.dropna()
+    if valid.empty:
+        raise ValueError(f"Time column '{time_column}' contains no timestamps")
+    start, end = valid.min(), valid.max()
+    span_days = (end - start).total_seconds() / 86400
+    recommendations = []
+    for days in candidates:
+        if isinstance(days, bool) or not isinstance(days, int) or days < 1:
+            raise ValueError("window candidates must be positive integers")
+        feasible = span_days >= days
+        recommendations.append({
+            "window_days": days,
+            "status": "available" if feasible else "insufficient_history",
+            "reason": None if feasible else "observed_span_shorter_than_window",
+        })
+    return {
+        "time_column": time_column,
+        "observed_start": start.isoformat().replace("+00:00", "Z"),
+        "observed_end": end.isoformat().replace("+00:00", "Z"),
+        "observed_span_days": span_days,
+        "valid_timestamp_rows": int(valid.size),
+        "excluded_undated_rows": int(timestamps.isna().sum()),
+        "windows": recommendations,
+    }
+
+
 def normalize_time_values(
     df: pd.DataFrame,
     time_column: str,

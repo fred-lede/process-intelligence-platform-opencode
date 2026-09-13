@@ -23,6 +23,30 @@ def test_time_series_fit_returns_model_ladder_and_unavailable_states():
     assert result["training_time_range"]["end"] < result["validation"]["test_start"]
 
 
+def test_time_series_windows_adapt_to_seven_day_span():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=168, freq="h"), "y": range(168),
+    }), {})
+    result = handle_request("features/time_series/windows", {
+        "dataset_id": dataset_id, "time_column": "ts",
+    })
+    statuses = {item["window_days"]: item["status"] for item in result["windows"]}
+    assert result["observed_span_days"] == 167 / 24
+    assert statuses[3] == "available" and statuses[7] == "available"
+    assert statuses[14] == "insufficient_history"
+
+
+def test_time_series_windows_allow_ninety_day_span():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=91, freq="D"), "y": range(91),
+    }), {})
+    result = handle_request("features/time_series/windows", {
+        "dataset_id": dataset_id, "time_column": "ts",
+    })
+    statuses = {item["window_days"]: item["status"] for item in result["windows"]}
+    assert statuses[90] == "available"
+
+
 def test_time_series_fit_persistence_is_explicit_and_registers_metadata():
     dataset_id = REGISTRY.register(pd.DataFrame({
         "ts": pd.date_range("2026-01-01", periods=40, freq="h"),
