@@ -65,6 +65,7 @@ from process_intelligence_engine.modeling.fitters import (
 )
 from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
+from process_intelligence_engine.modeling.fitters import ModelFit
 from process_intelligence_engine.reporting.models import ReportData
 from process_intelligence_engine.reporting.registry import _REPORT_REGISTRY as REPORT_REGISTRY
 from process_intelligence_engine.reporting.html import HTMLReportGenerator
@@ -2440,6 +2441,34 @@ def _handle_time_series_fit(params: dict) -> dict:
         result["quality"]["missing_timestamps"] = window["excluded_undated_rows"]
         result["quality"]["excluded_undated_rows"] = window["excluded_undated_rows"]
         result["feature_configuration"].update({"window_start": window["window_start"], "window_end": window["window_end"]})
+    # Persistence is explicit: the ladder is an evaluation result by default,
+    # while opting in registers metadata-only ModelFit records in the existing
+    # registry.  The fitted estimator is intentionally not serialized here.
+    persist_models = bool(params.get("persist_models", False))
+    persisted_ids: dict[str, str] = {}
+    if persist_models:
+        for item in result.get("results", []):
+            if item.get("status") != "available":
+                continue
+            fit = ModelFit(
+                model_type=f"time_series_{item['model_type']}",
+                target=result["target"],
+                inputs=list(result["inputs"]),
+                metrics=dict(item.get("metrics") or {}),
+                equation="time-series evaluation metadata; estimator replay required",
+                n_train=int(item.get("validation", {}).get("train_rows", 0)),
+                n_test=int(item.get("evaluation", {}).get("rows", item.get("validation", {}).get("test_rows", 0))),
+                created_at="",
+            )
+            persisted_ids[item["model_type"]] = MODEL_REGISTRY.register(fit)
+            item["model_id"] = persisted_ids[item["model_type"]]
+            item["persisted"] = True
+    result["provenance"].update({
+        "persisted": bool(persisted_ids),
+        "persistence_status": "registered_metadata" if persisted_ids else "not_requested",
+        "persistence_reason": "metadata registered; estimator serialization/replay is not included" if persisted_ids else "set persist_models=true to register available ladder results",
+        "model_ids": persisted_ids,
+    })
     return _plain_types({"dataset_id": params["dataset_id"], **result})
 
 

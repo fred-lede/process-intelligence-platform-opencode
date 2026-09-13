@@ -1,6 +1,7 @@
 import pandas as pd
 
 from process_intelligence_engine.main import REGISTRY, handle_request
+from process_intelligence_engine.main import MODEL_REGISTRY
 
 
 def test_time_series_fit_returns_model_ladder_and_unavailable_states():
@@ -20,6 +21,21 @@ def test_time_series_fit_returns_model_ladder_and_unavailable_states():
     assert all(item["status"] in {"available", "unavailable"} for item in result["results"])
     assert result["validation"]["strategy"] == "chronological_holdout"
     assert result["training_time_range"]["end"] < result["validation"]["test_start"]
+
+
+def test_time_series_fit_persistence_is_explicit_and_registers_metadata():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=40, freq="h"),
+        "x": range(40), "y": [10 + i * 0.1 for i in range(40)],
+    }), {})
+    params = {"dataset_id": dataset_id, "time_column": "ts", "target": "y", "inputs": ["x"], "lags": [1], "rolling_windows": [3]}
+    result = handle_request("features/time_series/fit", params)
+    assert result["provenance"]["persisted"] is False
+    persisted = handle_request("features/time_series/fit", {**params, "persist_models": True})
+    assert persisted["provenance"]["persisted"] is True
+    assert persisted["provenance"]["model_ids"]
+    for model_id in persisted["provenance"]["model_ids"].values():
+        assert MODEL_REGISTRY.get(model_id).model is None
 
 
 def test_time_series_fit_rejects_too_few_rows():
