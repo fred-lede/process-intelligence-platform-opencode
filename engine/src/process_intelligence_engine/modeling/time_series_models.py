@@ -18,6 +18,48 @@ def _unavailable(name, reason, features, validation, reason_code="not_implemente
     return {"model_type": name, "status": "unavailable", "error": reason, "reason_code": reason_code, "features": features, "validation": validation, "metrics": None}
 
 
+def _recursive_features(frame: pd.DataFrame, time_column: str, columns: list[str],
+                        feature_names: list[str], start: int, lags: list[int],
+                        rolling_windows: list[int], predictions: list[float],
+                        modeling_timezone: str | None) -> np.ndarray:
+    """Build test rows using predicted targets, never the test target values."""
+    target = columns[0]
+    history = frame[target].iloc[:start].astype(float).tolist() + list(predictions)
+    row_values: list[float] = []
+    for name in feature_names:
+        if name == "hour" or name == "weekday":
+            timestamp = pd.Timestamp(frame[time_column].iloc[start + len(predictions)])
+            if timestamp.tzinfo is not None and modeling_timezone:
+                timestamp = timestamp.tz_convert(modeling_timezone)
+            row_values.append(float(timestamp.hour if name == "hour" else timestamp.weekday()))
+            continue
+        matched = None
+        for column in columns:
+            prefix = f"{column}_"
+            if name.startswith(prefix):
+                matched = column
+                suffix = name[len(prefix):]
+                break
+        if matched is None:
+            raise ValueError(f"unknown time feature: {name}")
+        values = history if matched == target else frame[matched].astype(float).tolist()
+        previous = values[start + len(predictions) - 1]
+        if suffix.startswith("lag_"):
+            row_values.append(float(values[start + len(predictions) - int(suffix[4:])]))
+        elif suffix.startswith("rolling_mean_") or suffix.startswith("rolling_std_"):
+            window = int(suffix.rsplit("_", 1)[1])
+            sample = np.asarray(values[start + len(predictions) - window:start + len(predictions)], dtype=float)
+            row_values.append(float(np.mean(sample) if suffix.startswith("rolling_mean_") else np.std(sample, ddof=1)))
+        elif suffix == "first_difference":
+            row_values.append(float(previous - values[start + len(predictions) - 2]))
+        elif suffix == "rate_of_change":
+            prior = values[start + len(predictions) - 2]
+            row_values.append(float(previous / prior - 1) if prior != 0 else np.nan)
+        else:
+            raise ValueError(f"unknown time feature: {name}")
+    return np.asarray(row_values, dtype=float)
+
+
 def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *, lags: list[int] | None = None, rolling_windows: list[int] | None = None, seasonal_period: int = 24, train_ratio: float = .8, modeling_timezone: str | None = None, window_days: int | None = None, evaluation_protocol: str = "observed_feature_holdout") -> dict[str, Any]:
     """Fit comparable chronological models; never uses random K-fold."""
     from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
@@ -80,34 +122,53 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     valid_rows = np.isfinite(X).all(axis=1) & np.isfinite(y)
     train = valid_rows & (np.arange(len(usable)) < split); test = valid_rows & (np.arange(len(usable)) >= split)
     for name, estimator in [("dynamic_regression", LinearRegression()), ("time_feature_random_forest", RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=1, min_samples_leaf=2))]:
-        if fixed_horizon:
-            results.append(_unavailable(name, "fixed_horizon_forecast requires recursive feature generation", xcols, validation, "not_supported")); continue
         if not train.any() or not test.any():
             results.append(_unavailable(name, "insufficient complete chronological train/test rows", xcols, validation, "insufficient_history")); continue
-        estimator.fit(X[train], y[train]); pred = estimator.predict(X[test])
-        results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(y[test], pred), "_eval_rows":int(test.sum()), "_eval_indices":np.flatnonzero(test).tolist()})
+        estimator.fit(X[train], y[train])
+        if fixed_horizon:
+            forecasts = []
+            for _ in range(len(y) - split):
+                row = _recursive_features(usable, time_column, [target, *inputs], xcols, split, lags or [1], rolling_windows or [3], forecasts, modeling_timezone)
+                forecasts.append(float(estimator.predict(row.reshape(1, -1))[0]))
+            pred = np.asarray(forecasts)
+            eval_indices = list(range(split, len(y)))
+        else:
+            pred = estimator.predict(X[test]); eval_indices = np.flatnonzero(test).tolist()
+        actual = y[split:] if fixed_horizon else y[test]
+        results.append({"model_type":name, "status":"available", "features":xcols, "validation":validation, "metrics":_metrics(actual, pred), "_eval_rows":int(len(pred)), "_eval_indices":eval_indices, "evaluation_protocol":evaluation_protocol})
     for name, package in (("arima", "statsmodels"), ("xgboost", "xgboost"), ("lightgbm", "lightgbm")):
         if importlib.util.find_spec(package) is None:
             results.append(_unavailable(name, f"{package} is not installed", [] if name == "arima" else xcols, validation, "dependency_missing"))
         else:
             try:
+                eval_indices = list(range(split, len(y)))
                 if name == "arima":
                     from statsmodels.tsa.arima.model import ARIMA
                     model = ARIMA(y[:split], order=(1, 0, 0)).fit()
                     forecast = model.forecast(steps=len(y)-split)
                 elif name == "xgboost":
-                    if fixed_horizon:
-                        results.append(_unavailable(name, "fixed_horizon_forecast requires recursive feature generation", xcols, validation, "not_supported")); continue
                     import xgboost as xgb
                     model = xgb.XGBRegressor(n_estimators=100, max_depth=3, random_state=42, n_jobs=1).fit(X[train], y[train])
-                    forecast = model.predict(X[test])
-                else:
                     if fixed_horizon:
-                        results.append(_unavailable(name, "fixed_horizon_forecast requires recursive feature generation", xcols, validation, "not_supported")); continue
+                        forecast = []
+                        for _ in range(len(y) - split):
+                            row = _recursive_features(usable, time_column, [target, *inputs], xcols, split, lags or [1], rolling_windows or [3], forecast, modeling_timezone)
+                            forecast.append(float(model.predict(row.reshape(1, -1))[0]))
+                        forecast = np.asarray(forecast); eval_indices = list(range(split, len(y)))
+                    else:
+                        forecast = model.predict(X[test]); eval_indices = np.flatnonzero(test).tolist()
+                else:
                     import lightgbm as lgb
                     model = lgb.LGBMRegressor(n_estimators=100, verbosity=-1, random_state=42).fit(X[train], y[train])
-                    forecast = model.predict(X[test])
-                results.append({"model_type":name, "status":"available", "features":[] if name == "arima" else xcols, "validation":validation, "metrics":_metrics(y[split:], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast)), "_eval_indices":list(range(split, len(y))), "evaluation_protocol":"fixed_horizon_forecast" if name == "arima" else "observed_feature_holdout"})
+                    if fixed_horizon:
+                        forecast = []
+                        for _ in range(len(y) - split):
+                            row = _recursive_features(usable, time_column, [target, *inputs], xcols, split, lags or [1], rolling_windows or [3], forecast, modeling_timezone)
+                            forecast.append(float(model.predict(row.reshape(1, -1))[0]))
+                        forecast = np.asarray(forecast); eval_indices = list(range(split, len(y)))
+                    else:
+                        forecast = model.predict(X[test]); eval_indices = np.flatnonzero(test).tolist()
+                results.append({"model_type":name, "status":"available", "features":[] if name == "arima" else xcols, "validation":validation, "metrics":_metrics(y[split:] if fixed_horizon else y[test], np.asarray(forecast, dtype=float)), "_eval_rows":int(len(forecast)), "_eval_indices":eval_indices, "evaluation_protocol":evaluation_protocol})
             except Exception as exc:
                 results.append(_unavailable(name, f"adapter failed: {exc}", [] if name == "arima" else xcols, validation, "adapter_error"))
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}
