@@ -124,6 +124,7 @@ export default function ModelCenter() {
 
   const datasetId = importResult?.dataset_id
   const latestModel = models[models.length - 1]
+  const timeSeriesActive = modelingMode === 'time_series' || Boolean(latestModel?.model_type?.startsWith('time_series_'))
   const interactionModelType = latestModel?.model_type ?? modelType
   const interactionMode = interactionModelType === 'doe_linear'
     ? 'notModeled'
@@ -1033,7 +1034,7 @@ export default function ModelCenter() {
               type="primary"
               loading={interactionsLoading}
               onClick={handleComputeInteractions}
-              disabled={models.length === 0 || !datasetId}
+              disabled={models.length === 0 || !datasetId || timeSeriesActive}
             >
               {interactionsLoading ? t('modelCenter.computing') : t('modelCenter.computeInteractions')}
             </Button>
@@ -1091,7 +1092,7 @@ export default function ModelCenter() {
               <Alert type="info" showIcon message={t('modelCenter.interactionSummary')} description={t('modelCenter.interactionAdvice', { pair: '—', strength: '0.000000' })} />
               </>
             ) : (
-              <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
+              <Alert type="info" showIcon message={timeSeriesActive ? t('modelCenter.timeSeries.notApplicable') : t('modelCenter.noInteraction')} />
             )}
           </Space>
         </Card>
@@ -1146,13 +1147,13 @@ export default function ModelCenter() {
                 <Alert type="info" showIcon message={t('modelCenter.shapSummary')} description={t('modelCenter.shapAdvice')} />
               </Space>
             ) : (
-              <Alert type="info" showIcon message={t('modelCenter.noInteraction')} />
+              <Alert type="info" showIcon message={timeSeriesActive ? t('modelCenter.timeSeries.notApplicable') : t('modelCenter.noInteraction')} />
             )}
           </Space>
         </Card>
 
         <Card title={t('modelCenter.sensitivityTitle')} size="small">
-          <Button type="primary" loading={sensitivityLoading} onClick={handleComputeSensitivity} disabled={!models.length || !datasetId}>
+          <Button type="primary" loading={sensitivityLoading} onClick={handleComputeSensitivity} disabled={!models.length || !datasetId || timeSeriesActive}>
             {sensitivityLoading ? t('modelCenter.computing') : t('modelCenter.computeSensitivity')}
           </Button>
           {sensitivity && <Table size="small" pagination={false} rowKey="input" dataSource={sensitivity.items} columns={[
@@ -1227,7 +1228,7 @@ export default function ModelCenter() {
                 type="primary"
                 loading={validationLoading}
                 onClick={handleRunValidation}
-                disabled={models.length === 0 || !datasetId}
+                disabled={models.length === 0 || !datasetId || timeSeriesActive}
               >
                 {validationLoading ? t('modelCenter.runningValidation') : t('modelCenter.runValidation')}
               </Button>
@@ -1295,7 +1296,7 @@ export default function ModelCenter() {
               type="primary"
               loading={doeStatsLoading}
               onClick={handleComputeDOEStatistics}
-              disabled={models.length === 0 || !datasetId}
+              disabled={models.length === 0 || !datasetId || timeSeriesActive}
               size="small"
             >
               {doeStatsLoading ? t('modelCenter.computing') : t('modelCenter.computeDOEStatistics')}
@@ -1370,7 +1371,7 @@ export default function ModelCenter() {
               type="primary"
               loading={fullValidationLoading}
               onClick={handleRunFullValidation}
-              disabled={models.length === 0 || !datasetId}
+              disabled={models.length === 0 || !datasetId || timeSeriesActive}
             >
               {fullValidationLoading ? t('modelCenter.runningFullValidation') : t('modelCenter.runFullValidation')}
             </Button>
