@@ -18,7 +18,8 @@ def _schema(df) -> str:
 
 def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str,
                    df, time_column: str, feature_configuration: dict,
-                   evaluation_protocol: str, training_time_range: dict) -> dict:
+                   evaluation_protocol: str, training_time_range: dict,
+                   feature_names: list[str] | None = None) -> dict:
     if estimator is None or not hasattr(estimator, "predict"):
         raise ValueError("time-series estimator is not fitted")
     model_id = fit.model_id
@@ -34,6 +35,7 @@ def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str
         "dataset_id": dataset_id, "dataset_schema": _schema(df),
         "target": fit.target, "inputs": list(fit.inputs),
         "time_column": time_column, "feature_configuration": feature_configuration,
+        "feature_names": list(feature_names or []),
         "evaluation_protocol": evaluation_protocol,
         "training_time_range": training_time_range,
         "artifact": str(path.relative_to(Path(root).resolve())),

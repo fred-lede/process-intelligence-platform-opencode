@@ -2481,6 +2481,7 @@ def _handle_time_series_fit(params: dict) -> dict:
                 feature_configuration=result["feature_configuration"],
                 evaluation_protocol=item.get("evaluation", {}).get("protocol", params.get("evaluation_protocol", "observed_feature_holdout")),
                 training_time_range=result["training_time_range"],
+                feature_names=list(item.get("features") or []),
             ) if fit.model is not None else None
             if metadata:
                 _VERSION_CHAIN.register_entity("model", "default", {
@@ -2523,7 +2524,31 @@ def _handle_time_series_predict(params: dict) -> dict:
     missing = [c for c in columns if c not in df.columns]
     if missing:
         raise ValueError(f"Incompatible dataset: missing columns {missing}")
-    values = estimator.predict(df[columns].to_numpy(dtype=float))
+    feature_names = metadata.get("feature_names") or []
+    if feature_names and not all(c in df.columns for c in feature_names):
+        from process_intelligence_engine.features.time_series_modeling import build_time_features
+        cfg = metadata.get("feature_configuration") or {}
+        try:
+            featured = build_time_features(
+                df, metadata["time_column"], [metadata["target"], *columns],
+                cfg.get("lags", [1]), cfg.get("rolling_windows", [3]),
+                modeling_timezone=cfg.get("modeling_timezone"),
+            )["data"]
+        except (KeyError, ValueError) as exc:
+            raise ValueError(f"Unable to rebuild time-series features: {exc}") from exc
+        missing_features = [c for c in feature_names if c not in featured.columns]
+        if missing_features:
+            raise ValueError(f"Missing engineered features: {missing_features}")
+        frame = featured.dropna(subset=feature_names)
+        if frame.empty:
+            raise ValueError("Missing engineered features: no complete rows after feature warm-up")
+        values = estimator.predict(frame[feature_names].to_numpy(dtype=float))
+    else:
+        needed = feature_names or columns
+        missing_features = [c for c in needed if c not in df.columns]
+        if missing_features:
+            raise ValueError(f"Missing engineered features: {missing_features}")
+        values = estimator.predict(df[needed].to_numpy(dtype=float))
     return _plain_types({"success": True, "model_id": params["model_id"], "predictions": list(values), "metadata": metadata})
 
 
