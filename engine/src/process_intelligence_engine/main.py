@@ -2446,7 +2446,13 @@ def _handle_time_series_fit(params: dict) -> dict:
     # registry.  The fitted estimator is intentionally not serialized here.
     persist_models = bool(params.get("persist_models", False))
     persisted_ids: dict[str, str] = {}
-    persist_model_types = set(params.get("persist_model_types") or [])
+    requested_model_types = params.get("persist_model_types")
+    if requested_model_types is not None and (
+        not isinstance(requested_model_types, list)
+        or not all(isinstance(model_type, str) and model_type for model_type in requested_model_types)
+    ):
+        raise ValueError("persist_model_types must be a list of non-empty strings")
+    persist_model_types = set(requested_model_types or [])
     if persist_models:
         for item in result.get("results", []):
             if item.get("status") != "available" or (persist_model_types and item.get("model_type") not in persist_model_types):
@@ -2466,8 +2472,8 @@ def _handle_time_series_fit(params: dict) -> dict:
             item["persisted"] = True
     result["provenance"].update({
         "persisted": bool(persisted_ids),
-        "persistence_status": "registered_metadata" if persisted_ids else "not_requested",
-        "persistence_reason": "metadata registered; estimator serialization/replay is not included" if persisted_ids else "set persist_models=true to register available ladder results",
+        "persistence_status": "registered_metadata" if persisted_ids else ("no_models_to_persist" if persist_models else "not_requested"),
+        "persistence_reason": "metadata registered; estimator serialization/replay is not included" if persisted_ids else ("no available models matched the requested persistence selection" if persist_models else "set persist_models=true to register available ladder results"),
         "model_ids": persisted_ids,
     })
     return _plain_types({"dataset_id": params["dataset_id"], **result})

@@ -38,6 +38,49 @@ def test_time_series_fit_persistence_is_explicit_and_registers_metadata():
         assert MODEL_REGISTRY.get(model_id).model is None
 
 
+def test_time_series_fit_persists_only_selected_model_types():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=40, freq="h"),
+        "x": range(40), "y": [10 + i * 0.1 for i in range(40)],
+    }), {})
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "ts", "target": "y", "inputs": ["x"],
+        "lags": [1], "rolling_windows": [3], "persist_models": True,
+        "persist_model_types": ["naive"],
+    })
+    assert set(result["provenance"]["model_ids"]) == {"naive"}
+    assert result["results"][0]["persisted"] is True
+    assert all(item.get("persisted") is not True for item in result["results"] if item["model_type"] != "naive")
+
+
+def test_time_series_fit_rejects_invalid_persistence_selection():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=10, freq="h"), "y": range(10),
+    }), {})
+    for selection in ("naive", ["naive", 1], [""]):
+        try:
+            handle_request("features/time_series/fit", {
+                "dataset_id": dataset_id, "time_column": "ts", "target": "y",
+                "persist_models": True, "persist_model_types": selection,
+            })
+        except ValueError as exc:
+            assert "persist_model_types" in str(exc)
+        else:
+            raise AssertionError("expected invalid persistence selection error")
+
+
+def test_time_series_fit_reports_no_models_to_persist_for_unmatched_selection():
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=40, freq="h"), "y": range(40),
+    }), {})
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "ts", "target": "y",
+        "persist_models": True, "persist_model_types": ["missing_model"],
+    })
+    assert result["provenance"]["persisted"] is False
+    assert result["provenance"]["persistence_status"] == "no_models_to_persist"
+
+
 def test_time_series_fit_rejects_too_few_rows():
     dataset_id = REGISTRY.register(pd.DataFrame({"ts": pd.date_range("2026-01-01", periods=3), "y": [1, 2, 3]}), {})
     try:
