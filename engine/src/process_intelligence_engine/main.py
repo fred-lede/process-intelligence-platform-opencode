@@ -107,6 +107,7 @@ from process_intelligence_engine.features.time_series_modeling import (
     recommend_time_windows,
 )
 from process_intelligence_engine.modeling.time_series_models import fit_time_series_ladder, fit_residual_hybrid_time_series, validate_time_series_gate
+from process_intelligence_engine.modeling.time_series_explanations import explain_time_series_model
 from process_intelligence_engine.copula import compute_joint_probabilities
 from process_intelligence_engine.approval.workflow import APPROVAL_WORKFLOW
 from process_intelligence_engine.versioning.chain import VersionChain
@@ -1986,6 +1987,9 @@ def handle_request(method: str, params: dict) -> dict:
     if method == "modeling/shap/explain":
         return _handle_shap_explain(params)
 
+    if method == "modeling/time_series/explain":
+        return _handle_time_series_explain(params)
+
     if method == "modeling/extrapolation/check":
         return _handle_extrapolation_check(params)
 
@@ -2577,6 +2581,40 @@ def _handle_time_series_predict(params: dict) -> dict:
             raise ValueError(f"Missing engineered features: {missing_features}")
         values = estimator.predict(df[needed].to_numpy(dtype=float))
     return _plain_types({"success": True, "model_id": params["model_id"], "predictions": list(values), "metadata": metadata})
+
+
+def _handle_time_series_explain(params: dict) -> dict:
+    """Explain a persisted time-series estimator without changing standard explainers."""
+    df = REGISTRY.get(params["dataset_id"])
+    estimator, metadata = load_estimator(
+        _VERSION_CHAIN._project_root, params["model_id"], df=df,
+    )
+    feature_names = list(metadata.get("feature_names") or [])
+    configuration = metadata.get("feature_configuration") or {}
+    featured = build_time_features(
+        df,
+        metadata["time_column"],
+        [metadata["target"], *metadata.get("inputs", [])],
+        configuration.get("lags", [1]),
+        configuration.get("rolling_windows", [3]),
+        modeling_timezone=configuration.get("modeling_timezone"),
+    )["data"]
+    result = explain_time_series_model(
+        estimator,
+        featured,
+        target=metadata["target"],
+        feature_names=feature_names,
+        source_columns=[metadata["target"], *metadata.get("inputs", [])],
+        time_column=metadata["time_column"],
+        evaluation_protocol=metadata.get("evaluation_protocol", "unknown"),
+        block_size=params.get("block_size", 8),
+        random_seed=params.get("random_seed", 42),
+    )
+    return _plain_types({
+        "model_id": params["model_id"],
+        "dataset_id": params["dataset_id"],
+        **result,
+    })
 
 
 def _handle_time_series_validation(params: dict) -> dict:
