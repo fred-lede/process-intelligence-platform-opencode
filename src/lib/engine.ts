@@ -1289,6 +1289,8 @@ export interface TimeSeriesModelParams {
   modeling_timezone?: string
   window_days?: number
   evaluation_protocol?: 'fixed_horizon_forecast' | 'observed_feature_holdout'
+  persist_models?: boolean
+  persist_model_types?: string[]
 }
 
 export interface TimeSeriesLadderModel {
@@ -1301,6 +1303,7 @@ export interface TimeSeriesLadderModel {
   metrics: { mae: number; rmse: number; r2: number } | null
   leakage_check?: { status: 'passed' | 'not_checked' }
   persisted?: boolean
+  model_id?: string
   evaluation?: { rows?: number; protocol?: string; validation_strategy?: string; train_start?: string | null; train_end?: string | null; test_start?: string | null; test_end?: string | null; uses_observed_target?: boolean }
 }
 

@@ -2446,9 +2446,10 @@ def _handle_time_series_fit(params: dict) -> dict:
     # registry.  The fitted estimator is intentionally not serialized here.
     persist_models = bool(params.get("persist_models", False))
     persisted_ids: dict[str, str] = {}
+    persist_model_types = set(params.get("persist_model_types") or [])
     if persist_models:
         for item in result.get("results", []):
-            if item.get("status") != "available":
+            if item.get("status") != "available" or (persist_model_types and item.get("model_type") not in persist_model_types):
                 continue
             fit = ModelFit(
                 model_type=f"time_series_{item['model_type']}",
