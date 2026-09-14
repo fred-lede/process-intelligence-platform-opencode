@@ -2604,8 +2604,8 @@ def _handle_time_series_predict(params: dict) -> dict:
     missing = [c for c in columns if c not in df.columns]
     if missing:
         raise ValueError(f"Incompatible dataset: missing columns {missing}")
+    from process_intelligence_engine.features.time_series_modeling import prepare_time_series
     if metadata["model_type"] == "time_series_transformer":
-        from process_intelligence_engine.features.time_series_modeling import prepare_time_series
         from process_intelligence_engine.modeling.time_series_models import _forecast_sequence_model
 
         replay = metadata["replay"]
@@ -2627,6 +2627,35 @@ def _handle_time_series_predict(params: dict) -> dict:
             input_scale=np.asarray(normalization["inputs"]["scale"], dtype=float),
             fixed_horizon=True,
         )
+        return _plain_types({"success": True, "model_id": params["model_id"], "predictions": list(predictions), "metadata": metadata})
+    if metadata["model_type"] == "time_series_temporal_fusion_transformer":
+        import lightning.pytorch as pl
+        from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
+        checkpoint = estimator
+        replay = metadata.get("replay") or {}
+        sequence_length = int(replay.get("sequence_length", 24))
+        ordered = prepare_time_series(df, metadata["time_column"])["data"].reset_index(drop=True)
+        cutoff = pd.Timestamp(metadata["training_time_range"]["end"])
+        split = int((ordered[metadata["time_column"]] <= cutoff).sum())
+        train_frame = ordered.iloc[:split].copy(); all_frame = ordered.copy()
+        for frame in (train_frame, all_frame):
+            frame["_time_idx"] = np.arange(len(frame), dtype=int)
+            frame["_group_id"] = "series"
+            frame["_target"] = frame[metadata["target"]].astype(float)
+        training = TimeSeriesDataSet(
+            train_frame, time_idx="_time_idx", target="_target", group_ids=["_group_id"],
+            max_encoder_length=sequence_length, min_encoder_length=sequence_length,
+            max_prediction_length=1, min_prediction_length=1,
+            time_varying_known_reals=["_time_idx"],
+            time_varying_unknown_reals=["_target", *columns],
+            add_relative_time_idx=True, add_target_scales=True,
+        )
+        model = TemporalFusionTransformer.from_dataset(training, **checkpoint["hyper_parameters"])
+        model.load_state_dict(checkpoint["state_dict"])
+        model.eval()
+        validation_set = TimeSeriesDataSet.from_dataset(training, all_frame, min_prediction_idx=split, stop_randomization=True)
+        loader = validation_set.to_dataloader(train=False, batch_size=64, num_workers=0)
+        predictions = model.predict(loader, mode="prediction").detach().cpu().numpy().reshape(-1)
         return _plain_types({"success": True, "model_id": params["model_id"], "predictions": list(predictions), "metadata": metadata})
     feature_names = metadata.get("feature_names") or []
     if feature_names and not all(c in df.columns for c in feature_names):

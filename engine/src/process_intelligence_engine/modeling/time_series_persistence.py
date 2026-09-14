@@ -73,7 +73,7 @@ def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str
             "validation_gate_evidence": validation_gate_evidence or {},
         })
     elif tft:
-        metadata.update({"artifact_format": "pytorch", "validation_gate_evidence": validation_gate_evidence or {}})
+        metadata.update({"artifact_format": "pytorch", "replay": replay_metadata or {}, "validation_gate_evidence": validation_gate_evidence or {}})
     (directory / f"{model_id}.json").write_text(json.dumps(metadata, default=str, indent=2), encoding="utf-8")
     return metadata
 

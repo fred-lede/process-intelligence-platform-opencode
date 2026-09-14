@@ -445,6 +445,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     advanced_capabilities: dict[str, dict[str, Any]] = {
         "transformer": transformer_capability,
     }
+    tft_replay_metadata: dict[str, Any] | None = None
     for model_type, dependency, sequence_length, minimum_sequences in (
         ("temporal_fusion_transformer", "pytorch_forecasting", tft_sequence_length, TFT_MINIMUM_TRAINING_SEQUENCES),
     ):
@@ -539,6 +540,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     "_eval_indices": list(range(split, split + len(forecast_values))),
                     "evaluation_protocol": evaluation_protocol, "_estimator": tft_model,
                 }
+                tft_replay_metadata = {"sequence_length": sequence_length, "split": split}
                 result["backend"] = "pytorch"
                 result["framework_version"] = torch.__version__
             except Exception as exc:
@@ -557,7 +559,12 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "train_start": usable[time_column].iloc[0] if split else None, "train_end": usable[time_column].iloc[split - 1] if split else None, "test_start": usable[time_column].iloc[indices[0]] if indices else None, "test_end": usable[time_column].iloc[indices[-1]] if indices else None, "protocol": protocol, "uses_observed_target": protocol == "observed_feature_holdout", "observed_target_usage": "test_period" if protocol == "observed_feature_holdout" else "training_only"}
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False
-    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "capabilities":{"lstm":lstm_capability, **advanced_capabilities}, "_estimators": estimators, "_replay_metadata":{"transformer": transformer_replay_metadata} if transformer_replay_metadata else {}, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
+    replay_metadata = {}
+    if transformer_replay_metadata:
+        replay_metadata["transformer"] = transformer_replay_metadata
+    if tft_replay_metadata:
+        replay_metadata["temporal_fusion_transformer"] = tft_replay_metadata
+    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "capabilities":{"lstm":lstm_capability, **advanced_capabilities}, "_estimators": estimators, "_replay_metadata": replay_metadata, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
 
 
 def validate_time_series_gate(

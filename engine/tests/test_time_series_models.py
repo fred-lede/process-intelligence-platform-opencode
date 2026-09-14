@@ -251,6 +251,25 @@ def test_tft_persistence_uses_pytorch_artifact():
     assert loaded["status"] == "loaded"
 
 
+def test_tft_persistence_replays_predictions():
+    if importlib.util.find_spec("pytorch_forecasting") is None:
+        pytest.skip("pytorch_forecasting is optional")
+    frame = pd.read_csv(Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv")
+    dataset_id = REGISTRY.register(frame, {})
+    inputs = ["input_temperature", "input_voltage", "input_pressure", "input_speed", "input_load"]
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime", "target": "output_thickness",
+        "inputs": inputs, "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 1000,
+        "tft_sequence_length": 24, "persist_models": True,
+        "persist_model_types": ["temporal_fusion_transformer"],
+    })
+    model_id = result["provenance"]["model_ids"]["temporal_fusion_transformer"]
+    replayed = handle_request("features/time_series/predict", {"dataset_id": dataset_id, "model_id": model_id})
+    assert replayed["success"] is True
+    assert replayed["predictions"]
+
+
 def test_time_series_transformer_fits_when_capability_requirements_are_met():
     if importlib.util.find_spec("tensorflow") is None:
         pytest.skip("tensorflow is optional")
