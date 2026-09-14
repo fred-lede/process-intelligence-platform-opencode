@@ -3067,6 +3067,32 @@ def _handle_time_series_sequence_simulation(params: dict) -> dict:
                 sampled_targets.append(float(sampled))
                 sampled_inputs.append(scenario_input.tolist())
         quantiles = np.quantile(paths, [.05, .5, .95], axis=0)
+        calibration = {"status": "not_available", "nominal_confidence": .9,
+                       "overall_coverage": None, "steps": []}
+        observed_rows = params.get("observed_rows")
+        if observed_rows is not None:
+            if not isinstance(observed_rows, list) or not all(isinstance(row, dict) for row in observed_rows):
+                raise ValueError("observed_rows must be a list of objects when provided")
+            observed = pd.DataFrame(observed_rows)
+            if time_column not in observed.columns or target not in observed.columns:
+                raise ValueError("observed_rows must include the time and target columns")
+            observed = prepare_time_series(observed, time_column)["data"]
+            if observed[time_column].duplicated().any():
+                raise ValueError("observed_rows must not contain duplicate timestamps")
+            observed_by_time = dict(zip(observed[time_column], pd.to_numeric(observed[target], errors="raise")))
+            steps = [
+                {"timestamp": timestamp, "observed": float(observed_by_time[timestamp]),
+                 "lower": quantiles[0, index], "upper": quantiles[2, index],
+                 "covered": bool(quantiles[0, index] <= observed_by_time[timestamp] <= quantiles[2, index])}
+                for index, timestamp in enumerate(scenario_frame[time_column])
+                if timestamp in observed_by_time
+            ]
+            calibration = {
+                "status": "available" if len(steps) >= 2 else "insufficient_observations",
+                "nominal_confidence": .9,
+                "overall_coverage": float(np.mean([step["covered"] for step in steps])) if steps else None,
+                "steps": steps,
+            }
         return _plain_types({
             "status": "stochastic", "model_id": model_id, "horizon": horizon,
             "summary": [
@@ -3077,6 +3103,7 @@ def _handle_time_series_sequence_simulation(params: dict) -> dict:
             "simulation": {"mode": "sequence_stochastic", "seed": seed, "n_simulations": n_simulations,
                            "residual_method": "training_history_recursive_residuals"},
             "interval_coverage": {"status": "not_available", "reason": "future_observations_required", "confidence": .9},
+            "calibration": calibration,
             "final_gate": gate,
             "provenance": {"backend": metadata.get("backend"), "schema_version": metadata.get("schema_version"),
                            "residual_scale": residual_scale, "forecast_mode": "recursive_predictions_only"},

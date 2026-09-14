@@ -722,6 +722,7 @@ def test_time_series_sequence_simulation_uses_scenarios_and_recursive_prediction
         "model_id": approved["model_id"], "dataset_id": dataset_id,
         "history_rows": history_rows, "input_scenarios": scenarios, "horizon": 3,
         "simulation_mode": "sequence_stochastic", "seed": 17, "n_simulations": 12,
+        "observed_rows": frame.loc[timestamps > training_end, ["datetime", "output_thickness"]].head(3).to_dict("records"),
     }
     stochastic = handle_request("features/time_series/sequence_simulation", stochastic_params)
     repeated = handle_request("features/time_series/sequence_simulation", stochastic_params)
@@ -736,6 +737,10 @@ def test_time_series_sequence_simulation_uses_scenarios_and_recursive_prediction
     assert stochastic["interval_coverage"] == {
         "status": "not_available", "reason": "future_observations_required", "confidence": 0.9,
     }
+    assert stochastic["calibration"]["status"] == "available"
+    assert stochastic["calibration"]["nominal_confidence"] == 0.9
+    assert stochastic["calibration"]["overall_coverage"] is not None
+    assert len(stochastic["calibration"]["steps"]) == 3
 
     unsupported = handle_request("features/time_series/sequence_simulation", {
         "model_id": approved["model_id"], "dataset_id": dataset_id,
