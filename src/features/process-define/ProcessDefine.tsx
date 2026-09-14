@@ -35,7 +35,9 @@ import {
 } from '../../lib/engine'
 import type { ControlLimits } from '../../lib/engine'
 
-const NUMERIC_TYPES = new Set(['int64', 'float64', 'int', 'float'])
+// Field detector uses `continuous` for numeric columns in the role-review UI;
+// keep the canonical backend dtype aliases as well.
+const NUMERIC_TYPES = new Set(['int64', 'float64', 'int', 'float', 'continuous', 'numeric', 'number'])
 
 const TYPE_COLOR: Record<string, string> = {
   spec: 'red',
