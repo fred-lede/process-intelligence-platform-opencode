@@ -28,7 +28,7 @@ packaging==26.3
 pandas==3.0.5
 patsy==1.0.3
 pillow==12.3.0
-pip==24.0
+pip==26.2.1
 pluggy==1.6.0
 polars==1.44.1
 polars-runtime-32==1.44.1
@@ -50,6 +50,9 @@ six==1.17.0
 slicer==0.0.8
 statsmodels==0.15.0
 tensorflow==2.21.0
+torch==2.14.0
+pytorch-forecasting==1.8.0
+lightning==2.6.6
 threadpoolctl==3.6.0
 tinycss2==1.5.1
 tinyhtml5==2.1.0

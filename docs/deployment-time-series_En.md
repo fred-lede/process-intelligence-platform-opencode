@@ -2,7 +2,7 @@
 
 This guide creates an optional Temporal Fusion Transformer (TFT) environment. It does not change base requirements and does not make regular desktop deployments depend on PyTorch.
 
-The engine currently checks for `pytorch_forecasting`, required columns, a default sequence length of 24, and at least 128 training sequences. TFT remains `not_implemented` even when eligible; this environment prepares a later implementation without training anything today.
+The engine checks for `pytorch_forecasting`, required columns, a default sequence length of 24, and at least 128 training sequences. When eligible, TFT is trained and included in the time-series model comparison; missing dependencies or insufficient history are reported explicitly.
 
 ## Rules and installation order
 

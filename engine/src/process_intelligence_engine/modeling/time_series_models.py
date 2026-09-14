@@ -456,9 +456,8 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
             reason_codes.append("insufficient_history")
         if not dependency_available:
             reason_codes.append("dependency_missing")
-        reason_codes.append("not_implemented")
         capability = {
-            "eligible": False,
+            "eligible": not reason_codes,
             "backend": "pytorch",
             "dependency": {"name": dependency, "available": dependency_available},
             "data": {
@@ -481,18 +480,72 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
             },
             "reason_codes": reason_codes,
         }
-        primary_reason = reason_codes[0]
-        if primary_reason == "insufficient_history":
-            reason = f"requires at least {minimum_sequences} training sequences"
-        elif primary_reason == "dependency_missing":
-            reason = f"{dependency} is not installed"
+        tft_features = [f"{target}_sequence_{sequence_length}", *inputs]
+        if reason_codes:
+            primary_reason = reason_codes[0]
+            reason = (f"requires at least {minimum_sequences} training sequences"
+                      if primary_reason == "insufficient_history"
+                      else f"{dependency} is not installed")
+            result = _unavailable(model_type, reason, tft_features, validation, primary_reason)
         else:
-            reason = "training is not implemented in this stage"
-        result = _unavailable(
-            model_type, reason, [f"{target}_sequence_{sequence_length}"],
-            validation, primary_reason,
-        )
+            try:
+                import torch
+                import lightning.pytorch as pl
+                from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
+                from pytorch_forecasting.metrics import QuantileLoss
+
+                torch.set_num_threads(1)
+                train_frame = usable.iloc[:split].copy()
+                all_frame = usable.copy()
+                train_frame["_time_idx"] = np.arange(split, dtype=int)
+                all_frame["_time_idx"] = np.arange(len(usable), dtype=int)
+                train_frame["_group_id"] = "series"
+                all_frame["_group_id"] = "series"
+                train_frame["_target"] = train_frame[target].astype(float)
+                all_frame["_target"] = all_frame[target].astype(float)
+                training = TimeSeriesDataSet(
+                    train_frame, time_idx="_time_idx", target="_target",
+                    group_ids=["_group_id"], max_encoder_length=sequence_length,
+                    min_encoder_length=sequence_length, max_prediction_length=1,
+                    min_prediction_length=1, time_varying_known_reals=["_time_idx"],
+                    time_varying_unknown_reals=["_target", *inputs],
+                    add_relative_time_idx=True, add_target_scales=True,
+                    allow_missing_timesteps=False,
+                )
+                validation_set = TimeSeriesDataSet.from_dataset(
+                    training, all_frame, min_prediction_idx=split,
+                    stop_randomization=True,
+                )
+                train_loader = training.to_dataloader(train=True, batch_size=64, num_workers=0)
+                validation_loader = validation_set.to_dataloader(train=False, batch_size=64, num_workers=0)
+                tft_model = TemporalFusionTransformer.from_dataset(
+                    training, learning_rate=0.03, hidden_size=8, attention_head_size=1,
+                    dropout=0.1, hidden_continuous_size=8, loss=QuantileLoss(),
+                    log_interval=-1, reduce_on_plateau_patience=2,
+                )
+                trainer = pl.Trainer(
+                    max_epochs=3, accelerator="auto", devices=1, logger=False,
+                    enable_checkpointing=False, enable_model_summary=False,
+                    enable_progress_bar=False, gradient_clip_val=0.1,
+                )
+                trainer.fit(tft_model, train_dataloaders=train_loader)
+                raw_prediction = tft_model.predict(validation_loader, mode="prediction")
+                forecast_values = raw_prediction.detach().cpu().numpy().reshape(-1)
+                expected = y[split:split + len(forecast_values)]
+                result = {
+                    "model_type": model_type, "status": "available", "features": tft_features,
+                    "validation": validation, "metrics": _metrics(expected, forecast_values),
+                    "_eval_rows": len(forecast_values),
+                    "_eval_indices": list(range(split, split + len(forecast_values))),
+                    "evaluation_protocol": evaluation_protocol, "_estimator": tft_model,
+                }
+                result["backend"] = "pytorch"
+                result["framework_version"] = torch.__version__
+            except Exception as exc:
+                result = _unavailable(model_type, f"adapter failed: {exc}", tft_features, validation, "adapter_error")
         result["capability"] = capability
+        if result.get("status") == "available":
+            capability["implementation"] = "pytorch_forecasting_temporal_fusion_transformer"
         results.append(result)
         advanced_capabilities[model_type] = capability
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}

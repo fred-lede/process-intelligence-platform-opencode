@@ -123,7 +123,7 @@ print("pytorch_forecasting available:", importlib.util.find_spec("pytorch_foreca
 PY
 ```
 
-安裝成功後，Model Center 的 TFT capability 應顯示依賴可用、資料 contract、sequence length 與可用序列數；由於 Phase 3a 尚未實作訓練，reason code 仍會包含 `not_implemented`。缺少套件時，應明確顯示 `dependency_missing`，不是引擎啟動失敗。
+安裝成功後，Model Center 的 TFT capability 應顯示依賴可用、資料 contract、sequence length 與可用序列數；符合至少 128 組訓練序列時會執行 TFT 訓練並列入比較。資料不足或缺少套件時，應明確顯示 `insufficient_history` 或 `dependency_missing`，不是引擎啟動失敗。
 
 ## Fallback 與排錯
 

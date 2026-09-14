@@ -105,7 +105,7 @@ def test_advanced_time_series_rows_report_insufficient_sequence_history(monkeypa
     rows = {item["model_type"]: item for item in result["results"]}
     for model_type, minimum_sequences, reason_codes in (
         ("transformer", 64, ["insufficient_history"]),
-        ("temporal_fusion_transformer", 128, ["insufficient_history", "not_implemented"]),
+        ("temporal_fusion_transformer", 128, ["insufficient_history"]),
     ):
         row = rows[model_type]
         assert row["status"] == "unavailable"
@@ -150,7 +150,7 @@ def test_advanced_time_series_rows_report_missing_dependencies(monkeypatch):
     expected_dependencies = {
         "transformer": ("tensorflow", ["dependency_missing"]),
         "temporal_fusion_transformer": (
-            "pytorch_forecasting", ["dependency_missing", "not_implemented"],
+            "pytorch_forecasting", ["dependency_missing"],
         ),
     }
     for model_type, (dependency, reason_codes) in expected_dependencies.items():
@@ -195,7 +195,7 @@ def test_tft_capability_declares_data_contract_and_protocols(monkeypatch):
     assert tft["capability"]["dependency"] == {
         "name": "pytorch_forecasting", "available": False,
     }
-    assert tft["capability"]["reason_codes"] == ["dependency_missing", "not_implemented"]
+    assert tft["capability"]["reason_codes"] == ["dependency_missing"]
     assert tft["capability"]["data_contract"] == {
         "time_column": "datetime",
         "target": "output_thickness",
@@ -205,6 +205,30 @@ def test_tft_capability_declares_data_contract_and_protocols(monkeypatch):
         "evaluation_protocol": "fixed_horizon_forecast",
         "supported_protocols": ["fixed_horizon_forecast", "observed_feature_holdout"],
     }
+
+
+def test_tft_fits_when_dependency_and_sequence_requirements_are_met():
+    if importlib.util.find_spec("pytorch_forecasting") is None:
+        pytest.skip("pytorch_forecasting is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    dataset_id = REGISTRY.register(frame, {})
+    inputs = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": inputs,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 1000,
+        "tft_sequence_length": 24,
+    })
+    tft = next(item for item in result["results"] if item["model_type"] == "temporal_fusion_transformer")
+    assert tft["status"] == "available"
+    assert tft["backend"] == "pytorch"
+    assert tft["metrics"] is not None
 
 
 def test_time_series_transformer_fits_when_capability_requirements_are_met():
