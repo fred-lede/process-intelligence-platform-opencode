@@ -416,6 +416,13 @@
         "provenanceKinds": { "calendar_hour": "日曆小時", "calendar_weekday": "日曆星期", "lag": "延遲值", "rolling_mean": "移動平均", "rolling_std": "移動標準差", "difference": "一階差分", "rate_of_change": "變化率", "source": "原始值" },
         "availability": { "historical_only": "僅歷史資料", "prediction_timestamp": "預測時間戳", "prediction_time_input": "預測時輸入" }
       },
+      "sequenceSimulation": {
+        "title": "序列感知模擬", "description": "使用提供的未來 input 情境與遞迴預測執行 deterministic dry-run；不使用獨立蒙地卡羅抽樣或未來 target 值。",
+        "selectModel": "選擇已核准 Transformer", "horizon": "預測步數", "run": "執行 dry-run", "running": "預測中...",
+        "historyPlaceholder": "history rows JSON（時間、target 與所有 inputs）。", "scenariosPlaceholder": "future input scenarios JSON（僅時間與 inputs，勿含 target）。",
+        "invalidRows": "history rows 與 future input scenarios 必須各自是 JSON 陣列。", "success": "序列感知 dry-run 已完成", "error": "序列感知模擬失敗", "blocked": "最終風險使用 gate 已封鎖", "needsSequence": "獨立抽樣不可用；請提供序列感知 history window 與 future input scenarios。",
+        "deterministic": "Deterministic 遞迴預測", "uncertaintyUnavailable": "此 dry-run 尚無不確定性區間。", "windowRows": "歷史列數", "sequenceLength": "序列長度", "forecastMode": "預測模式", "schemaVersion": "Schema 版本", "modelVersion": "模型版本", "timestamp": "時間戳", "predicted": "預測值"
+      },
       "detectedTimestamp": "偵測為時間欄位",
       "timeColumn": "時間欄位",
       "selectTimeColumn": "選擇時間欄位",

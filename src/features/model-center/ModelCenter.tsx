@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, InputNumber, Typography, Descriptions } from 'antd'
+import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, Input, InputNumber, Typography, Descriptions } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from '../../components/PlotChart'
@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult, TimeSeriesExplanationResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult, TimeSeriesExplanationResult, TimeSeriesSequenceSimulationResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, runTimeSeriesSequenceSimulation, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -132,6 +132,12 @@ export default function ModelCenter() {
   const [selectedModelInfoLoading, setSelectedModelInfoLoading] = useState(false)
   const [timeSeriesExplanation, setTimeSeriesExplanation] = useState<TimeSeriesExplanationResult | null>(null)
   const [timeSeriesExplanationLoading, setTimeSeriesExplanationLoading] = useState(false)
+  const [sequenceSimulationModelId, setSequenceSimulationModelId] = useState<string | undefined>()
+  const [sequenceSimulationHorizon, setSequenceSimulationHorizon] = useState(1)
+  const [sequenceSimulationHistory, setSequenceSimulationHistory] = useState('[]')
+  const [sequenceSimulationScenarios, setSequenceSimulationScenarios] = useState('[]')
+  const [sequenceSimulationResult, setSequenceSimulationResult] = useState<TimeSeriesSequenceSimulationResult | null>(null)
+  const [sequenceSimulationLoading, setSequenceSimulationLoading] = useState(false)
 
   useEffect(() => {
     setContext(
@@ -213,6 +219,13 @@ export default function ModelCenter() {
     setTimeSeriesExplanation(null)
     setTimeSeriesExplanationLoading(false)
   }, [datasetId, selectedModelId])
+
+  useEffect(() => {
+    setSequenceSimulationResult(null)
+    if (selectedModelId && selectedModelInfo?.model_type === 'time_series_transformer') {
+      setSequenceSimulationModelId(selectedModelId)
+    }
+  }, [datasetId, selectedModelId, selectedModelInfo?.model_type])
 
   const invalidateTimeSeriesRun = () => {
     timeSeriesRequestId.current += 1
@@ -348,6 +361,39 @@ export default function ModelCenter() {
       messageApi.error(`${t('modelCenter.timeSeries.explanation.error')}: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       if (requestId === timeSeriesExplanationRequestId.current) setTimeSeriesExplanationLoading(false)
+    }
+  }
+
+  const handleRunSequenceSimulation = async () => {
+    if (!datasetId || !sequenceSimulationModelId) return
+    let historyRows: Array<Record<string, unknown>>
+    let inputScenarios: Array<Record<string, unknown>>
+    try {
+      const parsedHistory: unknown = JSON.parse(sequenceSimulationHistory)
+      const parsedScenarios: unknown = JSON.parse(sequenceSimulationScenarios)
+      if (!Array.isArray(parsedHistory) || !Array.isArray(parsedScenarios)) throw new Error(t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
+      historyRows = parsedHistory as Array<Record<string, unknown>>
+      inputScenarios = parsedScenarios as Array<Record<string, unknown>>
+    } catch (err) {
+      messageApi.error(err instanceof Error ? err.message : t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
+      return
+    }
+    setSequenceSimulationLoading(true)
+    setSequenceSimulationResult(null)
+    try {
+      const result = await runTimeSeriesSequenceSimulation({
+        model_id: sequenceSimulationModelId,
+        dataset_id: datasetId,
+        horizon: sequenceSimulationHorizon,
+        history_rows: historyRows,
+        input_scenarios: inputScenarios,
+      })
+      setSequenceSimulationResult(result)
+      if (result.status === 'dry_run') messageApi.success(t('modelCenter.timeSeries.sequenceSimulation.success'))
+    } catch (err) {
+      messageApi.error(`${t('modelCenter.timeSeries.sequenceSimulation.error')}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setSequenceSimulationLoading(false)
     }
   }
 
@@ -1196,8 +1242,77 @@ export default function ModelCenter() {
                     </Descriptions.Item>
                   </Descriptions>
                   {selectedModelInfo.model_type.startsWith('time_series_') && (
-                    <Card size="small" title={t('modelCenter.timeSeries.explanation.title')} style={{ marginTop: 12 }}>
-                      <Space direction="vertical" style={{ width: '100%' }}>
+                    <Space direction="vertical" style={{ width: '100%', marginTop: 12 }} size="middle">
+                      <Card size="small" title={t('modelCenter.timeSeries.sequenceSimulation.title')}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Alert type="info" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.description')} />
+                          <Space wrap>
+                            <Select
+                              value={sequenceSimulationModelId}
+                              onChange={setSequenceSimulationModelId}
+                              placeholder={t('modelCenter.timeSeries.sequenceSimulation.selectModel')}
+                              style={{ minWidth: 260 }}
+                              options={models
+                                .filter((model) => String(model.model_type) === 'time_series_transformer')
+                                .map((model) => ({ value: model.model_id, label: `${model.model_type} v${model.version}` }))}
+                            />
+                            <InputNumber
+                              min={1}
+                              value={sequenceSimulationHorizon}
+                              onChange={(value) => setSequenceSimulationHorizon(value ?? 1)}
+                              addonBefore={t('modelCenter.timeSeries.sequenceSimulation.horizon')}
+                            />
+                            <Button type="primary" loading={sequenceSimulationLoading} onClick={handleRunSequenceSimulation} disabled={!datasetId || !sequenceSimulationModelId}>
+                              {sequenceSimulationLoading
+                                ? t('modelCenter.timeSeries.sequenceSimulation.running')
+                                : t('modelCenter.timeSeries.sequenceSimulation.run')}
+                            </Button>
+                          </Space>
+                          <Input.TextArea
+                            value={sequenceSimulationHistory}
+                            onChange={(event) => setSequenceSimulationHistory(event.target.value)}
+                            rows={4}
+                            placeholder={t('modelCenter.timeSeries.sequenceSimulation.historyPlaceholder')}
+                          />
+                          <Input.TextArea
+                            value={sequenceSimulationScenarios}
+                            onChange={(event) => setSequenceSimulationScenarios(event.target.value)}
+                            rows={4}
+                            placeholder={t('modelCenter.timeSeries.sequenceSimulation.scenariosPlaceholder')}
+                          />
+                          {sequenceSimulationResult?.status === 'blocked' && (
+                            <Alert type="error" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.blocked')} description={sequenceSimulationResult.final_gate.reasons.join(', ')} />
+                          )}
+                          {sequenceSimulationResult?.status === 'not_supported' && (
+                            <Alert type="warning" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.needsSequence')} />
+                          )}
+                          {sequenceSimulationResult?.status === 'dry_run' && (
+                            <>
+                              <Alert type="success" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.deterministic')} description={t('modelCenter.timeSeries.sequenceSimulation.uncertaintyUnavailable')} />
+                              <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }}>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.windowRows')}>{sequenceSimulationResult.history_window?.rows}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.sequenceLength')}>{sequenceSimulationResult.history_window?.sequence_length}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.forecastMode')}>{sequenceSimulationResult.scenario_provenance?.forecast_mode}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.backend')}>{sequenceSimulationResult.final_gate.provenance.backend}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.schemaVersion')}>{sequenceSimulationResult.final_gate.provenance.schema_version}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.modelVersion')}>{sequenceSimulationResult.final_gate.provenance.model_version}</Descriptions.Item>
+                              </Descriptions>
+                              <Table
+                                size="small"
+                                pagination={false}
+                                rowKey="timestamp"
+                                dataSource={sequenceSimulationResult.predictions ?? []}
+                                columns={[
+                                  { title: t('modelCenter.timeSeries.sequenceSimulation.timestamp'), dataIndex: 'timestamp', key: 'timestamp' },
+                                  { title: t('modelCenter.timeSeries.sequenceSimulation.predicted'), dataIndex: 'predicted', key: 'predicted', render: (value: number) => value.toFixed(6) },
+                                ]}
+                              />
+                            </>
+                          )}
+                        </Space>
+                      </Card>
+                      <Card size="small" title={t('modelCenter.timeSeries.explanation.title')}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
                         <Button type="primary" loading={timeSeriesExplanationLoading} onClick={handleExplainTimeSeriesModel}>
                           {timeSeriesExplanationLoading
                             ? t('modelCenter.timeSeries.explanation.running')
@@ -1271,8 +1386,9 @@ export default function ModelCenter() {
                             />
                           </Space>
                         )}
-                      </Space>
-                    </Card>
+                        </Space>
+                      </Card>
+                    </Space>
                   )}
                 </>
               ) : (

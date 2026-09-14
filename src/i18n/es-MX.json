@@ -418,6 +418,13 @@
         "provenanceKinds": { "calendar_hour": "Hora del calendario", "calendar_weekday": "Día de la semana", "lag": "Retardo", "rolling_mean": "Media móvil", "rolling_std": "Desviación estándar móvil", "difference": "Primera diferencia", "rate_of_change": "Tasa de cambio", "source": "Valor de origen" },
         "availability": { "historical_only": "Solo datos históricos", "prediction_timestamp": "Marca de tiempo de predicción", "prediction_time_input": "Entrada al predecir" }
       },
+      "sequenceSimulation": {
+        "title": "Simulación consciente de secuencia", "description": "Ejecuta una prueba determinista con escenarios futuros de entradas y predicciones recursivas. No usa muestreo Monte Carlo independiente ni valores futuros del objetivo.",
+        "selectModel": "Seleccionar Transformer aprobado", "horizon": "Horizonte", "run": "Ejecutar prueba", "running": "Pronosticando...",
+        "historyPlaceholder": "JSON de filas históricas (tiempo, objetivo y todas las entradas).", "scenariosPlaceholder": "JSON de escenarios futuros (solo tiempo y entradas; no incluya objetivo).",
+        "invalidRows": "Las filas históricas y los escenarios futuros deben ser arreglos JSON.", "success": "Prueba de secuencia completada", "error": "Falló la simulación consciente de secuencia", "blocked": "La compuerta final de uso de riesgo está bloqueada", "needsSequence": "El muestreo independiente no está disponible; proporcione una ventana histórica y escenarios futuros conscientes de secuencia.",
+        "deterministic": "Pronóstico recursivo determinista", "uncertaintyUnavailable": "Los intervalos de incertidumbre no están disponibles para esta prueba.", "windowRows": "Filas históricas", "sequenceLength": "Longitud de secuencia", "forecastMode": "Modo de pronóstico", "schemaVersion": "Versión de esquema", "modelVersion": "Versión del modelo", "timestamp": "Marca de tiempo", "predicted": "Predicción"
+      },
       "detectedTimestamp": "tiempo detectado",
       "timeColumn": "Columna de tiempo",
       "selectTimeColumn": "Selecciona columna de tiempo",

@@ -416,6 +416,13 @@
         "provenanceKinds": { "calendar_hour": "Calendar hour", "calendar_weekday": "Calendar weekday", "lag": "Lag", "rolling_mean": "Rolling mean", "rolling_std": "Rolling standard deviation", "difference": "First difference", "rate_of_change": "Rate of change", "source": "Source value" },
         "availability": { "historical_only": "Historical data only", "prediction_timestamp": "Prediction timestamp", "prediction_time_input": "Prediction-time input" }
       },
+      "sequenceSimulation": {
+        "title": "Sequence-aware simulation", "description": "Runs a deterministic dry-run using supplied future input scenarios and recursive predictions. It does not use independent Monte Carlo sampling or future target values.",
+        "selectModel": "Select approved Transformer", "horizon": "Horizon", "run": "Run dry-run", "running": "Forecasting...",
+        "historyPlaceholder": "History rows JSON (time, target, and all inputs).", "scenariosPlaceholder": "Future input scenarios JSON (time and inputs only; do not include target).",
+        "invalidRows": "History rows and future input scenarios must each be a JSON array.", "success": "Sequence-aware dry-run completed", "error": "Sequence-aware simulation failed", "blocked": "Final risk-use gate is blocked", "needsSequence": "Independent sampling is unavailable; provide a sequence-aware history window and future input scenarios.",
+        "deterministic": "Deterministic recursive forecast", "uncertaintyUnavailable": "Uncertainty intervals are not available for this dry-run.", "windowRows": "History rows", "sequenceLength": "Sequence length", "forecastMode": "Forecast mode", "schemaVersion": "Schema version", "modelVersion": "Model version", "timestamp": "Timestamp", "predicted": "Predicted"
+      },
       "detectedTimestamp": "detected time",
       "timeColumn": "Time Column",
       "selectTimeColumn": "Select time column",

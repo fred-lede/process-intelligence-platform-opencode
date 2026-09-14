@@ -1517,6 +1517,46 @@ export interface TimeSeriesExplanationParams {
   random_seed?: number
 }
 
+export interface TimeSeriesFinalRiskGate {
+  status: 'approved' | 'blocked'
+  reasons: string[]
+  provenance: {
+    model_id: string
+    model_version: number
+    model_status: string
+    schema_version: string | null
+    backend: string | null
+    framework_version: string | null
+  }
+}
+
+export interface TimeSeriesSequenceSimulationResult {
+  success?: boolean
+  status: 'dry_run' | 'blocked' | 'not_supported'
+  reason?: 'final_risk_gate_blocked' | 'needs_sequence_simulation'
+  model_id?: string
+  horizon?: number
+  predictions?: Array<{ timestamp: string; predicted: number }>
+  final_gate: TimeSeriesFinalRiskGate
+  history_window?: { rows: number; sequence_length: number; start: string; end: string }
+  scenario_provenance?: {
+    rows: number
+    input_columns: string[]
+    target_usage: 'not_accepted'
+    forecast_mode: 'recursive_predictions_only'
+  }
+  uncertainty?: { status: 'not_available'; method: string; reason: 'deterministic_dry_run' }
+}
+
+export interface TimeSeriesSequenceSimulationParams {
+  model_id: string
+  dataset_id: string
+  horizon: number
+  history_rows: Array<Record<string, unknown>>
+  input_scenarios: Array<Record<string, unknown>>
+  simulation_mode?: 'sequence_aware' | 'independent'
+}
+
 export function recommendTimeSeriesWindows(params: { dataset_id: string; time_column: string; modeling_timezone?: string; candidates?: number[] }) {
   return engineCall<TimeSeriesWindowRecommendation>('features/time_series/windows', params)
 }
@@ -1577,6 +1617,10 @@ export async function validateTimeSeriesGate(params: TimeSeriesValidationGatePar
 
 export async function explainTimeSeriesModel(params: TimeSeriesExplanationParams): Promise<TimeSeriesExplanationResult> {
   return engineCall<TimeSeriesExplanationResult>('modeling/time_series/explain', params as unknown as Record<string, unknown>)
+}
+
+export async function runTimeSeriesSequenceSimulation(params: TimeSeriesSequenceSimulationParams): Promise<TimeSeriesSequenceSimulationResult> {
+  return engineCall<TimeSeriesSequenceSimulationResult>('features/time_series/sequence_simulation', params as unknown as Record<string, unknown>)
 }
 
 export async function getConsecutiveExceedance(params: ConsecutiveExceedanceParams): Promise<ConsecutiveExceedance> {
