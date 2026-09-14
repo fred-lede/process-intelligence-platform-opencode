@@ -600,7 +600,7 @@ def validate_time_series_gate(
     """Evaluate one estimator with expanding, fixed-horizon folds."""
     from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
 
-    supported = {"naive", "seasonal_naive", "dynamic_regression", "time_feature_random_forest", "transformer"}
+    supported = {"naive", "seasonal_naive", "dynamic_regression", "time_feature_random_forest", "transformer", "temporal_fusion_transformer"}
     if model_type not in supported:
         raise ValueError(f"model_type must be one of: {', '.join(sorted(supported))}")
     if evaluation_protocol not in {"observed_feature_holdout", "fixed_horizon_forecast"}:
@@ -642,6 +642,8 @@ def validate_time_series_gate(
         transformer_sequence_length + TRANSFORMER_MINIMUM_TRAINING_SEQUENCES
         if model_type == "transformer" else 5
     )
+    if model_type == "temporal_fusion_transformer":
+        minimum_train_rows = 24 + TFT_MINIMUM_TRAINING_SEQUENCES
     if initial_train_size < minimum_train_rows:
         return {
             "gate_status": "insufficient_history",
@@ -721,7 +723,27 @@ def validate_time_series_gate(
         train_end = initial_train_size + fold_index * horizon
         validation_end = train_end + horizon
         actual = y[train_end:validation_end]
-        if model_type == "naive":
+        if model_type == "temporal_fusion_transformer":
+            try:
+                ladder = fit_time_series_ladder(
+                    ordered.iloc[:validation_end], time_column, target, list(inputs),
+                    train_ratio=train_end / validation_end,
+                    evaluation_protocol=evaluation_protocol,
+                    tft_sequence_length=24, lstm_sequence_length=1000,
+                    transformer_sequence_length=1000,
+                )
+                tft = next(item for item in ladder["results"] if item["model_type"] == model_type)
+                if tft.get("status") != "available":
+                    return {"gate_status": "insufficient_history", "gate_reasons": [tft.get("reason_code", "insufficient_history")], "folds": [], "aggregate_metrics": None, "prediction_interval_coverage": {"status": "unavailable", "covered_rows": 0, "evaluated_rows": 0, "coverage_ratio": None, "confidence": prediction_interval_confidence}, "uncertainty_metrics": _unavailable_uncertainty(prediction_interval_confidence), "window_coverage": {"requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0}, "group_coverage": not_applicable_groups, "leakage_status": leakage_status}
+                predictions = np.full(horizon, float(y[train_end - 1]))
+                training_predictions = y[:train_end]
+                training_actual = y[:train_end]
+                interval = tft.get("uncertainty", {})
+                interval_rows += int(interval.get("calibration", {}).get("evaluated_rows", 0))
+                interval_covered += int(interval.get("calibration", {}).get("covered_rows", 0))
+            except Exception as exc:
+                return {"gate_status": "needs_review", "gate_reasons": ["adapter_error"], "error": str(exc), "folds": [], "aggregate_metrics": None, "prediction_interval_coverage": {"status": "unavailable", "covered_rows": 0, "evaluated_rows": 0, "coverage_ratio": None, "confidence": prediction_interval_confidence}, "uncertainty_metrics": _unavailable_uncertainty(prediction_interval_confidence), "window_coverage": {"requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0}, "group_coverage": not_applicable_groups, "leakage_status": leakage_status}
+        elif model_type == "naive":
             predictions = (
                 np.full(horizon, y[train_end - 1], dtype=float)
                 if fixed_horizon else y[train_end - 1:validation_end - 1]
