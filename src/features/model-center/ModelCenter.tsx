@@ -299,7 +299,8 @@ export default function ModelCenter() {
       if (result.gate_status === 'approved') {
         messageApi.success(t('modelCenter.timeSeries.gateApproved'))
       } else {
-        messageApi.warning(t(`modelCenter.timeSeries.gateStatus.${result.gate_status}`))
+        const reasons = result.gate_reasons.map((reason) => timeSeriesGateReason(reason)).join('；')
+        messageApi.warning(`${t(`modelCenter.timeSeries.gateStatus.${result.gate_status}`)}${reasons ? `：${reasons}` : ''}`)
       }
     } catch (err) {
       if (requestId !== timeSeriesGateRequestId.current) return
