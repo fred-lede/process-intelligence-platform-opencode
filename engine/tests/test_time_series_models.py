@@ -545,6 +545,61 @@ def test_time_series_retrain_compare_creates_unapproved_candidate_without_replac
     assert MODEL_REGISTRY.get(model_id).status == "draft"
 
 
+def test_time_series_retrain_candidate_review_requires_gate_then_persists_new_version():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    dataset_id = REGISTRY.register(frame, {})
+    fitted = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": input_columns,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 24,
+        "persist_models": True, "persist_model_types": ["transformer"],
+        "validation_gate_evidence": {"transformer": {"gate_status": "approved"}},
+    })
+    model_id = fitted["provenance"]["model_ids"]["transformer"]
+    metadata = handle_request("features/time_series/load", {
+        "dataset_id": dataset_id, "model_id": model_id,
+    })["metadata"]
+    training_end = pd.Timestamp(fitted["training_time_range"]["end"])
+    timestamps = pd.to_datetime(frame["datetime"], utc=True)
+    candidate = handle_request("features/time_series/retrain_compare", {
+        "model_id": model_id, "model_metadata": metadata,
+        "history_rows": frame.loc[timestamps <= training_end].to_dict("records"),
+        "new_observed_rows": frame.loc[timestamps > training_end].head(8).to_dict("records"),
+    })["candidate"]
+
+    with pytest.raises(ValueError, match="approved gate evidence"):
+        handle_request("features/time_series/retrain_review", {
+            "candidate_id": candidate["candidate_id"], "decision": "approve",
+            "reviewer": "qa", "reason": "metrics reviewed",
+            "gate_evidence": {"gate_status": "needs_review"},
+        })
+    approved = handle_request("features/time_series/retrain_review", {
+        "candidate_id": candidate["candidate_id"], "decision": "approve",
+        "reviewer": "qa", "reason": "independent evidence accepted",
+        "gate_evidence": {"gate_status": "approved", "evidence_id": "gate-42"},
+    })
+
+    assert approved["status"] == "persisted_for_validation"
+    assert approved["model_id"] != model_id
+    assert approved["model_status"] == "validated"
+    assert approved["review"] == {
+        "reviewer": "qa", "decision": "approve",
+        "reason": "independent evidence accepted",
+        "gate_evidence": {"gate_status": "approved", "evidence_id": "gate-42"},
+    }
+    assert MODEL_REGISTRY.get(model_id).status == "draft"
+    assert MODEL_REGISTRY.get(approved["model_id"]).status == "validated"
+
+
 def test_time_series_load_rejects_unknown_persistence_metadata_version(tmp_path):
     directory = tmp_path / "models" / "time_series"
     directory.mkdir(parents=True)

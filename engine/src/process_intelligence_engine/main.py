@@ -191,6 +191,8 @@ _PROJECT_ROOT = "/tmp/default-project"
 _VERSION_CHAIN = VersionChain(_PROJECT_ROOT, "anonymous")
 GATE_MANAGER = GateManager(project_root=_PROJECT_ROOT, project_id="default")
 _ASSISTANT_STATE = None
+_RETRAIN_CANDIDATES: dict[str, dict] = {}
+_RETRAIN_CANDIDATES_LOCK = threading.Lock()
 try:
     _VERSION_CHAIN.load()
 except Exception:
@@ -2165,6 +2167,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_experiment_validation(params)
     if method == "features/time_series/retrain_compare":
         return _handle_time_series_retrain_compare(params)
+    if method == "features/time_series/retrain_review":
+        return _handle_time_series_retrain_review(params)
     if method == "features/time_series/validation":
         return _handle_time_series_validation(params)
     if method == "features/time_series/validation_gate":
@@ -2809,16 +2813,25 @@ def _handle_time_series_retrain_compare(params: dict) -> dict:
         "rmse": root_mean_squared_error(observed, predictions),
     }
     source_fit = MODEL_REGISTRY.get(model_id)
+    candidate_id = str(uuid.uuid4())
     provenance = {
         "source_model_id": model_id, "source_model_version": source_fit.version,
         "schema_version": metadata["schema_version"], "backend": metadata.get("backend"),
         "framework_version": metadata.get("framework_version"),
         "evaluation_protocol": "fixed_horizon_forecast",
     }
+    with _RETRAIN_CANDIDATES_LOCK:
+        _RETRAIN_CANDIDATES[candidate_id] = {
+            "state": "draft", "source_model_id": model_id, "metadata": metadata,
+            "source": candidate_source, "estimator": candidate_estimator,
+            "fit": candidate_fit, "row": candidate_row, "replay": candidate_replay,
+            "after_metrics": after_metrics, "provenance": provenance,
+        }
     return _plain_types({
         "status": "candidate_created",
         "candidate": {
-            "version": source_fit.version + 1, "status": "draft", "persisted": False,
+            "candidate_id": candidate_id, "version": source_fit.version + 1,
+            "status": "draft", "persisted": False,
             "model_type": "time_series_transformer", "training_rows": len(candidate_history),
             "holdout_rows": len(holdout),
         },
@@ -2832,6 +2845,77 @@ def _handle_time_series_retrain_compare(params: dict) -> dict:
             "reasons": ["candidate_not_persisted", "independent_approval_required"],
         },
         "provenance": provenance,
+    })
+
+
+def _handle_time_series_retrain_review(params: dict) -> dict:
+    """Persist a reviewed retraining candidate without replacing its source."""
+    candidate_id = params["candidate_id"]
+    decision = params.get("decision")
+    reviewer = params.get("reviewer")
+    reason = params.get("reason")
+    evidence = params.get("gate_evidence")
+    if decision not in {"approve", "reject", "withdraw"}:
+        raise ValueError("decision must be approve, reject, or withdraw")
+    if not isinstance(reviewer, str) or not reviewer.strip() or not isinstance(reason, str) or not reason.strip():
+        raise ValueError("reviewer and reason are required")
+    with _RETRAIN_CANDIDATES_LOCK:
+        candidate = _RETRAIN_CANDIDATES.get(candidate_id)
+        if candidate is None:
+            raise KeyError(f"Unknown retraining candidate: {candidate_id}")
+        if candidate["state"] != "draft":
+            raise ValueError("Retraining candidate is no longer reviewable")
+        if decision in {"reject", "withdraw"}:
+            candidate["state"] = f"{decision}ed" if decision == "reject" else "withdrawn"
+            return {
+                "status": candidate["state"], "candidate_id": candidate_id,
+                "persisted": False,
+                "review": {"reviewer": reviewer, "decision": decision, "reason": reason},
+            }
+        if not isinstance(evidence, dict) or evidence.get("gate_status") != "approved":
+            raise ValueError("approved gate evidence is required before persistence")
+        metadata = candidate["metadata"]
+        candidate_fit = candidate["fit"]
+        fit = ModelFit(
+            model_type="time_series_transformer", target=metadata["target"],
+            inputs=list(metadata["inputs"]), metrics=dict(candidate["after_metrics"]),
+            equation="time-series retraining candidate; reviewed fixed-horizon replay",
+            n_train=candidate["row"]["validation"]["train_rows"],
+            n_test=candidate["row"].get("evaluation", {}).get("rows", 0),
+            created_at="", model=candidate["estimator"],
+        )
+        model_id = MODEL_REGISTRY.register(fit)
+        review = {
+            "reviewer": reviewer, "decision": decision, "reason": reason,
+            "gate_evidence": evidence,
+        }
+        saved = save_estimator(
+            _VERSION_CHAIN._project_root, fit, fit.model,
+            dataset_id=metadata["dataset_id"], df=candidate["source"],
+            time_column=metadata["time_column"],
+            feature_configuration=candidate_fit["feature_configuration"],
+            evaluation_protocol="fixed_horizon_forecast",
+            training_time_range=candidate_fit["training_time_range"],
+            feature_names=list(candidate["row"].get("features") or []),
+            replay_metadata=candidate["replay"], validation_gate_evidence=review,
+            backend=candidate["row"].get("backend"),
+            framework_version=candidate["row"].get("framework_version"),
+        )
+        MODEL_REGISTRY.transition(model_id, "pending_validation")
+        validated = MODEL_REGISTRY.transition(model_id, "validated")
+        _VERSION_CHAIN.register_entity("model", "default", {
+            "model_type": fit.model_type, "model_id": model_id,
+            "source_model_id": candidate["source_model_id"], "time_series_estimator": True,
+            "artifact": saved["artifact"], "retraining_candidate_id": candidate_id,
+            "review": review, "fit_snapshot": validated.to_dto(),
+        }, created_by=reviewer)
+        fit.model = None
+        candidate["state"] = "persisted_for_validation"
+        candidate["model_id"] = model_id
+    return _plain_types({
+        "status": "persisted_for_validation", "candidate_id": candidate_id,
+        "model_id": model_id, "model_status": "validated", "persisted": True,
+        "review": review, "provenance": candidate["provenance"],
     })
 
 
