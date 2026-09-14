@@ -1304,6 +1304,12 @@ export interface TimeSeriesModelParams {
 export interface TimeSeriesLadderModel {
   model_type: string
   status: 'available' | 'unavailable' | 'not_supported' | 'not_applicable'
+  backend?: string
+  framework_version?: string | null
+  capability?: {
+    backend?: string
+    dependency?: { name: string; available: boolean }
+  }
   error?: string | null
   reason_code?: string | null
   features: string[]

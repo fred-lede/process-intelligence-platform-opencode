@@ -392,6 +392,16 @@ export default function ModelCenter() {
         return metricA - metricB
       })
     : []
+  const selectedTimeSeriesLadderRow = timeSeriesLadder?.results.find((row) => row.model_id === selectedModelId)
+  const timeSeriesBackendDetails = (row: TimeSeriesLadderResult['results'][number]) => {
+    const backend = row.backend ?? row.capability?.backend
+    if (!backend) return '—'
+    const framework = row.framework_version ? ` ${row.framework_version}` : ''
+    const dependency = row.capability?.dependency
+    return dependency
+      ? `${backend}${framework} · ${dependency.name}: ${t(dependency.available ? 'modelCenter.timeSeries.dependencyAvailable' : 'modelCenter.timeSeries.dependencyMissing')}`
+      : `${backend}${framework}`
+  }
 
   useEffect(() => {
     invalidateTimeSeriesRun()
@@ -993,6 +1003,7 @@ export default function ModelCenter() {
                     <Table size="small" pagination={false} rowKey="model_type" dataSource={ladderRows} rowSelection={{ selectedRowKeys: selectedTimeSeriesModels, onChange: (keys) => setSelectedTimeSeriesModels(keys as string[]), getCheckboxProps: (row) => ({ disabled: row.status !== 'available' || row.persisted === true }) }} columns={[
                       { title: t('modelCenter.timeSeries.modelType'), dataIndex: 'model_type', key: 'model_type', render: (value: string) => timeSeriesModelLabel(value) },
                       { title: t('modelCenter.timeSeries.status'), dataIndex: 'status', key: 'status', render: (value: string) => <Tag color={value === 'available' ? 'success' : 'warning'}>{value === 'available' ? t('modelCenter.timeSeries.available') : value === 'not_supported' ? t('modelCenter.timeSeries.notSupported') : value === 'not_applicable' ? t('modelCenter.timeSeries.notApplicable') : t('modelCenter.timeSeries.unavailable')}</Tag> },
+                      { title: t('modelCenter.timeSeries.backend'), key: 'backend', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => timeSeriesBackendDetails(row) },
                       { title: 'MAE', key: 'mae', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.mae.toFixed(4) ?? '—' },
                       { title: 'RMSE', key: 'rmse', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.rmse.toFixed(4) ?? '—' },
                       { title: 'R²', key: 'r2', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.r2.toFixed(4) ?? '—' },
@@ -1175,6 +1186,11 @@ export default function ModelCenter() {
                     <Descriptions.Item label={t('modelCenter.selectedModel.target')}>{selectedModelInfo.target}</Descriptions.Item>
                     <Descriptions.Item label={t('modelCenter.selectedModel.inputs')}>{selectedModelInfo.inputs.join(', ') || '—'}</Descriptions.Item>
                     <Descriptions.Item label={t('modelCenter.selectedModel.trainingRows')}>{selectedModelInfo.n_train}</Descriptions.Item>
+                    {selectedTimeSeriesLadderRow && (
+                      <Descriptions.Item label={t('modelCenter.timeSeries.backend')}>
+                        {timeSeriesBackendDetails(selectedTimeSeriesLadderRow)}
+                      </Descriptions.Item>
+                    )}
                     <Descriptions.Item label={t('modelCenter.selectedModel.replay')}>
                       <Tag color="green">{t('modelCenter.selectedModel.replayReady')}</Tag>
                     </Descriptions.Item>
