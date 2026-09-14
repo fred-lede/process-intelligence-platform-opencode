@@ -12,6 +12,8 @@ from .metrics import mean_absolute_error, root_mean_squared_error, r2_score
 
 
 LSTM_MINIMUM_TRAINING_SEQUENCES = 32
+TRANSFORMER_MINIMUM_TRAINING_SEQUENCES = 64
+TFT_MINIMUM_TRAINING_SEQUENCES = 128
 
 
 def _metrics(y, pred):
@@ -83,7 +85,7 @@ def _recursive_features(frame: pd.DataFrame, time_column: str, columns: list[str
     return np.asarray(row_values, dtype=float)
 
 
-def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *, lags: list[int] | None = None, rolling_windows: list[int] | None = None, seasonal_period: int = 24, train_ratio: float = .8, modeling_timezone: str | None = None, window_days: int | None = None, evaluation_protocol: str = "observed_feature_holdout", lstm_sequence_length: int = 24) -> dict[str, Any]:
+def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *, lags: list[int] | None = None, rolling_windows: list[int] | None = None, seasonal_period: int = 24, train_ratio: float = .8, modeling_timezone: str | None = None, window_days: int | None = None, evaluation_protocol: str = "observed_feature_holdout", lstm_sequence_length: int = 24, transformer_sequence_length: int = 24, tft_sequence_length: int = 24) -> dict[str, Any]:
     """Fit comparable chronological models; never uses random K-fold."""
     from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
     if isinstance(seasonal_period, bool) or not isinstance(seasonal_period, int) or seasonal_period < 1:
@@ -92,8 +94,13 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         raise ValueError("train_ratio must be between 0 and 1")
     if evaluation_protocol not in {"observed_feature_holdout", "fixed_horizon_forecast"}:
         raise ValueError("evaluation_protocol must be observed_feature_holdout or fixed_horizon_forecast")
-    if isinstance(lstm_sequence_length, bool) or not isinstance(lstm_sequence_length, int) or lstm_sequence_length < 1:
-        raise ValueError("lstm_sequence_length must be a positive integer")
+    for value, name in (
+        (lstm_sequence_length, "lstm_sequence_length"),
+        (transformer_sequence_length, "transformer_sequence_length"),
+        (tft_sequence_length, "tft_sequence_length"),
+    ):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
     prepared = prepare_time_series(df, time_column)
     if prepared["quality"]["duplicate_timestamps"]:
         raise ValueError("duplicate timestamps are not allowed for time-series modeling")
@@ -264,6 +271,46 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
             lstm_result = _unavailable("lstm", f"adapter failed: {exc}", lstm_features, validation, "adapter_error")
     lstm_result["capability"] = lstm_capability
     results.append(lstm_result)
+    advanced_capabilities: dict[str, dict[str, Any]] = {}
+    for model_type, dependency, sequence_length, minimum_sequences in (
+        ("transformer", "tensorflow", transformer_sequence_length, TRANSFORMER_MINIMUM_TRAINING_SEQUENCES),
+        ("temporal_fusion_transformer", "pytorch_forecasting", tft_sequence_length, TFT_MINIMUM_TRAINING_SEQUENCES),
+    ):
+        dependency_available = importlib.util.find_spec(dependency) is not None
+        available_sequences = max(split - sequence_length, 0)
+        meets_threshold = available_sequences >= minimum_sequences
+        reason_codes = []
+        if not meets_threshold:
+            reason_codes.append("insufficient_history")
+        if not dependency_available:
+            reason_codes.append("dependency_missing")
+        reason_codes.append("not_implemented")
+        capability = {
+            "eligible": False,
+            "dependency": {"name": dependency, "available": dependency_available},
+            "data": {
+                "training_rows": split,
+                "sequence_length": sequence_length,
+                "available_sequences": available_sequences,
+                "minimum_sequences": minimum_sequences,
+                "meets_threshold": meets_threshold,
+            },
+            "reason_codes": reason_codes,
+        }
+        primary_reason = reason_codes[0]
+        if primary_reason == "insufficient_history":
+            reason = f"requires at least {minimum_sequences} training sequences"
+        elif primary_reason == "dependency_missing":
+            reason = f"{dependency} is not installed"
+        else:
+            reason = "training is not implemented in this stage"
+        result = _unavailable(
+            model_type, reason, [f"{target}_sequence_{sequence_length}"],
+            validation, primary_reason,
+        )
+        result["capability"] = capability
+        results.append(result)
+        advanced_capabilities[model_type] = capability
     config = {**feat["configuration"], "modeling_timezone": modeling_timezone or "UTC"}
     if window_days is not None: config["window_days"] = window_days
     estimators = {item["model_type"]: item.pop("_estimator", None) for item in results}
@@ -273,7 +320,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "train_start": usable[time_column].iloc[0] if split else None, "train_end": usable[time_column].iloc[split - 1] if split else None, "test_start": usable[time_column].iloc[indices[0]] if indices else None, "test_end": usable[time_column].iloc[indices[-1]] if indices else None, "protocol": protocol, "uses_observed_target": protocol == "observed_feature_holdout", "observed_target_usage": "test_period" if protocol == "observed_feature_holdout" else "training_only"}
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False
-    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "capabilities":{"lstm":lstm_capability}, "_estimators": estimators, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
+    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "capabilities":{"lstm":lstm_capability, **advanced_capabilities}, "_estimators": estimators, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
 
 
 def validate_time_series_gate(

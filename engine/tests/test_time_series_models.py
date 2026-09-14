@@ -72,6 +72,95 @@ def test_time_series_lstm_reports_missing_optional_dependency(monkeypatch):
     assert lstm["capability"]["reason_codes"] == ["dependency_missing"]
 
 
+def test_advanced_time_series_rows_report_insufficient_sequence_history(monkeypatch):
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util,
+        "find_spec",
+        lambda name: object()
+        if name in {"tensorflow", "pytorch_forecasting"}
+        else original_find_spec(name),
+    )
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=100, freq="h"),
+        "y": [float(index) for index in range(100)],
+    }), {})
+
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "lstm_sequence_length": 1000,
+        "transformer_sequence_length": 24,
+        "tft_sequence_length": 24,
+    })
+
+    rows = {item["model_type"]: item for item in result["results"]}
+    for model_type, minimum_sequences in (
+        ("transformer", 64),
+        ("temporal_fusion_transformer", 128),
+    ):
+        row = rows[model_type]
+        assert row["status"] == "unavailable"
+        assert row["reason_code"] == "insufficient_history"
+        assert result["capabilities"][model_type] == row["capability"]
+        assert row["capability"]["data"] == {
+            "training_rows": 77,
+            "sequence_length": 24,
+            "available_sequences": 53,
+            "minimum_sequences": minimum_sequences,
+            "meets_threshold": False,
+        }
+        assert row["capability"]["eligible"] is False
+        assert row["capability"]["reason_codes"] == [
+            "insufficient_history", "not_implemented",
+        ]
+
+
+def test_advanced_time_series_rows_report_missing_dependencies(monkeypatch):
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util,
+        "find_spec",
+        lambda name: None
+        if name in {"tensorflow", "pytorch_forecasting"}
+        else original_find_spec(name),
+    )
+    dataset_id = REGISTRY.register(pd.DataFrame({
+        "ts": pd.date_range("2026-01-01", periods=220, freq="h"),
+        "y": [float(index) for index in range(220)],
+    }), {})
+
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id,
+        "time_column": "ts",
+        "target": "y",
+        "inputs": [],
+        "lstm_sequence_length": 1000,
+        "transformer_sequence_length": 24,
+        "tft_sequence_length": 24,
+    })
+
+    rows = {item["model_type"]: item for item in result["results"]}
+    expected_dependencies = {
+        "transformer": "tensorflow",
+        "temporal_fusion_transformer": "pytorch_forecasting",
+    }
+    for model_type, dependency in expected_dependencies.items():
+        row = rows[model_type]
+        assert row["status"] == "unavailable"
+        assert row["reason_code"] == "dependency_missing"
+        assert row["capability"]["dependency"] == {
+            "name": dependency, "available": False,
+        }
+        assert row["capability"]["data"]["meets_threshold"] is True
+        assert row["capability"]["eligible"] is False
+        assert row["capability"]["reason_codes"] == [
+            "dependency_missing", "not_implemented",
+        ]
+
+
 def test_time_series_fit_returns_model_ladder_and_unavailable_states():
     dataset_id = REGISTRY.register(
         pd.DataFrame({
