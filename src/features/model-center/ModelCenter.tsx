@@ -451,10 +451,11 @@ export default function ModelCenter() {
     const backend = row.backend ?? row.capability?.backend
     if (!backend) return '—'
     const framework = row.framework_version ? ` ${row.framework_version}` : ''
+    const device = row.device ? `/${row.device}` : ''
     const dependency = row.capability?.dependency
     return dependency
-      ? `${backend}${framework} · ${dependency.name}: ${t(dependency.available ? 'modelCenter.timeSeries.dependencyAvailable' : 'modelCenter.timeSeries.dependencyMissing')}`
-      : `${backend}${framework}`
+      ? `${backend}${device}${framework} · ${dependency.name}: ${t(dependency.available ? 'modelCenter.timeSeries.dependencyAvailable' : 'modelCenter.timeSeries.dependencyMissing')}`
+      : `${backend}${device}${framework}`
   }
 
   useEffect(() => {

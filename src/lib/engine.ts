@@ -1306,6 +1306,7 @@ export interface TimeSeriesLadderModel {
   status: 'available' | 'unavailable' | 'not_supported' | 'not_applicable'
   backend?: string
   framework_version?: string | null
+  device?: 'cuda' | 'mps' | 'cpu'
   capability?: {
     backend?: string
     dependency?: { name: string; available: boolean }
