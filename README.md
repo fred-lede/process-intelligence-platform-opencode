@@ -90,6 +90,7 @@ npm run tauri dev
 4. **瀏覽器 WebView**：macOS 內建 WebKit，Windows 需安裝 WebView2 Runtime
 5. **macOS 需安裝 libomp**：執行 `brew install libomp`（缺失會導致 xgboost 載入失敗、引擎無法啟動，見下方排錯）
 6. **PDF 匯出需安裝 WeasyPrint 系統相依套件**：依作業系統執行 [PDF 報告部署指南](docs/deployment.md#pdf-報告匯出weasyprint)；僅安裝 Python 套件不足以輸出 PDF。
+7. **TFT / PyTorch（選配）**：不屬於 base requirements；需要時依 [時間序列深度模型部署指南](docs/deployment-time-series.md) 建立獨立 `.venv-tft`。
 
 若啟動時出現以下錯誤，請檢查：
 

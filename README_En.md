@@ -20,7 +20,7 @@ An explainable and traceable process-analysis platform with traditional DOE and 
 
 ## Quick start
 
-Requirements: Rust 1.77+, Node.js 18+, Python 3.11 or 3.12, and a system WebView. On macOS install OpenMP with `brew install libomp`. PDF export also requires the system dependencies in [docs/deployment.md](docs/deployment.md).
+Requirements: Rust 1.77+, Node.js 18+, Python 3.11 or 3.12, and a system WebView. On macOS install OpenMP with `brew install libomp`. PDF export also requires the system dependencies in [docs/deployment.md](docs/deployment.md). TFT/PyTorch is optional and has a separate [time-series deep-model deployment guide](docs/deployment-time-series_En.md).
 
 ```bash
 npm install
