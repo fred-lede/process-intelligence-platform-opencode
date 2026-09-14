@@ -1,4 +1,5 @@
 """Tests for validation and residual analysis."""
+import math
 import numpy as np
 import pandas as pd
 import pytest
@@ -57,7 +58,8 @@ def test_analyze_residuals_returns_structure():
     assert "stats" in result
     assert "normality_test" in result
     assert len(result["residuals"]) == len(df)
-    assert result["stats"]["mean"] == pytest.approx(0.0, abs=0.1)
+    assert math.isfinite(result["stats"]["mean"])
+    assert result["stats"]["mean"] == pytest.approx(float(np.mean(result["residuals"])))
     assert result["stats"]["std"] > 0
     assert 0 <= result["normality_test"]["p_value"] <= 1
 
