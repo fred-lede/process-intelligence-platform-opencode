@@ -134,3 +134,15 @@ PY
 - **資料不符合門檻：** 保持傳統/既有模型；TFT 需要時間欄、target、已選 inputs、sequence length 24，且訓練區至少 128 個可用序列。
 
 官方參考：[PyTorch Local Installation](https://pytorch.org/get-started/locally/)；[PyTorch Forecasting Installation](https://pytorch-forecasting.readthedocs.io/en/v1.8.0/installation.html)。
+
+## Sequence-aware simulation（Transformer）
+
+這是已持久化 Transformer 的風險使用流程，與獨立 Monte Carlo 不同。使用前必須通過 final risk gate：模型狀態為 `validated` 或 `approved`、具備 reviewer/decision/reason、已核准的 time-series gate evidence，以及可驗證的 schema、backend 與 framework version。未通過時 endpoint 回傳 `blocked/final_risk_gate_blocked`；不得繞過 gate。
+
+`simulation_mode=sequence_aware` 是 deterministic dry-run：提供完整 `history_rows`（時間、target、所有 inputs）與未來 `input_scenarios`（時間與 inputs，**不得含 target**），並指定等於 scenario 數的 `horizon`。每一步以歷史 target 與先前預測遞迴，使用該步的情境 input；不會使用未來 target。
+
+`simulation_mode=sequence_stochastic` 另外需要整數 `seed` 與正整數 `n_simulations`。它以相同的遞迴序列預測，加上從歷史遞迴殘差尺度產生的路徑擾動，回傳每個時間點的 `mean`、`p05`、`p50`、`p95`、殘差方法與 provenance。相同 history、scenario、seed 與版本應產生可重現的摘要；這是模型風險估計，不是獨立抽樣或因果結論。
+
+可選的 `observed_rows` 只能在預測完成後用於校正：每列需含時間與 target，系統以時間對齊 p05–p95 區間，回傳逐步 `covered` 與 overall coverage。`nominal_confidence` 為 0.90；`available` 表示至少兩個對齊觀測，`insufficient_observations` 表示觀測不足，`not_available` 表示尚未提供事後觀測。這不是未來覆蓋率保證，也不能把 observed target 回餵產生預測。
+
+Model Center 操作：選擇已持久化 Transformer → 在 Sequence-aware simulation 卡貼入 history JSON 與 future input scenarios JSON → 設定 horizon → 選 deterministic 或 stochastic（後者設定 paths 與 seed）→ 執行。查看 final-gate blocked 原因、backend/schema/version、路徑摘要與 calibration；若顯示 `needs_sequence_simulation`，代表 independent 模式不被允許。既有 Monte Carlo/Copula 對時間序列模型仍維持 independent block。

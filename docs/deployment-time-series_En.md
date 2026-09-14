@@ -87,3 +87,15 @@ With the package installed, the Model Center reports the TFT dependency, data co
 If CUDA or MPS is unavailable, use CPU; do not force a CUDA wheel. If the optional environment fails, deactivate it and use the normal `engine/.venv` with the existing non-TFT models. TFT needs a time column, target, selected inputs, sequence length 24, and at least 128 usable training sequences.
 
 References: [PyTorch Local Installation](https://pytorch.org/get-started/locally/) and [PyTorch Forecasting Installation](https://pytorch-forecasting.readthedocs.io/en/v1.8.0/installation.html).
+
+## Sequence-aware simulation (Transformer)
+
+This is the risk-use flow for a persisted Transformer, not independent Monte Carlo. The final risk gate must pass first: the model is `validated` or `approved`, reviewer/decision/reason provenance and approved time-series gate evidence exist, and the schema, backend, and framework version verify. Otherwise the endpoint returns `blocked/final_risk_gate_blocked`; do not bypass it.
+
+`simulation_mode=sequence_aware` is a deterministic dry-run. Supply complete `history_rows` (time, target, and every input), future `input_scenarios` (time and inputs only; **never target**), and a `horizon` equal to the scenario count. Each step recursively uses historical targets and prior predictions with that step's scenario inputs; future targets are never used.
+
+`simulation_mode=sequence_stochastic` additionally requires an integer `seed` and positive integer `n_simulations`. It uses the same recursive paths plus perturbations sampled from the historical recursive-residual scale, returning `mean`, `p05`, `p50`, `p95`, residual method, and provenance per step. Identical history, scenarios, seed, and model version produce reproducible summaries. This is model-risk estimation, not independent sampling or causal evidence.
+
+Optional `observed_rows` are calibration evidence only after the forecasts exist. Each row needs time and target; the system aligns timestamps to the p05–p95 interval and returns step `covered` values and overall coverage. `nominal_confidence` is 0.90; `available` needs at least two aligned observations, `insufficient_observations` means fewer, and `not_available` means no post-hoc observations were supplied. It is not a future coverage guarantee and observed targets must never feed prediction.
+
+In Model Center: select a persisted Transformer → paste history JSON and future-input-scenario JSON in Sequence-aware simulation → set horizon → choose deterministic or stochastic (then set paths and seed) → run. Review final-gate block reasons, backend/schema/version, path summaries, and calibration. `needs_sequence_simulation` means independent use is forbidden. Existing Monte Carlo/Copula time-series independent blocks remain in force.
