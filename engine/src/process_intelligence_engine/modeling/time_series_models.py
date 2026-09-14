@@ -456,6 +456,17 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                 "minimum_sequences": minimum_sequences,
                 "meets_threshold": meets_threshold,
             },
+            "data_contract": {
+                "time_column": time_column,
+                "target": target,
+                "inputs": list(inputs),
+                "sequence_length": sequence_length,
+                "minimum_sequences": minimum_sequences,
+                "evaluation_protocol": evaluation_protocol,
+                "supported_protocols": [
+                    "fixed_horizon_forecast", "observed_feature_holdout",
+                ],
+            },
             "reason_codes": reason_codes,
         }
         primary_reason = reason_codes[0]

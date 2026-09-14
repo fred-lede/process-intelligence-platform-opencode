@@ -165,6 +165,44 @@ def test_advanced_time_series_rows_report_missing_dependencies(monkeypatch):
         assert row["capability"]["reason_codes"] == reason_codes
 
 
+def test_tft_capability_declares_data_contract_and_protocols(monkeypatch):
+    original_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util,
+        "find_spec",
+        lambda name: None if name == "pytorch_forecasting" else original_find_spec(name),
+    )
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    dataset_id = REGISTRY.register(frame, {})
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": input_columns,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 1000,
+        "tft_sequence_length": 24,
+    })
+
+    tft = next(item for item in result["results"] if item["model_type"] == "temporal_fusion_transformer")
+    assert tft["status"] == "unavailable"
+    assert tft["reason_code"] == "dependency_missing"
+    assert tft["capability"]["reason_codes"] == ["dependency_missing", "not_implemented"]
+    assert tft["capability"]["data_contract"] == {
+        "time_column": "datetime",
+        "target": "output_thickness",
+        "inputs": input_columns,
+        "sequence_length": 24,
+        "minimum_sequences": 128,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "supported_protocols": ["fixed_horizon_forecast", "observed_feature_holdout"],
+    }
+
+
 def test_time_series_transformer_fits_when_capability_requirements_are_met():
     if importlib.util.find_spec("tensorflow") is None:
         pytest.skip("tensorflow is optional")
