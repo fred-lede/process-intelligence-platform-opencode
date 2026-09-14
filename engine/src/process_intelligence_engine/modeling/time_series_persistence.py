@@ -30,7 +30,8 @@ def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str
     directory = Path(root).resolve() / "models" / "time_series"
     directory.mkdir(parents=True, exist_ok=True)
     transformer = fit.model_type == "time_series_transformer"
-    path = (directory / f"{model_id}.{ 'keras' if transformer else 'joblib'}").resolve()
+    tft = fit.model_type == "time_series_temporal_fusion_transformer"
+    path = (directory / f"{model_id}.{ 'keras' if transformer else 'pt' if tft else 'joblib'}").resolve()
     if directory not in path.parents:
         raise ValueError("invalid model artifact path")
     if transformer:
@@ -43,10 +44,16 @@ def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str
         ):
             raise ValueError("Transformer replay metadata is incomplete")
         estimator.save(path)
+    elif tft:
+        import torch
+        torch.save({
+            "state_dict": estimator.state_dict(),
+            "hyper_parameters": dict(estimator.hparams),
+        }, path)
     else:
         joblib.dump(estimator, path)
     metadata = {
-        "schema_version": "ts-transformer-1" if transformer else "ts-estimator-1",
+        "schema_version": "ts-transformer-1" if transformer else "ts-tft-1" if tft else "ts-estimator-1",
         "model_id": model_id, "model_type": fit.model_type,
         "dataset_id": dataset_id, "dataset_schema": _schema(df),
         "target": fit.target, "inputs": list(fit.inputs),
@@ -65,6 +72,8 @@ def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str
             "replay": replay_metadata,
             "validation_gate_evidence": validation_gate_evidence or {},
         })
+    elif tft:
+        metadata.update({"artifact_format": "pytorch", "validation_gate_evidence": validation_gate_evidence or {}})
     (directory / f"{model_id}.json").write_text(json.dumps(metadata, default=str, indent=2), encoding="utf-8")
     return metadata
 
@@ -77,9 +86,10 @@ def load_estimator(root: Path, model_id: str, *, df, target: str | None = None,
         raise KeyError(f"Unknown persisted time-series model: {model_id}")
     metadata = json.loads(meta_path.read_text(encoding="utf-8"))
     schema_version = metadata.get("schema_version")
-    if schema_version not in {"ts-estimator-1", "ts-transformer-1"}:
+    if schema_version not in {"ts-estimator-1", "ts-transformer-1", "ts-tft-1"}:
         raise ValueError("Unsupported persisted time-series metadata version")
     transformer = metadata.get("model_type") == "time_series_transformer"
+    tft = metadata.get("model_type") == "time_series_temporal_fusion_transformer"
     if transformer:
         replay = metadata.get("replay")
         normalization = replay.get("normalization") if isinstance(replay, dict) else None
@@ -90,6 +100,8 @@ def load_estimator(root: Path, model_id: str, *, df, target: str | None = None,
             or not isinstance(normalization, dict)
         ):
             raise ValueError("Invalid Transformer replay metadata")
+    if tft and (schema_version != "ts-tft-1" or metadata.get("artifact_format") != "pytorch"):
+        raise ValueError("Invalid TFT persistence metadata")
     required = [metadata["target"], *metadata["inputs"], metadata["time_column"]]
     missing = [c for c in required if c not in df.columns]
     if missing:
@@ -108,4 +120,7 @@ def load_estimator(root: Path, model_id: str, *, df, target: str | None = None,
     if transformer:
         from tensorflow import keras
         return keras.models.load_model(artifact), metadata
+    if tft:
+        import torch
+        return torch.load(artifact, map_location="cpu", weights_only=False), metadata
     return joblib.load(artifact), metadata
