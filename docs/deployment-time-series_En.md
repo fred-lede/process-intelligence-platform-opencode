@@ -1,12 +1,12 @@
-# Time-Series Deep Model Deployment: TFT / PyTorch (Optional)
+# Time-Series Deep Model Deployment: TFT / PyTorch
 
-This guide creates an optional Temporal Fusion Transformer (TFT) environment. It does not change base requirements and does not make regular desktop deployments depend on PyTorch.
+This guide describes the Temporal Fusion Transformer (TFT) environment. TFT is integrated into the time-series ladder; deployments without PyTorch can continue using existing models.
 
 The engine checks for `pytorch_forecasting`, required columns, a default sequence length of 24, and at least 128 training sequences. When eligible, TFT is trained and included in the time-series model comparison; missing dependencies or insufficient history are reported explicitly.
 
 ## Rules and installation order
 
-Use Python 3.11 or 3.12, create a platform-local venv, install the project first, then the platform-specific PyTorch wheel, then `pytorch-forecasting`. Do not copy venvs between operating systems or CPU architectures. Do not add PyTorch packages to `engine/pyproject.toml` or the base requirements.
+Use Python 3.11 or 3.12, create a platform-local venv, install the project first, then the platform-specific PyTorch wheel, then `pytorch-forecasting`. Do not copy venvs between operating systems or CPU architectures. An isolated venv is optional because the tested PyTorch stack is included in requirements.
 
 The examples use `engine/.venv-tft` so the application's normal `engine/.venv` remains unchanged.
 

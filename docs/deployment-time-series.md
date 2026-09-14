@@ -1,17 +1,17 @@
-# 時間序列深度模型部署：TFT / PyTorch（選配）
+# 時間序列深度模型部署：TFT / PyTorch
 
-本文件說明 Temporal Fusion Transformer（TFT）的**選配**執行環境。它不會修改本專案的 base requirements，也不會使沒有 PyTorch 的一般桌面部署失效。
+本文件說明 Temporal Fusion Transformer（TFT）的執行環境。TFT 已接入時間序列模型階梯；沒有 PyTorch 時仍可使用既有模型。
 
-目前引擎會檢查 `pytorch_forecasting`、資料欄位、sequence length（預設 24）與至少 128 個訓練序列；即使依賴與資料都符合，TFT 仍會標示為 `not_implemented`，不會開始訓練。這個獨立環境是為後續 TFT 實作與驗證預先準備的。
+目前引擎會檢查 `pytorch_forecasting`、資料欄位、sequence length（預設 24）與至少 128 個訓練序列；符合條件時執行 TFT 訓練，否則明確回報缺少依賴或資料不足。
 
 ## 共通原則與安裝順序
 
 1. 使用 Python 3.11 或 3.12；不要共用或複製不同 OS/CPU 架構的 venv。
 2. 先建立本專案與開發測試環境，再安裝**目標平台對應的 PyTorch**，最後安裝 `pytorch-forecasting`。
 3. NVIDIA CUDA wheel 必須依 [PyTorch 官方 selector](https://pytorch.org/get-started/locally/) 選擇，不能把其他主機的 CUDA wheel 複製過來。
-4. 不要把 `torch`、`pytorch-forecasting`、`pytorch-lightning` 加入 `engine/pyproject.toml` 或 base requirements；這些只屬於選配 TFT venv。
+4. 可直接使用專案 `engine/.venv`；若要隔離環境，才建立獨立 `.venv-tft`。
 
-以下示例把環境命名為 `.venv-tft`，避免影響桌面應用程式預設使用的 `engine/.venv`。
+以下示例把環境命名為 `.venv-tft`，也可替換成既有 `engine/.venv`。
 
 ## macOS（Apple Silicon 與 Intel CPU）
 
