@@ -2519,6 +2519,8 @@ def _handle_time_series_fit(params: dict) -> dict:
                 feature_names=list(item.get("features") or []),
                 replay_metadata=replay_metadata.get(item["model_type"]),
                 validation_gate_evidence=validation_gate_evidence.get(item["model_type"]),
+                backend=item.get("backend"),
+                framework_version=item.get("framework_version"),
             ) if fit.model is not None else None
             if metadata:
                 _VERSION_CHAIN.register_entity("model", "default", {

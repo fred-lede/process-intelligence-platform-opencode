@@ -21,7 +21,9 @@ def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str
                    evaluation_protocol: str, training_time_range: dict,
                    feature_names: list[str] | None = None,
                    replay_metadata: dict | None = None,
-                   validation_gate_evidence: dict | None = None) -> dict:
+                   validation_gate_evidence: dict | None = None,
+                   backend: str | None = None,
+                   framework_version: str | None = None) -> dict:
     if estimator is None or not hasattr(estimator, "predict"):
         raise ValueError("time-series estimator is not fitted")
     model_id = fit.model_id
@@ -54,6 +56,9 @@ def save_estimator(root: Path, fit: ModelFit, estimator: Any, *, dataset_id: str
         "training_time_range": training_time_range,
         "artifact": str(path.relative_to(Path(root).resolve())),
     }
+    if backend is not None:
+        metadata["backend"] = backend
+        metadata["framework_version"] = framework_version
     if transformer:
         metadata.update({
             "artifact_format": "keras",

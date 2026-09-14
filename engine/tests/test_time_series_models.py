@@ -191,6 +191,10 @@ def test_tft_capability_declares_data_contract_and_protocols(monkeypatch):
     tft = next(item for item in result["results"] if item["model_type"] == "temporal_fusion_transformer")
     assert tft["status"] == "unavailable"
     assert tft["reason_code"] == "dependency_missing"
+    assert tft["capability"]["backend"] == "pytorch"
+    assert tft["capability"]["dependency"] == {
+        "name": "pytorch_forecasting", "available": False,
+    }
     assert tft["capability"]["reason_codes"] == ["dependency_missing", "not_implemented"]
     assert tft["capability"]["data_contract"] == {
         "time_column": "datetime",
@@ -230,6 +234,8 @@ def test_time_series_transformer_fits_when_capability_requirements_are_met():
         item for item in result["results"] if item["model_type"] == "transformer"
     )
     assert transformer["status"] == "available"
+    assert transformer["backend"] == "tensorflow"
+    assert transformer["framework_version"]
     assert set(transformer["metrics"]) == {"mae", "rmse", "r2"}
     assert all(math.isfinite(value) for value in transformer["metrics"].values())
     capability = transformer["capability"]
@@ -404,6 +410,8 @@ def test_time_series_transformer_persistence_replays_without_future_values():
     metadata = loaded["metadata"]
     assert metadata["schema_version"] == "ts-transformer-1"
     assert metadata["model_type"] == "time_series_transformer"
+    assert metadata["backend"] == "tensorflow"
+    assert metadata["framework_version"]
     assert metadata["replay"]["sequence_length"] == 24
     assert metadata["validation_gate_evidence"] == {"gate_status": "approved"}
 

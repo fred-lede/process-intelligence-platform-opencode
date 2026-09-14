@@ -258,6 +258,13 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
             except Exception as exc:
                 results.append(_unavailable(name, f"adapter failed: {exc}", [] if name == "arima" else xcols, validation, "adapter_error"))
     tensorflow_available = importlib.util.find_spec("tensorflow") is not None
+    tensorflow_version = None
+    if tensorflow_available:
+        try:
+            import tensorflow as tensorflow
+            tensorflow_version = tensorflow.__version__
+        except ImportError:
+            tensorflow_available = False
     available_sequences = max(split - lstm_sequence_length, 0)
     data_eligible = available_sequences >= LSTM_MINIMUM_TRAINING_SEQUENCES
     capability_reasons = []
@@ -324,6 +331,8 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         except Exception as exc:
             lstm_result = _unavailable("lstm", f"adapter failed: {exc}", lstm_features, validation, "adapter_error")
     lstm_result["capability"] = lstm_capability
+    lstm_result["backend"] = "tensorflow"
+    lstm_result["framework_version"] = tensorflow_version
     results.append(lstm_result)
     transformer_available_sequences = max(split - transformer_sequence_length, 0)
     transformer_data_eligible = transformer_available_sequences >= TRANSFORMER_MINIMUM_TRAINING_SEQUENCES
@@ -430,6 +439,8 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                 validation, "adapter_error",
             )
     transformer_result["capability"] = transformer_capability
+    transformer_result["backend"] = "tensorflow"
+    transformer_result["framework_version"] = tensorflow_version
     results.append(transformer_result)
     advanced_capabilities: dict[str, dict[str, Any]] = {
         "transformer": transformer_capability,
@@ -448,6 +459,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         reason_codes.append("not_implemented")
         capability = {
             "eligible": False,
+            "backend": "pytorch",
             "dependency": {"name": dependency, "available": dependency_available},
             "data": {
                 "training_rows": split,
