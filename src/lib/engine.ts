@@ -1318,6 +1318,7 @@ export interface TimeSeriesLadderModel {
   uncertainty?: { status?: string; mean_interval_width?: number | null; calibration?: { covered_rows?: number; evaluated_rows?: number; coverage_ratio?: number | null } }
   leakage_check?: { status: 'passed' | 'not_checked' }
   persisted?: boolean
+  persistence_blocked_reason?: string
   model_id?: string
   evaluation?: { rows?: number; protocol?: string; validation_strategy?: string; train_start?: string | null; train_end?: string | null; test_start?: string | null; test_end?: string | null; uses_observed_target?: boolean }
 }
