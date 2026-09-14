@@ -661,6 +661,72 @@ def test_time_series_final_risk_gate_blocks_unreviewed_and_requires_sequence_sim
     assert copula["reason"] == "needs_sequence_simulation"
 
 
+def test_time_series_sequence_simulation_uses_scenarios_and_recursive_predictions_only():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    dataset_id = REGISTRY.register(frame, {})
+    fitted = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": input_columns,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 24,
+        "persist_models": True, "persist_model_types": ["transformer"],
+        "validation_gate_evidence": {"transformer": {"gate_status": "approved"}},
+    })
+    source_id = fitted["provenance"]["model_ids"]["transformer"]
+    metadata = handle_request("features/time_series/load", {
+        "dataset_id": dataset_id, "model_id": source_id,
+    })["metadata"]
+    training_end = pd.Timestamp(fitted["training_time_range"]["end"])
+    timestamps = pd.to_datetime(frame["datetime"], utc=True)
+    history_rows = frame.loc[timestamps <= training_end].to_dict("records")
+    candidate = handle_request("features/time_series/retrain_compare", {
+        "model_id": source_id, "model_metadata": metadata,
+        "history_rows": history_rows,
+        "new_observed_rows": frame.loc[timestamps > training_end].head(8).to_dict("records"),
+    })["candidate"]
+    approved = handle_request("features/time_series/retrain_review", {
+        "candidate_id": candidate["candidate_id"], "decision": "approve",
+        "reviewer": "qa", "reason": "sequence risk review complete",
+        "gate_evidence": {"gate_status": "approved", "evidence_id": "gate-100"},
+    })
+    scenarios = frame.loc[timestamps > training_end, ["datetime", *input_columns]].head(3).to_dict("records")
+
+    result = handle_request("features/time_series/sequence_simulation", {
+        "model_id": approved["model_id"], "dataset_id": dataset_id,
+        "history_rows": history_rows, "input_scenarios": scenarios, "horizon": 3,
+    })
+
+    assert result["status"] == "dry_run"
+    assert result["history_window"]["rows"] == len(history_rows)
+    assert result["history_window"]["sequence_length"] == 24
+    assert result["scenario_provenance"] == {
+        "rows": 3, "input_columns": input_columns,
+        "target_usage": "not_accepted", "forecast_mode": "recursive_predictions_only",
+    }
+    assert [row["timestamp"] for row in result["predictions"]] == [
+        pd.Timestamp(scenario["datetime"]).isoformat() for scenario in scenarios
+    ]
+    assert all(math.isfinite(row["predicted"]) for row in result["predictions"])
+    assert result["uncertainty"]["status"] == "not_available"
+    assert result["uncertainty"]["reason"] == "deterministic_dry_run"
+
+    unsupported = handle_request("features/time_series/sequence_simulation", {
+        "model_id": approved["model_id"], "dataset_id": dataset_id,
+        "history_rows": history_rows, "input_scenarios": scenarios, "horizon": 3,
+        "simulation_mode": "independent",
+    })
+    assert unsupported["status"] == "not_supported"
+    assert unsupported["reason"] == "needs_sequence_simulation"
+
+
 def test_time_series_load_rejects_unknown_persistence_metadata_version(tmp_path):
     directory = tmp_path / "models" / "time_series"
     directory.mkdir(parents=True)

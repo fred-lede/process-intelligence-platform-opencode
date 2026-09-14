@@ -2179,6 +2179,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_retrain_review(params)
     if method == "features/time_series/risk_use_gate":
         return _handle_time_series_risk_use_gate(params)
+    if method == "features/time_series/sequence_simulation":
+        return _handle_time_series_sequence_simulation(params)
     if method == "features/time_series/validation":
         return _handle_time_series_validation(params)
     if method == "features/time_series/validation_gate":
@@ -2961,6 +2963,101 @@ def _time_series_final_risk_gate(model_id: str, dataset_id: str) -> dict:
 
 def _handle_time_series_risk_use_gate(params: dict) -> dict:
     return _plain_types(_time_series_final_risk_gate(params["model_id"], params["dataset_id"]))
+
+
+def _handle_time_series_sequence_simulation(params: dict) -> dict:
+    """Run a deterministic, scenario-driven Transformer forecast dry-run."""
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    gate = _time_series_final_risk_gate(model_id, dataset_id)
+    if gate["status"] != "approved":
+        return {"success": False, "status": "blocked", "reason": "final_risk_gate_blocked", "final_gate": gate}
+    if params.get("simulation_mode", "sequence_aware") != "sequence_aware":
+        return {
+            "success": False, "status": "not_supported",
+            "reason": "needs_sequence_simulation", "model_id": model_id,
+            "final_gate": gate,
+        }
+    history_rows = params.get("history_rows")
+    scenarios = params.get("input_scenarios")
+    horizon = params.get("horizon")
+    if not isinstance(history_rows, list) or not history_rows or not all(isinstance(row, dict) for row in history_rows):
+        raise ValueError("history_rows must be a non-empty list of objects")
+    if not isinstance(scenarios, list) or not scenarios or not all(isinstance(row, dict) for row in scenarios):
+        raise ValueError("input_scenarios must be a non-empty list of objects")
+    if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon < 1 or horizon != len(scenarios):
+        raise ValueError("horizon must equal the positive number of input_scenarios")
+
+    estimator, metadata = load_estimator(_VERSION_CHAIN._project_root, model_id, df=REGISTRY.get(dataset_id))
+    if metadata.get("model_type") != "time_series_transformer":
+        return {
+            "success": False, "status": "not_supported",
+            "reason": "needs_sequence_simulation", "model_id": model_id,
+            "final_gate": gate,
+        }
+    time_column = metadata["time_column"]
+    target = metadata["target"]
+    inputs = list(metadata["inputs"])
+    history = pd.DataFrame(history_rows)
+    scenario_frame = pd.DataFrame(scenarios)
+    required_history = [time_column, target, *inputs]
+    missing_history = [column for column in required_history if column not in history.columns]
+    missing_scenarios = [column for column in [time_column, *inputs] if column not in scenario_frame.columns]
+    if missing_history or missing_scenarios:
+        raise ValueError(f"Sequence simulation rows missing required columns: {missing_history or missing_scenarios}")
+    if target in scenario_frame.columns:
+        raise ValueError("input_scenarios must not include the target column")
+    history_prepared = prepare_time_series(history, time_column)
+    scenarios_prepared = prepare_time_series(scenario_frame, time_column)
+    if history_prepared["quality"]["duplicate_timestamps"] or scenarios_prepared["quality"]["duplicate_timestamps"]:
+        raise ValueError("Sequence simulation rows must not contain duplicate timestamps")
+    history = history_prepared["data"].reset_index(drop=True)
+    scenario_frame = scenarios_prepared["data"].reset_index(drop=True)
+    if history[time_column].iloc[-1] >= scenario_frame[time_column].iloc[0]:
+        raise ValueError("input_scenarios must occur after all history_rows")
+    sequence_length = metadata["replay"]["sequence_length"]
+    if len(history) < sequence_length:
+        raise ValueError("Insufficient history_rows for Transformer sequence window")
+    try:
+        target_history = history[target].to_numpy(dtype=float).tolist()
+        input_history = history[inputs].to_numpy(dtype=float).tolist()
+        scenario_inputs = scenario_frame[inputs].to_numpy(dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Sequence simulation target and inputs must be numeric") from exc
+    if not np.isfinite(np.asarray(target_history)).all() or not np.isfinite(scenario_inputs).all():
+        raise ValueError("Sequence simulation target and inputs must be finite")
+    normalization = metadata["replay"]["normalization"]
+    target_center = float(normalization["target"]["center"])
+    target_scale = float(normalization["target"]["scale"])
+    input_center = np.asarray(normalization["inputs"]["center"], dtype=float)
+    input_scale = np.asarray(normalization["inputs"]["scale"], dtype=float)
+    predictions = []
+    for timestamp, scenario_input in zip(scenario_frame[time_column], scenario_inputs):
+        normalized_target = (np.asarray(target_history[-sequence_length:]) - target_center) / target_scale
+        normalized_inputs = (np.asarray(input_history[-sequence_length:]) - input_center) / input_scale
+        positions = np.linspace(-1.0, 1.0, sequence_length, dtype=float)
+        sequence = np.column_stack((normalized_target, normalized_inputs, positions))
+        predicted = float(estimator.predict(sequence.reshape(1, sequence_length, sequence.shape[1]), verbose=0)[0, 0])
+        predicted = predicted * target_scale + target_center
+        predictions.append({"timestamp": timestamp, "predicted": predicted})
+        target_history.append(predicted)
+        input_history.append(scenario_input.tolist())
+    return _plain_types({
+        "status": "dry_run", "model_id": model_id, "horizon": horizon,
+        "predictions": predictions, "final_gate": gate,
+        "history_window": {
+            "rows": len(history), "sequence_length": sequence_length,
+            "start": history[time_column].iloc[0], "end": history[time_column].iloc[-1],
+        },
+        "scenario_provenance": {
+            "rows": len(scenario_frame), "input_columns": inputs,
+            "target_usage": "not_accepted", "forecast_mode": "recursive_predictions_only",
+        },
+        "uncertainty": {
+            "status": "not_available", "method": "deterministic_recursive_forecast",
+            "reason": "deterministic_dry_run",
+        },
+    })
 
 
 def _handle_time_series_explain(params: dict) -> dict:
