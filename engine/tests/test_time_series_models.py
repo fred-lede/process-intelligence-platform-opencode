@@ -229,6 +229,8 @@ def test_tft_fits_when_dependency_and_sequence_requirements_are_met():
     assert tft["status"] == "available"
     assert tft["backend"] == "pytorch"
     assert tft["metrics"] is not None
+    assert tft["uncertainty"]["status"] == "available"
+    assert tft["uncertainty"]["calibration"]["evaluated_rows"] > 0
 
 
 def test_tft_persistence_uses_pytorch_artifact():

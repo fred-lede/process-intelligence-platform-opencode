@@ -530,15 +530,26 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     enable_progress_bar=False, gradient_clip_val=0.1,
                 )
                 trainer.fit(tft_model, train_dataloaders=train_loader)
-                raw_prediction = tft_model.predict(validation_loader, mode="prediction")
-                forecast_values = raw_prediction.detach().cpu().numpy().reshape(-1)
+                raw_prediction = tft_model.predict(validation_loader, mode="quantiles")
+                quantiles = raw_prediction.detach().cpu().numpy()
+                if quantiles.ndim == 3:
+                    quantiles = quantiles[:, 0, :]
+                forecast_values = quantiles[:, 3].reshape(-1)
                 expected = y[split:split + len(forecast_values)]
+                lower = quantiles[:, 1].reshape(-1)
+                upper = quantiles[:, 5].reshape(-1)
+                covered = (expected >= lower) & (expected <= upper)
                 result = {
                     "model_type": model_type, "status": "available", "features": tft_features,
                     "validation": validation, "metrics": _metrics(expected, forecast_values),
                     "_eval_rows": len(forecast_values),
                     "_eval_indices": list(range(split, split + len(forecast_values))),
                     "evaluation_protocol": evaluation_protocol, "_estimator": tft_model,
+                }
+                result["uncertainty"] = {
+                    "status": "available", "method": "quantile_loss", "confidence": 0.8,
+                    "mean_interval_width": float(np.mean(upper - lower)),
+                    "calibration": {"covered_rows": int(covered.sum()), "evaluated_rows": int(len(expected)), "coverage_ratio": float(np.mean(covered))},
                 }
                 tft_replay_metadata = {"sequence_length": sequence_length, "split": split}
                 result["backend"] = "pytorch"
