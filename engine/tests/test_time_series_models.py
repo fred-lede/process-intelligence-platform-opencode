@@ -600,6 +600,67 @@ def test_time_series_retrain_candidate_review_requires_gate_then_persists_new_ve
     assert MODEL_REGISTRY.get(approved["model_id"]).status == "validated"
 
 
+def test_time_series_final_risk_gate_blocks_unreviewed_and_requires_sequence_simulation():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    dataset_id = REGISTRY.register(frame, {})
+    fitted = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": input_columns,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 24,
+        "persist_models": True, "persist_model_types": ["transformer"],
+        "validation_gate_evidence": {"transformer": {"gate_status": "approved"}},
+    })
+    source_id = fitted["provenance"]["model_ids"]["transformer"]
+    metadata = handle_request("features/time_series/load", {
+        "dataset_id": dataset_id, "model_id": source_id,
+    })["metadata"]
+    blocked = handle_request("features/time_series/risk_use_gate", {
+        "model_id": source_id, "dataset_id": dataset_id,
+    })
+    assert blocked["status"] == "blocked"
+    assert "model_not_validated" in blocked["reasons"]
+
+    training_end = pd.Timestamp(fitted["training_time_range"]["end"])
+    timestamps = pd.to_datetime(frame["datetime"], utc=True)
+    candidate = handle_request("features/time_series/retrain_compare", {
+        "model_id": source_id, "model_metadata": metadata,
+        "history_rows": frame.loc[timestamps <= training_end].to_dict("records"),
+        "new_observed_rows": frame.loc[timestamps > training_end].head(8).to_dict("records"),
+    })["candidate"]
+    approved = handle_request("features/time_series/retrain_review", {
+        "candidate_id": candidate["candidate_id"], "decision": "approve",
+        "reviewer": "qa", "reason": "risk review complete",
+        "gate_evidence": {"gate_status": "approved", "evidence_id": "gate-99"},
+    })
+    gate = handle_request("features/time_series/risk_use_gate", {
+        "model_id": approved["model_id"], "dataset_id": dataset_id,
+    })
+    assert gate["status"] == "approved"
+    assert gate["provenance"]["model_version"] == MODEL_REGISTRY.get(approved["model_id"]).version
+    assert gate["provenance"]["backend"] == "tensorflow"
+
+    monte_carlo = handle_request("monte_carlo/run", {
+        "dataset_id": dataset_id, "model_id": approved["model_id"],
+    })
+    assert monte_carlo == {
+        "success": False, "status": "not_supported",
+        "reason": "needs_sequence_simulation", "model_id": approved["model_id"],
+        "final_gate": gate,
+    }
+    copula = handle_request("copula/joint", {"model_id": approved["model_id"], "dataset_id": dataset_id})
+    assert copula["status"] == "not_supported"
+    assert copula["reason"] == "needs_sequence_simulation"
+
+
 def test_time_series_load_rejects_unknown_persistence_metadata_version(tmp_path):
     directory = tmp_path / "models" / "time_series"
     directory.mkdir(parents=True)

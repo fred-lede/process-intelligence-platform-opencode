@@ -1681,19 +1681,27 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     fit = MODEL_REGISTRY.get(model_id)
 
     if fit.model_type.startswith("time_series_"):
+        gate = _time_series_final_risk_gate(model_id, did)
+        if gate["status"] != "approved":
+            return {
+                "success": False,
+                "error": {
+                    "code": "MONTE_CARLO_TIME_SERIES_UNSUPPORTED",
+                    "message": (
+                        "Independent Monte Carlo sampling does not preserve the time axis "
+                        "or historical sequence required by time-series models. Select a "
+                        "standard regression model for this simulation."
+                    ),
+                    "reason": "missing_time_axis_and_history",
+                    "model_type": fit.model_type,
+                    "suggested_model_types": sorted(SUPPORTED_MODELS),
+                    "final_gate": gate,
+                },
+            }
         return {
-            "success": False,
-            "error": {
-                "code": "MONTE_CARLO_TIME_SERIES_UNSUPPORTED",
-                "message": (
-                    "Independent Monte Carlo sampling does not preserve the time axis "
-                    "or historical sequence required by time-series models. Select a "
-                    "standard regression model for this simulation."
-                ),
-                "reason": "missing_time_axis_and_history",
-                "model_type": fit.model_type,
-                "suggested_model_types": sorted(SUPPORTED_MODELS),
-            },
+            "success": False, "status": "not_supported",
+            "reason": "needs_sequence_simulation", "model_id": model_id,
+            "final_gate": gate,
         }
 
     source_row_count = len(df)
@@ -2169,6 +2177,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_retrain_compare(params)
     if method == "features/time_series/retrain_review":
         return _handle_time_series_retrain_review(params)
+    if method == "features/time_series/risk_use_gate":
+        return _handle_time_series_risk_use_gate(params)
     if method == "features/time_series/validation":
         return _handle_time_series_validation(params)
     if method == "features/time_series/validation_gate":
@@ -2919,6 +2929,40 @@ def _handle_time_series_retrain_review(params: dict) -> dict:
     })
 
 
+def _time_series_final_risk_gate(model_id: str, dataset_id: str) -> dict:
+    """Verify a persisted time-series model is eligible for risk-use review."""
+    fit = MODEL_REGISTRY.get(model_id)
+    reasons: list[str] = []
+    metadata = None
+    if fit.status not in {"validated", "approved"}:
+        reasons.append("model_not_validated")
+    try:
+        _, metadata = load_estimator(_VERSION_CHAIN._project_root, model_id, df=REGISTRY.get(dataset_id))
+    except (KeyError, ValueError, FileNotFoundError, ImportError):
+        reasons.append("persistence_metadata_invalid")
+    review = metadata.get("validation_gate_evidence") if isinstance(metadata, dict) else None
+    gate_evidence = review.get("gate_evidence") if isinstance(review, dict) else None
+    if not isinstance(review, dict) or review.get("decision") != "approve" or not review.get("reviewer") or not review.get("reason"):
+        reasons.append("review_provenance_missing")
+    if not isinstance(gate_evidence, dict) or gate_evidence.get("gate_status") != "approved":
+        reasons.append("time_series_gate_evidence_missing")
+    if not isinstance(metadata, dict) or metadata.get("schema_version") != "ts-transformer-1":
+        reasons.append("schema_version_invalid")
+    if not isinstance(metadata, dict) or metadata.get("backend") != "tensorflow" or not metadata.get("framework_version"):
+        reasons.append("backend_provenance_invalid")
+    provenance = {
+        "model_id": model_id, "model_version": fit.version, "model_status": fit.status,
+        "schema_version": metadata.get("schema_version") if metadata else None,
+        "backend": metadata.get("backend") if metadata else None,
+        "framework_version": metadata.get("framework_version") if metadata else None,
+    }
+    return {"status": "approved" if not reasons else "blocked", "reasons": reasons, "provenance": provenance}
+
+
+def _handle_time_series_risk_use_gate(params: dict) -> dict:
+    return _plain_types(_time_series_final_risk_gate(params["model_id"], params["dataset_id"]))
+
+
 def _handle_time_series_explain(params: dict) -> dict:
     """Explain a persisted time-series estimator without changing standard explainers."""
     df = REGISTRY.get(params["dataset_id"])
@@ -3215,6 +3259,17 @@ def _handle_copula_joint(params: dict) -> dict:
     Supports Gaussian Copula (with a correlation matrix), independent
     assumption, or direct pair-joint probabilities.
     """
+    model_id = params.get("model_id")
+    if model_id is not None:
+        fit = MODEL_REGISTRY.get(model_id)
+        if fit.model_type.startswith("time_series_"):
+            dataset_id = params.get("dataset_id")
+            if not isinstance(dataset_id, str) or not dataset_id:
+                raise ValueError("dataset_id is required for time-series Copula risk use")
+            gate = _time_series_final_risk_gate(model_id, dataset_id)
+            if gate["status"] != "approved":
+                return {"success": False, "status": "blocked", "reason": "final_risk_gate_blocked", "final_gate": gate}
+            return {"success": False, "status": "not_supported", "reason": "needs_sequence_simulation", "model_id": model_id, "final_gate": gate}
     anomalies = params.get("anomalies") or []
     correlation_matrix = params.get("correlation_matrix")
     direct_joints = params.get("direct_joints")
