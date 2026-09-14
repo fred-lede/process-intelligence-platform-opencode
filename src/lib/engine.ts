@@ -1372,6 +1372,7 @@ export type TimeSeriesValidationGateModelType =
   | 'seasonal_naive'
   | 'dynamic_regression'
   | 'time_feature_random_forest'
+  | 'transformer'
 
 export type TimeSeriesValidationGateStatus = 'approved' | 'needs_review' | 'insufficient_history'
 

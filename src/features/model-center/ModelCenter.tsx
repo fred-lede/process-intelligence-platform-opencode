@@ -53,6 +53,7 @@ const TIME_SERIES_GATE_MODEL_TYPES: TimeSeriesValidationGateModelType[] = [
   'seasonal_naive',
   'dynamic_regression',
   'time_feature_random_forest',
+  'transformer',
 ]
 
 const isTimeSeriesGateModel = (modelType: string): modelType is TimeSeriesValidationGateModelType =>

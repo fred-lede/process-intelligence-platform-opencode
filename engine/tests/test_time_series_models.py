@@ -609,6 +609,58 @@ def test_validation_gate_fixed_horizon_ignores_validation_period_inputs():
     assert perturbed["aggregate_metrics"] == original["aggregate_metrics"]
     assert perturbed["prediction_interval_coverage"] == original["prediction_interval_coverage"]
 
+def test_validation_gate_transformer_runs_without_observed_validation_inputs():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    original_id = REGISTRY.register(frame, {})
+    changed = frame.copy()
+    changed.loc[276:, input_columns] = 9999.0
+    changed_id = REGISTRY.register(changed, {})
+    params = {
+        "time_column": "datetime", "target": "output_thickness",
+        "inputs": input_columns, "model_type": "transformer",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "fold_count": 1, "horizon": 12,
+    }
+
+    original = handle_request(
+        "features/time_series/validation_gate", {"dataset_id": original_id, **params}
+    )
+    perturbed = handle_request(
+        "features/time_series/validation_gate", {"dataset_id": changed_id, **params}
+    )
+
+    assert len(original["folds"]) == 1
+    assert set(original["aggregate_metrics"]) == {"mae", "rmse", "r2"}
+    assert original["uncertainty_metrics"]["status"] == "available"
+    assert original["leakage_status"] == {
+        "status": "passed",
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "uses_observed_validation_targets": False,
+    }
+    assert perturbed["folds"] == original["folds"]
+    assert perturbed["aggregate_metrics"] == original["aggregate_metrics"]
+    assert perturbed["prediction_interval_coverage"] == original["prediction_interval_coverage"]
+
+    observed = handle_request("features/time_series/validation_gate", {
+        "dataset_id": original_id,
+        **{**params, "evaluation_protocol": "observed_feature_holdout"},
+    })
+    assert len(observed["folds"]) == 1
+    assert observed["uncertainty_metrics"]["status"] == "available"
+    assert observed["leakage_status"] == {
+        "status": "needs_review",
+        "evaluation_protocol": "observed_feature_holdout",
+        "uses_observed_validation_targets": True,
+    }
+
 
 def test_validation_gate_missing_latest_targets_reduce_window_coverage():
     dataset_id = REGISTRY.register(pd.DataFrame({

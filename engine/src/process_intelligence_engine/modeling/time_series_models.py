@@ -496,7 +496,7 @@ def validate_time_series_gate(
     """Evaluate one estimator with expanding, fixed-horizon folds."""
     from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
 
-    supported = {"naive", "seasonal_naive", "dynamic_regression", "time_feature_random_forest"}
+    supported = {"naive", "seasonal_naive", "dynamic_regression", "time_feature_random_forest", "transformer"}
     if model_type not in supported:
         raise ValueError(f"model_type must be one of: {', '.join(sorted(supported))}")
     if evaluation_protocol not in {"observed_feature_holdout", "fixed_horizon_forecast"}:
@@ -533,7 +533,12 @@ def validate_time_series_gate(
         "status": "not_applicable", "group_column": None,
         "covered_groups": 0, "total_groups": 0, "coverage_ratio": None,
     }
-    if initial_train_size < 5:
+    transformer_sequence_length = 24
+    minimum_train_rows = (
+        transformer_sequence_length + TRANSFORMER_MINIMUM_TRAINING_SEQUENCES
+        if model_type == "transformer" else 5
+    )
+    if initial_train_size < minimum_train_rows:
         return {
             "gate_status": "insufficient_history",
             "gate_reasons": ["insufficient_history"],
@@ -607,6 +612,7 @@ def validate_time_series_gate(
     fixed_horizon = evaluation_protocol == "fixed_horizon_forecast"
     y = ordered[target].to_numpy(float)
     X = ordered[xcols].to_numpy(float) if xcols else None
+    sequence_inputs = ordered[inputs].to_numpy(float)
     for fold_index in range(fold_count):
         train_end = initial_train_size + fold_index * horizon
         validation_end = train_end + horizon
@@ -637,6 +643,56 @@ def validate_time_series_gate(
             predictions = np.asarray(predictions_list)
             training_predictions = y[:train_end - seasonal_period]
             training_actual = y[seasonal_period:train_end]
+        elif model_type == "transformer":
+            from tensorflow import keras
+
+            train_values = y[:train_end]
+            train_inputs = sequence_inputs[:train_end]
+            target_center, target_scale, input_center, input_scale = (
+                _fit_sequence_normalization(train_values, train_inputs)
+            )
+            sequence_x = np.asarray([
+                _sequence_input(
+                    train_values[index - transformer_sequence_length:index],
+                    train_inputs[index - transformer_sequence_length:index],
+                    transformer_sequence_length, target_center, target_scale,
+                    input_center, input_scale,
+                )
+                for index in range(transformer_sequence_length, len(train_values))
+            ], dtype=float)
+            sequence_y = (
+                (train_values[transformer_sequence_length:] - target_center) / target_scale
+            )
+            keras.utils.set_random_seed(42)
+            model_input = keras.layers.Input(
+                shape=(transformer_sequence_length, sequence_x.shape[2])
+            )
+            projected = keras.layers.Dense(16)(model_input)
+            attention = keras.layers.MultiHeadAttention(num_heads=2, key_dim=8)(
+                projected, projected,
+            )
+            encoded = keras.layers.LayerNormalization()(
+                keras.layers.Add()([projected, attention])
+            )
+            pooled = keras.layers.GlobalAveragePooling1D()(encoded)
+            hidden = keras.layers.Dense(16, activation="relu")(pooled)
+            model = keras.Model(model_input, keras.layers.Dense(1)(hidden))
+            model.compile(optimizer="adam", loss="mse")
+            model.fit(
+                sequence_x, sequence_y, epochs=5,
+                batch_size=min(32, len(sequence_x)), verbose=0, shuffle=False,
+            )
+            training_predictions = (
+                model.predict(sequence_x, verbose=0).reshape(-1) * target_scale + target_center
+            )
+            training_actual = train_values[transformer_sequence_length:]
+            predictions = _forecast_sequence_model(
+                model, y, sequence_inputs, split=train_end,
+                sequence_length=transformer_sequence_length,
+                target_center=target_center, target_scale=target_scale,
+                input_center=input_center, input_scale=input_scale,
+                fixed_horizon=fixed_horizon,
+            )[:horizon]
         else:
             estimator = LinearRegression() if model_type == "dynamic_regression" else RandomForestRegressor(
                 n_estimators=100, random_state=42, n_jobs=1, min_samples_leaf=2,
