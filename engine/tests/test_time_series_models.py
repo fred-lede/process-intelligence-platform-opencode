@@ -687,11 +687,22 @@ def test_time_series_sequence_simulation_uses_scenarios_and_recursive_prediction
     training_end = pd.Timestamp(fitted["training_time_range"]["end"])
     timestamps = pd.to_datetime(frame["datetime"], utc=True)
     history_rows = frame.loc[timestamps <= training_end].to_dict("records")
+    source_gate = handle_request("features/time_series/risk_use_gate", {
+        "model_id": source_id, "dataset_id": dataset_id,
+    })
+    assert source_gate["status"] == "blocked"
+    assert "model_not_validated" in source_gate["reasons"]
     candidate = handle_request("features/time_series/retrain_compare", {
         "model_id": source_id, "model_metadata": metadata,
         "history_rows": history_rows,
         "new_observed_rows": frame.loc[timestamps > training_end].head(8).to_dict("records"),
     })["candidate"]
+    with pytest.raises(ValueError, match="approved gate evidence"):
+        handle_request("features/time_series/retrain_review", {
+            "candidate_id": candidate["candidate_id"], "decision": "approve",
+            "reviewer": "qa", "reason": "missing evidence",
+            "gate_evidence": {"gate_status": "needs_review"},
+        })
     approved = handle_request("features/time_series/retrain_review", {
         "candidate_id": candidate["candidate_id"], "decision": "approve",
         "reviewer": "qa", "reason": "sequence risk review complete",
