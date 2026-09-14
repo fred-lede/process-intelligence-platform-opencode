@@ -85,28 +85,57 @@ def _recursive_features(frame: pd.DataFrame, time_column: str, columns: list[str
     return np.asarray(row_values, dtype=float)
 
 
-def _sequence_input(values: np.ndarray, sequence_length: int,
-                    center: float, scale: float) -> np.ndarray:
-    normalized = (np.asarray(values[-sequence_length:], dtype=float) - center) / scale
+def _fit_sequence_normalization(target_values: np.ndarray,
+                                input_values: np.ndarray) -> tuple[float, float, np.ndarray, np.ndarray]:
+    """Fit sequence normalizers from chronological training rows only."""
+    target_center = float(np.mean(target_values))
+    target_scale = float(np.std(target_values)) or 1.0
+    input_center = np.mean(input_values, axis=0)
+    input_scale = np.std(input_values, axis=0)
+    input_scale = np.where(input_scale == 0, 1.0, input_scale)
+    return target_center, target_scale, input_center, input_scale
+
+
+def _sequence_input(target_values: np.ndarray, input_values: np.ndarray,
+                    sequence_length: int, target_center: float,
+                    target_scale: float, input_center: np.ndarray,
+                    input_scale: np.ndarray) -> np.ndarray:
+    normalized_target = (
+        np.asarray(target_values[-sequence_length:], dtype=float) - target_center
+    ) / target_scale
+    normalized_inputs = (
+        np.asarray(input_values[-sequence_length:], dtype=float) - input_center
+    ) / input_scale
     positions = np.linspace(-1.0, 1.0, sequence_length, dtype=float)
-    return np.column_stack((normalized, positions))
+    return np.column_stack((normalized_target, normalized_inputs, positions))
 
 
-def _forecast_sequence_model(model: Any, y: np.ndarray, *, split: int,
-                             sequence_length: int, center: float, scale: float,
+def _forecast_sequence_model(model: Any, y: np.ndarray, input_values: np.ndarray,
+                             *, split: int, sequence_length: int,
+                             target_center: float, target_scale: float,
+                             input_center: np.ndarray, input_scale: np.ndarray,
                              fixed_horizon: bool) -> np.ndarray:
-    """Forecast from historical target sequences without fixed-horizon leakage."""
-    history = list(np.asarray(y[:split], dtype=float))
+    """Forecast from historical sequences without fixed-horizon leakage."""
+    target_history = list(np.asarray(y[:split], dtype=float))
+    input_history = np.asarray(input_values[:split], dtype=float).tolist()
     forecasts: list[float] = []
     for index in range(split, len(y)):
-        source = history if fixed_horizon else y[:index]
+        if fixed_horizon:
+            target_source = target_history
+            input_source = input_history
+        else:
+            target_source = y[:index]
+            input_source = input_values[:index]
         inputs = _sequence_input(
-            np.asarray(source, dtype=float), sequence_length, center, scale,
+            np.asarray(target_source, dtype=float), np.asarray(input_source, dtype=float),
+            sequence_length, target_center, target_scale, input_center, input_scale,
         )
-        prediction = float(model.predict(inputs.reshape(1, sequence_length, 2), verbose=0)[0, 0])
-        forecast = prediction * scale + center
+        prediction = float(model.predict(inputs.reshape(1, sequence_length, inputs.shape[1]), verbose=0)[0, 0])
+        forecast = prediction * target_scale + target_center
         forecasts.append(forecast)
-        history.append(forecast)
+        target_history.append(forecast)
+        if fixed_horizon:
+            input_history.append(input_history[-sequence_length])
     return np.asarray(forecasts, dtype=float)
 
 
@@ -334,18 +363,26 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
             from tensorflow import keras
 
             train_values = np.asarray(y[:split], dtype=float)
-            center = float(np.mean(train_values))
-            scale = float(np.std(train_values)) or 1.0
+            train_inputs = usable[inputs].iloc[:split].to_numpy(float)
+            target_center, target_scale, input_center, input_scale = (
+                _fit_sequence_normalization(train_values, train_inputs)
+            )
             sequence_x = np.asarray([
                 _sequence_input(
                     train_values[index - transformer_sequence_length:index],
-                    transformer_sequence_length, center, scale,
+                    train_inputs[index - transformer_sequence_length:index],
+                    transformer_sequence_length, target_center, target_scale,
+                    input_center, input_scale,
                 )
                 for index in range(transformer_sequence_length, len(train_values))
             ], dtype=float)
-            sequence_y = ((train_values[transformer_sequence_length:] - center) / scale)
+            sequence_y = (
+                (train_values[transformer_sequence_length:] - target_center) / target_scale
+            )
             keras.utils.set_random_seed(42)
-            model_input = keras.layers.Input(shape=(transformer_sequence_length, 2))
+            model_input = keras.layers.Input(
+                shape=(transformer_sequence_length, sequence_x.shape[2])
+            )
             projected = keras.layers.Dense(16)(model_input)
             attention = keras.layers.MultiHeadAttention(num_heads=2, key_dim=8)(
                 projected, projected,
@@ -363,9 +400,11 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                 batch_size=min(32, len(sequence_x)), verbose=0, shuffle=False,
             )
             forecasts = _forecast_sequence_model(
-                model, y, split=split,
+                model, y, usable[inputs].to_numpy(float), split=split,
                 sequence_length=transformer_sequence_length,
-                center=center, scale=scale, fixed_horizon=fixed_horizon,
+                target_center=target_center, target_scale=target_scale,
+                input_center=input_center, input_scale=input_scale,
+                fixed_horizon=fixed_horizon,
             )
             transformer_result = {
                 "model_type": "transformer", "status": "available",

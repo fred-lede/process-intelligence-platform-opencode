@@ -209,7 +209,25 @@ def test_time_series_transformer_fits_when_capability_requirements_are_met():
     assert transformer["leakage_check"] == "passed_by_historical_features"
 
 
-def test_transformer_fixed_horizon_forecast_recurses_on_prior_predictions():
+def test_transformer_sequence_normalization_is_fit_from_training_history():
+    target_center, target_scale, input_center, input_scale = (
+        time_series_models._fit_sequence_normalization(
+            np.asarray([10.0, 20.0, 30.0]),
+            np.asarray([
+                [1.0, 2.0, 3.0, 4.0, 5.0],
+                [3.0, 4.0, 5.0, 6.0, 7.0],
+                [5.0, 6.0, 7.0, 8.0, 9.0],
+            ]),
+        )
+    )
+
+    assert target_center == 20.0
+    assert target_scale == pytest.approx(np.std([10.0, 20.0, 30.0]))
+    assert input_center.tolist() == [3.0, 4.0, 5.0, 6.0, 7.0]
+    assert input_scale.tolist() == pytest.approx([np.std([1.0, 3.0, 5.0])] * 5)
+
+
+def test_transformer_fixed_horizon_uses_historical_inputs_and_prior_predictions():
     class LastValueModel:
         def __init__(self):
             self.inputs = []
@@ -222,16 +240,27 @@ def test_transformer_fixed_horizon_forecast_recurses_on_prior_predictions():
     predictions = time_series_models._forecast_sequence_model(
         model,
         np.asarray([1.0, 2.0, 3.0, 100.0, 200.0]),
+        np.asarray([
+            [10.0, 10.0, 10.0, 10.0, 10.0],
+            [20.0, 20.0, 20.0, 20.0, 20.0],
+            [30.0, 30.0, 30.0, 30.0, 30.0],
+            [400.0, 400.0, 400.0, 400.0, 400.0],
+            [500.0, 500.0, 500.0, 500.0, 500.0],
+        ]),
         split=3,
         sequence_length=2,
-        center=0.0,
-        scale=1.0,
+        target_center=0.0,
+        target_scale=1.0,
+        input_center=np.zeros(5),
+        input_scale=np.ones(5),
         fixed_horizon=True,
     )
 
     assert predictions.tolist() == [3.0, 3.0]
     assert model.inputs[0][0, :, 0].tolist() == [2.0, 3.0]
     assert model.inputs[1][0, :, 0].tolist() == [3.0, 3.0]
+    assert model.inputs[0][0, :, 1:6].tolist() == [[20.0] * 5, [30.0] * 5]
+    assert model.inputs[1][0, :, 1:6].tolist() == [[30.0] * 5, [20.0] * 5]
 
 
 def test_time_series_fit_returns_model_ladder_and_unavailable_states():
