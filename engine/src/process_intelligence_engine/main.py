@@ -2518,6 +2518,11 @@ def _handle_time_series_fit(params: dict) -> dict:
         for item in result.get("results", []):
             if item.get("status") != "available" or (persist_model_types and item.get("model_type") not in persist_model_types):
                 continue
+            if item.get("model_type") == "temporal_fusion_transformer":
+                evidence = validation_gate_evidence.get(item["model_type"])
+                if not isinstance(evidence, dict) or evidence.get("gate_status") != "approved":
+                    item["persistence_blocked_reason"] = "TFT requires an approved validation gate before persistence"
+                    continue
             fit = ModelFit(
                 model_type=f"time_series_{item['model_type']}",
                 target=result["target"],

@@ -245,6 +245,7 @@ def test_tft_persistence_uses_pytorch_artifact():
         "lstm_sequence_length": 1000, "transformer_sequence_length": 1000,
         "tft_sequence_length": 24, "persist_models": True,
         "persist_model_types": ["temporal_fusion_transformer"],
+        "validation_gate_evidence": {"temporal_fusion_transformer": {"gate_status": "approved"}},
     })
     model_id = result["provenance"]["model_ids"]["temporal_fusion_transformer"]
     loaded = handle_request("features/time_series/load", {"dataset_id": dataset_id, "model_id": model_id})
@@ -265,6 +266,7 @@ def test_tft_persistence_replays_predictions():
         "lstm_sequence_length": 1000, "transformer_sequence_length": 1000,
         "tft_sequence_length": 24, "persist_models": True,
         "persist_model_types": ["temporal_fusion_transformer"],
+        "validation_gate_evidence": {"temporal_fusion_transformer": {"gate_status": "approved"}},
     })
     model_id = result["provenance"]["model_ids"]["temporal_fusion_transformer"]
     replayed = handle_request("features/time_series/predict", {"dataset_id": dataset_id, "model_id": model_id})
