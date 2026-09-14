@@ -718,6 +718,25 @@ def test_time_series_sequence_simulation_uses_scenarios_and_recursive_prediction
     assert result["uncertainty"]["status"] == "not_available"
     assert result["uncertainty"]["reason"] == "deterministic_dry_run"
 
+    stochastic_params = {
+        "model_id": approved["model_id"], "dataset_id": dataset_id,
+        "history_rows": history_rows, "input_scenarios": scenarios, "horizon": 3,
+        "simulation_mode": "sequence_stochastic", "seed": 17, "n_simulations": 12,
+    }
+    stochastic = handle_request("features/time_series/sequence_simulation", stochastic_params)
+    repeated = handle_request("features/time_series/sequence_simulation", stochastic_params)
+    assert stochastic["status"] == "stochastic"
+    assert stochastic["summary"] == repeated["summary"]
+    assert stochastic["simulation"] == {
+        "mode": "sequence_stochastic", "seed": 17, "n_simulations": 12,
+        "residual_method": "training_history_recursive_residuals",
+    }
+    assert len(stochastic["summary"]) == 3
+    assert set(stochastic["summary"][0]) == {"timestamp", "mean", "p05", "p50", "p95"}
+    assert stochastic["interval_coverage"] == {
+        "status": "not_available", "reason": "future_observations_required", "confidence": 0.9,
+    }
+
     unsupported = handle_request("features/time_series/sequence_simulation", {
         "model_id": approved["model_id"], "dataset_id": dataset_id,
         "history_rows": history_rows, "input_scenarios": scenarios, "horizon": 3,

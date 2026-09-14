@@ -2966,13 +2966,14 @@ def _handle_time_series_risk_use_gate(params: dict) -> dict:
 
 
 def _handle_time_series_sequence_simulation(params: dict) -> dict:
-    """Run a deterministic, scenario-driven Transformer forecast dry-run."""
+    """Run deterministic or residual-sampled Transformer sequence forecasts."""
     model_id = params["model_id"]
     dataset_id = params["dataset_id"]
     gate = _time_series_final_risk_gate(model_id, dataset_id)
     if gate["status"] != "approved":
         return {"success": False, "status": "blocked", "reason": "final_risk_gate_blocked", "final_gate": gate}
-    if params.get("simulation_mode", "sequence_aware") != "sequence_aware":
+    simulation_mode = params.get("simulation_mode", "sequence_aware")
+    if simulation_mode not in {"sequence_aware", "sequence_stochastic"}:
         return {
             "success": False, "status": "not_supported",
             "reason": "needs_sequence_simulation", "model_id": model_id,
@@ -3031,14 +3032,58 @@ def _handle_time_series_sequence_simulation(params: dict) -> dict:
     target_scale = float(normalization["target"]["scale"])
     input_center = np.asarray(normalization["inputs"]["center"], dtype=float)
     input_scale = np.asarray(normalization["inputs"]["scale"], dtype=float)
-    predictions = []
-    for timestamp, scenario_input in zip(scenario_frame[time_column], scenario_inputs):
-        normalized_target = (np.asarray(target_history[-sequence_length:]) - target_center) / target_scale
-        normalized_inputs = (np.asarray(input_history[-sequence_length:]) - input_center) / input_scale
+
+    def predict_next(target_values: list[float], input_values: list[list[float]]) -> float:
+        normalized_target = (np.asarray(target_values[-sequence_length:]) - target_center) / target_scale
+        normalized_inputs = (np.asarray(input_values[-sequence_length:]) - input_center) / input_scale
         positions = np.linspace(-1.0, 1.0, sequence_length, dtype=float)
         sequence = np.column_stack((normalized_target, normalized_inputs, positions))
         predicted = float(estimator.predict(sequence.reshape(1, sequence_length, sequence.shape[1]), verbose=0)[0, 0])
-        predicted = predicted * target_scale + target_center
+        return predicted * target_scale + target_center
+
+    if simulation_mode == "sequence_stochastic":
+        n_simulations = params.get("n_simulations")
+        seed = params.get("seed")
+        if isinstance(n_simulations, bool) or not isinstance(n_simulations, int) or n_simulations < 1:
+            raise ValueError("n_simulations must be a positive integer for sequence_stochastic")
+        if isinstance(seed, bool) or not isinstance(seed, int):
+            raise ValueError("seed must be an integer for sequence_stochastic")
+        observed_history = history[target].to_numpy(dtype=float)
+        residuals = [
+            observed_history[index] - predict_next(
+                observed_history[:index].tolist(), history[inputs].iloc[:index].to_numpy(dtype=float).tolist(),
+            )
+            for index in range(sequence_length, len(history))
+        ]
+        residual_scale = float(np.std(residuals, ddof=1)) if len(residuals) > 1 else 0.0
+        rng = np.random.default_rng(seed)
+        paths = np.empty((n_simulations, horizon), dtype=float)
+        for simulation in range(n_simulations):
+            sampled_targets = list(target_history)
+            sampled_inputs = list(input_history)
+            for index, scenario_input in enumerate(scenario_inputs):
+                sampled = predict_next(sampled_targets, sampled_inputs) + rng.normal(0.0, residual_scale)
+                paths[simulation, index] = sampled
+                sampled_targets.append(float(sampled))
+                sampled_inputs.append(scenario_input.tolist())
+        quantiles = np.quantile(paths, [.05, .5, .95], axis=0)
+        return _plain_types({
+            "status": "stochastic", "model_id": model_id, "horizon": horizon,
+            "summary": [
+                {"timestamp": timestamp, "mean": float(paths[:, index].mean()),
+                 "p05": quantiles[0, index], "p50": quantiles[1, index], "p95": quantiles[2, index]}
+                for index, timestamp in enumerate(scenario_frame[time_column])
+            ],
+            "simulation": {"mode": "sequence_stochastic", "seed": seed, "n_simulations": n_simulations,
+                           "residual_method": "training_history_recursive_residuals"},
+            "interval_coverage": {"status": "not_available", "reason": "future_observations_required", "confidence": .9},
+            "final_gate": gate,
+            "provenance": {"backend": metadata.get("backend"), "schema_version": metadata.get("schema_version"),
+                           "residual_scale": residual_scale, "forecast_mode": "recursive_predictions_only"},
+        })
+    predictions = []
+    for timestamp, scenario_input in zip(scenario_frame[time_column], scenario_inputs):
+        predicted = predict_next(target_history, input_history)
         predictions.append({"timestamp": timestamp, "predicted": predicted})
         target_history.append(predicted)
         input_history.append(scenario_input.tolist())
