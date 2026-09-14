@@ -430,6 +430,69 @@ def test_time_series_transformer_persistence_replays_without_future_values():
     assert replayed["predictions"] == original["predictions"]
 
 
+def test_time_series_experiment_validation_replays_metadata_without_observed_leakage():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    dataset_id = REGISTRY.register(frame, {})
+    fitted = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": input_columns,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 24,
+        "persist_models": True, "persist_model_types": ["transformer"],
+        "validation_gate_evidence": {"transformer": {"gate_status": "approved"}},
+    })
+    model_id = fitted["provenance"]["model_ids"]["transformer"]
+    metadata = handle_request("features/time_series/load", {
+        "dataset_id": dataset_id, "model_id": model_id,
+    })["metadata"]
+    training_end = pd.Timestamp(fitted["training_time_range"]["end"])
+    timestamps = pd.to_datetime(frame["datetime"], utc=True)
+    history = frame.loc[timestamps <= training_end].to_dict("records")
+    observed = frame.loc[timestamps > training_end].head(4).to_dict("records")
+
+    result = handle_request("features/time_series/experiment_validation", {
+        "model_id": model_id, "model_metadata": metadata,
+        "history_rows": history, "observed_rows": observed,
+    })
+
+    assert result["status"] == "validated"
+    assert result["metrics"]["mae"] >= 0
+    assert result["metrics"]["rmse"] >= 0
+    assert len(result["rows"]) == len(observed)
+    assert set(result["rows"][0]) == {"timestamp", "predicted", "observed", "delta"}
+    assert result["metadata"] == {
+        key: metadata[key]
+        for key in (
+            "model_id", "model_type", "schema_version", "target", "inputs",
+            "time_column", "evaluation_protocol", "backend", "framework_version",
+        )
+    }
+    changed = [{**row, "output_thickness": 9999.0, **{column: 9999.0 for column in input_columns}} for row in observed]
+    replayed = handle_request("features/time_series/experiment_validation", {
+        "model_id": model_id, "model_metadata": metadata,
+        "history_rows": history, "observed_rows": changed,
+    })
+    assert [row["predicted"] for row in replayed["rows"]] == [row["predicted"] for row in result["rows"]]
+    assert replayed["metrics"]["mae"] != result["metrics"]["mae"]
+
+
+def test_time_series_experiment_validation_rejects_metadata_version_mismatch():
+    with pytest.raises(ValueError, match="metadata does not match"):
+        handle_request("features/time_series/experiment_validation", {
+            "model_id": "unknown",
+            "model_metadata": {"schema_version": "ts-estimator-1"},
+            "history_rows": [], "observed_rows": [],
+        })
+
+
 def test_time_series_load_rejects_unknown_persistence_metadata_version(tmp_path):
     directory = tmp_path / "models" / "time_series"
     directory.mkdir(parents=True)

@@ -66,6 +66,7 @@ from process_intelligence_engine.modeling.fitters import (
 from process_intelligence_engine.modeling.doe import generate_design
 from process_intelligence_engine.modeling.registry import ModelRegistry
 from process_intelligence_engine.modeling.fitters import ModelFit
+from process_intelligence_engine.modeling.metrics import mean_absolute_error, root_mean_squared_error
 from process_intelligence_engine.modeling.time_series_persistence import save_estimator, load_estimator
 from process_intelligence_engine.reporting.models import ReportData
 from process_intelligence_engine.reporting.registry import _REPORT_REGISTRY as REPORT_REGISTRY
@@ -2160,6 +2161,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_load(params)
     if method == "features/time_series/predict":
         return _handle_time_series_predict(params)
+    if method == "features/time_series/experiment_validation":
+        return _handle_time_series_experiment_validation(params)
     if method == "features/time_series/validation":
         return _handle_time_series_validation(params)
     if method == "features/time_series/validation_gate":
@@ -2633,6 +2636,99 @@ def _handle_time_series_predict(params: dict) -> dict:
             raise ValueError(f"Missing engineered features: {missing_features}")
         values = estimator.predict(df[needed].to_numpy(dtype=float))
     return _plain_types({"success": True, "model_id": params["model_id"], "predictions": list(values), "metadata": metadata})
+
+
+def _handle_time_series_experiment_validation(params: dict) -> dict:
+    """Validate a persisted Transformer against later observed experiment rows.
+
+    Observed targets remain scoring evidence only.  The replay uses strictly
+    earlier history and its own prior forecasts, matching fixed-horizon use.
+    """
+    model_id = params["model_id"]
+    supplied_metadata = params.get("model_metadata")
+    if (
+        not isinstance(supplied_metadata, dict)
+        or supplied_metadata.get("model_id") != model_id
+        or supplied_metadata.get("schema_version") != "ts-transformer-1"
+        or supplied_metadata.get("model_type") != "time_series_transformer"
+    ):
+        raise ValueError("Experiment validation metadata does not match persisted contract")
+    history_rows = params.get("history_rows")
+    observed_rows = params.get("observed_rows")
+    if not isinstance(history_rows, list) or not history_rows or not isinstance(observed_rows, list) or not observed_rows:
+        raise ValueError("history_rows and observed_rows must be non-empty lists")
+    if not all(isinstance(row, dict) for row in [*history_rows, *observed_rows]):
+        raise ValueError("experiment rows must be objects")
+    history = pd.DataFrame(history_rows)
+    observed = pd.DataFrame(observed_rows)
+    required = [
+        supplied_metadata.get("time_column"), supplied_metadata.get("target"),
+        *supplied_metadata.get("inputs", []),
+    ]
+    if not all(isinstance(column, str) and column for column in required):
+        raise ValueError("Experiment validation metadata does not match persisted contract")
+    missing_history = [column for column in required if column not in history.columns]
+    missing_observed = [column for column in required if column not in observed.columns]
+    if missing_history or missing_observed:
+        raise ValueError(f"Experiment rows missing required columns: {missing_history or missing_observed}")
+    combined = pd.concat([history, observed], ignore_index=True)
+    estimator, metadata = load_estimator(_VERSION_CHAIN._project_root, model_id, df=combined)
+    metadata_keys = (
+        "model_id", "schema_version", "model_type", "target", "inputs", "time_column",
+        "evaluation_protocol", "backend", "framework_version",
+    )
+    if any(supplied_metadata.get(key) != metadata.get(key) for key in metadata_keys):
+        raise ValueError("Experiment validation metadata does not match persisted artifact")
+    time_column = supplied_metadata["time_column"]
+    target = supplied_metadata["target"]
+    inputs = list(supplied_metadata["inputs"])
+    history_prepared = prepare_time_series(history, time_column)
+    observed_prepared = prepare_time_series(observed, time_column)
+    if history_prepared["quality"]["duplicate_timestamps"] or observed_prepared["quality"]["duplicate_timestamps"]:
+        raise ValueError("Experiment rows must not contain duplicate timestamps")
+    history = history_prepared["data"].reset_index(drop=True)
+    observed = observed_prepared["data"].reset_index(drop=True)
+    if history[time_column].iloc[-1] >= observed[time_column].iloc[0]:
+        raise ValueError("Experiment observations must occur after all history rows")
+    if history[required].isna().any().any() or observed[required].isna().any().any():
+        raise ValueError("Experiment rows must have complete time, target, and input values")
+    combined = pd.concat([history, observed], ignore_index=True)
+    from process_intelligence_engine.modeling.time_series_models import _forecast_sequence_model
+
+    replay = metadata["replay"]
+    normalization = replay["normalization"]
+    predictions = _forecast_sequence_model(
+        estimator,
+        combined[target].to_numpy(float), combined[inputs].to_numpy(float),
+        split=len(history), sequence_length=replay["sequence_length"],
+        target_center=float(normalization["target"]["center"]),
+        target_scale=float(normalization["target"]["scale"]),
+        input_center=np.asarray(normalization["inputs"]["center"], dtype=float),
+        input_scale=np.asarray(normalization["inputs"]["scale"], dtype=float),
+        fixed_horizon=True,
+    )
+    actual = observed[target].to_numpy(float)
+    rows = [
+        {
+            "timestamp": timestamp, "predicted": predicted, "observed": actual_value,
+            "delta": actual_value - predicted,
+        }
+        for timestamp, predicted, actual_value in zip(observed[time_column], predictions, actual)
+    ]
+    contract_metadata = {key: metadata.get(key) for key in metadata_keys}
+    return _plain_types({
+        "status": "validated", "validation_status": "completed", "model_id": model_id,
+        "rows": rows,
+        "metrics": {
+            "mae": mean_absolute_error(actual, predictions),
+            "rmse": root_mean_squared_error(actual, predictions),
+        },
+        "metadata": contract_metadata,
+        "leakage_check": {
+            "status": "passed", "evaluation_protocol": "fixed_horizon_forecast",
+            "observed_target_usage": "scoring_only",
+        },
+    })
 
 
 def _handle_time_series_explain(params: dict) -> dict:
