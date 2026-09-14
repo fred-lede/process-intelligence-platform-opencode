@@ -85,6 +85,31 @@ def _recursive_features(frame: pd.DataFrame, time_column: str, columns: list[str
     return np.asarray(row_values, dtype=float)
 
 
+def _sequence_input(values: np.ndarray, sequence_length: int,
+                    center: float, scale: float) -> np.ndarray:
+    normalized = (np.asarray(values[-sequence_length:], dtype=float) - center) / scale
+    positions = np.linspace(-1.0, 1.0, sequence_length, dtype=float)
+    return np.column_stack((normalized, positions))
+
+
+def _forecast_sequence_model(model: Any, y: np.ndarray, *, split: int,
+                             sequence_length: int, center: float, scale: float,
+                             fixed_horizon: bool) -> np.ndarray:
+    """Forecast from historical target sequences without fixed-horizon leakage."""
+    history = list(np.asarray(y[:split], dtype=float))
+    forecasts: list[float] = []
+    for index in range(split, len(y)):
+        source = history if fixed_horizon else y[:index]
+        inputs = _sequence_input(
+            np.asarray(source, dtype=float), sequence_length, center, scale,
+        )
+        prediction = float(model.predict(inputs.reshape(1, sequence_length, 2), verbose=0)[0, 0])
+        forecast = prediction * scale + center
+        forecasts.append(forecast)
+        history.append(forecast)
+    return np.asarray(forecasts, dtype=float)
+
+
 def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inputs: list[str], *, lags: list[int] | None = None, rolling_windows: list[int] | None = None, seasonal_period: int = 24, train_ratio: float = .8, modeling_timezone: str | None = None, window_days: int | None = None, evaluation_protocol: str = "observed_feature_holdout", lstm_sequence_length: int = 24, transformer_sequence_length: int = 24, tft_sequence_length: int = 24) -> dict[str, Any]:
     """Fit comparable chronological models; never uses random K-fold."""
     from process_intelligence_engine.features.time_series_modeling import build_time_features, prepare_time_series
@@ -271,9 +296,96 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
             lstm_result = _unavailable("lstm", f"adapter failed: {exc}", lstm_features, validation, "adapter_error")
     lstm_result["capability"] = lstm_capability
     results.append(lstm_result)
-    advanced_capabilities: dict[str, dict[str, Any]] = {}
+    transformer_available_sequences = max(split - transformer_sequence_length, 0)
+    transformer_data_eligible = transformer_available_sequences >= TRANSFORMER_MINIMUM_TRAINING_SEQUENCES
+    transformer_reasons = []
+    if not transformer_data_eligible:
+        transformer_reasons.append("insufficient_history")
+    if not tensorflow_available:
+        transformer_reasons.append("dependency_missing")
+    transformer_capability = {
+        "eligible": not transformer_reasons,
+        "dependency": {"name": "tensorflow", "available": tensorflow_available},
+        "data": {
+            "training_rows": split,
+            "sequence_length": transformer_sequence_length,
+            "available_sequences": transformer_available_sequences,
+            "minimum_sequences": TRANSFORMER_MINIMUM_TRAINING_SEQUENCES,
+            "meets_threshold": transformer_data_eligible,
+        },
+        "reason_codes": transformer_reasons,
+    }
+    transformer_features = [
+        f"{target}_sequence_{transformer_sequence_length}", "relative_position",
+    ]
+    if transformer_reasons:
+        transformer_reason_code = transformer_reasons[0]
+        transformer_reason = (
+            f"requires at least {TRANSFORMER_MINIMUM_TRAINING_SEQUENCES} training sequences"
+            if transformer_reason_code == "insufficient_history"
+            else "tensorflow is not installed"
+        )
+        transformer_result = _unavailable(
+            "transformer", transformer_reason, transformer_features,
+            validation, transformer_reason_code,
+        )
+    else:
+        try:
+            from tensorflow import keras
+
+            train_values = np.asarray(y[:split], dtype=float)
+            center = float(np.mean(train_values))
+            scale = float(np.std(train_values)) or 1.0
+            sequence_x = np.asarray([
+                _sequence_input(
+                    train_values[index - transformer_sequence_length:index],
+                    transformer_sequence_length, center, scale,
+                )
+                for index in range(transformer_sequence_length, len(train_values))
+            ], dtype=float)
+            sequence_y = ((train_values[transformer_sequence_length:] - center) / scale)
+            keras.utils.set_random_seed(42)
+            model_input = keras.layers.Input(shape=(transformer_sequence_length, 2))
+            projected = keras.layers.Dense(16)(model_input)
+            attention = keras.layers.MultiHeadAttention(num_heads=2, key_dim=8)(
+                projected, projected,
+            )
+            encoded = keras.layers.LayerNormalization()(
+                keras.layers.Add()([projected, attention])
+            )
+            pooled = keras.layers.GlobalAveragePooling1D()(encoded)
+            hidden = keras.layers.Dense(16, activation="relu")(pooled)
+            model_output = keras.layers.Dense(1)(hidden)
+            model = keras.Model(model_input, model_output)
+            model.compile(optimizer="adam", loss="mse")
+            model.fit(
+                sequence_x, sequence_y, epochs=5,
+                batch_size=min(32, len(sequence_x)), verbose=0, shuffle=False,
+            )
+            forecasts = _forecast_sequence_model(
+                model, y, split=split,
+                sequence_length=transformer_sequence_length,
+                center=center, scale=scale, fixed_horizon=fixed_horizon,
+            )
+            transformer_result = {
+                "model_type": "transformer", "status": "available",
+                "features": transformer_features, "validation": validation,
+                "metrics": _metrics(y[split:], forecasts),
+                "_eval_rows": len(forecasts),
+                "_eval_indices": list(range(split, len(y))),
+                "evaluation_protocol": evaluation_protocol, "_estimator": None,
+            }
+        except Exception as exc:
+            transformer_result = _unavailable(
+                "transformer", f"adapter failed: {exc}", transformer_features,
+                validation, "adapter_error",
+            )
+    transformer_result["capability"] = transformer_capability
+    results.append(transformer_result)
+    advanced_capabilities: dict[str, dict[str, Any]] = {
+        "transformer": transformer_capability,
+    }
     for model_type, dependency, sequence_length, minimum_sequences in (
-        ("transformer", "tensorflow", transformer_sequence_length, TRANSFORMER_MINIMUM_TRAINING_SEQUENCES),
         ("temporal_fusion_transformer", "pytorch_forecasting", tft_sequence_length, TFT_MINIMUM_TRAINING_SEQUENCES),
     ):
         dependency_available = importlib.util.find_spec(dependency) is not None

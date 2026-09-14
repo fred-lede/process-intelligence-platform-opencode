@@ -1,10 +1,14 @@
 import math
 import importlib.util
+from pathlib import Path
 
+import numpy as np
 import pandas as pd
+import pytest
 
 from process_intelligence_engine.main import REGISTRY, handle_request
 from process_intelligence_engine.main import MODEL_REGISTRY
+from process_intelligence_engine.modeling import time_series_models
 
 
 def test_time_series_lstm_reports_insufficient_sequence_history(monkeypatch):
@@ -97,9 +101,9 @@ def test_advanced_time_series_rows_report_insufficient_sequence_history(monkeypa
     })
 
     rows = {item["model_type"]: item for item in result["results"]}
-    for model_type, minimum_sequences in (
-        ("transformer", 64),
-        ("temporal_fusion_transformer", 128),
+    for model_type, minimum_sequences, reason_codes in (
+        ("transformer", 64, ["insufficient_history"]),
+        ("temporal_fusion_transformer", 128, ["insufficient_history", "not_implemented"]),
     ):
         row = rows[model_type]
         assert row["status"] == "unavailable"
@@ -113,9 +117,7 @@ def test_advanced_time_series_rows_report_insufficient_sequence_history(monkeypa
             "meets_threshold": False,
         }
         assert row["capability"]["eligible"] is False
-        assert row["capability"]["reason_codes"] == [
-            "insufficient_history", "not_implemented",
-        ]
+        assert row["capability"]["reason_codes"] == reason_codes
 
 
 def test_advanced_time_series_rows_report_missing_dependencies(monkeypatch):
@@ -144,10 +146,12 @@ def test_advanced_time_series_rows_report_missing_dependencies(monkeypatch):
 
     rows = {item["model_type"]: item for item in result["results"]}
     expected_dependencies = {
-        "transformer": "tensorflow",
-        "temporal_fusion_transformer": "pytorch_forecasting",
+        "transformer": ("tensorflow", ["dependency_missing"]),
+        "temporal_fusion_transformer": (
+            "pytorch_forecasting", ["dependency_missing", "not_implemented"],
+        ),
     }
-    for model_type, dependency in expected_dependencies.items():
+    for model_type, (dependency, reason_codes) in expected_dependencies.items():
         row = rows[model_type]
         assert row["status"] == "unavailable"
         assert row["reason_code"] == "dependency_missing"
@@ -156,9 +160,78 @@ def test_advanced_time_series_rows_report_missing_dependencies(monkeypatch):
         }
         assert row["capability"]["data"]["meets_threshold"] is True
         assert row["capability"]["eligible"] is False
-        assert row["capability"]["reason_codes"] == [
-            "dependency_missing", "not_implemented",
-        ]
+        assert row["capability"]["reason_codes"] == reason_codes
+
+
+def test_time_series_transformer_fits_when_capability_requirements_are_met():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    dataset_id = REGISTRY.register(frame, {})
+
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id,
+        "time_column": "datetime",
+        "target": "output_thickness",
+        "inputs": [
+            "input_temperature", "input_voltage", "input_pressure",
+            "input_speed", "input_load",
+        ],
+        "lags": [1],
+        "rolling_windows": [3],
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000,
+        "transformer_sequence_length": 24,
+    })
+
+    transformer = next(
+        item for item in result["results"] if item["model_type"] == "transformer"
+    )
+    assert transformer["status"] == "available"
+    assert set(transformer["metrics"]) == {"mae", "rmse", "r2"}
+    assert all(math.isfinite(value) for value in transformer["metrics"].values())
+    capability = transformer["capability"]
+    assert capability["eligible"] is True
+    assert capability["dependency"] == {"name": "tensorflow", "available": True}
+    assert capability["data"]["sequence_length"] == 24
+    assert capability["data"]["available_sequences"] == capability["data"]["training_rows"] - 24
+    assert capability["data"]["available_sequences"] >= 64
+    assert capability["data"]["minimum_sequences"] == 64
+    assert capability["data"]["meets_threshold"] is True
+    assert capability["reason_codes"] == []
+    assert transformer["evaluation"]["rows"] == transformer["validation"]["test_rows"]
+    assert transformer["evaluation"]["rows"] > 0
+    assert transformer["evaluation"]["protocol"] == "fixed_horizon_forecast"
+    assert transformer["evaluation"]["uses_observed_target"] is False
+    assert transformer["evaluation"]["observed_target_usage"] == "training_only"
+    assert transformer["leakage_check"] == "passed_by_historical_features"
+
+
+def test_transformer_fixed_horizon_forecast_recurses_on_prior_predictions():
+    class LastValueModel:
+        def __init__(self):
+            self.inputs = []
+
+        def predict(self, values, verbose=0):
+            self.inputs.append(values.copy())
+            return np.asarray([[values[0, -1, 0]]])
+
+    model = LastValueModel()
+    predictions = time_series_models._forecast_sequence_model(
+        model,
+        np.asarray([1.0, 2.0, 3.0, 100.0, 200.0]),
+        split=3,
+        sequence_length=2,
+        center=0.0,
+        scale=1.0,
+        fixed_horizon=True,
+    )
+
+    assert predictions.tolist() == [3.0, 3.0]
+    assert model.inputs[0][0, :, 0].tolist() == [2.0, 3.0]
+    assert model.inputs[1][0, :, 0].tolist() == [3.0, 3.0]
 
 
 def test_time_series_fit_returns_model_ladder_and_unavailable_states():
