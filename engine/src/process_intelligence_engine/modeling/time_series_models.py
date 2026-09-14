@@ -347,6 +347,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
     transformer_features = [
         f"{target}_sequence_{transformer_sequence_length}", "relative_position",
     ]
+    transformer_replay_metadata: dict[str, Any] | None = None
     if transformer_reasons:
         transformer_reason_code = transformer_reasons[0]
         transformer_reason = (
@@ -406,13 +407,22 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                 input_center=input_center, input_scale=input_scale,
                 fixed_horizon=fixed_horizon,
             )
+            transformer_replay_metadata = {
+                "sequence_length": transformer_sequence_length,
+                "normalization": {
+                    "target": {"center": target_center, "scale": target_scale},
+                    "inputs": {
+                        "center": input_center.tolist(), "scale": input_scale.tolist(),
+                    },
+                },
+            }
             transformer_result = {
                 "model_type": "transformer", "status": "available",
                 "features": transformer_features, "validation": validation,
                 "metrics": _metrics(y[split:], forecasts),
                 "_eval_rows": len(forecasts),
                 "_eval_indices": list(range(split, len(y))),
-                "evaluation_protocol": evaluation_protocol, "_estimator": None,
+                "evaluation_protocol": evaluation_protocol, "_estimator": model,
             }
         except Exception as exc:
             transformer_result = _unavailable(
@@ -471,7 +481,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
         item["evaluation"] = {"rows": item.pop("_eval_rows", 0), "validation_strategy": "chronological_holdout", "train_start": usable[time_column].iloc[0] if split else None, "train_end": usable[time_column].iloc[split - 1] if split else None, "test_start": usable[time_column].iloc[indices[0]] if indices else None, "test_end": usable[time_column].iloc[indices[-1]] if indices else None, "protocol": protocol, "uses_observed_target": protocol == "observed_feature_holdout", "observed_target_usage": "test_period" if protocol == "observed_feature_holdout" else "training_only"}
         item["leakage_check"] = "passed_by_historical_features"
         item["persisted"] = False
-    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "capabilities":{"lstm":lstm_capability, **advanced_capabilities}, "_estimators": estimators, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
+    return {"status":"completed", "target":target, "inputs":inputs, "time_column":time_column, "quality":prepared["quality"], "validation":validation, "results":results, "capabilities":{"lstm":lstm_capability, **advanced_capabilities}, "_estimators": estimators, "_replay_metadata":{"transformer": transformer_replay_metadata} if transformer_replay_metadata else {}, "provenance":{"contract":"phase1_time_series", "leakage_check":"passed_by_historical_features", "persisted":False, "persistence_status":"unavailable", "persistence_reason":"time-series ladder results are not yet connected to ModelRegistry"}, "training_time_range":{"start":usable[time_column].iloc[0], "end":usable[time_column].iloc[split-1]}, "feature_configuration":config}
 
 
 def validate_time_series_gate(

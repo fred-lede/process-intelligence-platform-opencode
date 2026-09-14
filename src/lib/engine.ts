@@ -1298,6 +1298,7 @@ export interface TimeSeriesModelParams {
   evaluation_protocol?: 'fixed_horizon_forecast' | 'observed_feature_holdout'
   persist_models?: boolean
   persist_model_types?: string[]
+  validation_gate_evidence?: Partial<Record<string, TimeSeriesValidationGateResult>>
 }
 
 export interface TimeSeriesLadderModel {

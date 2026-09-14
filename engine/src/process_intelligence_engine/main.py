@@ -2489,6 +2489,10 @@ def _handle_time_series_fit(params: dict) -> dict:
     ):
         raise ValueError("persist_model_types must be a list of non-empty strings")
     persist_model_types = set(requested_model_types or [])
+    replay_metadata = result.pop("_replay_metadata", {})
+    validation_gate_evidence = params.get("validation_gate_evidence", {})
+    if not isinstance(validation_gate_evidence, dict):
+        raise ValueError("validation_gate_evidence must be an object keyed by model type")
     if persist_models:
         for item in result.get("results", []):
             if item.get("status") != "available" or (persist_model_types and item.get("model_type") not in persist_model_types):
@@ -2513,6 +2517,8 @@ def _handle_time_series_fit(params: dict) -> dict:
                 evaluation_protocol=item.get("evaluation", {}).get("protocol", params.get("evaluation_protocol", "observed_feature_holdout")),
                 training_time_range=result["training_time_range"],
                 feature_names=list(item.get("features") or []),
+                replay_metadata=replay_metadata.get(item["model_type"]),
+                validation_gate_evidence=validation_gate_evidence.get(item["model_type"]),
             ) if fit.model is not None else None
             if metadata:
                 _VERSION_CHAIN.register_entity("model", "default", {
@@ -2529,7 +2535,7 @@ def _handle_time_series_fit(params: dict) -> dict:
     result["provenance"].update({
         "persisted": bool(persisted_ids),
         "persistence_status": "registered_metadata" if persisted_ids else ("no_models_to_persist" if persist_models else "not_requested"),
-        "persistence_reason": "metadata registered; estimator serialization/replay is not included" if persisted_ids else ("no available models matched the requested persistence selection" if persist_models else "set persist_models=true to register available ladder results"),
+        "persistence_reason": "metadata and supported estimator artifacts registered for replay" if persisted_ids else ("no available models matched the requested persistence selection" if persist_models else "set persist_models=true to register available ladder results"),
         "model_ids": persisted_ids,
     })
     result.pop("_estimators", None)
@@ -2575,6 +2581,30 @@ def _handle_time_series_predict(params: dict) -> dict:
     missing = [c for c in columns if c not in df.columns]
     if missing:
         raise ValueError(f"Incompatible dataset: missing columns {missing}")
+    if metadata["model_type"] == "time_series_transformer":
+        from process_intelligence_engine.features.time_series_modeling import prepare_time_series
+        from process_intelligence_engine.modeling.time_series_models import _forecast_sequence_model
+
+        replay = metadata["replay"]
+        normalization = replay["normalization"]
+        ordered = prepare_time_series(df, metadata["time_column"])["data"].reset_index(drop=True)
+        cutoff = pd.Timestamp(metadata["training_time_range"]["end"])
+        split = int((ordered[metadata["time_column"]] <= cutoff).sum())
+        if split < replay["sequence_length"]:
+            raise ValueError("Insufficient historical rows for Transformer replay")
+        predictions = _forecast_sequence_model(
+            estimator,
+            ordered[metadata["target"]].to_numpy(float),
+            ordered[columns].to_numpy(float),
+            split=split,
+            sequence_length=replay["sequence_length"],
+            target_center=float(normalization["target"]["center"]),
+            target_scale=float(normalization["target"]["scale"]),
+            input_center=np.asarray(normalization["inputs"]["center"], dtype=float),
+            input_scale=np.asarray(normalization["inputs"]["scale"], dtype=float),
+            fixed_horizon=True,
+        )
+        return _plain_types({"success": True, "model_id": params["model_id"], "predictions": list(predictions), "metadata": metadata})
     feature_names = metadata.get("feature_names") or []
     if feature_names and not all(c in df.columns for c in feature_names):
         from process_intelligence_engine.features.time_series_modeling import build_time_features

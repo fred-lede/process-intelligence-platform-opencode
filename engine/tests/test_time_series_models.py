@@ -1,5 +1,6 @@
 import math
 import importlib.util
+import json
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +10,7 @@ import pytest
 from process_intelligence_engine.main import REGISTRY, handle_request
 from process_intelligence_engine.main import MODEL_REGISTRY
 from process_intelligence_engine.modeling import time_series_models
+from process_intelligence_engine.modeling.time_series_persistence import load_estimator
 
 
 def test_time_series_lstm_reports_insufficient_sequence_history(monkeypatch):
@@ -335,6 +337,60 @@ def test_time_series_fit_persists_only_selected_model_types():
     assert set(result["provenance"]["model_ids"]) == {"naive"}
     assert result["results"][0]["persisted"] is True
     assert all(item.get("persisted") is not True for item in result["results"] if item["model_type"] != "naive")
+
+
+def test_time_series_transformer_persistence_replays_without_future_values():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    dataset_id = REGISTRY.register(frame, {})
+    result = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": input_columns,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 24,
+        "persist_models": True, "persist_model_types": ["transformer"],
+        "validation_gate_evidence": {"transformer": {"gate_status": "approved"}},
+    })
+    model_id = result["provenance"]["model_ids"]["transformer"]
+
+    loaded = handle_request("features/time_series/load", {
+        "dataset_id": dataset_id, "model_id": model_id,
+    })
+    metadata = loaded["metadata"]
+    assert metadata["schema_version"] == "ts-transformer-1"
+    assert metadata["model_type"] == "time_series_transformer"
+    assert metadata["replay"]["sequence_length"] == 24
+    assert metadata["validation_gate_evidence"] == {"gate_status": "approved"}
+
+    original = handle_request("features/time_series/predict", {
+        "dataset_id": dataset_id, "model_id": model_id,
+    })
+    changed = frame.copy()
+    training_end = pd.Timestamp(result["training_time_range"]["end"])
+    future = pd.to_datetime(changed["datetime"], utc=True) > training_end
+    changed.loc[future, [*input_columns, "output_thickness"]] = 9999.0
+    changed_id = REGISTRY.register(changed, {})
+    replayed = handle_request("features/time_series/predict", {
+        "dataset_id": changed_id, "model_id": model_id,
+    })
+
+    assert replayed["predictions"] == original["predictions"]
+
+
+def test_time_series_load_rejects_unknown_persistence_metadata_version(tmp_path):
+    directory = tmp_path / "models" / "time_series"
+    directory.mkdir(parents=True)
+    (directory / "unknown.json").write_text(json.dumps({"schema_version": "unknown"}))
+
+    with pytest.raises(ValueError, match="metadata version"):
+        load_estimator(tmp_path, "unknown", df=pd.DataFrame())
 
 
 def test_time_series_fit_rejects_invalid_persistence_selection():

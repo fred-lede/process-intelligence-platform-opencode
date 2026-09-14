@@ -317,7 +317,10 @@ export default function ModelCenter() {
     if (!datasetId || !timeColumn || !target || selectedInputs.length === 0 || !gatesApproved) return
     setTimeSeriesPersisting(true)
     try {
-      const result = await fitTimeSeriesLadder({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays, evaluation_protocol: timeEvaluationProtocol, persist_models: true, persist_model_types: selectedTimeSeriesModels })
+      const validationGateEvidence = Object.fromEntries(selectedTimeSeriesModels
+        .filter(isTimeSeriesGateModel)
+        .map((model) => [model, timeSeriesGateResults[model]!]))
+      const result = await fitTimeSeriesLadder({ dataset_id: datasetId, time_column: timeColumn, target, inputs: selectedInputs, lags: timeLags, rolling_windows: rollingWindows, modeling_timezone: 'UTC', window_days: timeWindowDays, evaluation_protocol: timeEvaluationProtocol, persist_models: true, persist_model_types: selectedTimeSeriesModels, validation_gate_evidence: validationGateEvidence })
       setTimeSeriesLadder(result)
       setSelectedTimeSeriesModels([])
       messageApi.success(t('modelCenter.timeSeries.persistenceSuccess'))
