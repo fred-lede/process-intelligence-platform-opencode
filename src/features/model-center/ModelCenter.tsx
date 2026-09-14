@@ -1060,6 +1060,7 @@ export default function ModelCenter() {
                       { title: 'MAE', key: 'mae', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.mae.toFixed(4) ?? '—' },
                       { title: 'RMSE', key: 'rmse', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.rmse.toFixed(4) ?? '—' },
                       { title: 'R²', key: 'r2', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.metrics?.r2.toFixed(4) ?? '—' },
+                      { title: t('modelCenter.timeSeries.predictionIntervalCoverage'), key: 'intervalCoverage', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.uncertainty?.calibration?.coverage_ratio == null ? '—' : `${formatCoverage(row.uncertainty.calibration.coverage_ratio)} (${row.uncertainty.calibration.covered_rows ?? 0}/${row.uncertainty.calibration.evaluated_rows ?? 0})` },
                       { title: t('modelCenter.timeSeries.validationStrategy'), key: 'validation', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.validation?.strategy || '—' },
                       { title: t('modelCenter.timeSeries.protocol'), key: 'protocol', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.evaluation?.protocol || '—' },
                       { title: t('modelCenter.timeSeries.trainRows'), key: 'trainRows', render: (_: unknown, row: TimeSeriesLadderResult['results'][number]) => row.validation?.train_rows ?? '—' },

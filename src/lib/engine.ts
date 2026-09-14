@@ -1315,6 +1315,7 @@ export interface TimeSeriesLadderModel {
   features: string[]
   validation: { strategy: string; train_rows: number; test_rows: number; train_end?: string; test_start?: string }
   metrics: { mae: number; rmse: number; r2: number } | null
+  uncertainty?: { status?: string; mean_interval_width?: number | null; calibration?: { covered_rows?: number; evaluated_rows?: number; coverage_ratio?: number | null } }
   leakage_check?: { status: 'passed' | 'not_checked' }
   persisted?: boolean
   model_id?: string
