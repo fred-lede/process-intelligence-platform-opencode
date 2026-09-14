@@ -69,6 +69,8 @@
 | `test_dataset_quality_issues.csv` | Data Import | Quality warnings and readiness |
 | `test_dataset_grr.csv` | Exploration - GRR | EV, AV, and %GRR |
 | `test_dataset_timeseries.csv` | Exploration - Time Series | Trend, cycle, autocorrelation, and features |
+| `test_dataset_timeseries_transformer.csv` | Model Center - Time Series | Transformer capability; 288 hourly rows provide 204 training sequences at sequence length 24 (at least 64) |
+| `test_dataset_timeseries_tft.csv` | Model Center - Time Series | TFT capability; 432 hourly rows provide 319 training sequences at sequence length 24 (at least 128) |
 | `test_dataset_out_of_spec.csv` | Process Definition / SPC / Simulation | Specification violations and NG risk |
 
 ### Expected results
@@ -98,6 +100,8 @@ These files are internal test fixtures, not user data-collection templates. Gene
 | `test_dataset_quality_issues.csv` | 8 rows with deliberate issues | Data-quality report/readiness | Import and review warnings |
 | `test_dataset_grr.csv` | 45 rows (5 parts × 3 operators × 3 repeats) | GRR | Assign engineering fields |
 | `test_dataset_timeseries.csv` | 45 ordered rows with cycles | Trend, time series, SPC | Set `datetime` and numeric field |
+| `test_dataset_timeseries_transformer.csv` | 288 hourly rows with trend, daily/weekly cycles, and lag-1 autocorrelation | Transformer capability and data threshold | Use sequence length 24 and confirm 204 training sequences meet the 64-sequence threshold |
+| `test_dataset_timeseries_tft.csv` | 432 hourly multivariate rows with trend, daily/weekly cycles, and lag-1 autocorrelation | TFT capability and data threshold | Use sequence length 24 and confirm 319 training sequences meet the 128-sequence threshold |
 | `test_dataset_out_of_spec.csv` | 8 rows crossing LSL/USL | SPC, specification checks, NG risk | Set limits and inspect violations |
 
 ### Testing notes
@@ -107,3 +111,4 @@ These files are internal test fixtures, not user data-collection templates. Gene
 - Fix specifications, simulation count, and random seed when comparing models or simulations.
 - `test_dataset_quality_issues.csv` deliberately contains issues expected to be detected.
 - `test_dataset_grr.csv` uses engineering multi-level fields and should not be treated as an ordinary CSV role mapping.
+- The Transformer and TFT fixtures use the same nine-column schema as `test_dataset_timeseries_regular.csv`. Their outputs remain within a reasonable specification range; they are intended for capability, eligibility, and sequence-volume gates and do not imply that deep-model training is enabled.

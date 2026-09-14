@@ -78,6 +78,8 @@
 | `test_dataset_quality_issues.csv` | 資料匯入 | 品質警告與 readiness |
 | `test_dataset_grr.csv` | 探索分析－GRR | EV、AV、%GRR |
 | `test_dataset_timeseries.csv` | 探索分析－時間序列 | 趨勢、週期、自相關與特徵 |
+| `test_dataset_timeseries_transformer.csv` | 模型中心－時間序列 | Transformer capability；288 筆 hourly 資料在 seq=24 時提供 204 個訓練序列（≥64） |
+| `test_dataset_timeseries_tft.csv` | 模型中心－時間序列 | TFT capability；432 筆 hourly 資料在 seq=24 時提供 319 個訓練序列（≥128） |
 | `test_dataset_out_of_spec.csv` | 製程定義／SPC／模擬 | 規格超限與 NG 風險 |
 
 ### 預期結果
@@ -107,6 +109,8 @@
 | `test_dataset_quality_issues.csv` | 8 筆，含缺值、重複、錯序與格式差異 | 資料品質報告與 readiness | 匯入後先檢查 warning |
 | `test_dataset_grr.csv` | 45 筆（5 零件 × 3 操作者 × 3 重複） | GRR | 指定測量、零件與操作者欄位 |
 | `test_dataset_timeseries.csv` | 45 筆有序時間與週期變化 | 趨勢、時間序列、SPC | 指定 `datetime` 與數值欄位 |
+| `test_dataset_timeseries_transformer.csv` | 288 筆 hourly 資料，含趨勢、日／週週期與 lag-1 自相關 | Transformer capability 與資料門檻 | 設定 seq=24，確認 204 個訓練序列達到 64 門檻 |
+| `test_dataset_timeseries_tft.csv` | 432 筆 hourly 多變量資料，含趨勢、日／週週期與 lag-1 自相關 | TFT capability 與資料門檻 | 設定 seq=24，確認 319 個訓練序列達到 128 門檻 |
 | `test_dataset_out_of_spec.csv` | 8 筆，輸出跨越 LSL／USL | SPC、規格判定、蒙地卡羅 NG 風險 | 設定規格後檢查超限 |
 
 ### 測試注意事項
@@ -116,3 +120,4 @@
 - 比較模型或蒙地卡羅情境時，固定規格、模擬次數與隨機種子。
 - `test_dataset_quality_issues.csv` 的問題是刻意設計，預期由資料品質檢查偵測。
 - `test_dataset_grr.csv` 使用工程多層級欄位，不能直接套用一般 CSV 的欄位角色假設。
+- Transformer／TFT 情境檔沿用 `test_dataset_timeseries_regular.csv` 的 9 欄結構；輸出維持合理規格範圍，主要用於 capability／eligibility 與 sequence-volume gate，不代表深度模型訓練已啟用。
