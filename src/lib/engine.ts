@@ -1381,6 +1381,7 @@ export type TimeSeriesValidationGateModelType =
   | 'dynamic_regression'
   | 'time_feature_random_forest'
   | 'transformer'
+  | 'temporal_fusion_transformer'
 
 export type TimeSeriesValidationGateStatus = 'approved' | 'needs_review' | 'insufficient_history'
 
