@@ -134,6 +134,9 @@ export default function ModelCenter() {
   const [timeSeriesExplanationLoading, setTimeSeriesExplanationLoading] = useState(false)
   const [sequenceSimulationModelId, setSequenceSimulationModelId] = useState<string | undefined>()
   const [sequenceSimulationHorizon, setSequenceSimulationHorizon] = useState(1)
+  const [sequenceSimulationMode, setSequenceSimulationMode] = useState<'sequence_aware' | 'sequence_stochastic'>('sequence_aware')
+  const [sequenceSimulationCount, setSequenceSimulationCount] = useState(100)
+  const [sequenceSimulationSeed, setSequenceSimulationSeed] = useState(42)
   const [sequenceSimulationHistory, setSequenceSimulationHistory] = useState('[]')
   const [sequenceSimulationScenarios, setSequenceSimulationScenarios] = useState('[]')
   const [sequenceSimulationResult, setSequenceSimulationResult] = useState<TimeSeriesSequenceSimulationResult | null>(null)
@@ -387,6 +390,10 @@ export default function ModelCenter() {
         horizon: sequenceSimulationHorizon,
         history_rows: historyRows,
         input_scenarios: inputScenarios,
+        simulation_mode: sequenceSimulationMode,
+        ...(sequenceSimulationMode === 'sequence_stochastic'
+          ? { n_simulations: sequenceSimulationCount, seed: sequenceSimulationSeed }
+          : {}),
       })
       setSequenceSimulationResult(result)
       if (result.status === 'dry_run') messageApi.success(t('modelCenter.timeSeries.sequenceSimulation.success'))
@@ -1262,6 +1269,21 @@ export default function ModelCenter() {
                               onChange={(value) => setSequenceSimulationHorizon(value ?? 1)}
                               addonBefore={t('modelCenter.timeSeries.sequenceSimulation.horizon')}
                             />
+                            <Select
+                              value={sequenceSimulationMode}
+                              onChange={setSequenceSimulationMode}
+                              style={{ minWidth: 180 }}
+                              options={[
+                                { value: 'sequence_aware', label: t('modelCenter.timeSeries.sequenceSimulation.deterministicMode') },
+                                { value: 'sequence_stochastic', label: t('modelCenter.timeSeries.sequenceSimulation.stochasticMode') },
+                              ]}
+                            />
+                            {sequenceSimulationMode === 'sequence_stochastic' && (
+                              <>
+                                <InputNumber min={1} value={sequenceSimulationCount} onChange={(value) => setSequenceSimulationCount(value ?? 1)} addonBefore={t('modelCenter.timeSeries.sequenceSimulation.simulationCount')} />
+                                <InputNumber value={sequenceSimulationSeed} onChange={(value) => setSequenceSimulationSeed(value ?? 0)} addonBefore={t('modelCenter.timeSeries.sequenceSimulation.seed')} />
+                              </>
+                            )}
                             <Button type="primary" loading={sequenceSimulationLoading} onClick={handleRunSequenceSimulation} disabled={!datasetId || !sequenceSimulationModelId}>
                               {sequenceSimulationLoading
                                 ? t('modelCenter.timeSeries.sequenceSimulation.running')
@@ -1307,6 +1329,23 @@ export default function ModelCenter() {
                                   { title: t('modelCenter.timeSeries.sequenceSimulation.predicted'), dataIndex: 'predicted', key: 'predicted', render: (value: number) => value.toFixed(6) },
                                 ]}
                               />
+                            </>
+                          )}
+                          {sequenceSimulationResult?.status === 'stochastic' && (
+                            <>
+                              <Alert type="success" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.stochasticComplete')} description={t('modelCenter.timeSeries.sequenceSimulation.coverageUnavailable')} />
+                              <Descriptions bordered size="small" column={{ xs: 1, sm: 2, md: 3 }}>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.residualMethod')}>{sequenceSimulationResult.simulation?.residual_method}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.residualScale')}>{sequenceSimulationResult.provenance?.residual_scale?.toFixed(6)}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.simulationCount')}>{sequenceSimulationResult.simulation?.n_simulations}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.seed')}>{sequenceSimulationResult.simulation?.seed}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.backend')}>{sequenceSimulationResult.provenance?.backend}</Descriptions.Item>
+                                <Descriptions.Item label={t('modelCenter.timeSeries.sequenceSimulation.schemaVersion')}>{sequenceSimulationResult.provenance?.schema_version}</Descriptions.Item>
+                              </Descriptions>
+                              <Table size="small" pagination={false} rowKey="timestamp" dataSource={sequenceSimulationResult.summary ?? []} columns={[
+                                { title: t('modelCenter.timeSeries.sequenceSimulation.timestamp'), dataIndex: 'timestamp', key: 'timestamp' },
+                                ...(['mean', 'p05', 'p50', 'p95'] as const).map((key) => ({ title: key.toUpperCase(), dataIndex: key, key, render: (value: number) => value.toFixed(6) })),
+                              ]} />
                             </>
                           )}
                         </Space>

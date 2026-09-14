@@ -421,7 +421,7 @@
         "selectModel": "選擇已核准 Transformer", "horizon": "預測步數", "run": "執行 dry-run", "running": "預測中...",
         "historyPlaceholder": "history rows JSON（時間、target 與所有 inputs）。", "scenariosPlaceholder": "future input scenarios JSON（僅時間與 inputs，勿含 target）。",
         "invalidRows": "history rows 與 future input scenarios 必須各自是 JSON 陣列。", "success": "序列感知 dry-run 已完成", "error": "序列感知模擬失敗", "blocked": "最終風險使用 gate 已封鎖", "needsSequence": "獨立抽樣不可用；請提供序列感知 history window 與 future input scenarios。",
-        "deterministic": "Deterministic 遞迴預測", "uncertaintyUnavailable": "此 dry-run 尚無不確定性區間。", "windowRows": "歷史列數", "sequenceLength": "序列長度", "forecastMode": "預測模式", "schemaVersion": "Schema 版本", "modelVersion": "模型版本", "timestamp": "時間戳", "predicted": "預測值"
+        "deterministic": "Deterministic 遞迴預測", "uncertaintyUnavailable": "此 dry-run 尚無不確定性區間。", "deterministicMode": "Deterministic dry-run", "stochasticMode": "Stochastic 序列路徑", "simulationCount": "路徑數", "seed": "Seed", "stochasticComplete": "Stochastic 序列模擬", "coverageUnavailable": "區間 coverage 需未來觀測結果才可計算。", "residualMethod": "殘差方法", "residualScale": "殘差尺度", "windowRows": "歷史列數", "sequenceLength": "序列長度", "forecastMode": "預測模式", "schemaVersion": "Schema 版本", "modelVersion": "模型版本", "timestamp": "時間戳", "predicted": "預測值"
       },
       "detectedTimestamp": "偵測為時間欄位",
       "timeColumn": "時間欄位",

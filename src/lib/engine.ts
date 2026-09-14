@@ -1532,7 +1532,7 @@ export interface TimeSeriesFinalRiskGate {
 
 export interface TimeSeriesSequenceSimulationResult {
   success?: boolean
-  status: 'dry_run' | 'blocked' | 'not_supported'
+  status: 'dry_run' | 'stochastic' | 'blocked' | 'not_supported'
   reason?: 'final_risk_gate_blocked' | 'needs_sequence_simulation'
   model_id?: string
   horizon?: number
@@ -1546,6 +1546,10 @@ export interface TimeSeriesSequenceSimulationResult {
     forecast_mode: 'recursive_predictions_only'
   }
   uncertainty?: { status: 'not_available'; method: string; reason: 'deterministic_dry_run' }
+  summary?: Array<{ timestamp: string; mean: number; p05: number; p50: number; p95: number }>
+  simulation?: { mode: 'sequence_stochastic'; seed: number; n_simulations: number; residual_method: string }
+  interval_coverage?: { status: 'not_available'; reason: 'future_observations_required'; confidence: number }
+  provenance?: { backend: string | null; schema_version: string | null; residual_scale: number; forecast_mode: string }
 }
 
 export interface TimeSeriesSequenceSimulationParams {
@@ -1554,7 +1558,9 @@ export interface TimeSeriesSequenceSimulationParams {
   horizon: number
   history_rows: Array<Record<string, unknown>>
   input_scenarios: Array<Record<string, unknown>>
-  simulation_mode?: 'sequence_aware' | 'independent'
+  simulation_mode?: 'sequence_aware' | 'sequence_stochastic' | 'independent'
+  seed?: number
+  n_simulations?: number
 }
 
 export function recommendTimeSeriesWindows(params: { dataset_id: string; time_column: string; modeling_timezone?: string; candidates?: number[] }) {
