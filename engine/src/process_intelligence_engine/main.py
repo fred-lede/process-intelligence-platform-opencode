@@ -2163,6 +2163,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_predict(params)
     if method == "features/time_series/experiment_validation":
         return _handle_time_series_experiment_validation(params)
+    if method == "features/time_series/retrain_compare":
+        return _handle_time_series_retrain_compare(params)
     if method == "features/time_series/validation":
         return _handle_time_series_validation(params)
     if method == "features/time_series/validation_gate":
@@ -2728,6 +2730,108 @@ def _handle_time_series_experiment_validation(params: dict) -> dict:
             "status": "passed", "evaluation_protocol": "fixed_horizon_forecast",
             "observed_target_usage": "scoring_only",
         },
+    })
+
+
+def _handle_time_series_retrain_compare(params: dict) -> dict:
+    """Create an unpersisted Transformer retraining candidate for review.
+
+    The chronologically first half of new observations is adaptation data;
+    the remaining half is a shared, leakage-safe holdout for both models.
+    """
+    model_id = params["model_id"]
+    metadata = params.get("model_metadata")
+    new_rows = params.get("new_observed_rows")
+    history_rows = params.get("history_rows")
+    if not isinstance(new_rows, list) or len(new_rows) < 4 or not all(isinstance(row, dict) for row in new_rows):
+        raise ValueError("new_observed_rows must contain at least four experiment rows")
+    if not isinstance(metadata, dict) or not isinstance(history_rows, list) or not history_rows:
+        raise ValueError("model metadata and history_rows are required")
+    time_column = metadata.get("time_column")
+    if not isinstance(time_column, str) or not time_column:
+        raise ValueError("Experiment validation metadata does not match persisted contract")
+    new_frame = pd.DataFrame(new_rows)
+    prepared_new = prepare_time_series(new_frame, time_column)
+    if prepared_new["quality"]["duplicate_timestamps"]:
+        raise ValueError("Experiment rows must not contain duplicate timestamps")
+    ordered_new = new_frame.iloc[
+        pd.to_datetime(new_frame[time_column], utc=True).argsort(kind="stable")
+    ].to_dict("records")
+    adaptation_rows = ordered_new[:len(ordered_new) // 2]
+    holdout_rows = ordered_new[len(adaptation_rows):]
+    before = _handle_time_series_experiment_validation({
+        "model_id": model_id, "model_metadata": metadata,
+        "history_rows": history_rows, "observed_rows": holdout_rows,
+    })
+    candidate_source = pd.concat(
+        [pd.DataFrame(history_rows), pd.DataFrame(adaptation_rows)], ignore_index=True,
+    )
+    configuration = metadata.get("feature_configuration") or {}
+    replay = metadata.get("replay") or {}
+    sequence_length = replay.get("sequence_length")
+    if not isinstance(sequence_length, int) or sequence_length < 1:
+        raise ValueError("Experiment validation metadata does not match persisted contract")
+    candidate_fit = fit_time_series_ladder(
+        candidate_source, metadata["time_column"], metadata["target"], list(metadata["inputs"]),
+        lags=configuration.get("lags"), rolling_windows=configuration.get("rolling_windows"),
+        modeling_timezone=configuration.get("modeling_timezone"),
+        evaluation_protocol="fixed_horizon_forecast", train_ratio=.99,
+        lstm_sequence_length=10**9, transformer_sequence_length=sequence_length,
+        tft_sequence_length=sequence_length,
+    )
+    candidate_row = next(item for item in candidate_fit["results"] if item["model_type"] == "transformer")
+    candidate_estimator = candidate_fit.get("_estimators", {}).get("transformer")
+    candidate_replay = candidate_fit.get("_replay_metadata", {}).get("transformer")
+    if candidate_row.get("status") != "available" or candidate_estimator is None or not isinstance(candidate_replay, dict):
+        raise ValueError("Unable to retrain Transformer candidate from supplied history")
+    candidate_end = pd.Timestamp(candidate_fit["training_time_range"]["end"])
+    candidate_times = pd.to_datetime(candidate_source[metadata["time_column"]], utc=True)
+    candidate_history = candidate_source.loc[candidate_times <= candidate_end].reset_index(drop=True)
+    holdout = pd.DataFrame(holdout_rows).reset_index(drop=True)
+    candidate_frame = pd.concat([candidate_history, holdout], ignore_index=True)
+    from process_intelligence_engine.modeling.time_series_models import _forecast_sequence_model
+
+    normalization = candidate_replay["normalization"]
+    predictions = _forecast_sequence_model(
+        candidate_estimator,
+        candidate_frame[metadata["target"]].to_numpy(float),
+        candidate_frame[list(metadata["inputs"])].to_numpy(float),
+        split=len(candidate_history), sequence_length=candidate_replay["sequence_length"],
+        target_center=float(normalization["target"]["center"]),
+        target_scale=float(normalization["target"]["scale"]),
+        input_center=np.asarray(normalization["inputs"]["center"], dtype=float),
+        input_scale=np.asarray(normalization["inputs"]["scale"], dtype=float),
+        fixed_horizon=True,
+    )
+    observed = holdout[metadata["target"]].to_numpy(float)
+    after_metrics = {
+        "mae": mean_absolute_error(observed, predictions),
+        "rmse": root_mean_squared_error(observed, predictions),
+    }
+    source_fit = MODEL_REGISTRY.get(model_id)
+    provenance = {
+        "source_model_id": model_id, "source_model_version": source_fit.version,
+        "schema_version": metadata["schema_version"], "backend": metadata.get("backend"),
+        "framework_version": metadata.get("framework_version"),
+        "evaluation_protocol": "fixed_horizon_forecast",
+    }
+    return _plain_types({
+        "status": "candidate_created",
+        "candidate": {
+            "version": source_fit.version + 1, "status": "draft", "persisted": False,
+            "model_type": "time_series_transformer", "training_rows": len(candidate_history),
+            "holdout_rows": len(holdout),
+        },
+        "before_metrics": before["metrics"], "after_metrics": after_metrics,
+        "delta_metrics": {
+            name: after_metrics[name] - before["metrics"][name]
+            for name in ("mae", "rmse")
+        },
+        "gate": {
+            "status": "needs_review",
+            "reasons": ["candidate_not_persisted", "independent_approval_required"],
+        },
+        "provenance": provenance,
     })
 
 

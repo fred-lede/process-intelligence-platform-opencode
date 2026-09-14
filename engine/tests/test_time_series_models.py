@@ -493,6 +493,58 @@ def test_time_series_experiment_validation_rejects_metadata_version_mismatch():
         })
 
 
+def test_time_series_retrain_compare_creates_unapproved_candidate_without_replacing_model():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    dataset_id = REGISTRY.register(frame, {})
+    fitted = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": input_columns,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 24,
+        "persist_models": True, "persist_model_types": ["transformer"],
+        "validation_gate_evidence": {"transformer": {"gate_status": "approved"}},
+    })
+    model_id = fitted["provenance"]["model_ids"]["transformer"]
+    metadata = handle_request("features/time_series/load", {
+        "dataset_id": dataset_id, "model_id": model_id,
+    })["metadata"]
+    training_end = pd.Timestamp(fitted["training_time_range"]["end"])
+    timestamps = pd.to_datetime(frame["datetime"], utc=True)
+    history = frame.loc[timestamps <= training_end].to_dict("records")
+    new_observed = frame.loc[timestamps > training_end].head(8).to_dict("records")
+    prior_version = MODEL_REGISTRY.get(model_id).version
+
+    result = handle_request("features/time_series/retrain_compare", {
+        "model_id": model_id, "model_metadata": metadata,
+        "history_rows": history, "new_observed_rows": new_observed,
+    })
+
+    assert result["status"] == "candidate_created"
+    assert result["candidate"]["version"] == prior_version + 1
+    assert result["candidate"]["status"] == "draft"
+    assert result["candidate"]["persisted"] is False
+    assert result["gate"]["status"] == "needs_review"
+    assert result["before_metrics"]["mae"] >= 0
+    assert result["after_metrics"]["rmse"] >= 0
+    assert set(result["delta_metrics"]) == {"mae", "rmse"}
+    assert result["provenance"] == {
+        "source_model_id": model_id, "source_model_version": prior_version,
+        "schema_version": "ts-transformer-1", "backend": "tensorflow",
+        "framework_version": metadata["framework_version"],
+        "evaluation_protocol": "fixed_horizon_forecast",
+    }
+    assert MODEL_REGISTRY.get(model_id).version == prior_version
+    assert MODEL_REGISTRY.get(model_id).status == "draft"
+
+
 def test_time_series_load_rejects_unknown_persistence_metadata_version(tmp_path):
     directory = tmp_path / "models" / "time_series"
     directory.mkdir(parents=True)
