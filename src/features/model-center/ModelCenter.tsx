@@ -1787,7 +1787,10 @@ export default function ModelCenter() {
                       pagination={false}
                       scroll={{ x: 600 }}
                       columns={[
-                        { title: t('modelCenter.doeColumn'), dataIndex: 'name', key: 'name', width: 150 },
+                        {
+                          title: t('modelCenter.doeColumn'), dataIndex: 'name', key: 'name', width: 150,
+                          render: (name: string) => name === '1' ? '截距（Intercept）' : name,
+                        },
                         { title: 'Coef', dataIndex: 'coef', key: 'coef', width: 80, render: (v: number) => v?.toFixed(4) },
                         { title: 'SE', dataIndex: 'std_err', key: 'std_err', width: 80, render: (v: number) => v?.toFixed(6) },
                         { title: 't', dataIndex: 't_stat', key: 't_stat', width: 60, render: (v: number) => v?.toFixed(2) },
