@@ -41,6 +41,7 @@ interface DataPipelineState {
     filterColumn?: string
     filterValue?: string
   }
+  spcSummary: { datasetId: string; column: string; analyzedAt: string; violationCount: number; stable: boolean } | null
   status: ConfirmStatus
 
   setImportResult: (result: ImportResult) => void
@@ -61,6 +62,7 @@ interface DataPipelineState {
     analysisPackage: AnalysisPackage | null
   }) => void
   setSpcSettings: (settings: DataPipelineState['spcSettings']) => void
+  setSpcSummary: (summary: DataPipelineState['spcSummary']) => void
   restoreSpcSettings: (settings: DataPipelineState['spcSettings'] | undefined) => void
   updateFieldRole: (originalName: string, role: FieldRole) => void
   confirmField: (originalName: string, confirmed?: boolean) => void
@@ -79,6 +81,7 @@ export const useDataPipelineStore = create<DataPipelineState>((set) => ({
   anomalyScenariosConfirmed: false,
   analysisPackage: null,
   spcSettings: {},
+  spcSummary: null,
   status: 'notStarted',
 
   setImportResult: (result) =>
@@ -150,6 +153,7 @@ export const useDataPipelineStore = create<DataPipelineState>((set) => ({
       analysisPackage,
   }),
   setSpcSettings: (settings) => set({ spcSettings: settings }),
+  setSpcSummary: (summary) => set({ spcSummary: summary }),
   restoreSpcSettings: (settings) => set({ spcSettings: settings ?? {} }),
 
   updateFieldRole: (originalName, role) =>

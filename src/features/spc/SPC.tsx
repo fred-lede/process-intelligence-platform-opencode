@@ -28,7 +28,7 @@ const WE_RULE_NAMES: Record<number, string> = {
 
 export default function SPC() {
   const { t } = useTranslation()
-  const { importResult, spec, controlLimits, spcSettings, setSpcSettings } = useDataPipelineStore()
+  const { importResult, spec, controlLimits, spcSettings, setSpcSettings, setSpcSummary } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
 
   const consumedRef = useRef(false)
@@ -153,6 +153,7 @@ export default function SPC() {
           : {}),
       })
       setResult(res)
+      setSpcSummary({ datasetId: importResult.dataset_id, column, analyzedAt: new Date().toISOString(), violationCount: res.violations.length, stable: res.violations.length === 0 })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
