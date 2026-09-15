@@ -738,6 +738,7 @@ def validate_time_series_gate(
         train_end = initial_train_size + fold_index * horizon
         validation_end = train_end + horizon
         actual = y[train_end:validation_end]
+        tft_interval_coverage = None
         if model_type == "temporal_fusion_transformer":
             try:
                 ladder = fit_time_series_ladder(
@@ -756,6 +757,7 @@ def validate_time_series_gate(
                 interval = tft.get("uncertainty", {})
                 interval_rows += int(interval.get("calibration", {}).get("evaluated_rows", 0))
                 interval_covered += int(interval.get("calibration", {}).get("covered_rows", 0))
+                tft_interval_coverage = interval.get("calibration", {}).get("coverage_ratio")
             except Exception as exc:
                 return {"gate_status": "needs_review", "gate_reasons": ["adapter_error"], "error": str(exc), "folds": [], "aggregate_metrics": None, "prediction_interval_coverage": {"status": "unavailable", "covered_rows": 0, "evaluated_rows": 0, "coverage_ratio": None, "confidence": prediction_interval_confidence}, "uncertainty_metrics": _unavailable_uncertainty(prediction_interval_confidence), "window_coverage": {"requested_folds": fold_count, "evaluated_folds": 0, "coverage_ratio": 0.0}, "group_coverage": not_applicable_groups, "leakage_status": leakage_status}
         elif model_type == "naive":
@@ -858,8 +860,11 @@ def validate_time_series_gate(
         z_score = NormalDist().inv_cdf((1 + prediction_interval_confidence) / 2)
         half_width = z_score * residual_rmse * np.sqrt(1 + 1 / max(len(training_actual), 1))
         covered = int(np.sum((actual >= predictions - half_width) & (actual <= predictions + half_width)))
-        interval_covered += covered
-        interval_rows += len(actual)
+        if tft_interval_coverage is None:
+            interval_covered += covered
+            interval_rows += len(actual)
+        else:
+            covered = int(round(float(tft_interval_coverage) * len(actual)))
         residual_scales.append(float(residual_rmse))
         interval_widths.append(float(2 * half_width))
         validation_positions.extend(range(train_end, validation_end))
