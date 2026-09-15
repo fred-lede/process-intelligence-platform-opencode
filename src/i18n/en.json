@@ -904,6 +904,8 @@
     "resultSummary": "This simulation used {{n}} trials and produced {{ng}} NG results ({{ngPct}}%). Output mean={{mean}}, median={{median}}, standard deviation={{std}}, and P1–P99={{p1}}–{{p99}}. {{capability}}Compare the output distribution with LSL, USL, and the center value; if the tails approach a limit or sampling methods differ materially, review input distributions, dependence, model applicability, and specifications. Results depend on model, sampling parameters, and seed and are not production evidence."
   },
   "prediction": {
+    "profilerTitle": "Prediction Profiler",
+    "profilerLimit": "Adjust values only within the defined operating range. Outside-range values are model extrapolations and are not automatically safe to run.",
     "title": "Interactive Prediction (What-if)",
     "selectModel": "Select Model",
     "noModels": "No trained models yet. Go to Model Center to train one first.",

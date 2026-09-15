@@ -236,7 +236,8 @@ export default function Prediction() {
       {modelInfo && (
         <Row gutter={[16, 16]} style={{ width: '100%' }}>
           <Col flex="1 1 auto" style={{ minWidth: 0 }}>
-            <Card title={t('prediction.equation')} size="small">
+            <Card title={t('prediction.profilerTitle')} size="small">
+              <Alert type="warning" showIcon message={t('prediction.profilerLimit')} style={{ marginBottom: 12 }} />
               <pre style={{ fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, margin: '0 0 12px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{modelInfo.equation}</pre>
               <Alert
                 type="info"

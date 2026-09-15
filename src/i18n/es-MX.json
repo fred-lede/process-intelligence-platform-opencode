@@ -900,6 +900,8 @@
     "resultSummary": "La simulación usó {{n}} pruebas y produjo {{ng}} resultados NG ({{ngPct}}%). Media={{mean}}, mediana={{median}}, desviación estándar={{std}} y P1–P99={{p1}}–{{p99}}. {{capability}}Compara la distribución con LSL, USL y el centro; si las colas se acercan a un límite o los métodos difieren, revisa distribuciones, dependencia, aplicabilidad del modelo y especificaciones. El resultado depende del modelo, parámetros y semilla; no es evidencia de producción."
   },
   "prediction": {
+    "profilerTitle": "Perfilador de predicción",
+    "profilerLimit": "Ajuste los valores solo dentro del rango operativo definido. Fuera del rango son extrapolaciones del modelo y no son automáticamente seguras.",
     "title": "Predicción Interactiva (What-if)",
     "selectModel": "Seleccionar modelo",
     "noModels": "No hay modelos entrenados aún. Ve al Centro de Modelos para entrenar uno.",
