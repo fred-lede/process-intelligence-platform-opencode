@@ -109,6 +109,14 @@ impl EngineManager {
         self.kill_child();
 
         let mut cmd = Command::new(&self.python_path);
+        // Resolve the project-local package instead of any stale globally
+        // installed copy when launched from Finder/Launchpad.
+        if let Some(engine_root) = std::path::Path::new(&self.python_path)
+            .parent()
+            .and_then(|venv| venv.parent())
+        {
+            cmd.current_dir(engine_root);
+        }
         cmd.arg("-m")
             .arg(&self.engine_module)
             .stdin(Stdio::piped())
