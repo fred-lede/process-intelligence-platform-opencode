@@ -83,7 +83,7 @@ const isTimeSeriesGateModel = (modelType: string): modelType is TimeSeriesValida
 export default function ModelCenter() {
   const { t, i18n } = useTranslation()
   const [messageApi, contextHolder] = message.useMessage()
-  const { importResult, fields, spec } = useDataPipelineStore()
+  const { importResult, fields, spec, spcSummary } = useDataPipelineStore()
   const { setContext } = useAssistantContextStore()
   const {
     models, fitting, transitioning, deleting, error,
@@ -846,6 +846,8 @@ export default function ModelCenter() {
   return (
     <>
       {contextHolder}
+      {spcSummary && importResult && spcSummary.datasetId === importResult.dataset_id && !spcSummary.stable && <Alert type="warning" showIcon message={t('modelCenter.spcApprovalWarning')} description={t('modelCenter.spcApprovalDetail', { count: spcSummary.violationCount })} />}
+      {spcSummary && importResult && spcSummary.datasetId !== importResult.dataset_id && <Alert type="info" showIcon message={t('modelCenter.spcSummaryMismatch')} />}
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {error && <Alert type="error" showIcon message={error} closable onClose={clearError} />}
 
