@@ -543,8 +543,11 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     quantiles = quantiles[:, 0, :]
                 forecast_values = quantiles[:, 3].reshape(-1)
                 expected = y[split:split + len(forecast_values)]
-                lower = quantiles[:, 1].reshape(-1)
-                upper = quantiles[:, 5].reshape(-1)
+                # PyTorch Forecasting's default QuantileLoss emits seven
+                # quantiles; use the outer 0.02/0.98 pair for the advertised
+                # 95% interval rather than the narrower 0.10/0.90 pair.
+                lower = quantiles[:, 0].reshape(-1)
+                upper = quantiles[:, -1].reshape(-1)
                 covered = (expected >= lower) & (expected <= upper)
                 result = {
                     "model_type": model_type, "status": "available", "features": tft_features,
@@ -554,7 +557,7 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     "evaluation_protocol": evaluation_protocol, "_estimator": tft_model,
                 }
                 result["uncertainty"] = {
-                    "status": "available", "method": "quantile_loss", "confidence": 0.8,
+                    "status": "available", "method": "quantile_loss", "confidence": 0.96,
                     "mean_interval_width": float(np.mean(upper - lower)),
                     "calibration": {"covered_rows": int(covered.sum()), "evaluated_rows": int(len(expected)), "coverage_ratio": float(np.mean(covered))},
                 }
