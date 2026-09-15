@@ -693,6 +693,8 @@
     "doeMainEffects": "Gráfico de efectos principales",
     "doeInteractionPlot": "Gráfico de interacción",
     "doeNormalEffects": "Gráfico normal de efectos estandarizados",
+    "doeNormalReference": "Línea de referencia normal",
+    "doeNormalPoints": "Efectos estandarizados",
     "doePredictedEffect": "Efecto del modelo",
     "doeResidualsVsFits": "Residuos vs. ajustes",
     "doeResidualsVsOrder": "Residuos vs. orden",

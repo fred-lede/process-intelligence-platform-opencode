@@ -691,6 +691,8 @@
     "doeMainEffects": "主效應圖",
     "doeInteractionPlot": "交互作用圖",
     "doeNormalEffects": "標準化效應常態機率圖",
+    "doeNormalReference": "常態參考線",
+    "doeNormalPoints": "標準化效應",
     "doePredictedEffect": "模型效應",
     "doeResidualsVsFits": "殘差對預測值",
     "doeResidualsVsOrder": "殘差對資料順序",

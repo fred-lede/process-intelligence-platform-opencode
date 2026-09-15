@@ -22,6 +22,26 @@ const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'lightgbm', labelKey: 'modelCenter.modelType.lightgbm' },
 ]
 
+function normalQuantile(p: number): number {
+  const a = [-39.6968302866538, 220.946098424521, -275.928510446969, 138.357751867269, -30.6647980661472, 2.50662827745924]
+  const b = [-54.4760987982241, 161.585836858041, -155.698979859887, 66.8013118877197, -13.2806815528857]
+  const c = [-0.00778489400243029, -0.322396458041136, -2.40075827716184, -2.54973253934373, 4.37466414146497, 2.93816398269878]
+  const d = [0.00778469570904146, 0.32246712907004, 2.445134137143, 3.75440866190742]
+  const q = p - 0.5
+  if (Math.abs(q) <= 0.425) {
+    const r = 0.180625 - q * q
+    const numerator = ((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]
+    const denominator = ((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1
+    return q * numerator / denominator
+  }
+  const r = q < 0 ? p : 1 - p
+  const s = Math.sqrt(-Math.log(r))
+  const numerator = ((((c[0] * s + c[1]) * s + c[2]) * s + c[3]) * s + c[4]) * s + c[5]
+  const denominator = (((d[0] * s + d[1]) * s + d[2]) * s + d[3]) * s + 1
+  const value = numerator / denominator
+  return q < 0 ? -value : value
+}
+
 const MODEL_DESC_KEY: Record<ModelType, string> = {
   doe_linear: 'doeLinear',
   doe_quadratic: 'doeQuadratic',
@@ -1810,7 +1830,7 @@ export default function ModelCenter() {
                     />
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16 }}>
                       <Card size="small" title={t('modelCenter.doeMainEffects')}>
-                        <Plot data={doeStats.coefficients.filter(c => c.name !== '1').map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 80 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: true, legend: { orientation: 'h', y: -0.25 } }} />
+                        <Plot data={doeStats.coefficients.filter(c => c.name !== '1' && !/[\\^:*]/.test(c.name)).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 80 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: true, legend: { orientation: 'h', y: -0.25 } }} />
                       </Card>
                       <Card size="small" title={t('modelCenter.doeResidualsVsFits')}>
                         <Plot data={[{ x: doeStats.fitted_values ?? [], y: doeStats.residuals ?? [], mode: 'markers', type: 'scatter' }]} layout={{ height: 340, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: 'Fitted' }, yaxis: { title: 'Residual' } }} />
@@ -1822,7 +1842,7 @@ export default function ModelCenter() {
                         <Plot data={doeStats.coefficients.filter(c => /[:*]/.test(c.name)).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') } }} />
                       </Card>
                       <Card size="small" title={t('modelCenter.doeNormalEffects')}>
-                        <Plot data={(() => { const rows = doeStats.coefficients.filter(c => c.name !== '1').sort((a, b) => a.t_stat - b.t_stat); const n = rows.length; const points = rows.map((c, i) => ({ x: c.t_stat, y: (i + 0.5) / Math.max(n, 1), name: c.name })); const xs = points.map(p => p.x); const span = Math.max(...xs, 1) - Math.min(...xs, -1); const line = [{ x: [Math.min(...xs, -1), Math.max(...xs, 1)], y: [0.5 - span * 0.08, 0.5 + span * 0.08], mode: 'lines', line: { dash: 'dot', color: '#999' }, hoverinfo: 'skip', type: 'scatter' }]; return [...line, { x: points.map(p => p.x), y: points.map(p => p.y), mode: 'markers', text: points.map(p => p.name), hovertemplate: '%{text}<br>t=%{x:.3f}<br>p-position=%{y:.3f}<extra></extra>', type: 'scatter' }]; })()} layout={{ height: 340, margin: { l: 55, r: 15, t: 10, b: 55 }, xaxis: { title: 'Standardized effect (t)' }, yaxis: { title: 'Normal probability position', range: [0, 1], tickformat: '.1f' } }} />
+                        <Plot data={(() => { const rows = doeStats.coefficients.filter(c => c.name !== '1').sort((a, b) => a.t_stat - b.t_stat); const n = rows.length; const points = rows.map((c, i) => ({ x: c.t_stat, y: normalQuantile((i + 0.5) / Math.max(n, 1)), name: c.name })); const xs = points.map(p => p.x); const ys = points.map(p => p.y); const meanX = xs.reduce((s, x) => s + x, 0) / Math.max(xs.length, 1); const meanY = ys.reduce((s, y) => s + y, 0) / Math.max(ys.length, 1); const denom = xs.reduce((s, x) => s + (x - meanX) ** 2, 0); const slope = denom ? xs.reduce((s, x, i) => s + (x - meanX) * (ys[i] - meanY), 0) / denom : 0; const intercept = meanY - slope * meanX; const line = [{ x: [Math.min(...xs), Math.max(...xs)], y: [intercept + slope * Math.min(...xs), intercept + slope * Math.max(...xs)], mode: 'lines', name: t('modelCenter.doeNormalReference'), line: { dash: 'dot', color: '#999' }, hoverinfo: 'skip', type: 'scatter' }]; return [...line, { x: xs, y: ys, mode: 'markers', name: t('modelCenter.doeNormalPoints'), text: points.map(p => p.name), hovertemplate: '%{text}<br>t=%{x:.3f}<br>normal quantile=%{y:.3f}<extra></extra>', type: 'scatter' }]; })()} layout={{ height: 340, margin: { l: 55, r: 15, t: 10, b: 55 }, xaxis: { title: 'Standardized effect (t)' }, yaxis: { title: 'Theoretical normal quantile' }, showlegend: true }} />
                       </Card>
                     </div>
                   </>

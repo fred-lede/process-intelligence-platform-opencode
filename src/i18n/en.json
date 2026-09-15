@@ -691,6 +691,8 @@
     "doeMainEffects": "Main Effects Plot",
     "doeInteractionPlot": "Interaction Plot",
     "doeNormalEffects": "Normal Plot of Standardized Effects",
+    "doeNormalReference": "Normal reference line",
+    "doeNormalPoints": "Standardized effects",
     "doePredictedEffect": "Model effect",
     "doeResidualsVsFits": "Residuals vs Fits",
     "doeResidualsVsOrder": "Residuals vs Order",
