@@ -697,6 +697,7 @@
     "doeContourY": "Factor del eje Y",
     "computeDOEContour": "Calcular contorno",
     "doeContourHint": "Seleccione dos factores de entrada para calcular el contorno predicho dentro del rango operativo.",
+    "doeSurfaceHint": "La superficie 3D es solo una guía visual; no use valores fuera del rango operativo definido.",
     "doeInteractionPlot": "Gráfico de interacción",
     "doeNormalEffects": "Gráfico normal de efectos estandarizados",
     "doeNormalReference": "Línea de referencia normal",

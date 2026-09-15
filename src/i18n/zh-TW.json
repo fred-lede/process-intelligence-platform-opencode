@@ -695,6 +695,7 @@
     "doeContourY": "Y 軸因子",
     "computeDOEContour": "計算等高線",
     "doeContourHint": "選擇兩個輸入因子後計算操作範圍內的預測等高線。",
+    "doeSurfaceHint": "3D 曲面僅供視覺輔助；請勿將設定值帶出已定義的操作範圍。",
     "doeInteractionPlot": "交互作用圖",
     "doeNormalEffects": "標準化效應常態機率圖",
     "doeNormalReference": "常態參考線",

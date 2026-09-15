@@ -695,6 +695,7 @@
     "doeContourY": "Y-axis factor",
     "computeDOEContour": "Compute contour",
     "doeContourHint": "Select two input factors to compute a predicted contour within the operating range.",
+    "doeSurfaceHint": "The 3D surface is visual guidance only; do not move settings outside the defined operating range.",
     "doeInteractionPlot": "Interaction Plot",
     "doeNormalEffects": "Normal Plot of Standardized Effects",
     "doeNormalReference": "Normal reference line",
