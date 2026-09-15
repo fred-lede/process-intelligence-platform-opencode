@@ -970,6 +970,8 @@
     "xbarS": "X-bar + S (Promedio y Desv. Estándar)",
     "analyze": "Analizar",
     "processCapability": "Capacidad del proceso",
+    "capabilityStabilityWarning": "Se detectaron violaciones de límites de control",
+    "capabilityStabilityDetail": "Se detectaron {{count}} violación(es). Cp/Cpk son informativos hasta estabilizar el proceso.",
     "cp": "Cp",
     "cpk": "Cpk",
     "pp": "Pp",

@@ -604,6 +604,7 @@ export default function SPC() {
       {result && (
         <>
           <Card title={t('spc.processCapability')} size="small">
+            {result.violations.length > 0 && <Alert type="warning" showIcon message={t('spc.capabilityStabilityWarning')} description={t('spc.capabilityStabilityDetail', { count: result.violations.length })} style={{ marginBottom: 12 }} />}
             <Space wrap>
               <Space>
                 <Typography.Text>Cp:</Typography.Text>

@@ -974,6 +974,8 @@
     "xbarS": "X-bar + S 圖 (平均與標準差)",
     "analyze": "分析",
     "processCapability": "製程能力",
+    "capabilityStabilityWarning": "製程尚有管制界限違規",
+    "capabilityStabilityDetail": "偵測到 {{count}} 個違規點；製程未穩定前，Cp/Cpk 僅供參考。",
     "cp": "Cp",
     "cpk": "Cpk",
     "pp": "Pp",

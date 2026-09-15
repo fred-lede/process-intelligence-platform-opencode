@@ -974,6 +974,8 @@
     "xbarS": "X-bar + S (Average & Std Dev)",
     "analyze": "Analyze",
     "processCapability": "Process Capability",
+    "capabilityStabilityWarning": "Control-limit violations detected",
+    "capabilityStabilityDetail": "{{count}} violation(s) detected. Cp/Cpk are informational until the process is stable.",
     "cp": "Cp",
     "cpk": "Cpk",
     "pp": "Pp",
