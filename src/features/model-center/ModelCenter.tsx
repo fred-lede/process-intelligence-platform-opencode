@@ -1878,6 +1878,12 @@ export default function ModelCenter() {
                       <Card size="small" title={t('modelCenter.doeResidualsVsOrder')}>
                         <Plot data={[{ x: (doeStats.residuals ?? []).map((_, i) => i + 1), y: doeStats.residuals ?? [], mode: 'lines+markers', type: 'scatter' }]} layout={{ height: 340, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: 'Order' }, yaxis: { title: 'Residual' } }} />
                       </Card>
+                      <Card size="small" title={t('modelCenter.doeResidualNormalPlot')}>
+                        <Plot data={[(() => { const values = [...(doeStats.residuals ?? [])].sort((a, b) => a - b); const n = values.length; return { x: values, y: values.map((_, i) => normalQuantile((i + 0.5) / Math.max(n, 1))), mode: 'markers', type: 'scatter', name: t('modelCenter.doeResidualPoints'), hovertemplate: 'Residual=%{x:.6f}<br>Normal quantile=%{y:.3f}<extra></extra>' }; })()]} layout={{ height: 340, margin: { l: 55, r: 15, t: 10, b: 55 }, xaxis: { title: 'Residual' }, yaxis: { title: t('modelCenter.doeTheoreticalNormalQuantile') }, shapes: [{ type: 'line', x0: -1, x1: 1, y0: 0, y1: 0, line: { dash: 'dash', color: '#999' } }], showlegend: false }} />
+                      </Card>
+                      <Card size="small" title={t('modelCenter.doeResidualHistogram')}>
+                        <Plot data={[{ x: doeStats.residuals ?? [], type: 'histogram', marker: { color: '#6699cc' }, name: t('modelCenter.doeResiduals') }]} layout={{ height: 340, margin: { l: 50, r: 15, t: 10, b: 55 }, xaxis: { title: 'Residual' }, yaxis: { title: t('modelCenter.doeFrequency') }, bargap: 0.05, showlegend: false }} />
+                      </Card>
                       <Card size="small" title={t('modelCenter.doeInteractionPlot')}>
                         <Plot data={doeStats.coefficients.filter(c => /[:*]/.test(c.name)).sort((a, b) => Math.abs(b.t_stat) - Math.abs(a.t_stat)).slice(0, 6).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 80 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: true, legend: { orientation: 'h', y: -0.25 } }} />
                       </Card>
