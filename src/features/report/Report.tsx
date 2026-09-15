@@ -136,6 +136,12 @@ export default function Report() {
               description={t('report.infoDetail')}
               showIcon
             />
+            <Alert
+              type="info"
+              showIcon
+              message={t('report.doeChartsIncluded')}
+              description={t('report.doeChartsIncludedDetail')}
+            />
 
             <Space>
               <Button

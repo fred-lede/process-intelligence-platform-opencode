@@ -469,6 +469,8 @@ data/test_dataset.csv
 - Exploration 趨勢圖：所有 numeric 欄位均顯示自動計算的 UCL/LCL 虛線
 
 **模型中心擴充**
+- DOE 圖表與治理：Pareto、主效應、交互作用、Contour、3D Surface、殘差診斷；SPC 穩定性 Gate 與人工覆核稽核紀錄。
+- Prediction Profiler 支援 Maximize／Minimize／Target 目標與操作範圍內候選設定建議。
 - 模型類型選單右側顯示說明文字（含目標欄位與輸入限制）
 - 模型表格新增 Equation 欄位 + 各模型適用的 metrics 列（AUC/accuracy/shape_k/AIC）
 - Logistic 迴歸支援字串二元目標（OK/NG），前端預先檢查連續目標

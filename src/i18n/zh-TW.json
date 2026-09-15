@@ -808,6 +808,8 @@
     "noData": "請先匯入資料才能產生報告。",
     "info": "產生分析報告",
     "infoDetail": "將分析結果匯出為 HTML 或 Excel 檔案。",
+    "doeChartsIncluded": "DOE 圖表與診斷",
+    "doeChartsIncludedDetail": "報告會保留已產生的 Pareto、主效應、交互作用、Contour、3D Surface、標準化效應常態機率圖，以及殘差對預測值／資料順序圖；圖表仍應配合模型假設與驗證結果判讀。",
     "htmlButton": "產生 HTML",
     "excelButton": "下載 Excel",
     "pdfButton": "下載 PDF",

@@ -810,6 +810,8 @@
     "noData": "Importa datos para generar un informe.",
     "info": "Generar informe de análisis",
     "infoDetail": "Exporta los resultados del análisis como archivo HTML o Excel.",
+    "doeChartsIncluded": "Gráficos y diagnósticos DOE",
+    "doeChartsIncludedDetail": "El informe conserva los gráficos Pareto, efectos principales, interacciones, contorno, superficie 3D, efectos normales, residuos frente a ajustados y residuos frente al orden. Interprétalos junto con los supuestos y la validación del modelo.",
     "htmlButton": "Generar HTML",
     "excelButton": "Descargar Excel",
     "pdfButton": "Descargar PDF",

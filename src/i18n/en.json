@@ -808,6 +808,8 @@
     "noData": "Import data to generate a report.",
     "info": "Generate analysis report",
     "infoDetail": "Export the analysis results as HTML or Excel file.",
+    "doeChartsIncluded": "DOE charts and diagnostics",
+    "doeChartsIncludedDetail": "The report retains generated Pareto, main-effects, interaction, contour, 3D surface, normal-effects, residual-versus-fits, and residual-versus-order charts. Interpret them together with model assumptions and validation results.",
     "htmlButton": "Generate HTML",
     "excelButton": "Download Excel",
     "pdfButton": "Download PDF",
