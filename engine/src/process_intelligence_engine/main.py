@@ -738,6 +738,8 @@ def _handle_modeling_list(params: dict) -> dict:
 
 def _handle_modeling_transition(params: dict) -> dict:
     fit = MODEL_REGISTRY.transition(params["model_id"], params["status"])
+    if params.get("status") == "approved" and params.get("approval_reason"):
+        AUTH_MANAGER._log_audit("model_manual_approval", "model_approved_with_override", {"model_id": fit.model_id, "reason": params["approval_reason"]})
     _VERSION_CHAIN.register_entity("model_state", "default", {"model_id": fit.model_id, "status": fit.status})
     return fit.to_dto()
 

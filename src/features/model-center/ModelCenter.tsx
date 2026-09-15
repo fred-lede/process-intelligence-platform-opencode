@@ -595,12 +595,13 @@ export default function ModelCenter() {
   }
 
   const handleTransition = async (modelId: string, newStatus: ModelStatus) => {
+    let approvalReason: string | undefined
     if (newStatus === 'approved' && currentRole === 'reviewer') {
       const reason = window.prompt(t('modelCenter.approvalOverrideReason'))
       if (!reason?.trim()) return
-      localStorage.setItem(`process-intelligence-approval-${modelId}`, JSON.stringify({ modelId, reason: reason.trim(), approvedAt: new Date().toISOString(), role: 'approver' }))
+      approvalReason = reason.trim()
     }
-    await transition(modelId, newStatus)
+    await transition(modelId, newStatus, approvalReason)
     messageApi.success(t('modelCenter.transitionSuccess', { status: newStatus }))
   }
 

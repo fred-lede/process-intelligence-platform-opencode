@@ -17,7 +17,7 @@ export interface ModelStore {
     target: string
     inputs: string[]
   }) => Promise<ModelFitDTO | null>
-  transition: (modelId: string, status: ModelStatus) => Promise<void>
+  transition: (modelId: string, status: ModelStatus, approvalReason?: string) => Promise<void>
   deleteModel: (modelId: string) => Promise<void>
   selectModel: (modelId: string | null) => void
   clearError: () => void
@@ -53,10 +53,10 @@ export const useModelStore = create<ModelStore>((set) => ({
     }
   },
 
-  transition: async (modelId, status) => {
+  transition: async (modelId, status, approvalReason) => {
     set({ transitioning: true, error: null })
     try {
-      const updated = await transitionModel(modelId, status)
+      const updated = await transitionModel(modelId, status, approvalReason)
       set((s) => ({
         models: s.models.map((m) => (m.model_id === modelId ? updated : m)),
         transitioning: false,

@@ -402,8 +402,9 @@ export async function listModels(dataset_id?: string): Promise<{ models: ModelFi
 export async function transitionModel(
   model_id: string,
   status: ModelStatus,
+  approval_reason?: string,
 ): Promise<ModelFitDTO> {
-  return engineCall<ModelFitDTO>('modeling/transition', { model_id, status })
+  return engineCall<ModelFitDTO>('modeling/transition', { model_id, status, approval_reason })
 }
 
 export async function deleteModel(
