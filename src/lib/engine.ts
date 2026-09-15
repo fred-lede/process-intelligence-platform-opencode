@@ -432,6 +432,10 @@ export async function computeDOEContour(params: { model_id: string; dataset_id: 
   return engineCall<DOEContourResult>('modeling/doe/contour', params as unknown as Record<string, unknown>)
 }
 
+export async function recommendProfilerSettings(params: { model_id: string; dataset_id: string; objective: 'maximize' | 'minimize' | 'target'; target_value?: number; current?: Record<string, number> }): Promise<Record<string, unknown>> {
+  return engineCall<Record<string, unknown>>('modeling/profiler/recommend', params as unknown as Record<string, unknown>)
+}
+
 // --- Phase 3b: DOE Design Library ----------------------------------------
 
 export interface DOEFactor {

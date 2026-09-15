@@ -836,6 +836,28 @@ def _handle_doe_contour(params: dict) -> dict:
     return {"x_factor": x_factor, "y_factor": y_factor, "x": xs.tolist(), "y": ys.tolist(), "z": z, "ranges": {x_factor: [x_low, x_high], y_factor: [y_low, y_high]}, "baseline": baseline}
 
 
+def _handle_profiler_recommend(params: dict) -> dict:
+    fit = MODEL_REGISTRY.get(params["model_id"])
+    df = REGISTRY.get(params["dataset_id"])
+    objective = params.get("objective", "target")
+    if objective not in ("maximize", "minimize", "target"):
+        raise ValueError("objective must be maximize, minimize, or target")
+    ranges = get_input_ranges(df, fit.inputs)
+    current = {name: float(params.get("current", {}).get(name, df[name].median())) for name in fit.inputs}
+    candidates = []
+    for name in fit.inputs:
+        low, high = ranges[name]["min"], ranges[name]["max"]
+        values = [low, high, (low + high) / 2]
+        for value in values:
+            point = {**current, name: float(value)}
+            candidates.append({"input": name, "value": float(value), "predicted": predict_single(fit.model_type, fit.coefficients or {}, point, fit.model)})
+    target = params.get("target_value")
+    def score(item):
+        return abs(item["predicted"] - target) if objective == "target" and target is not None else (-item["predicted"] if objective == "maximize" else item["predicted"])
+    best = min(candidates, key=score) if candidates else None
+    return {"objective": objective, "target_value": target, "current": current, "ranges": ranges, "candidates": candidates, "best_candidate": best, "note": "候選設定僅供確認，尚未套用或保存。"}
+
+
 def _handle_sensitivity_compute(params: dict) -> dict:
     fit = MODEL_REGISTRY.get(params["model_id"])
     df = REGISTRY.get(params["dataset_id"])
@@ -2054,6 +2076,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_stats_compute(params)
     if method == "modeling/doe/contour":
         return _handle_doe_contour(params)
+    if method == "modeling/profiler/recommend":
+        return _handle_profiler_recommend(params)
     if method == "modeling/sensitivity":
         return _handle_sensitivity_compute(params)
 
