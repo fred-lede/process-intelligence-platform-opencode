@@ -806,6 +806,7 @@ def _handle_stats_compute(params: dict) -> dict:
     fit = MODEL_REGISTRY.get(model_id)
     df = REGISTRY.get(dataset_id)
     result = compute_doe_statistics(fit, df)
+    result["residual_diagnostics"] = analyze_residuals(fit, df)
     return {"success": True, "statistics": result}
 
 

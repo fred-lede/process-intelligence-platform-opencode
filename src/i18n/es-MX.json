@@ -704,6 +704,7 @@
     "doePredictedEffect": "Efecto del modelo",
     "doeResidualsVsFits": "Residuos vs. ajustes",
     "doeResidualsVsOrder": "Residuos vs. orden",
+    "doeResidualDiagnostic": "Diagnóstico de residuos: normalidad y autocorrelación",
     "dwPositiveAutoCorr": "Autocorrelación positiva",
     "dwNegativeAutoCorr": "Autocorrelación negativa",
     "dwNoAutoCorr": "Sin autocorrelación",

@@ -1791,6 +1791,7 @@ export default function ModelCenter() {
               <Space direction="vertical" style={{ width: '100%' }} size="small">
                 {doeStats.anova ? (
                   <>
+                    {doeStats.residual_diagnostics && <Alert type={doeStats.residual_diagnostics.normality_test?.is_normal && (doeStats.residual_diagnostics.durbin_watson?.statistic ?? 2) >= 1.5 && (doeStats.residual_diagnostics.durbin_watson?.statistic ?? 2) <= 2.5 ? 'success' : 'warning'} showIcon message={t('modelCenter.doeResidualDiagnostic')} description={`DW=${doeStats.residual_diagnostics.durbin_watson?.statistic.toFixed(2) ?? '—'} · p=${doeStats.residual_diagnostics.normality_test?.p_value.toFixed(3) ?? '—'}`} />}
                     <div>
                       <strong>{t('modelCenter.doeR2')}:</strong>
                       <span style={{ marginLeft: 8 }}>R²={doeStats.r2?.toFixed(4)}</span>

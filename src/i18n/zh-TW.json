@@ -702,6 +702,7 @@
     "doePredictedEffect": "模型效應",
     "doeResidualsVsFits": "殘差對預測值",
     "doeResidualsVsOrder": "殘差對資料順序",
+    "doeResidualDiagnostic": "殘差診斷：常態性與自相關檢查",
     "dwPositiveAutoCorr": "正自相關",
     "dwNegativeAutoCorr": "負自相關",
     "dwNoAutoCorr": "無自相關",

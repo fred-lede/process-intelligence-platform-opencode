@@ -702,6 +702,7 @@
     "doePredictedEffect": "Model effect",
     "doeResidualsVsFits": "Residuals vs Fits",
     "doeResidualsVsOrder": "Residuals vs Order",
+    "doeResidualDiagnostic": "Residual diagnostics: normality and autocorrelation",
     "dwPositiveAutoCorr": "Positive autocorrelation",
     "dwNegativeAutoCorr": "Negative autocorrelation",
     "dwNoAutoCorr": "No autocorrelation",
