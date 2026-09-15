@@ -98,7 +98,8 @@ export default function Report() {
       setSavedReports((await listReports()).reports)
       setLastFormat(format)
     } catch (err) {
-      messageApi.error(t('report.generateError'))
+      const detail = err instanceof Error ? err.message : String(err)
+      messageApi.error(`${t('report.generateError')}: ${detail}`)
     } finally {
       setGenerating(false)
     }

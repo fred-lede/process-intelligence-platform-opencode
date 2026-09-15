@@ -297,6 +297,16 @@ class HTMLReportGenerator(ReportGenerator):
             body += heatmap_svg(matrix=matrix, labels=list(factors), title="交互作用強度熱圖")
         return self._section("重要因素與交互作用", body)
 
+    def _render_doe_chart_note(self) -> str:
+        """Document DOE chart coverage and interpretation limits in reports."""
+        model_type = (self.data.best_model or {}).get("model_type", "")
+        if not str(model_type).startswith("doe_"):
+            return ""
+        body = ("本報告對應 DOE 統計推論頁的 Pareto、主效應、交互作用、Contour、3D Surface、"
+                "標準化效應常態機率圖，以及殘差對預測值／資料順序、殘差常態機率圖與直方圖。"
+                "圖表僅描述目前模型與資料範圍；顯著性不等於因果，Contour／Surface 為其他輸入固定下的切片。")
+        return self._section("DOE 圖表與使用限制", f"<div class='info-box'>{self._e(body)}</div>")
+
     def _render_sensitivity_effects(self) -> str:
         data = self.data.sensitivity_effects or {}
         items = data.get("items") or []
@@ -512,6 +522,7 @@ class HTMLReportGenerator(ReportGenerator):
             self._render_model_comparison(),
             self._render_best_model(),
             self._render_interactions(),
+            self._render_doe_chart_note(),
             self._render_sensitivity_effects(),
             self._render_monte_carlo(),
             self._render_spc(),
