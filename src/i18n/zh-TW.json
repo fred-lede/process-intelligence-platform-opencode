@@ -708,6 +708,7 @@
     "spcApprovalWarning": "SPC 顯示製程尚未穩定",
     "spcApprovalDetail": "目前資料集有 {{count}} 個管制違規點，模型核准前請先完成製程穩定性確認。",
     "spcSummaryMismatch": "最近一次 SPC 摘要來自不同資料集，不能用於目前模型核准。",
+    "approvalOverrideReason": "請輸入人工覆核原因",
     "dwPositiveAutoCorr": "正自相關",
     "dwNegativeAutoCorr": "負自相關",
     "dwNoAutoCorr": "無自相關",

@@ -708,6 +708,7 @@
     "spcApprovalWarning": "SPC indicates the process is not stable",
     "spcApprovalDetail": "The current dataset has {{count}} control violations. Confirm process stability before approving a model.",
     "spcSummaryMismatch": "The latest SPC summary belongs to a different dataset and cannot be used for this model approval.",
+    "approvalOverrideReason": "Enter the reason for manual approval override",
     "dwPositiveAutoCorr": "Positive autocorrelation",
     "dwNegativeAutoCorr": "Negative autocorrelation",
     "dwNoAutoCorr": "No autocorrelation",

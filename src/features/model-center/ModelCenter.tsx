@@ -593,6 +593,11 @@ export default function ModelCenter() {
   }
 
   const handleTransition = async (modelId: string, newStatus: ModelStatus) => {
+    if (newStatus === 'approved' && localStorage.getItem('process-intelligence-role') === 'approver') {
+      const reason = window.prompt(t('modelCenter.approvalOverrideReason'))
+      if (!reason?.trim()) return
+      localStorage.setItem(`process-intelligence-approval-${modelId}`, JSON.stringify({ modelId, reason: reason.trim(), approvedAt: new Date().toISOString(), role: 'approver' }))
+    }
     await transition(modelId, newStatus)
     messageApi.success(t('modelCenter.transitionSuccess', { status: newStatus }))
   }
@@ -821,7 +826,8 @@ export default function ModelCenter() {
               const approvalBlocked = s === 'approved'
                 && record.model_type.startsWith('time_series_')
                 && (!isTimeSeriesGateModel(ladderModelType) || timeSeriesGateResults[ladderModelType]?.gate_status !== 'approved')
-              const blocked = approvalBlocked || spcApprovalBlocked
+              const approver = typeof window !== 'undefined' && localStorage.getItem('process-intelligence-role') === 'approver'
+              const blocked = approvalBlocked || (spcApprovalBlocked && !approver)
               return (
                 <Popconfirm key={s} title={t('modelCenter.confirmTransition', { status: s })} onConfirm={() => handleTransition(record.model_id, s)} disabled={blocked}>
                   <Button size="small" loading={transitioning} disabled={blocked} title={blocked ? (spcApprovalBlocked ? t('modelCenter.spcApprovalWarning') : t('modelCenter.timeSeries.approvalGateRequired')) : undefined}>{s}</Button>

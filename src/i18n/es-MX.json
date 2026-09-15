@@ -710,6 +710,7 @@
     "spcApprovalWarning": "SPC indica que el proceso no está estable",
     "spcApprovalDetail": "El conjunto actual tiene {{count}} violaciones de control. Confirme la estabilidad antes de aprobar un modelo.",
     "spcSummaryMismatch": "El último resumen SPC pertenece a otro conjunto y no puede usarse para aprobar este modelo.",
+    "approvalOverrideReason": "Ingrese el motivo de la aprobación manual",
     "dwPositiveAutoCorr": "Autocorrelación positiva",
     "dwNegativeAutoCorr": "Autocorrelación negativa",
     "dwNoAutoCorr": "Sin autocorrelación",
