@@ -251,8 +251,11 @@ export default function Prediction() {
                       const coef = modelInfo.coefficients?.[inp] ?? 0
                       const std = importResult?.stats.column_stats[inp]?.std ?? 1
                       const effect = coef * (typeof std === 'number' && isFinite(std) ? std : 1)
-                      const actionIncrease = optimizationObjective === 'minimize' ? effect < 0 : effect >= 0
-                      return <span key={inp}>{inp}: {effect >= 0 ? '+' : ''}{effect.toFixed(4)} · {effect >= 0 ? t('prediction.effectIncrease') : t('prediction.effectDecrease')} · {optimizationObjective === 'target' ? t('prediction.effectTargetOnly') : actionIncrease ? t('prediction.effectActionIncrease') : t('prediction.effectActionDecrease')}</span>
+                      const target = spec?.target ?? null
+                      const targetDirection = target !== null && predicted !== null ? predicted < target : null
+                      const actionIncrease = optimizationObjective === 'minimize' ? effect < 0 : optimizationObjective === 'target' && targetDirection !== null ? (targetDirection ? effect >= 0 : effect < 0) : effect >= 0
+                      const action = optimizationObjective === 'target' && targetDirection === null ? t('prediction.effectTargetOnly') : actionIncrease ? t('prediction.effectActionIncrease') : t('prediction.effectActionDecrease')
+                      return <span key={inp}>{inp}: {effect >= 0 ? '+' : ''}{effect.toFixed(4)} · {effect >= 0 ? t('prediction.effectIncrease') : t('prediction.effectDecrease')} · {action}</span>
                     })}
                     <span>{t('prediction.effectAdvice')}</span>
                   </Space>
