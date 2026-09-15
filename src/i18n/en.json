@@ -917,6 +917,9 @@
   "prediction": {
     "profilerTitle": "Prediction Profiler",
     "profilerLimit": "Adjust values only within the defined operating range. Outside-range values are model extrapolations and are not automatically safe to run.",
+    "objectiveMaximize": "Objective: maximize",
+    "objectiveMinimize": "Objective: minimize",
+    "objectiveTarget": "Objective: hit target",
     "title": "Interactive Prediction (What-if)",
     "selectModel": "Select Model",
     "noModels": "No trained models yet. Go to Model Center to train one first.",

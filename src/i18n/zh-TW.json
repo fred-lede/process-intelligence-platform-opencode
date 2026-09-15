@@ -917,6 +917,9 @@
   "prediction": {
     "profilerTitle": "預測剖面",
     "profilerLimit": "僅能在已定義的操作範圍內調整；超出範圍屬於模型外推，不代表可安全執行。",
+    "objectiveMaximize": "最佳化目標：越大越好",
+    "objectiveMinimize": "最佳化目標：越小越好",
+    "objectiveTarget": "最佳化目標：接近目標值",
     "title": "互動預測 (What-if)",
     "selectModel": "選擇模型",
     "noModels": "尚未訓練模型。請先到模型中心訓練。",

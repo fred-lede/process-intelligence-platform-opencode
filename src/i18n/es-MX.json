@@ -913,6 +913,9 @@
   "prediction": {
     "profilerTitle": "Perfilador de predicción",
     "profilerLimit": "Ajuste los valores solo dentro del rango operativo definido. Fuera del rango son extrapolaciones del modelo y no son automáticamente seguras.",
+    "objectiveMaximize": "Objetivo: maximizar",
+    "objectiveMinimize": "Objetivo: minimizar",
+    "objectiveTarget": "Objetivo: alcanzar el objetivo",
     "title": "Predicción Interactiva (What-if)",
     "selectModel": "Seleccionar modelo",
     "noModels": "No hay modelos entrenados aún. Ve al Centro de Modelos para entrenar uno.",

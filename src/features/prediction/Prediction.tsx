@@ -90,6 +90,7 @@ export default function Prediction() {
 
   const [models, setModels] = useState<Array<{ model_id: string; model_type: string; equation: string }>>([])
   const [selectedModel, setSelectedModel] = useState<string | undefined>()
+  const [optimizationObjective, setOptimizationObjective] = useState<'maximize' | 'minimize' | 'target'>('target')
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null)
   const [inputValues, setInputValues] = useState<Record<string, number>>({})
   const [predicted, setPredicted] = useState<number | null>(null)
@@ -227,6 +228,7 @@ export default function Prediction() {
             style={{ width: 400 }}
             placeholder={t('prediction.noModels')}
           />
+          <Select value={optimizationObjective} onChange={setOptimizationObjective} style={{ width: 220 }} options={[{ value: 'maximize', label: t('prediction.objectiveMaximize') }, { value: 'minimize', label: t('prediction.objectiveMinimize') }, { value: 'target', label: t('prediction.objectiveTarget') }]} />
           <Button onClick={handleRestore} disabled={!hasData || !modelInfo}>
             {t('prediction.restoreDefaults')}
           </Button>
