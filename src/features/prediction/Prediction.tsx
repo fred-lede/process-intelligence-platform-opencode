@@ -238,6 +238,23 @@ export default function Prediction() {
           <Col flex="1 1 auto" style={{ minWidth: 0 }}>
             <Card title={t('prediction.equation')} size="small">
               <pre style={{ fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, margin: '0 0 12px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{modelInfo.equation}</pre>
+              <Alert
+                type="info"
+                showIcon
+                message={t('prediction.effectTitle')}
+                description={(
+                  <Space direction="vertical" size={2}>
+                    {modelInfo.inputs.map((inp) => {
+                      const coef = modelInfo.coefficients?.[inp] ?? 0
+                      const std = importResult?.stats.column_stats[inp]?.std ?? 1
+                      const effect = coef * (typeof std === 'number' && isFinite(std) ? std : 1)
+                      return <span key={inp}>{inp}: {effect >= 0 ? '+' : ''}{effect.toFixed(4)} · {effect >= 0 ? t('prediction.effectIncrease') : t('prediction.effectDecrease')}</span>
+                    })}
+                    <span>{t('prediction.effectAdvice')}</span>
+                  </Space>
+                )}
+                style={{ marginBottom: 12 }}
+              />
               {modelInfo.inputs.map(inp => {
                 const s = importResult?.stats.column_stats[inp]
                 const val = inputValues[inp] ?? 0
