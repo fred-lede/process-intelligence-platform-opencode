@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 import importlib.util
+from pathlib import Path
+import tempfile
 from statistics import NormalDist
 import numpy as np
 import pandas as pd
@@ -528,6 +530,9 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     max_epochs=3, accelerator="auto", devices=1, logger=False,
                     enable_checkpointing=False, enable_model_summary=False,
                     enable_progress_bar=False, gradient_clip_val=0.1,
+                    # Keep Lightning runtime artifacts outside src-tauri so
+                    # the Tauri watcher does not restart the application.
+                    default_root_dir=str(Path(tempfile.gettempdir()) / "process-intelligence-platform" / "lightning"),
                 )
                 trainer.fit(tft_model, train_dataloaders=train_loader)
                 raw_prediction = tft_model.predict(validation_loader, mode="quantiles")
