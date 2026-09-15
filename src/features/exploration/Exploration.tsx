@@ -82,10 +82,14 @@ export default function Exploration() {
   const numericColumns = useMemo(() => {
     if (!importResult) return []
     const stats = importResult.stats.column_stats
-    return Object.entries(stats)
+    const fromStats = Object.entries(stats)
       .filter(([, s]) => s.numeric)
       .map(([name]) => name)
-  }, [importResult])
+    const fromRoles = fields
+      .filter((f) => f.confirmed && (f.role === 'input' || f.role === 'output') && f.dataType === 'continuous')
+      .map((f) => f.originalName)
+    return Array.from(new Set([...fromStats, ...fromRoles]))
+  }, [importResult, fields])
 
   useEffect(() => {
     if (consumedRef.current) return
@@ -153,6 +157,12 @@ export default function Exploration() {
       setTrendColumn(numericColumns[0])
     }
   }, [tsColumn, trendColumn, numericColumns])
+
+  useEffect(() => {
+    if (!grrMeasurementCol && numericColumns.length > 0) setGrrMeasurementCol(tsColumn ?? numericColumns[0])
+    if (!grrPartCol) setGrrPartCol(fields.find((f) => /part|product/i.test(f.originalName))?.originalName)
+    if (!grrOperatorCol) setGrrOperatorCol(fields.find((f) => /operator|inspector|appraiser/i.test(f.originalName))?.originalName)
+  }, [fields, numericColumns, tsColumn, grrMeasurementCol, grrPartCol, grrOperatorCol])
 
 
   useEffect(() => {
