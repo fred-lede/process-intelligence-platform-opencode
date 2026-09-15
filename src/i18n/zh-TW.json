@@ -687,6 +687,7 @@
     "doeSignificant": "顯著",
     "doeNotSignificant": "不顯著",
     "doeColumn": "欄位",
+    "doeIntercept": "截距（Intercept）",
     "dwPositiveAutoCorr": "正自相關",
     "dwNegativeAutoCorr": "負自相關",
     "dwNoAutoCorr": "無自相關",

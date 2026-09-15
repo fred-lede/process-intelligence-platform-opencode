@@ -689,6 +689,7 @@
     "doeSignificant": "Sig.",
     "doeNotSignificant": "No Sig.",
     "doeColumn": "Columna",
+    "doeIntercept": "Intercepto",
     "dwPositiveAutoCorr": "Autocorrelación positiva",
     "dwNegativeAutoCorr": "Autocorrelación negativa",
     "dwNoAutoCorr": "Sin autocorrelación",
