@@ -928,7 +928,10 @@ def validate_time_series_gate(
     gate_reasons: list[str] = []
     if leakage_status["status"] != "passed":
         gate_reasons.append("observed_validation_target_usage")
-    if prediction_interval_coverage["coverage_ratio"] < minimum_prediction_interval_coverage:
+    if (
+        prediction_interval_coverage["coverage_ratio"] is not None
+        and prediction_interval_coverage["coverage_ratio"] < minimum_prediction_interval_coverage
+    ):
         gate_reasons.append("prediction_interval_coverage_below_threshold")
     if group_column and (
         group_coverage["coverage_ratio"] is None
