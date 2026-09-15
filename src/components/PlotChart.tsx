@@ -5,7 +5,7 @@ const PlotLazy = lazy(() => import('react-plotly.js'))
 export default function PlotChart(props: any) {
   return (
     <Suspense fallback={null}>
-      <PlotLazy {...props} />
+      <PlotLazy {...props} useResizeHandler style={{ width: '100%', ...(props.style ?? {}) }} layout={{ autosize: true, ...(props.layout ?? {}) }} />
     </Suspense>
   )
 }
