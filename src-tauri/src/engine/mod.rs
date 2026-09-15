@@ -10,7 +10,9 @@
 //!           or {"id": "...", "error": {"message": "...", "traceback": "..."}}
 
 use std::collections::HashMap;
+use std::fs::{create_dir_all, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
+use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
@@ -18,6 +20,15 @@ use std::thread;
 use std::time::Duration;
 
 use serde_json::{json, Value};
+
+fn append_runtime_log(message: &str) {
+    let Some(home) = std::env::var_os("HOME") else { return };
+    let path = PathBuf::from(home).join("Library/Logs/Process Intelligence Platform/engine.log");
+    if let Some(parent) = path.parent() { let _ = create_dir_all(parent); }
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(path) {
+        let _ = writeln!(file, "{message}");
+    }
+}
 
 /// Errors emitted by the engine client.
 #[derive(Debug)]
@@ -130,7 +141,7 @@ impl EngineManager {
             let reader = BufReader::new(stderr);
             for line in reader.lines() {
                 match line {
-                    Ok(l) => log::info!("[engine:stderr] {l}"),
+                    Ok(l) => { append_runtime_log(&format!("[engine:stderr] {l}")); log::info!("[engine:stderr] {l}"); },
                     Err(_) => break,
                 }
             }
@@ -280,6 +291,7 @@ pub fn default_engine() -> EngineManager {
         .unwrap_or_else(|| std::path::PathBuf::from("./engine/.venv/bin/python"));
 
     let python = python.to_string_lossy().to_string();
+    append_runtime_log(&format!("engine python path: {python}"));
     log::info!("engine python path: {python}");
     EngineManager::new(python, "process_intelligence_engine.main")
 }
