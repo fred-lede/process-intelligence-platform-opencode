@@ -561,7 +561,11 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                 result["framework_version"] = torch.__version__
                 result["device"] = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
             except Exception as exc:
-                result = _unavailable(model_type, f"adapter failed: {exc}", tft_features, validation, "adapter_error")
+                result = _unavailable(model_type, f"adapter failed: {type(exc).__name__}: {exc}", tft_features, validation, "adapter_error")
+                # Keep a structured diagnostic so callers can distinguish a
+                # dependency/runtime failure from an empty evaluation split.
+                result["error_type"] = type(exc).__name__
+                result["error_detail"] = str(exc)
         result["capability"] = capability
         if result.get("status") == "available":
             capability["implementation"] = "pytorch_forecasting_temporal_fusion_transformer"
