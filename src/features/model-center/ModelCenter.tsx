@@ -9,7 +9,7 @@ import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
 import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult, TimeSeriesExplanationResult, TimeSeriesSequenceSimulationResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, runTimeSeriesSequenceSimulation, getModelInfo, type DoeStatisticsResult, type ModelInfo } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeDOEContour, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, runTimeSeriesSequenceSimulation, getModelInfo, type DoeStatisticsResult, type ModelInfo, type DOEContourResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -108,6 +108,9 @@ export default function ModelCenter() {
   const [fullValidationLoading, setFullValidationLoading] = useState(false)
   const [doeStats, setDoeStats] = useState<DoeStatisticsResult | null>(null)
   const [doeStatsLoading, setDoeStatsLoading] = useState(false)
+  const [doeContour, setDoeContour] = useState<DOEContourResult | null>(null)
+  const [doeContourLoading, setDoeContourLoading] = useState(false)
+  const [contourFactors, setContourFactors] = useState<[string, string]>(['', ''])
   const [sensitivity, setSensitivity] = useState<SensitivityEffectResult | null>(null)
   const [sensitivityLoading, setSensitivityLoading] = useState(false)
   const [nEstimators, setNEstimators] = useState(200)
@@ -627,6 +630,18 @@ export default function ModelCenter() {
     } finally {
       setDoeStatsLoading(false)
     }
+  }
+
+  const handleComputeDOEContour = async () => {
+    if (!datasetId || !models.length || !contourFactors[0] || !contourFactors[1]) return
+    setDoeContourLoading(true)
+    try {
+      const result = await computeDOEContour({ model_id: models[models.length - 1].model_id, dataset_id: datasetId, x_factor: contourFactors[0], y_factor: contourFactors[1] })
+      setDoeContour(result)
+    } catch (error) {
+      setDoeContour(null)
+      messageApi.error(error instanceof Error ? error.message : 'Failed to compute contour')
+    } finally { setDoeContourLoading(false) }
   }
 
   const handleComputeSHAP = async () => {
@@ -1828,6 +1843,14 @@ export default function ModelCenter() {
                         },
                       ]}
                     />
+                    <Card size="small" title={t('modelCenter.doeContourPlot')}>
+                      <Space wrap>
+                        <Select placeholder={t('modelCenter.doeContourX')} style={{ width: 220 }} value={contourFactors[0] || undefined} onChange={v => setContourFactors([v, contourFactors[1]])} options={models[models.length - 1]?.inputs.map(v => ({ value: v, label: v })) ?? []} />
+                        <Select placeholder={t('modelCenter.doeContourY')} style={{ width: 220 }} value={contourFactors[1] || undefined} onChange={v => setContourFactors([contourFactors[0], v])} options={models[models.length - 1]?.inputs.filter(v => v !== contourFactors[0]).map(v => ({ value: v, label: v })) ?? []} />
+                        <Button type="primary" loading={doeContourLoading} disabled={!contourFactors[0] || !contourFactors[1]} onClick={handleComputeDOEContour}>{t('modelCenter.computeDOEContour')}</Button>
+                      </Space>
+                      {doeContour ? <Plot data={[{ x: doeContour.x, y: doeContour.y, z: doeContour.z, type: 'contour', colorscale: 'Viridis', contours: { coloring: 'heatmap', showlabels: true }, colorbar: { title: 'Output' } }]} layout={{ height: 420, margin: { l: 60, r: 20, t: 20, b: 60 }, xaxis: { title: doeContour.x_factor }, yaxis: { title: doeContour.y_factor } }} /> : <Alert type="info" showIcon message={t('modelCenter.doeContourHint')} style={{ marginTop: 12 }} />}
+                    </Card>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16 }}>
                       <Card size="small" title={t('modelCenter.doeParetoChart')}>
                         <Plot data={[{ x: doeStats.coefficients.filter(c => c.name !== '1').sort((a, b) => Math.abs(b.t_stat) - Math.abs(a.t_stat)).map(c => Math.abs(c.t_stat)), y: doeStats.coefficients.filter(c => c.name !== '1').sort((a, b) => Math.abs(b.t_stat) - Math.abs(a.t_stat)).map(c => c.name), type: 'bar', orientation: 'h', marker: { color: '#2563eb' } }]} layout={{ height: 340, margin: { l: 150, r: 25, t: 10, b: 45 }, xaxis: { title: '｜t｜（標準化效應）' }, yaxis: { automargin: true }, shapes: [{ type: 'line', x0: 2, x1: 2, y0: -0.5, y1: doeStats.coefficients.filter(c => c.name !== '1').length - 0.5, line: { dash: 'dash', color: '#ef4444' } }], showlegend: false }} />
