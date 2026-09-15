@@ -5,7 +5,7 @@ import { Card, Select, Space, Button, Alert, Typography, Tag, InputNumber, Stati
 import { PlusOutlined, MinusOutlined, SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, type ModelInfo, type PredictionScenario } from '../../lib/engine'
+import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, recommendProfilerSettings, type ModelInfo, type PredictionScenario } from '../../lib/engine'
 import { buildPredictionContext } from '../../lib/assistantData'
 
 function DraggableSlider({ min, max, value, onChange, style }: {
@@ -91,6 +91,8 @@ export default function Prediction() {
   const [models, setModels] = useState<Array<{ model_id: string; model_type: string; equation: string }>>([])
   const [selectedModel, setSelectedModel] = useState<string | undefined>()
   const [optimizationObjective, setOptimizationObjective] = useState<'maximize' | 'minimize' | 'target'>('target')
+  const [profilerRecommendation, setProfilerRecommendation] = useState<Record<string, unknown> | null>(null)
+  const [profilerLoading, setProfilerLoading] = useState(false)
   const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null)
   const [inputValues, setInputValues] = useState<Record<string, number>>({})
   const [predicted, setPredicted] = useState<number | null>(null)
@@ -229,6 +231,7 @@ export default function Prediction() {
             placeholder={t('prediction.noModels')}
           />
           <Select value={optimizationObjective} onChange={setOptimizationObjective} style={{ width: 220 }} options={[{ value: 'maximize', label: t('prediction.objectiveMaximize') }, { value: 'minimize', label: t('prediction.objectiveMinimize') }, { value: 'target', label: t('prediction.objectiveTarget') }]} />
+          <Button loading={profilerLoading} disabled={!selectedModel || !importResult} onClick={async () => { if (!selectedModel || !importResult) return; setProfilerLoading(true); try { setProfilerRecommendation(await recommendProfilerSettings({ model_id: selectedModel, dataset_id: importResult.dataset_id, objective: optimizationObjective, target_value: spec?.target ?? undefined, current: inputValues })) } finally { setProfilerLoading(false) } }}>{t('prediction.generateRecommendation')}</Button>
           <Button onClick={handleRestore} disabled={!hasData || !modelInfo}>
             {t('prediction.restoreDefaults')}
           </Button>
@@ -240,6 +243,7 @@ export default function Prediction() {
           <Col flex="1 1 auto" style={{ minWidth: 0 }}>
             <Card title={t('prediction.profilerTitle')} size="small">
               <Alert type="warning" showIcon message={t('prediction.profilerLimit')} style={{ marginBottom: 12 }} />
+              {profilerRecommendation && <Alert type="info" showIcon message={t('prediction.recommendationReady')} description={JSON.stringify((profilerRecommendation as { best_candidate?: unknown }).best_candidate ?? profilerRecommendation)} style={{ marginBottom: 12 }} />}
               <pre style={{ fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, margin: '0 0 12px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{modelInfo.equation}</pre>
               <Alert
                 type="info"

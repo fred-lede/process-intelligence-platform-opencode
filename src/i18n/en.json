@@ -923,6 +923,8 @@
     "effectActionIncrease": "recommend increase",
     "effectActionDecrease": "recommend decrease",
     "effectTargetOnly": "judge by target distance",
+    "generateRecommendation": "Generate recommendation",
+    "recommendationReady": "Candidate setting generated (review before applying)",
     "title": "Interactive Prediction (What-if)",
     "selectModel": "Select Model",
     "noModels": "No trained models yet. Go to Model Center to train one first.",

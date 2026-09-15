@@ -919,6 +919,8 @@
     "effectActionIncrease": "se recomienda aumentar",
     "effectActionDecrease": "se recomienda reducir",
     "effectTargetOnly": "juzgar por distancia al objetivo",
+    "generateRecommendation": "Generar recomendación",
+    "recommendationReady": "Configuración candidata generada (revise antes de aplicar)",
     "title": "Predicción Interactiva (What-if)",
     "selectModel": "Seleccionar modelo",
     "noModels": "No hay modelos entrenados aún. Ve al Centro de Modelos para entrenar uno.",
