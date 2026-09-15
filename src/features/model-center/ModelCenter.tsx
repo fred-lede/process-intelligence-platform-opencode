@@ -1808,6 +1808,17 @@ export default function ModelCenter() {
                         },
                       ]}
                     />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+                      <Card size="small" title={t('modelCenter.doeMainEffects')}>
+                        <Plot data={doeStats.coefficients.filter(c => c.name !== '1').map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: false }} />
+                      </Card>
+                      <Card size="small" title={t('modelCenter.doeInteractionPlot')}>
+                        <Plot data={doeStats.coefficients.filter(c => /[:*]/.test(c.name)).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') } }} />
+                      </Card>
+                      <Card size="small" title={t('modelCenter.doeNormalEffects')}>
+                        <Plot data={[{ x: doeStats.coefficients.filter(c => c.name !== '1').map(c => c.t_stat), y: doeStats.coefficients.filter(c => c.name !== '1').map((_, i, a) => (i - (a.length - 1) / 2) / Math.max(a.length, 1)), mode: 'markers+text', text: doeStats.coefficients.filter(c => c.name !== '1').map(c => c.name), textposition: 'top center', type: 'scatter' }]} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: 'Standardized effect (t)' }, yaxis: { title: 'Normal probability' } }} />
+                      </Card>
+                    </div>
                   </>
                 ) : (
                   <Alert type="info" showIcon message={doeStats.note || t('modelCenter.doeNotAvailable')} />
