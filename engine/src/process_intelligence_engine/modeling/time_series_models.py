@@ -526,13 +526,15 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     dropout=0.1, hidden_continuous_size=8, loss=QuantileLoss(),
                     log_interval=-1, reduce_on_plateau_patience=2,
                 )
+                lightning_root = Path(tempfile.gettempdir()) / "process-intelligence-platform" / "lightning"
+                lightning_root.mkdir(parents=True, exist_ok=True)
                 trainer = pl.Trainer(
                     max_epochs=3, accelerator="auto", devices=1, logger=False,
                     enable_checkpointing=False, enable_model_summary=False,
                     enable_progress_bar=False, gradient_clip_val=0.1,
                     # Keep Lightning runtime artifacts outside src-tauri so
                     # the Tauri watcher does not restart the application.
-                    default_root_dir=str(Path(tempfile.gettempdir()) / "process-intelligence-platform" / "lightning"),
+                    default_root_dir=str(lightning_root),
                 )
                 trainer.fit(tft_model, train_dataloaders=train_loader)
                 raw_prediction = tft_model.predict(validation_loader, mode="quantiles")
