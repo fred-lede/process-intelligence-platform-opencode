@@ -703,6 +703,7 @@
     "doeResidualsVsFits": "Residuals vs Fits",
     "doeResidualsVsOrder": "Residuals vs Order",
     "doeResidualDiagnostic": "Residual diagnostics: normality and autocorrelation",
+    "doeResidualOutliers": "Outlying residuals",
     "dwPositiveAutoCorr": "Positive autocorrelation",
     "dwNegativeAutoCorr": "Negative autocorrelation",
     "dwNoAutoCorr": "No autocorrelation",

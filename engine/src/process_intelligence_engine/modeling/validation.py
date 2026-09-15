@@ -191,6 +191,7 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
     else:
         skewness = 0.0
         kurtosis = 0.0
+    outlier_indices = np.where(np.abs((residuals - mean) / std) >= 3.0)[0].astype(int).tolist() if std > 0 else []
 
     stat = skewness ** 2 + kurtosis ** 2
     p_value = max(0.0, 1.0 - stat / 10.0)
@@ -242,7 +243,8 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
         "durbin_watson": {
             "statistic": dw_stat,
             "interpretation": interpretation,
-        }
+        },
+        "outliers": {"count": len(outlier_indices), "indices": outlier_indices, "threshold": 3.0},
     }
 
 

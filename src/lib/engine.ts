@@ -334,7 +334,7 @@ export interface DoeStatisticsResult {
   note?: string
   fitted_values?: number[]
   residuals?: number[]
-  residual_diagnostics?: { normality_test?: { p_value: number; is_normal: boolean }; durbin_watson?: { statistic: number; interpretation: string }; stats?: { skewness: number; kurtosis: number } }
+  residual_diagnostics?: { normality_test?: { p_value: number; is_normal: boolean }; durbin_watson?: { statistic: number; interpretation: string }; stats?: { skewness: number; kurtosis: number }; outliers?: { count: number; indices: number[]; threshold: number } }
 }
 
 export interface DoeStatisticsParams {
