@@ -817,12 +817,14 @@ export default function ModelCenter() {
           <Space size="small">
             {nextStatuses.map((s) => {
               const ladderModelType = record.model_type.replace(/^time_series_/, '')
+              const spcApprovalBlocked = s === 'approved' && (!spcSummary || spcSummary.datasetId !== importResult?.dataset_id || !spcSummary.stable)
               const approvalBlocked = s === 'approved'
                 && record.model_type.startsWith('time_series_')
                 && (!isTimeSeriesGateModel(ladderModelType) || timeSeriesGateResults[ladderModelType]?.gate_status !== 'approved')
+              const blocked = approvalBlocked || spcApprovalBlocked
               return (
-                <Popconfirm key={s} title={t('modelCenter.confirmTransition', { status: s })} onConfirm={() => handleTransition(record.model_id, s)} disabled={approvalBlocked}>
-                  <Button size="small" loading={transitioning} disabled={approvalBlocked} title={approvalBlocked ? t('modelCenter.timeSeries.approvalGateRequired') : undefined}>{s}</Button>
+                <Popconfirm key={s} title={t('modelCenter.confirmTransition', { status: s })} onConfirm={() => handleTransition(record.model_id, s)} disabled={blocked}>
+                  <Button size="small" loading={transitioning} disabled={blocked} title={blocked ? (spcApprovalBlocked ? t('modelCenter.spcApprovalWarning') : t('modelCenter.timeSeries.approvalGateRequired')) : undefined}>{s}</Button>
                 </Popconfirm>
               )
             })}
