@@ -9,7 +9,7 @@ import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
 import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult, TimeSeriesExplanationResult, TimeSeriesSequenceSimulationResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeDOEContour, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, runTimeSeriesSequenceSimulation, getModelInfo, type DoeStatisticsResult, type ModelInfo, type DOEContourResult } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeDOEContour, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, runTimeSeriesSequenceSimulation, getModelInfo, getCurrentUser, type DoeStatisticsResult, type ModelInfo, type DOEContourResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -111,6 +111,8 @@ export default function ModelCenter() {
   const [doeContour, setDoeContour] = useState<DOEContourResult | null>(null)
   const [doeContourLoading, setDoeContourLoading] = useState(false)
   const [contourFactors, setContourFactors] = useState<[string, string]>(['', ''])
+  const [currentRole, setCurrentRole] = useState<string | null>(null)
+  useEffect(() => { getCurrentUser().then(user => setCurrentRole(user.role)).catch(() => setCurrentRole(null)) }, [])
   const [sensitivity, setSensitivity] = useState<SensitivityEffectResult | null>(null)
   const [sensitivityLoading, setSensitivityLoading] = useState(false)
   const [nEstimators, setNEstimators] = useState(200)
@@ -593,7 +595,7 @@ export default function ModelCenter() {
   }
 
   const handleTransition = async (modelId: string, newStatus: ModelStatus) => {
-    if (newStatus === 'approved' && localStorage.getItem('process-intelligence-role') === 'approver') {
+    if (newStatus === 'approved' && currentRole === 'reviewer') {
       const reason = window.prompt(t('modelCenter.approvalOverrideReason'))
       if (!reason?.trim()) return
       localStorage.setItem(`process-intelligence-approval-${modelId}`, JSON.stringify({ modelId, reason: reason.trim(), approvedAt: new Date().toISOString(), role: 'approver' }))
@@ -826,7 +828,7 @@ export default function ModelCenter() {
               const approvalBlocked = s === 'approved'
                 && record.model_type.startsWith('time_series_')
                 && (!isTimeSeriesGateModel(ladderModelType) || timeSeriesGateResults[ladderModelType]?.gate_status !== 'approved')
-              const approver = typeof window !== 'undefined' && localStorage.getItem('process-intelligence-role') === 'approver'
+              const approver = currentRole === 'reviewer' || currentRole === 'admin'
               const blocked = approvalBlocked || (spcApprovalBlocked && !approver)
               return (
                 <Popconfirm key={s} title={t('modelCenter.confirmTransition', { status: s })} onConfirm={() => handleTransition(record.model_id, s)} disabled={blocked}>
