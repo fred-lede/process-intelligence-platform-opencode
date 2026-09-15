@@ -1,8 +1,8 @@
 # Time-Series Deep Model Deployment: TFT / PyTorch
 
-This guide describes the Temporal Fusion Transformer (TFT) environment. TFT is integrated into the time-series ladder; deployments without PyTorch can continue using existing models.
+This guide describes the Temporal Fusion Transformer (TFT) environment. TFT is integrated into the time-series ladder and can train/predict with PyTorch and Apple MPS; deployments without PyTorch can continue using existing models.
 
-The engine checks for `pytorch_forecasting`, required columns, a default sequence length of 24, and at least 128 training sequences. When eligible, TFT is trained and included in the time-series model comparison; missing dependencies or insufficient history are reported explicitly.
+The engine checks for `pytorch_forecasting`, required columns, a default sequence length of 24, and at least 128 training sequences. When eligible, TFT is trained and included in the time-series model comparison; missing dependencies or insufficient history are reported explicitly. A fitted model must still pass the time-series validation gate; insufficient prediction-interval coverage is marked for review and cannot be persisted or used for formal simulation.
 
 ## Rules and installation order
 
@@ -82,7 +82,7 @@ print(importlib.util.find_spec("pytorch_forecasting") is not None)
 PY
 ```
 
-With the package installed, the Model Center reports the TFT dependency, data contract, sequence count, and `not_implemented`. Without it, it reports `dependency_missing` without preventing engine startup.
+With the package installed, the Model Center reports the TFT dependency, data contract, sequence count, and execution device such as `pytorch/mps`. Without it, it reports `dependency_missing` without preventing engine startup. Lightning artifacts are written outside the Tauri source tree so training does not trigger a development restart.
 
 If CUDA or MPS is unavailable, use CPU; do not force a CUDA wheel. If the optional environment fails, deactivate it and use the normal `engine/.venv` with the existing non-TFT models. TFT needs a time column, target, selected inputs, sequence length 24, and at least 128 usable training sequences.
 

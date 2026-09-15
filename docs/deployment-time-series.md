@@ -1,8 +1,8 @@
 # 時間序列深度模型部署：TFT / PyTorch
 
-本文件說明 Temporal Fusion Transformer（TFT）的執行環境。TFT 已接入時間序列模型階梯；沒有 PyTorch 時仍可使用既有模型。
+本文件說明 Temporal Fusion Transformer（TFT）的執行環境。TFT 已接入時間序列模型階梯，並可使用 PyTorch／Apple MPS 訓練與預測；沒有 PyTorch 時仍可使用既有模型。
 
-目前引擎會檢查 `pytorch_forecasting`、資料欄位、sequence length（預設 24）與至少 128 個訓練序列；符合條件時執行 TFT 訓練，否則明確回報缺少依賴或資料不足。
+目前引擎會檢查 `pytorch_forecasting`、資料欄位、sequence length（預設 24）與至少 128 個訓練序列；符合條件時執行 TFT 訓練，否則明確回報缺少依賴或資料不足。配適完成後仍須執行時間序列驗證閘門；預測區間覆蓋率不足時會標示「需要審查」，不可直接保存或用於正式模擬。
 
 ## 共通原則與安裝順序
 
@@ -123,7 +123,7 @@ print("pytorch_forecasting available:", importlib.util.find_spec("pytorch_foreca
 PY
 ```
 
-安裝成功後，Model Center 的 TFT capability 應顯示依賴可用、資料 contract、sequence length 與可用序列數；符合至少 128 組訓練序列時會執行 TFT 訓練並列入比較。資料不足或缺少套件時，應明確顯示 `insufficient_history` 或 `dependency_missing`，不是引擎啟動失敗。
+安裝成功後，Model Center 的 TFT capability 應顯示依賴可用、資料 contract、sequence length、可用序列數與運算裝置（例如 `pytorch/mps`）；符合至少 128 組訓練序列時會執行 TFT 訓練並列入比較。資料不足或缺少套件時，應明確顯示 `insufficient_history` 或 `dependency_missing`，不是引擎啟動失敗。Lightning 訓練產物會寫入系統暫存目錄，不應觸發 Tauri 開發程序重啟。
 
 ## Fallback 與排錯
 
