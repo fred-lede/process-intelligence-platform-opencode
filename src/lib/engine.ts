@@ -417,6 +417,20 @@ export async function computeDOEStatistics(
   return engineCall<DoeStatisticsApiResponse>('modeling/stats', params as unknown as Record<string, unknown>)
 }
 
+export interface DOEContourResult {
+  x_factor: string
+  y_factor: string
+  x: number[]
+  y: number[]
+  z: number[][]
+  ranges: Record<string, [number, number]>
+  baseline: Record<string, number>
+}
+
+export async function computeDOEContour(params: { model_id: string; dataset_id: string; x_factor: string; y_factor: string; grid_size?: number }): Promise<DOEContourResult> {
+  return engineCall<DOEContourResult>('modeling/doe/contour', params as unknown as Record<string, unknown>)
+}
+
 // --- Phase 3b: DOE Design Library ----------------------------------------
 
 export interface DOEFactor {

@@ -809,6 +809,32 @@ def _handle_stats_compute(params: dict) -> dict:
     return {"success": True, "statistics": result}
 
 
+def _handle_doe_contour(params: dict) -> dict:
+    """Generate an operation-range prediction grid for two DOE factors."""
+    fit = MODEL_REGISTRY.get(params["model_id"])
+    if fit.model_type not in ("doe_linear", "doe_quadratic"):
+        raise ValueError("Contour grid is available only for DOE linear/quadratic models")
+    x_factor, y_factor = params["x_factor"], params["y_factor"]
+    if x_factor not in fit.inputs or y_factor not in fit.inputs or x_factor == y_factor:
+        raise ValueError("x_factor and y_factor must be distinct model inputs")
+    grid_size = max(8, min(int(params.get("grid_size", 25)), 60))
+    df = REGISTRY.get(params["dataset_id"])
+    ranges = get_input_ranges(df, fit.inputs)
+    x_low, x_high = ranges[x_factor]["min"], ranges[x_factor]["max"]
+    y_low, y_high = ranges[y_factor]["min"], ranges[y_factor]["max"]
+    xs = np.linspace(x_low, x_high, grid_size)
+    ys = np.linspace(y_low, y_high, grid_size)
+    z = []
+    baseline = {name: float(df[name].median()) for name in fit.inputs}
+    for y in ys:
+        row = []
+        for x in xs:
+            values = {**baseline, x_factor: float(x), y_factor: float(y)}
+            row.append(predict_single(fit.model_type, fit.coefficients or {}, values, fit.model))
+        z.append(row)
+    return {"x_factor": x_factor, "y_factor": y_factor, "x": xs.tolist(), "y": ys.tolist(), "z": z, "ranges": {x_factor: [x_low, x_high], y_factor: [y_low, y_high]}, "baseline": baseline}
+
+
 def _handle_sensitivity_compute(params: dict) -> dict:
     fit = MODEL_REGISTRY.get(params["model_id"])
     df = REGISTRY.get(params["dataset_id"])
@@ -2025,6 +2051,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_validation_analyze(params)
     if method == "modeling/stats":
         return _handle_stats_compute(params)
+    if method == "modeling/doe/contour":
+        return _handle_doe_contour(params)
     if method == "modeling/sensitivity":
         return _handle_sensitivity_compute(params)
 
