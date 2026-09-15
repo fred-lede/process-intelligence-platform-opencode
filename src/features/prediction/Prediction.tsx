@@ -251,7 +251,8 @@ export default function Prediction() {
                       const coef = modelInfo.coefficients?.[inp] ?? 0
                       const std = importResult?.stats.column_stats[inp]?.std ?? 1
                       const effect = coef * (typeof std === 'number' && isFinite(std) ? std : 1)
-                      return <span key={inp}>{inp}: {effect >= 0 ? '+' : ''}{effect.toFixed(4)} · {effect >= 0 ? t('prediction.effectIncrease') : t('prediction.effectDecrease')}</span>
+                      const actionIncrease = optimizationObjective === 'minimize' ? effect < 0 : effect >= 0
+                      return <span key={inp}>{inp}: {effect >= 0 ? '+' : ''}{effect.toFixed(4)} · {effect >= 0 ? t('prediction.effectIncrease') : t('prediction.effectDecrease')} · {optimizationObjective === 'target' ? t('prediction.effectTargetOnly') : actionIncrease ? t('prediction.effectActionIncrease') : t('prediction.effectActionDecrease')}</span>
                     })}
                     <span>{t('prediction.effectAdvice')}</span>
                   </Space>
