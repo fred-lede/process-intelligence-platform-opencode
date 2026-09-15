@@ -689,6 +689,7 @@
     "doeColumn": "欄位",
     "doeIntercept": "截距（Intercept）",
     "doeMainEffects": "主效應圖",
+    "doeParetoChart": "效應 Pareto 圖",
     "doeInteractionPlot": "交互作用圖",
     "doeNormalEffects": "標準化效應常態機率圖",
     "doeNormalReference": "常態參考線",

@@ -691,6 +691,7 @@
     "doeColumn": "Columna",
     "doeIntercept": "Intercepto",
     "doeMainEffects": "Gráfico de efectos principales",
+    "doeParetoChart": "Gráfico de Pareto de efectos",
     "doeInteractionPlot": "Gráfico de interacción",
     "doeNormalEffects": "Gráfico normal de efectos estandarizados",
     "doeNormalReference": "Línea de referencia normal",

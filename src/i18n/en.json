@@ -689,6 +689,7 @@
     "doeColumn": "Column",
     "doeIntercept": "Intercept",
     "doeMainEffects": "Main Effects Plot",
+    "doeParetoChart": "Pareto Chart of Effects",
     "doeInteractionPlot": "Interaction Plot",
     "doeNormalEffects": "Normal Plot of Standardized Effects",
     "doeNormalReference": "Normal reference line",
