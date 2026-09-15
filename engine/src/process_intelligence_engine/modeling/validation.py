@@ -565,4 +565,6 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         "sig_count": sig_count,
         "total_terms": total_terms,
         "fit_level": fit_level,
+        "fitted_values": [float(v) for v in y_pred],
+        "residuals": [float(v) for v in residuals],
     }

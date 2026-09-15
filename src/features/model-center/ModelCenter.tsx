@@ -1812,6 +1812,12 @@ export default function ModelCenter() {
                       <Card size="small" title={t('modelCenter.doeMainEffects')}>
                         <Plot data={doeStats.coefficients.filter(c => c.name !== '1').map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: false }} />
                       </Card>
+                      <Card size="small" title={t('modelCenter.doeResidualsVsFits')}>
+                        <Plot data={[{ x: doeStats.fitted_values ?? [], y: doeStats.residuals ?? [], mode: 'markers', type: 'scatter' }]} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: 'Fitted' }, yaxis: { title: 'Residual' } }} />
+                      </Card>
+                      <Card size="small" title={t('modelCenter.doeResidualsVsOrder')}>
+                        <Plot data={[{ x: (doeStats.residuals ?? []).map((_, i) => i + 1), y: doeStats.residuals ?? [], mode: 'lines+markers', type: 'scatter' }]} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: 'Order' }, yaxis: { title: 'Residual' } }} />
+                      </Card>
                       <Card size="small" title={t('modelCenter.doeInteractionPlot')}>
                         <Plot data={doeStats.coefficients.filter(c => /[:*]/.test(c.name)).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') } }} />
                       </Card>

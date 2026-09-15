@@ -692,6 +692,8 @@
     "doeInteractionPlot": "Interaction Plot",
     "doeNormalEffects": "Normal Plot of Standardized Effects",
     "doePredictedEffect": "Model effect",
+    "doeResidualsVsFits": "Residuals vs Fits",
+    "doeResidualsVsOrder": "Residuals vs Order",
     "dwPositiveAutoCorr": "Positive autocorrelation",
     "dwNegativeAutoCorr": "Negative autocorrelation",
     "dwNoAutoCorr": "No autocorrelation",

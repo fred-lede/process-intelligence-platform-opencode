@@ -694,6 +694,8 @@
     "doeInteractionPlot": "Gráfico de interacción",
     "doeNormalEffects": "Gráfico normal de efectos estandarizados",
     "doePredictedEffect": "Efecto del modelo",
+    "doeResidualsVsFits": "Residuos vs. ajustes",
+    "doeResidualsVsOrder": "Residuos vs. orden",
     "dwPositiveAutoCorr": "Autocorrelación positiva",
     "dwNegativeAutoCorr": "Autocorrelación negativa",
     "dwNoAutoCorr": "Sin autocorrelación",

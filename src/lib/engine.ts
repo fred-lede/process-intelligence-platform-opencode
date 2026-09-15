@@ -332,6 +332,8 @@ export interface DoeStatisticsResult {
   total_terms: number
   fit_level: 'excellent' | 'good' | 'moderate' | 'marginal' | 'poor' | null
   note?: string
+  fitted_values?: number[]
+  residuals?: number[]
 }
 
 export interface DoeStatisticsParams {
