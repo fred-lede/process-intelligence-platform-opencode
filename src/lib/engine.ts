@@ -427,6 +427,7 @@ export interface DOEContourResult {
   z: number[][]
   ranges: Record<string, [number, number]>
   baseline: Record<string, number>
+  curvature_terms: Record<string, number>
 }
 
 export async function computeDOEContour(params: { model_id: string; dataset_id: string; x_factor: string; y_factor: string; grid_size?: number }): Promise<DOEContourResult> {

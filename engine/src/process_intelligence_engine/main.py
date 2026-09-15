@@ -829,13 +829,16 @@ def _handle_doe_contour(params: dict) -> dict:
     ys = np.linspace(y_low, y_high, grid_size)
     z = []
     baseline = {name: float(df[name].median()) for name in fit.inputs}
+    terms = fit.coefficients or {}
+    curvature_terms = {key: float(value) for key, value in terms.items()
+                       if key in (f"{x_factor}^2", f"{y_factor}^2", f"{x_factor}:{y_factor}", f"{x_factor}*{y_factor}")}
     for y in ys:
         row = []
         for x in xs:
             values = {**baseline, x_factor: float(x), y_factor: float(y)}
             row.append(predict_single(fit.model_type, fit.coefficients or {}, values, fit.model))
         z.append(row)
-    return {"x_factor": x_factor, "y_factor": y_factor, "x": xs.tolist(), "y": ys.tolist(), "z": z, "ranges": {x_factor: [x_low, x_high], y_factor: [y_low, y_high]}, "baseline": baseline}
+    return {"x_factor": x_factor, "y_factor": y_factor, "x": xs.tolist(), "y": ys.tolist(), "z": z, "ranges": {x_factor: [x_low, x_high], y_factor: [y_low, y_high]}, "baseline": baseline, "curvature_terms": curvature_terms}
 
 
 def _handle_profiler_recommend(params: dict) -> dict:
