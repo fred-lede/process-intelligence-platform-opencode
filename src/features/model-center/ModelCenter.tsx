@@ -1810,7 +1810,7 @@ export default function ModelCenter() {
                     />
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 16 }}>
                       <Card size="small" title={t('modelCenter.doeMainEffects')}>
-                        <Plot data={doeStats.coefficients.filter(c => c.name !== '1').map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: false }} />
+                        <Plot data={doeStats.coefficients.filter(c => c.name !== '1').map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 80 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: true, legend: { orientation: 'h', y: -0.25 } }} />
                       </Card>
                       <Card size="small" title={t('modelCenter.doeResidualsVsFits')}>
                         <Plot data={[{ x: doeStats.fitted_values ?? [], y: doeStats.residuals ?? [], mode: 'markers', type: 'scatter' }]} layout={{ height: 340, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: 'Fitted' }, yaxis: { title: 'Residual' } }} />
