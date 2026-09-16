@@ -9,13 +9,13 @@ release/
 # Rust / Tauri
 src-tauri/target/
 src-tauri/gen/
-src-tauri/lightning_logs/
 
 # Python
 engine/.venv/
 engine/__pycache__/
 engine/**/__pycache__/
 engine/**/*.pyc
+lightning_logs/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
