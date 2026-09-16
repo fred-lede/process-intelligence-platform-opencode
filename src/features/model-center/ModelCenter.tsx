@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, Input, InputNumber, Typography, Descriptions, Modal, Form } from 'antd'
+import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, Input, InputNumber, Typography, Descriptions, Modal, Form, Upload } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
+import * as XLSX from 'xlsx'
 import Plot from '../../components/PlotChart'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
@@ -612,6 +613,53 @@ export default function ModelCenter() {
     } catch (err) {
       messageApi.error(err instanceof Error ? err.message : t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
     }
+  }
+  const downloadSequenceTemplate = (kind: 'history' | 'scenario') => {
+    if (!sequenceSimulationColumns) return
+    const { timeColumn, target, inputs } = sequenceSimulationColumns
+    const headerRow: Record<string, string | number | null> =
+      kind === 'history'
+        ? { [timeColumn]: '', [target]: '', ...Object.fromEntries(inputs.map((col) => [col, ''])) }
+        : { [timeColumn]: '', ...Object.fromEntries(inputs.map((col) => [col, ''])) }
+    const exampleRow: Record<string, string | number | null> =
+      kind === 'history'
+        ? { [timeColumn]: '2025-01-01', [target]: 0, ...Object.fromEntries(inputs.map((col) => [col, 0])) }
+        : { [timeColumn]: '2025-01-01', ...Object.fromEntries(inputs.map((col) => [col, 0])) }
+    const sheet = XLSX.utils.json_to_sheet([headerRow, exampleRow], { header: Object.keys(headerRow) })
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, sheet, kind === 'history' ? 'history' : 'future inputs')
+    XLSX.writeFile(wb, `sequenceSimulation-${kind}Template.xlsx`)
+    messageApi.success(t('modelCenter.timeSeries.sequenceSimulation.templateDownloaded'))
+  }
+  const importSequenceSpreadsheet = (kind: 'history' | 'scenario', file?: File) => {
+    if (!file || !sequenceSimulationColumns) return
+    const fileReader = new FileReader()
+    fileReader.onload = () => {
+      try {
+        const wb = XLSX.read(fileReader.result as ArrayBuffer, { type: 'array' })
+        const worksheet = wb.Sheets[wb.SheetNames[0]]
+        if (!worksheet) {
+          messageApi.info(t('modelCenter.timeSeries.sequenceSimulation.nothingToLoad'))
+          return
+        }
+        const parsed: Record<string, string | number | null>[] = XLSX.utils.sheet_to_json(worksheet)
+        if (!parsed.length) {
+          messageApi.info(t('modelCenter.timeSeries.sequenceSimulation.nothingToLoad'))
+          return
+        }
+        const rows = parsed.map((row) => ({ ...row, __rowKey: ++sequenceRowKeyRef.current }))
+        if (kind === 'history') {
+          setSequenceSimulationHistoryRows(rows)
+        } else {
+          setSequenceSimulationScenarioRows(rows)
+          setSequenceSimulationHorizon(Math.max(1, rows.length))
+        }
+        messageApi.success(t('modelCenter.timeSeries.sequenceSimulation.importedRows', { n: rows.length }))
+      } catch (err) {
+        messageApi.error(err instanceof Error ? err.message : t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
+      }
+    }
+    fileReader.readAsArrayBuffer(file)
   }
   const timeSeriesProvenanceKind = (kind: string) =>
     t(`modelCenter.timeSeries.explanation.provenanceKinds.${kind}`, { defaultValue: kind })
@@ -1597,9 +1645,25 @@ export default function ModelCenter() {
                                 rows={2}
                                 placeholder={t('modelCenter.timeSeries.sequenceSimulation.historyPlaceholder')}
                               />
+                              <Space size={4} wrap>
                               <Button size="small" onClick={loadHistoryRowsFromJson}>
                                 {t('modelCenter.timeSeries.sequenceSimulation.loadFromJson')}
                               </Button>
+                              <Button size="small" onClick={() => downloadSequenceTemplate('history')}>
+                                {t('modelCenter.timeSeries.sequenceSimulation.downloadTemplate')}
+                              </Button>
+                              <Upload
+                                showUploadList={false}
+                                accept=".xlsx,.xls,.csv"
+                                beforeUpload={(file) => {
+                                  importSequenceSpreadsheet('history', file)
+                                  return false
+                                }}
+                              >
+                                <Button size="small">{t('modelCenter.timeSeries.sequenceSimulation.importExcel')}</Button>
+                              </Upload>
+                                
+                              </Space>
                               <Typography.Title level={5}>{t('modelCenter.timeSeries.sequenceSimulation.scenariosTitle')}</Typography.Title>
                               <Table
                                 size="small"
@@ -1652,9 +1716,25 @@ export default function ModelCenter() {
                                 rows={2}
                                 placeholder={t('modelCenter.timeSeries.sequenceSimulation.scenariosPlaceholder')}
                               />
+                              <Space size={4} wrap>
                               <Button size="small" onClick={loadScenarioRowsFromJson}>
                                 {t('modelCenter.timeSeries.sequenceSimulation.loadFromJson')}
                               </Button>
+                              <Button size="small" onClick={() => downloadSequenceTemplate('scenario')}>
+                                {t('modelCenter.timeSeries.sequenceSimulation.downloadTemplate')}
+                              </Button>
+                              <Upload
+                                showUploadList={false}
+                                accept=".xlsx,.xls,.csv"
+                                beforeUpload={(file) => {
+                                  importSequenceSpreadsheet('scenario', file)
+                                  return false
+                                }}
+                              >
+                                <Button size="small">{t('modelCenter.timeSeries.sequenceSimulation.importExcel')}</Button>
+                              </Upload>
+                                
+                              </Space>
                             </>
                           ) : (
                             <Alert type="warning" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.noColumns')} />

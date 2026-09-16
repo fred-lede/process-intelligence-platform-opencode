@@ -515,8 +515,13 @@
         "addRow": "Agregar fila",
         "removeRow": "Quitar",
         "loadFromJson": "Cargar desde JSON (opcional; llena el editor de filas)",
+        "downloadTemplate": "Descargar plantilla",
+        "importExcel": "Importar Excel/CSV",
         "noColumns": "El editor interactivo no está listo. Ejecute la preparación temporal (Preparar y validar) para este conjunto de datos, o seleccione un modelo Transformer persistido cuya metadata pueda cargarse.",
-        "nothingToLoad": "El JSON de histórico/escenarios está vacío o no es un arreglo válido; pegue filas históricas y escenarios futuros primero."
+        "nothingToLoad": "El JSON de histórico/escenarios está vacío o no es un arreglo válido; pegue filas históricas y escenarios futuros primero.",
+        "templateDownloaded": "Plantilla descargada (.xlsx)",
+        "downloadSequenceTemplate": "Descargar plantilla",
+        "importedRows": "{{n}} filas importadas"
       },
       "riskUse": {
         "title": "Puerta final de uso de riesgo",

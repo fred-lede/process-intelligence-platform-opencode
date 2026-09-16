@@ -513,8 +513,13 @@
         "addRow": "Add row",
         "removeRow": "Remove",
         "loadFromJson": "Load from JSON (optional; populates the row editor)",
+        "downloadTemplate": "Download template",
+        "importExcel": "Import Excel/CSV",
         "noColumns": "The interactive row editor is not ready. Run time-series preparation (Prepare & Validate) for this dataset, or select a persisted time-series Transformer model whose metadata can be loaded.",
-        "nothingToLoad": "History/scenario JSON is empty or not a valid array; paste history rows and future input scenarios first."
+        "nothingToLoad": "History/scenario JSON is empty or not a valid array; paste history rows and future input scenarios first.",
+        "templateDownloaded": "Template downloaded (.xlsx)",
+        "downloadSequenceTemplate": "Download template",
+        "importedRows": "Imported {{n}} rows"
       },
       "riskUse": {
         "title": "Final risk-use gate",
