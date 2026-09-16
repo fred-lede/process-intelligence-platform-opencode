@@ -566,6 +566,21 @@ data/test_dataset.csv
 - 新增依目前頁面切換的使用說明視窗，涵蓋功能目的、統計原理、公式、圖表判讀、限制與工程建議。
 - 使用說明支援繁體中文、英文、西班牙文。
 
+### v0.9.1（2026-09-16）
+
+**時間序列深度模型與 DOE／模型核准強化**
+- 接入 Temporal Fusion Transformer（TFT），支援 PyTorch／Apple MPS 訓練與預測；沒有 PyTorch 時仍使用既有模型。
+- 新增序列感知模擬（sequence-aware simulation）與時間序列最終風險閘門。
+- DOE 強化：Pareto、Contour、3D Surface、殘差診斷；Prediction Profiler（Maximize／Minimize／Target）；SPC 穩定性 Gate 與人工覆核稽核。
+- 報告新增「DOE 圖表與使用限制」段落；報告匯出失敗時在 UI 顯示錯誤詳細訊息。
+- 完整部署細節見 [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md)，TFT 部署見 [docs/deployment-time-series.md](docs/deployment-time-series.md)。
+
+### v0.9.0（2026-09-15）
+
+- 首次支援時間序列深度模型：將 Temporal Fusion Transformer（TFT）接入時間序列模型階梯。
+- 序列感知（sequence-aware）模擬流程與時間序列最終風險閘門。
+- 詳見 [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md) 與 [docs/deployment-time-series.md](docs/deployment-time-series.md)。
+
 ### v0.8.2（2026-09-10）
 
 **蒙地卡羅抽樣分布**

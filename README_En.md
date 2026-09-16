@@ -90,6 +90,21 @@ Multiple scenario fixtures are provided. See the test-data guides: [繁體中文
 
 Added page-specific usage guides with statistical principles, formulas, chart interpretation, limitations, and engineering recommendations in English, Traditional Chinese, and Spanish.
 
+### v0.9.1 (2026-09-16)
+
+**Time-series deep models and DOE / model governance hardening**
+- Added Temporal Fusion Transformer (TFT), supporting PyTorch／Apple MPS training and inference; falls back to existing models when PyTorch is unavailable.
+- Added sequence-aware simulation and a time-series final risk gate.
+- DOE hardening: Pareto, Contour, 3D Surface, residual diagnostics; Prediction Profiler (Maximize／Minimize／Target); SPC stability gate and manual-review audit.
+- Reports now include a "DOE charts and usage limits" section; report export failures surface detailed error messages in the UI.
+- Full deployment details in [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md), TFT deployment in [docs/deployment-time-series.md](docs/deployment-time-series.md).
+
+### v0.9.0 (2026-09-15)
+
+- Added time-series deep models for the first time: Temporal Fusion Transformer (TFT) integrated into the time-series model ladder.
+- Added sequence-aware simulation flow and a time-series final risk gate.
+- See [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md) and [docs/deployment-time-series.md](docs/deployment-time-series.md).
+
 ### v0.8.2 (2026-09-10)
 
 Added `best_distribution`-driven Monte Carlo sampling, `uniform`/`triangular`/`normal`/`empirical` sampling, manual overrides, parameter reporting, and extrapolation-risk metadata.
