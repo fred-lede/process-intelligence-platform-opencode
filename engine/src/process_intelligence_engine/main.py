@@ -3169,7 +3169,7 @@ def _handle_time_series_sequence_simulation(params: dict) -> dict:
         raise ValueError("input_scenarios must occur after all history_rows")
     sequence_length = metadata["replay"]["sequence_length"]
     if len(history) < sequence_length:
-        raise ValueError("Insufficient history_rows for Transformer sequence window")
+        raise ValueError(f"Insufficient history_rows for Transformer sequence window: need at least {sequence_length}, received {len(history)}")
     try:
         target_history = history[target].to_numpy(dtype=float).tolist()
         input_history = history[inputs].to_numpy(dtype=float).tolist()
