@@ -596,7 +596,10 @@ export default function ModelCenter() {
     }
   }
   const loadScenarioRowsFromJson = () => {
-    if (!sequenceSimulationScenarios.trim()) return
+    if (!sequenceSimulationScenarios.trim()) {
+      messageApi.info(t('modelCenter.timeSeries.sequenceSimulation.nothingToLoad'))
+      return
+    }
     try {
       const parsed: unknown = JSON.parse(sequenceSimulationScenarios)
       if (!Array.isArray(parsed)) throw new Error(t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
