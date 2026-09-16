@@ -38,8 +38,8 @@
     "loading": "Cargando...",
     "error": "Error",
     "success": "Éxito",
-    "refresh": "Actualizar"
-    ,"delete": "Eliminar"
+    "refresh": "Actualizar",
+    "delete": "Eliminar"
   },
   "engine": {
     "online": "Motor de análisis en línea",
@@ -214,9 +214,29 @@
     "qualityCheck": "Verificación",
     "qualitySeverity": "Severidad",
     "qualityMessage": "Problema",
-    "severity": { "critical": "Bloqueante", "warning": "Advertencia", "info": "Información" },
-    "qualityChecks": { "missing_value": "Valores faltantes", "duplicate": "Filas duplicadas", "constant_column": "Columna constante", "time_order": "Orden temporal", "unbalanced_okng": "OK/NG desequilibrado", "unit_mixing": "Mezcla de unidades", "missing_spec": "Especificación faltante" },
-    "qualityMessages": { "missing_value": "La columna '{{column}}' tiene valores faltantes.", "duplicate": "Se encontraron filas duplicadas.", "constant_column": "La columna '{{column}}' es constante y no aporta información analítica.", "time_order": "La columna '{{column}}' no está en orden cronológico.", "unbalanced_okng": "La columna '{{column}}' tiene una proporción OK/NG desequilibrada.", "unit_mixing": "La columna '{{column}}' mezcla unidades.", "missing_spec": "La columna de salida '{{column}}' no tiene límites de especificación." },
+    "severity": {
+      "critical": "Bloqueante",
+      "warning": "Advertencia",
+      "info": "Información"
+    },
+    "qualityChecks": {
+      "missing_value": "Valores faltantes",
+      "duplicate": "Filas duplicadas",
+      "constant_column": "Columna constante",
+      "time_order": "Orden temporal",
+      "unbalanced_okng": "OK/NG desequilibrado",
+      "unit_mixing": "Mezcla de unidades",
+      "missing_spec": "Especificación faltante"
+    },
+    "qualityMessages": {
+      "missing_value": "La columna '{{column}}' tiene valores faltantes.",
+      "duplicate": "Se encontraron filas duplicadas.",
+      "constant_column": "La columna '{{column}}' es constante y no aporta información analítica.",
+      "time_order": "La columna '{{column}}' no está en orden cronológico.",
+      "unbalanced_okng": "La columna '{{column}}' tiene una proporción OK/NG desequilibrada.",
+      "unit_mixing": "La columna '{{column}}' mezcla unidades.",
+      "missing_spec": "La columna de salida '{{column}}' no tiene límites de especificación."
+    },
     "qualitySummary": "La verificación de calidad en {{rows}} filas × {{cols}} columnas encontró {{issues}} problema(s).",
     "qualityClean": "No se detectaron problemas de calidad."
   },
@@ -357,7 +377,11 @@
     "bestFitReason": "La prueba KS no detectó diferencias significativas (p={{p}}); AIC={{aic}}, BIC={{bic}}. Parámetros: {{params}}. Otras candidatas: {{compared}}. Puede usarse como distribución inicial para simulación, sujeta a revisión; no prueba la distribución poblacional.",
     "trendSummary": "Resumen de tendencia de {{column}}: {{count}} puntos, primero {{first}}, último {{last}}, cambio {{delta}} ({{direction}}). Racha más larga en la misma dirección: {{run}} puntos; fuera de límites de control: {{beyond}}.",
     "trendAdvice": "Si hay puntos fuera de los límites de control, verifica primero la calibración, las unidades y el orden de las marcas de tiempo. Una racha sostenida puede indicar deriva; segmenta por lote o máquina y valida las marcas de tiempo. Una tendencia no implica causalidad.",
-    "trendDirection": { "up": "ascendente", "down": "descendente", "flat": "estable" },
+    "trendDirection": {
+      "up": "ascendente",
+      "down": "descendente",
+      "flat": "estable"
+    },
     "timeSeriesSummary": "Serie temporal de {{column}}: {{features}} características calculadas ({{rows}} filas de vista previa).",
     "timeSeriesAdvice": "Con la columna de tiempo {{time}} se calcularon retardos, diferencias y ventanas móviles ({{windows}}). Verifica el orden de las marcas de tiempo, la regularidad de los intervalos, valores faltantes y tiempos duplicados. Si hay deriva o autocorrelación, segmenta por lote o máquina y reúne suficientes observaciones antes de modelar. Son indicadores descriptivos y no implican causalidad.",
     "params": "Parámetros ajustados",
@@ -369,9 +393,30 @@
     "nodeFilterCleared": "Limpiar filtro de nodo"
   },
   "modelCenter": {
-    "interactionSummary": "Resumen de interacciones", "interactionAdvice": "Los valores absolutos mayores indican efectos conjuntos más fuertes; prioriza esos pares para confirmación experimental. Se muestran seis decimales para no ocultar efectos pequeños por redondeo.",
-    "interactionMode": { "notModeled": { "title": "Interacciones no modeladas", "description": "El modelo actual solo incluye efectos principales. Un cero significa que no se estimó el término de interacción, no que el proceso carezca de interacción. Usa DOE cuadrático o un modelo con interacciones para probarla." }, "explicit": { "title": "Interacciones modeladas explícitamente", "description": "El modelo DOE cuadrático estima términos de interacción por pares. Revisa los pares más fuertes y confírmalos con un experimento dirigido." }, "implicit": { "title": "Interacciones capturadas implícitamente", "description": "Este modelo de árboles puede capturar interacciones sin términos explícitos. Usa SHAP interaction o PDP/ALE para validar las combinaciones importantes." }, "hybrid": { "title": "Las interacciones dependen del modelo híbrido", "description": "Revisa las interacciones tanto en la base DOE como en el modelo de residuos y confirma las combinaciones importantes experimentalmente." } },
-    "shapSummary": "Resumen SHAP", "shapAdvice": "Se muestra la magnitud media; los signos indican la dirección y no prueban causalidad.", "sensitivitySummary": "Resumen de sensibilidad y tamaño del efecto", "sensitivityAdvice": "La sensibilidad ordena la influencia y el tamaño del efecto cuantifica el impacto; confirma con validación y DOE.",
+    "interactionSummary": "Resumen de interacciones",
+    "interactionAdvice": "Los valores absolutos mayores indican efectos conjuntos más fuertes; prioriza esos pares para confirmación experimental. Se muestran seis decimales para no ocultar efectos pequeños por redondeo.",
+    "interactionMode": {
+      "notModeled": {
+        "title": "Interacciones no modeladas",
+        "description": "El modelo actual solo incluye efectos principales. Un cero significa que no se estimó el término de interacción, no que el proceso carezca de interacción. Usa DOE cuadrático o un modelo con interacciones para probarla."
+      },
+      "explicit": {
+        "title": "Interacciones modeladas explícitamente",
+        "description": "El modelo DOE cuadrático estima términos de interacción por pares. Revisa los pares más fuertes y confírmalos con un experimento dirigido."
+      },
+      "implicit": {
+        "title": "Interacciones capturadas implícitamente",
+        "description": "Este modelo de árboles puede capturar interacciones sin términos explícitos. Usa SHAP interaction o PDP/ALE para validar las combinaciones importantes."
+      },
+      "hybrid": {
+        "title": "Las interacciones dependen del modelo híbrido",
+        "description": "Revisa las interacciones tanto en la base DOE como en el modelo de residuos y confirma las combinaciones importantes experimentalmente."
+      }
+    },
+    "shapSummary": "Resumen SHAP",
+    "shapAdvice": "Se muestra la magnitud media; los signos indican la dirección y no prueban causalidad.",
+    "sensitivitySummary": "Resumen de sensibilidad y tamaño del efecto",
+    "sensitivityAdvice": "La sensibilidad ordena la influencia y el tamaño del efecto cuantifica el impacto; confirma con validación y DOE.",
     "title": "Centro de Modelos",
     "noData": "Importa un conjunto de datos antes de ajustar modelos.",
     "fitTitle": "Ajustar Modelo",
@@ -414,24 +459,79 @@
         "conditioningFeature": "Característica condicionante",
         "strength": "Fuerza",
         "stratumContrasts": "Contrastes por estrato",
-        "methods": { "tree_feature_importance": "Importancia de características del árbol", "absolute_linear_coefficient": "Coeficiente lineal absoluto" },
-        "provenanceKinds": { "calendar_hour": "Hora del calendario", "calendar_weekday": "Día de la semana", "lag": "Retardo", "rolling_mean": "Media móvil", "rolling_std": "Desviación estándar móvil", "difference": "Primera diferencia", "rate_of_change": "Tasa de cambio", "source": "Valor de origen" },
-        "availability": { "historical_only": "Solo datos históricos", "prediction_timestamp": "Marca de tiempo de predicción", "prediction_time_input": "Entrada al predecir" }
+        "methods": {
+          "tree_feature_importance": "Importancia de características del árbol",
+          "absolute_linear_coefficient": "Coeficiente lineal absoluto"
+        },
+        "provenanceKinds": {
+          "calendar_hour": "Hora del calendario",
+          "calendar_weekday": "Día de la semana",
+          "lag": "Retardo",
+          "rolling_mean": "Media móvil",
+          "rolling_std": "Desviación estándar móvil",
+          "difference": "Primera diferencia",
+          "rate_of_change": "Tasa de cambio",
+          "source": "Valor de origen"
+        },
+        "availability": {
+          "historical_only": "Solo datos históricos",
+          "prediction_timestamp": "Marca de tiempo de predicción",
+          "prediction_time_input": "Entrada al predecir"
+        }
       },
       "sequenceSimulation": {
-        "title": "Simulación consciente de secuencia", "description": "Ejecuta una prueba determinista con escenarios futuros de entradas y predicciones recursivas. No usa muestreo Monte Carlo independiente ni valores futuros del objetivo.",
-        "selectModel": "Seleccionar Transformer aprobado", "horizon": "Horizonte", "run": "Ejecutar prueba", "running": "Pronosticando...",
-        "historyPlaceholder": "JSON de filas históricas (tiempo, objetivo y todas las entradas).", "scenariosPlaceholder": "JSON de escenarios futuros (solo tiempo y entradas; no incluya objetivo).",
-        "invalidRows": "Las filas históricas y los escenarios futuros deben ser arreglos JSON.", "success": "Prueba de secuencia completada", "error": "Falló la simulación consciente de secuencia", "blocked": "La compuerta final de uso de riesgo está bloqueada", "needsSequence": "El muestreo independiente no está disponible; proporcione una ventana histórica y escenarios futuros conscientes de secuencia.",
-        "deterministic": "Pronóstico recursivo determinista", "uncertaintyUnavailable": "Los intervalos de incertidumbre no están disponibles para esta prueba.", "deterministicMode": "Prueba determinista", "stochasticMode": "Rutas de secuencia estocásticas", "simulationCount": "Rutas", "seed": "Semilla", "stochasticComplete": "Simulación de secuencia estocástica", "coverageUnavailable": "La cobertura de intervalos requiere resultados futuros observados.", "residualMethod": "Método residual", "residualScale": "Escala residual", "windowRows": "Filas históricas", "sequenceLength": "Longitud de secuencia", "forecastMode": "Modo de pronóstico", "schemaVersion": "Versión de esquema", "modelVersion": "Versión del modelo", "timestamp": "Marca de tiempo", "predicted": "Predicción",
-        "historyTitle": "Filas históricas (tiempo, objetivo, entradas)", "scenariosTitle": "Escenarios futuros (tiempo + entradas)", "addRow": "Agregar fila", "removeRow": "Quitar", "loadFromJson": "Cargar desde JSON (opcional; llena el editor de filas)", "noColumns": "El editor interactivo no está listo. Ejecute la preparación temporal (Preparar y validar) para este conjunto de datos, o seleccione un modelo Transformer persistido cuya metadata pueda cargarse."
+        "title": "Simulación consciente de secuencia",
+        "description": "Ejecuta una prueba determinista con escenarios futuros de entradas y predicciones recursivas. No usa muestreo Monte Carlo independiente ni valores futuros del objetivo.",
+        "selectModel": "Seleccionar Transformer aprobado",
+        "horizon": "Horizonte",
+        "run": "Ejecutar prueba",
+        "running": "Pronosticando...",
+        "historyPlaceholder": "JSON de filas históricas (tiempo, objetivo y todas las entradas).",
+        "scenariosPlaceholder": "JSON de escenarios futuros (solo tiempo y entradas; no incluya objetivo).",
+        "invalidRows": "Las filas históricas y los escenarios futuros deben ser arreglos JSON.",
+        "success": "Prueba de secuencia completada",
+        "error": "Falló la simulación consciente de secuencia",
+        "blocked": "La compuerta final de uso de riesgo está bloqueada",
+        "needsSequence": "El muestreo independiente no está disponible; proporcione una ventana histórica y escenarios futuros conscientes de secuencia.",
+        "deterministic": "Pronóstico recursivo determinista",
+        "uncertaintyUnavailable": "Los intervalos de incertidumbre no están disponibles para esta prueba.",
+        "deterministicMode": "Prueba determinista",
+        "stochasticMode": "Rutas de secuencia estocásticas",
+        "simulationCount": "Rutas",
+        "seed": "Semilla",
+        "stochasticComplete": "Simulación de secuencia estocástica",
+        "coverageUnavailable": "La cobertura de intervalos requiere resultados futuros observados.",
+        "residualMethod": "Método residual",
+        "residualScale": "Escala residual",
+        "windowRows": "Filas históricas",
+        "sequenceLength": "Longitud de secuencia",
+        "forecastMode": "Modo de pronóstico",
+        "schemaVersion": "Versión de esquema",
+        "modelVersion": "Versión del modelo",
+        "timestamp": "Marca de tiempo",
+        "predicted": "Predicción",
+        "historyTitle": "Filas históricas (tiempo, objetivo, entradas)",
+        "scenariosTitle": "Escenarios futuros (tiempo + entradas)",
+        "addRow": "Agregar fila",
+        "removeRow": "Quitar",
+        "loadFromJson": "Cargar desde JSON (opcional; llena el editor de filas)",
+        "noColumns": "El editor interactivo no está listo. Ejecute la preparación temporal (Preparar y validar) para este conjunto de datos, o seleccione un modelo Transformer persistido cuya metadata pueda cargarse.",
+        "nothingToLoad": "El JSON de histórico/escenarios está vacío o no es un arreglo válido; pegue filas históricas y escenarios futuros primero."
       },
       "riskUse": {
-        "title": "Puerta final de uso de riesgo", "checking": "Comprobando la puerta final de uso de riesgo...",
-        "approveButton": "Aprobar uso de riesgo", "modalTitle": "Aprobar la puerta final de uso de riesgo",
-        "reviewerLabel": "Revisor", "reviewerPlaceholder": "Nombre del revisor", "reviewerRequired": "El revisor es obligatorio.",
-        "reasonLabel": "Motivo", "reasonPlaceholder": "Justificación para aprobar el uso de riesgo del modelo", "reasonRequired": "El motivo es obligatorio.",
-        "submit": "Aprobar", "submitting": "Aprobando...", "cancel": "Cancelar",
+        "title": "Puerta final de uso de riesgo",
+        "checking": "Comprobando la puerta final de uso de riesgo...",
+        "approveButton": "Aprobar uso de riesgo",
+        "modalTitle": "Aprobar la puerta final de uso de riesgo",
+        "reviewerLabel": "Revisor",
+        "reviewerPlaceholder": "Nombre del revisor",
+        "reviewerRequired": "El revisor es obligatorio.",
+        "reasonLabel": "Motivo",
+        "reasonPlaceholder": "Justificación para aprobar el uso de riesgo del modelo",
+        "reasonRequired": "El motivo es obligatorio.",
+        "submit": "Aprobar",
+        "submitting": "Aprobando...",
+        "cancel": "Cancelar",
         "error": "Falló la aprobación de la puerta final de uso de riesgo",
         "reasons": {
           "model_not_validated": "El modelo no está validado ni aprobado",
@@ -534,8 +634,24 @@
       "windowSkipped": "Omitida",
       "windowCoverageAdvice": "Las ventanas insuficientes no inventan datos ni métricas; compara modelos solo dentro de la misma ventana y protocolo.",
       "windowRecommendationError": "No se pudieron comprobar las ventanas",
-      "models": { "naive": "Ingenuo", "seasonal_naive": "Ingenuo estacional", "dynamic_regression": "Regresión dinámica", "time_feature_random_forest": "Bosque aleatorio con variables temporales", "arima": "ARIMA", "xgboost": "XGBoost", "lightgbm": "LightGBM" },
-      "reasons": { "dependency_missing": "Falta una dependencia requerida", "adapter_error": "Falló el adaptador del modelo", "not_implemented": "El adaptador del modelo no está habilitado", "insufficient_history": "Historial insuficiente para este periodo estacional", "not_supported": "El modelo no es compatible con los datos seleccionados", "not_applicable": "El modelo no aplica a los datos seleccionados", "unknown": "No disponible: consulte los detalles del motor" },
+      "models": {
+        "naive": "Ingenuo",
+        "seasonal_naive": "Ingenuo estacional",
+        "dynamic_regression": "Regresión dinámica",
+        "time_feature_random_forest": "Bosque aleatorio con variables temporales",
+        "arima": "ARIMA",
+        "xgboost": "XGBoost",
+        "lightgbm": "LightGBM"
+      },
+      "reasons": {
+        "dependency_missing": "Falta una dependencia requerida",
+        "adapter_error": "Falló el adaptador del modelo",
+        "not_implemented": "El adaptador del modelo no está habilitado",
+        "insufficient_history": "Historial insuficiente para este periodo estacional",
+        "not_supported": "El modelo no es compatible con los datos seleccionados",
+        "not_applicable": "El modelo no aplica a los datos seleccionados",
+        "unknown": "No disponible: consulte los detalles del motor"
+      },
       "running": "Preparando...",
       "runSuccess": "Preparación y validación temporal completadas",
       "runError": "Falló la preparación temporal",
@@ -660,8 +776,6 @@
     "experimentRecommendations": "Recomendaciones de experimento",
     "experimentSuggestions": "Condiciones del siguiente experimento",
     "fullValidationError": "Error al ejecutar validación completa",
-    "fullValidationError": "Error al ejecutar validación completa",
-    "experimentSuggestions": "Condiciones del siguiente experimento",
     "column": {
       "type": "Tipo",
       "status": "Estado",
@@ -676,7 +790,18 @@
     },
     "transitionSuccess": "Estado cambiado a {{status}}",
     "listTitle": "Modelos Ajustados",
-    "selectedModel": { "title": "Modelo seleccionado", "status": "Estado de carga", "loaded": "Cargado", "unavailable": "No se pudo cargar el modelo guardado para reproducir la predicción.", "type": "Tipo de modelo", "target": "Objetivo", "inputs": "Entradas", "trainingRows": "Filas de entrenamiento", "replay": "Reproducción de predicción", "replayReady": "Listo" },
+    "selectedModel": {
+      "title": "Modelo seleccionado",
+      "status": "Estado de carga",
+      "loaded": "Cargado",
+      "unavailable": "No se pudo cargar el modelo guardado para reproducir la predicción.",
+      "type": "Tipo de modelo",
+      "target": "Objetivo",
+      "inputs": "Entradas",
+      "trainingRows": "Filas de entrenamiento",
+      "replay": "Reproducción de predicción",
+      "replayReady": "Listo"
+    },
     "confirmTransition": "¿Confirmar la transición a {{status}}?",
     "compareButton": "Comparar",
     "compareTitle": "Comparación de Modelos",
@@ -1160,12 +1285,16 @@
     "results": "Resultados de probabilidad conjunta",
     "pair": "Par de anomalías",
     "noResultRows": "No hay pares de probabilidad conjunta disponibles.",
-    "above": "Sobre el límite", "below": "Bajo el límite", "run": "Tendencia consecutiva", "deviation": "Desviación",
+    "above": "Sobre el límite",
+    "below": "Bajo el límite",
+    "run": "Tendencia consecutiva",
+    "deviation": "Desviación",
     "summaryTitle": "Resumen de probabilidad conjunta de anomalías",
     "summary": "Este análisis usó {{mode}} para {{count}} escenarios de anomalía. Compara cada probabilidad conjunta con la expectativa independiente: un valor mayor indica mayor riesgo de ocurrencia conjunta y uno menor, menor coocurrencia. Si una combinación probable puede aumentar NG, inclúyela en Monte Carlo e investiga causas comunes por lote, máquina, operador y tiempo. El resultado depende del tamaño de muestra, las definiciones y la matriz de correlación; correlación no implica causalidad."
   },
   "grr": {
-    "summaryTitle": "Resumen GRR", "summaryAdvice": "%GRR={{pct}}%, pieza a pieza={{part}}%; DE de repetibilidad={{repeatability}}, DE de reproducibilidad={{reproducibility}}. Usa el veredicto junto con los requisitos de la aplicación; si es marginal o inaceptable, revisa primero la fijación y calibración, luego la consistencia del operador y vuelve a medir. El GRR depende del rango de piezas y del diseño del estudio.",
+    "summaryTitle": "Resumen GRR",
+    "summaryAdvice": "%GRR={{pct}}%, pieza a pieza={{part}}%; DE de repetibilidad={{repeatability}}, DE de reproducibilidad={{reproducibility}}. Usa el veredicto junto con los requisitos de la aplicación; si es marginal o inaceptable, revisa primero la fijación y calibración, luego la consistencia del operador y vuelve a medir. El GRR depende del rango de piezas y del diseño del estudio.",
     "title": "Gage R&R",
     "measurementColumn": "Columna de medición",
     "partColumn": "Columna de pieza",
@@ -1310,6 +1439,32 @@
     "pending": "Pendiente",
     "notStarted": "No Iniciado"
   },
-  "guide": { "labels": { "purpose": "Propósito", "principle": "Principio", "formula": "Fórmula", "interpretation": "Interpretación", "limits": "Limitaciones", "recommendation": "Recomendación" }, "generic": { "title": "Guía de uso", "purpose": "Comprende la función y los resultados de la página actual.", "principle": "Interpreta con base en los datos y supuestos estadísticos mostrados.", "formula": "Consulta las etiquetas de métricas y anotaciones del gráfico.", "interpretation": "Combina resultados numéricos, gráficos y conocimiento del proceso.", "limits": "Los resultados describen la muestra seleccionada y no prueban población ni causalidad.", "recommendation": "Verifica la calidad de datos y los supuestos antes de decidir." } }
-  ,"guideDistribution": { "title": "Ajuste de distribución", "purpose": "Compara distribuciones candidatas para la columna seleccionada.", "principle": "AIC/BIC comparan el ajuste relativo; la prueba KS verifica la consistencia.", "formula": "AIC=2k−2ln(L); BIC=kln(n)−2ln(L).", "interpretation": "Un AIC/BIC menor suele ser preferible; un p-value KS mayor indica que esta muestra no rechaza la distribución.", "limits": "El ajuste de una muestra no demuestra que la población siga esa distribución.", "recommendation": "Revisa parámetros, gráficos y plausibilidad antes de usarla en simulación." }
+  "guide": {
+    "labels": {
+      "purpose": "Propósito",
+      "principle": "Principio",
+      "formula": "Fórmula",
+      "interpretation": "Interpretación",
+      "limits": "Limitaciones",
+      "recommendation": "Recomendación"
+    },
+    "generic": {
+      "title": "Guía de uso",
+      "purpose": "Comprende la función y los resultados de la página actual.",
+      "principle": "Interpreta con base en los datos y supuestos estadísticos mostrados.",
+      "formula": "Consulta las etiquetas de métricas y anotaciones del gráfico.",
+      "interpretation": "Combina resultados numéricos, gráficos y conocimiento del proceso.",
+      "limits": "Los resultados describen la muestra seleccionada y no prueban población ni causalidad.",
+      "recommendation": "Verifica la calidad de datos y los supuestos antes de decidir."
+    }
+  },
+  "guideDistribution": {
+    "title": "Ajuste de distribución",
+    "purpose": "Compara distribuciones candidatas para la columna seleccionada.",
+    "principle": "AIC/BIC comparan el ajuste relativo; la prueba KS verifica la consistencia.",
+    "formula": "AIC=2k−2ln(L); BIC=kln(n)−2ln(L).",
+    "interpretation": "Un AIC/BIC menor suele ser preferible; un p-value KS mayor indica que esta muestra no rechaza la distribución.",
+    "limits": "El ajuste de una muestra no demuestra que la población siga esa distribución.",
+    "recommendation": "Revisa parámetros, gráficos y plausibilidad antes de usarla en simulación."
+  }
 }

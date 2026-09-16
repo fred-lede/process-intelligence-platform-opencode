@@ -579,8 +579,13 @@ export default function ModelCenter() {
     })
   }
   const loadHistoryRowsFromJson = () => {
+    const source = sequenceSimulationHistory.trim()
+    if (!source) {
+      messageApi.info(t('modelCenter.timeSeries.sequenceSimulation.nothingToLoad'))
+      return
+    }
     try {
-      const parsed: unknown = JSON.parse(sequenceSimulationHistory)
+      const parsed: unknown = JSON.parse(source)
       if (!Array.isArray(parsed)) throw new Error(t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
       setSequenceSimulationHistoryRows(parsed.map((row) => ({
         ...(row as Record<string, string | number | null>),
@@ -591,6 +596,7 @@ export default function ModelCenter() {
     }
   }
   const loadScenarioRowsFromJson = () => {
+    if (!sequenceSimulationScenarios.trim()) return
     try {
       const parsed: unknown = JSON.parse(sequenceSimulationScenarios)
       if (!Array.isArray(parsed)) throw new Error(t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))

@@ -38,8 +38,8 @@
     "loading": "載入中...",
     "error": "錯誤",
     "success": "成功",
-    "refresh": "重新整理"
-    ,"delete": "刪除"
+    "refresh": "重新整理",
+    "delete": "刪除"
   },
   "engine": {
     "online": "分析引擎已連線",
@@ -212,9 +212,29 @@
     "qualityCheck": "檢查項目",
     "qualitySeverity": "嚴重度",
     "qualityMessage": "問題",
-    "severity": { "critical": "阻擋", "warning": "警告", "info": "資訊" },
-    "qualityChecks": { "missing_value": "缺少值", "duplicate": "重複資料列", "constant_column": "常數欄位", "time_order": "時間順序", "unbalanced_okng": "OK/NG 不平衡", "unit_mixing": "單位混用", "missing_spec": "缺少規格" },
-    "qualityMessages": { "missing_value": "欄位「{{column}}」有缺少值。", "duplicate": "發現重複資料列。", "constant_column": "欄位「{{column}}」為常數，沒有分析資訊。", "time_order": "欄位「{{column}}」不是時間順序。", "unbalanced_okng": "欄位「{{column}}」的 OK/NG 比例不平衡。", "unit_mixing": "欄位「{{column}}」包含混用單位。", "missing_spec": "輸出欄位「{{column}}」尚未設定規格界限。" },
+    "severity": {
+      "critical": "阻擋",
+      "warning": "警告",
+      "info": "資訊"
+    },
+    "qualityChecks": {
+      "missing_value": "缺少值",
+      "duplicate": "重複資料列",
+      "constant_column": "常數欄位",
+      "time_order": "時間順序",
+      "unbalanced_okng": "OK/NG 不平衡",
+      "unit_mixing": "單位混用",
+      "missing_spec": "缺少規格"
+    },
+    "qualityMessages": {
+      "missing_value": "欄位「{{column}}」有缺少值。",
+      "duplicate": "發現重複資料列。",
+      "constant_column": "欄位「{{column}}」為常數，沒有分析資訊。",
+      "time_order": "欄位「{{column}}」不是時間順序。",
+      "unbalanced_okng": "欄位「{{column}}」的 OK/NG 比例不平衡。",
+      "unit_mixing": "欄位「{{column}}」包含混用單位。",
+      "missing_spec": "輸出欄位「{{column}}」尚未設定規格界限。"
+    },
     "qualitySummary": "品質檢查 {{rows}} 列 × {{cols}} 欄，共發現 {{issues}} 個問題。",
     "qualityClean": "未發現資料品質問題。"
   },
@@ -355,7 +375,11 @@
     "bestFitReason": "KS 檢定未發現資料與此分布有顯著差異（p={{p}}）；AIC={{aic}}、BIC={{bic}}。配適參數：{{params}}。其他候選：{{compared}}。可作為後續模擬的初始分布，但仍需結合圖形與工程合理性判斷；這不代表母體一定服從此分布。",
     "trendSummary": "{{column}} 趨勢摘要：{{count}} 個點，首值 {{first}}，末值 {{last}}，變化 {{delta}}（{{direction}}）。最長連續同向 {{run}} 點，控制界線外 {{beyond}} 點。",
     "trendAdvice": "若有控制界線外點，請優先檢查量測校正、單位與時間排序；連續同向變化可能代表漂移，建議分批／機台追蹤並確認資料時間戳。趨勢不代表因果關係。",
-    "trendDirection": { "up": "上升", "down": "下降", "flat": "持平" },
+    "trendDirection": {
+      "up": "上升",
+      "down": "下降",
+      "flat": "持平"
+    },
     "timeSeriesSummary": "{{column}} 時間序列已計算 {{features}} 個特徵（目前顯示 {{rows}} 筆預覽資料）。",
     "timeSeriesAdvice": "已使用時間欄位 {{time}} 計算延遲、差分與移動視窗（{{windows}}）；請檢查時間戳是否排序、間隔是否一致，以及缺值或重複時間。若漂移或自相關明顯，建議依批次／機台分層並補充足夠觀測後再建模。這些特徵是描述性指標，不代表因果關係。",
     "params": "配適參數",
@@ -367,9 +391,30 @@
     "nodeFilterCleared": "清除節點篩選"
   },
   "modelCenter": {
-    "interactionSummary": "交互作用摘要", "interactionAdvice": "絕對值越大表示聯合作用越強，建議優先檢視高值組合並以實驗確認。數值顯示至小數點後六位，避免小幅效果被四捨五入成 0。",
-    "interactionMode": { "notModeled": { "title": "交互作用未建模", "description": "目前模型只包含主效應。此處顯示 0 代表未估計交互項，不代表製程沒有交互作用；請改用 DOE 二次或含交互項模型檢定。" }, "explicit": { "title": "已明確估計交互作用", "description": "DOE 二次模型會估計成對交互項。請檢視較強的組合，並以針對性實驗確認。" }, "implicit": { "title": "模型隱含捕捉交互作用", "description": "樹模型可以不使用顯式項目捕捉交互作用；請用 SHAP interaction 或 PDP／ALE 驗證重要組合。" }, "hybrid": { "title": "交互作用取決於混合模型", "description": "請分別檢視 DOE 基礎模型與殘差模型的交互作用，並以實驗確認重要組合。" } },
-    "shapSummary": "SHAP 解讀摘要", "shapAdvice": "長條圖比較平均影響幅度；正負值表示推高或降低輸出，不能單獨視為因果關係。", "sensitivitySummary": "敏感度與效應量摘要", "sensitivityAdvice": "敏感度反映全域影響排序，效應量反映標準化影響大小；建議結合模型驗證與 DOE 實驗確認。",
+    "interactionSummary": "交互作用摘要",
+    "interactionAdvice": "絕對值越大表示聯合作用越強，建議優先檢視高值組合並以實驗確認。數值顯示至小數點後六位，避免小幅效果被四捨五入成 0。",
+    "interactionMode": {
+      "notModeled": {
+        "title": "交互作用未建模",
+        "description": "目前模型只包含主效應。此處顯示 0 代表未估計交互項，不代表製程沒有交互作用；請改用 DOE 二次或含交互項模型檢定。"
+      },
+      "explicit": {
+        "title": "已明確估計交互作用",
+        "description": "DOE 二次模型會估計成對交互項。請檢視較強的組合，並以針對性實驗確認。"
+      },
+      "implicit": {
+        "title": "模型隱含捕捉交互作用",
+        "description": "樹模型可以不使用顯式項目捕捉交互作用；請用 SHAP interaction 或 PDP／ALE 驗證重要組合。"
+      },
+      "hybrid": {
+        "title": "交互作用取決於混合模型",
+        "description": "請分別檢視 DOE 基礎模型與殘差模型的交互作用，並以實驗確認重要組合。"
+      }
+    },
+    "shapSummary": "SHAP 解讀摘要",
+    "shapAdvice": "長條圖比較平均影響幅度；正負值表示推高或降低輸出，不能單獨視為因果關係。",
+    "sensitivitySummary": "敏感度與效應量摘要",
+    "sensitivityAdvice": "敏感度反映全域影響排序，效應量反映標準化影響大小；建議結合模型驗證與 DOE 實驗確認。",
     "title": "模型中心",
     "noData": "請先匯入資料集再進行模型配適。",
     "fitTitle": "模型配適",
@@ -412,24 +457,79 @@
         "conditioningFeature": "條件特徵",
         "strength": "強度",
         "stratumContrasts": "分層對比",
-        "methods": { "tree_feature_importance": "樹模型特徵重要性", "absolute_linear_coefficient": "線性係數絕對值" },
-        "provenanceKinds": { "calendar_hour": "日曆小時", "calendar_weekday": "日曆星期", "lag": "延遲值", "rolling_mean": "移動平均", "rolling_std": "移動標準差", "difference": "一階差分", "rate_of_change": "變化率", "source": "原始值" },
-        "availability": { "historical_only": "僅歷史資料", "prediction_timestamp": "預測時間戳", "prediction_time_input": "預測時輸入" }
+        "methods": {
+          "tree_feature_importance": "樹模型特徵重要性",
+          "absolute_linear_coefficient": "線性係數絕對值"
+        },
+        "provenanceKinds": {
+          "calendar_hour": "日曆小時",
+          "calendar_weekday": "日曆星期",
+          "lag": "延遲值",
+          "rolling_mean": "移動平均",
+          "rolling_std": "移動標準差",
+          "difference": "一階差分",
+          "rate_of_change": "變化率",
+          "source": "原始值"
+        },
+        "availability": {
+          "historical_only": "僅歷史資料",
+          "prediction_timestamp": "預測時間戳",
+          "prediction_time_input": "預測時輸入"
+        }
       },
       "sequenceSimulation": {
-        "title": "序列感知模擬", "description": "使用提供的未來 input 情境與遞迴預測執行 deterministic dry-run；不使用獨立蒙地卡羅抽樣或未來 target 值。",
-        "selectModel": "選擇已核准 Transformer", "horizon": "預測步數", "run": "執行 dry-run", "running": "預測中...",
-        "historyPlaceholder": "history rows JSON（時間、target 與所有 inputs）。", "scenariosPlaceholder": "future input scenarios JSON（僅時間與 inputs，勿含 target）。",
-        "invalidRows": "history rows 與 future input scenarios 必須各自是 JSON 陣列。", "success": "序列感知 dry-run 已完成", "error": "序列感知模擬失敗", "blocked": "最終風險使用 gate 已封鎖", "needsSequence": "獨立抽樣不可用；請提供序列感知 history window 與 future input scenarios。",
-        "deterministic": "Deterministic 遞迴預測", "uncertaintyUnavailable": "此 dry-run 尚無不確定性區間。", "deterministicMode": "Deterministic dry-run", "stochasticMode": "Stochastic 序列路徑", "simulationCount": "路徑數", "seed": "Seed", "stochasticComplete": "Stochastic 序列模擬", "coverageUnavailable": "區間 coverage 需未來觀測結果才可計算。", "residualMethod": "殘差方法", "residualScale": "殘差尺度", "windowRows": "歷史列數", "sequenceLength": "序列長度", "forecastMode": "預測模式", "schemaVersion": "Schema 版本", "modelVersion": "模型版本", "timestamp": "時間戳", "predicted": "預測值",
-        "historyTitle": "歷史列（時間、target、inputs）", "scenariosTitle": "未來 input 情境（時間＋inputs）", "addRow": "新增列", "removeRow": "刪除", "loadFromJson": "從 JSON 載入（選用；會填入列編輯器）", "noColumns": "互動列編輯器尚未就緒。請先對此資料集執行時間序列準備（準備並驗證），或選取可載入中繼資料的已持久化時間序列 Transformer 模型。"
+        "title": "序列感知模擬",
+        "description": "使用提供的未來 input 情境與遞迴預測執行 deterministic dry-run；不使用獨立蒙地卡羅抽樣或未來 target 值。",
+        "selectModel": "選擇已核准 Transformer",
+        "horizon": "預測步數",
+        "run": "執行 dry-run",
+        "running": "預測中...",
+        "historyPlaceholder": "history rows JSON（時間、target 與所有 inputs）。",
+        "scenariosPlaceholder": "future input scenarios JSON（僅時間與 inputs，勿含 target）。",
+        "invalidRows": "history rows 與 future input scenarios 必須各自是 JSON 陣列。",
+        "success": "序列感知 dry-run 已完成",
+        "error": "序列感知模擬失敗",
+        "blocked": "最終風險使用 gate 已封鎖",
+        "needsSequence": "獨立抽樣不可用；請提供序列感知 history window 與 future input scenarios。",
+        "deterministic": "Deterministic 遞迴預測",
+        "uncertaintyUnavailable": "此 dry-run 尚無不確定性區間。",
+        "deterministicMode": "Deterministic dry-run",
+        "stochasticMode": "Stochastic 序列路徑",
+        "simulationCount": "路徑數",
+        "seed": "Seed",
+        "stochasticComplete": "Stochastic 序列模擬",
+        "coverageUnavailable": "區間 coverage 需未來觀測結果才可計算。",
+        "residualMethod": "殘差方法",
+        "residualScale": "殘差尺度",
+        "windowRows": "歷史列數",
+        "sequenceLength": "序列長度",
+        "forecastMode": "預測模式",
+        "schemaVersion": "Schema 版本",
+        "modelVersion": "模型版本",
+        "timestamp": "時間戳",
+        "predicted": "預測值",
+        "historyTitle": "歷史列（時間、target、inputs）",
+        "scenariosTitle": "未來 input 情境（時間＋inputs）",
+        "addRow": "新增列",
+        "removeRow": "刪除",
+        "loadFromJson": "從 JSON 載入（選用；會填入列編輯器）",
+        "noColumns": "互動列編輯器尚未就緒。請先對此資料集執行時間序列準備（準備並驗證），或選取可載入中繼資料的已持久化時間序列 Transformer 模型。",
+        "nothingToLoad": "JSON 未填內容（或不是有效 JSON 陣列）；請先張貼歷史片段與未來輸入情境。"
       },
       "riskUse": {
-        "title": "最終風險使用閘門", "checking": "檢查最終風險使用閘門…",
-        "approveButton": "核准風險使用", "modalTitle": "核准最終風險使用閘門",
-        "reviewerLabel": "審核者", "reviewerPlaceholder": "審核者名稱", "reviewerRequired": "請填寫審核者。",
-        "reasonLabel": "核准理由", "reasonPlaceholder": "核准模型風險使用的理由", "reasonRequired": "請填寫核准理由。",
-        "submit": "核准", "submitting": "核准中…", "cancel": "取消",
+        "title": "最終風險使用閘門",
+        "checking": "檢查最終風險使用閘門…",
+        "approveButton": "核准風險使用",
+        "modalTitle": "核准最終風險使用閘門",
+        "reviewerLabel": "審核者",
+        "reviewerPlaceholder": "審核者名稱",
+        "reviewerRequired": "請填寫審核者。",
+        "reasonLabel": "核准理由",
+        "reasonPlaceholder": "核准模型風險使用的理由",
+        "reasonRequired": "請填寫核准理由。",
+        "submit": "核准",
+        "submitting": "核准中…",
+        "cancel": "取消",
         "error": "最終風險使用閘門核准失敗",
         "reasons": {
           "model_not_validated": "模型尚未驗證或核准",
@@ -532,8 +632,24 @@
       "windowSkipped": "跳過",
       "windowCoverageAdvice": "不足的視窗不會補造資料或產生指標；請在相同視窗與評估協定內比較模型。",
       "windowRecommendationError": "檢查時間視窗失敗",
-      "models": { "naive": "天真基準", "seasonal_naive": "季節性天真基準", "dynamic_regression": "動態迴歸", "time_feature_random_forest": "時間特徵隨機森林", "arima": "ARIMA", "xgboost": "XGBoost", "lightgbm": "LightGBM" },
-      "reasons": { "dependency_missing": "尚未安裝必要的相依套件", "adapter_error": "模型轉接器執行失敗", "not_implemented": "模型轉接器尚未啟用", "insufficient_history": "此季節週期的歷史資料不足", "not_supported": "所選資料不支援此模型", "not_applicable": "此模型不適用於所選資料", "unknown": "不可用：請參考引擎詳細資訊" },
+      "models": {
+        "naive": "天真基準",
+        "seasonal_naive": "季節性天真基準",
+        "dynamic_regression": "動態迴歸",
+        "time_feature_random_forest": "時間特徵隨機森林",
+        "arima": "ARIMA",
+        "xgboost": "XGBoost",
+        "lightgbm": "LightGBM"
+      },
+      "reasons": {
+        "dependency_missing": "尚未安裝必要的相依套件",
+        "adapter_error": "模型轉接器執行失敗",
+        "not_implemented": "模型轉接器尚未啟用",
+        "insufficient_history": "此季節週期的歷史資料不足",
+        "not_supported": "所選資料不支援此模型",
+        "not_applicable": "此模型不適用於所選資料",
+        "unknown": "不可用：請參考引擎詳細資訊"
+      },
       "running": "準備中...",
       "runSuccess": "時間序列準備與驗證已完成",
       "runError": "時間序列準備失敗",
@@ -616,7 +732,18 @@
     "confirmDeleteModel": "確定刪除此模型？此操作無法復原。",
     "continuousTarget": "目標欄位「{{column}}」有 {{n}} 個唯一值（連續變數）。邏輯迴歸需要二元目標（0/1 或兩類）。請更換目標欄位或改用迴歸模型。",
     "listTitle": "已配適模型",
-    "selectedModel": { "title": "選定模型", "status": "載入狀態", "loaded": "已載入", "unavailable": "無法載入已保存模型以進行重現預測。", "type": "模型類型", "target": "目標欄位", "inputs": "輸入欄位", "trainingRows": "訓練列數", "replay": "預測重現", "replayReady": "可用" },
+    "selectedModel": {
+      "title": "選定模型",
+      "status": "載入狀態",
+      "loaded": "已載入",
+      "unavailable": "無法載入已保存模型以進行重現預測。",
+      "type": "模型類型",
+      "target": "目標欄位",
+      "inputs": "輸入欄位",
+      "trainingRows": "訓練列數",
+      "replay": "預測重現",
+      "replayReady": "可用"
+    },
     "column": {
       "type": "類型",
       "version": "版本",
@@ -681,8 +808,6 @@
     "experimentRecommendations": "實驗建議",
     "experimentSuggestions": "下一步實驗條件",
     "fullValidationError": "無法執行完整驗證",
-    "fullValidationError": "無法執行完整驗證",
-    "experimentSuggestions": "下一步實驗條件",
     "treeModelAdvanced": "樹模型設定",
     "autoFeatureSelect": "自動特徵選取",
     "nEstimators": "樹棵數",
@@ -1164,12 +1289,16 @@
     "results": "聯合機率結果",
     "pair": "異常配對",
     "noResultRows": "沒有可顯示的聯合機率配對。",
-    "above": "超過上限", "below": "低於下限", "run": "連續趨勢", "deviation": "偏離",
+    "above": "超過上限",
+    "below": "低於下限",
+    "run": "連續趨勢",
+    "deviation": "偏離",
     "summaryTitle": "聯合異常機率摘要",
     "summary": "本次以 {{mode}} 分析 {{count}} 個異常情境。請比較每組聯合機率與獨立假設期望值；高於期望值代表共同發生風險增加，低於期望值則代表共同發生較少。若高聯合機率組合會同時推高 NG，建議將其納入蒙地卡羅異常情境並依批次、機台、操作者與時間追查共同原因。結果受樣本量、異常定義與相關矩陣影響，相關性不代表因果。"
   },
   "grr": {
-    "summaryTitle": "GRR 結果摘要", "summaryAdvice": "%GRR={{pct}}%，零件間變異={{part}}%；重複性標準差={{repeatability}}、再現性標準差={{reproducibility}}。請依判定區間決定是否接受；若邊界或不可接受，優先檢查量具固定與校正，再檢視操作員一致性並重新量測。GRR 結果受零件範圍與抽樣設計影響，不宜脫離應用規格解讀。",
+    "summaryTitle": "GRR 結果摘要",
+    "summaryAdvice": "%GRR={{pct}}%，零件間變異={{part}}%；重複性標準差={{repeatability}}、再現性標準差={{reproducibility}}。請依判定區間決定是否接受；若邊界或不可接受，優先檢查量具固定與校正，再檢視操作員一致性並重新量測。GRR 結果受零件範圍與抽樣設計影響，不宜脫離應用規格解讀。",
     "title": "量測系統分析 (GRR)",
     "measurementColumn": "測量欄位",
     "partColumn": "零件欄位",
@@ -1314,6 +1443,32 @@
     "pending": "待確認",
     "notStarted": "未開始"
   },
-  "guide": { "labels": { "purpose": "功能目的", "principle": "統計原理", "formula": "主要公式", "interpretation": "圖表判讀", "limits": "限制", "recommendation": "工程建議" }, "generic": { "title": "使用說明", "purpose": "協助理解目前分析頁面的功能與結果。", "principle": "以頁面顯示的資料與統計假設作為判讀基礎。", "formula": "請參考目前頁面的指標標籤與圖表註記。", "interpretation": "綜合數值、圖表與工程知識判讀。", "limits": "結果描述所選樣本，不代表母體或因果結論。", "recommendation": "做出製程決策前，先確認資料品質與分析假設。" } }
-  ,"guideDistribution": { "title": "分布配適", "purpose": "比較所選欄位的候選分布。", "principle": "AIC／BIC 比較相對配適；KS 檢定檢查一致性。", "formula": "AIC=2k−2ln(L)；BIC=kln(n)−2ln(L)。", "interpretation": "AIC／BIC 越低通常越佳；KS p-value 越大表示本樣本未拒絕。", "limits": "樣本配適不代表母體一定服從該分布。", "recommendation": "確認參數、圖形與工程合理性後再用於模擬。" }
+  "guide": {
+    "labels": {
+      "purpose": "功能目的",
+      "principle": "統計原理",
+      "formula": "主要公式",
+      "interpretation": "圖表判讀",
+      "limits": "限制",
+      "recommendation": "工程建議"
+    },
+    "generic": {
+      "title": "使用說明",
+      "purpose": "協助理解目前分析頁面的功能與結果。",
+      "principle": "以頁面顯示的資料與統計假設作為判讀基礎。",
+      "formula": "請參考目前頁面的指標標籤與圖表註記。",
+      "interpretation": "綜合數值、圖表與工程知識判讀。",
+      "limits": "結果描述所選樣本，不代表母體或因果結論。",
+      "recommendation": "做出製程決策前，先確認資料品質與分析假設。"
+    }
+  },
+  "guideDistribution": {
+    "title": "分布配適",
+    "purpose": "比較所選欄位的候選分布。",
+    "principle": "AIC／BIC 比較相對配適；KS 檢定檢查一致性。",
+    "formula": "AIC=2k−2ln(L)；BIC=kln(n)−2ln(L)。",
+    "interpretation": "AIC／BIC 越低通常越佳；KS p-value 越大表示本樣本未拒絕。",
+    "limits": "樣本配適不代表母體一定服從該分布。",
+    "recommendation": "確認參數、圖形與工程合理性後再用於模擬。"
+  }
 }

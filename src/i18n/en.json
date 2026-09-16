@@ -38,8 +38,8 @@
     "loading": "Loading...",
     "error": "Error",
     "success": "Success",
-    "refresh": "Refresh"
-    ,"delete": "Delete"
+    "refresh": "Refresh",
+    "delete": "Delete"
   },
   "engine": {
     "online": "Analysis Engine Online",
@@ -212,9 +212,29 @@
     "qualityCheck": "Check",
     "qualitySeverity": "Severity",
     "qualityMessage": "Issue",
-    "severity": { "critical": "Blocking", "warning": "Warning", "info": "Info" },
-    "qualityChecks": { "missing_value": "Missing values", "duplicate": "Duplicate rows", "constant_column": "Constant column", "time_order": "Time order", "unbalanced_okng": "Unbalanced OK/NG", "unit_mixing": "Unit mixing", "missing_spec": "Missing specification" },
-    "qualityMessages": { "missing_value": "Column '{{column}}' has missing values.", "duplicate": "Found duplicate row(s).", "constant_column": "Column '{{column}}' is constant and carries no analytical information.", "time_order": "Column '{{column}}' is not in chronological order.", "unbalanced_okng": "Column '{{column}}' has an unbalanced OK/NG ratio.", "unit_mixing": "Column '{{column}}' mixes units.", "missing_spec": "Output column '{{column}}' has no specification limits set." },
+    "severity": {
+      "critical": "Blocking",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "qualityChecks": {
+      "missing_value": "Missing values",
+      "duplicate": "Duplicate rows",
+      "constant_column": "Constant column",
+      "time_order": "Time order",
+      "unbalanced_okng": "Unbalanced OK/NG",
+      "unit_mixing": "Unit mixing",
+      "missing_spec": "Missing specification"
+    },
+    "qualityMessages": {
+      "missing_value": "Column '{{column}}' has missing values.",
+      "duplicate": "Found duplicate row(s).",
+      "constant_column": "Column '{{column}}' is constant and carries no analytical information.",
+      "time_order": "Column '{{column}}' is not in chronological order.",
+      "unbalanced_okng": "Column '{{column}}' has an unbalanced OK/NG ratio.",
+      "unit_mixing": "Column '{{column}}' mixes units.",
+      "missing_spec": "Output column '{{column}}' has no specification limits set."
+    },
     "qualitySummary": "Quality check on {{rows}} rows × {{cols}} columns found {{issues}} issue(s).",
     "qualityClean": "No quality issues detected."
   },
@@ -355,7 +375,11 @@
     "bestFitReason": "The KS test found no significant difference from this distribution (p={{p}}); AIC={{aic}}, BIC={{bic}}. Parameters: {{params}}. Other candidates: {{compared}}. It can be an initial distribution for simulation, subject to plot and engineering review; this does not prove the population distribution.",
     "trendSummary": "{{column}} trend summary: {{count}} points, first {{first}}, last {{last}}, change {{delta}} ({{direction}}). Longest same-direction run: {{run}} points; beyond control limits: {{beyond}}.",
     "trendAdvice": "If points exceed control limits, check measurement calibration, units, and timestamp ordering first. A sustained same-direction run may indicate drift; segment by batch or machine and verify timestamps. A trend does not imply causation.",
-    "trendDirection": { "up": "upward", "down": "downward", "flat": "flat" },
+    "trendDirection": {
+      "up": "upward",
+      "down": "downward",
+      "flat": "flat"
+    },
     "timeSeriesSummary": "{{column}} time series: {{features}} features computed ({{rows}} preview rows shown).",
     "timeSeriesAdvice": "Using time column {{time}}, lag, differencing, and rolling windows ({{windows}}) were computed. Check timestamp ordering, interval consistency, missing values, and duplicate times. If drift or autocorrelation is visible, segment by batch or machine and collect enough observations before modeling. These features are descriptive and do not imply causation.",
     "params": "Fitted params",
@@ -367,9 +391,30 @@
     "nodeFilterCleared": "Clear node filter"
   },
   "modelCenter": {
-    "interactionSummary": "Interaction summary", "interactionAdvice": "Larger absolute values indicate stronger joint effects; prioritize high-value pairs for experimental confirmation. Values are shown to six decimal places so small effects are not hidden by rounding.",
-    "interactionMode": { "notModeled": { "title": "Interactions not modeled", "description": "The current model includes main effects only. A zero here means the interaction term was not estimated, not that the process has no interaction. Use DOE Quadratic or an interaction model to test it." }, "explicit": { "title": "Explicit interactions modeled", "description": "The DOE Quadratic model estimates pairwise interaction terms. Review the strongest pairs and confirm them with a targeted experiment." }, "implicit": { "title": "Interactions captured implicitly", "description": "This tree model can capture interactions without explicit terms. Use SHAP interaction or PDP/ALE to validate important factor combinations." }, "hybrid": { "title": "Interactions depend on the hybrid model", "description": "Review interactions in both the DOE baseline and the residual model; confirm important combinations experimentally." } },
-    "shapSummary": "SHAP interpretation summary", "shapAdvice": "Mean impact magnitude is shown; signs indicate output direction and do not prove causality.", "sensitivitySummary": "Sensitivity and effect-size summary", "sensitivityAdvice": "Sensitivity ranks global influence and effect size quantifies standardized impact; confirm with validation and DOE.",
+    "interactionSummary": "Interaction summary",
+    "interactionAdvice": "Larger absolute values indicate stronger joint effects; prioritize high-value pairs for experimental confirmation. Values are shown to six decimal places so small effects are not hidden by rounding.",
+    "interactionMode": {
+      "notModeled": {
+        "title": "Interactions not modeled",
+        "description": "The current model includes main effects only. A zero here means the interaction term was not estimated, not that the process has no interaction. Use DOE Quadratic or an interaction model to test it."
+      },
+      "explicit": {
+        "title": "Explicit interactions modeled",
+        "description": "The DOE Quadratic model estimates pairwise interaction terms. Review the strongest pairs and confirm them with a targeted experiment."
+      },
+      "implicit": {
+        "title": "Interactions captured implicitly",
+        "description": "This tree model can capture interactions without explicit terms. Use SHAP interaction or PDP/ALE to validate important factor combinations."
+      },
+      "hybrid": {
+        "title": "Interactions depend on the hybrid model",
+        "description": "Review interactions in both the DOE baseline and the residual model; confirm important combinations experimentally."
+      }
+    },
+    "shapSummary": "SHAP interpretation summary",
+    "shapAdvice": "Mean impact magnitude is shown; signs indicate output direction and do not prove causality.",
+    "sensitivitySummary": "Sensitivity and effect-size summary",
+    "sensitivityAdvice": "Sensitivity ranks global influence and effect size quantifies standardized impact; confirm with validation and DOE.",
     "title": "Model Center",
     "noData": "Import a dataset before fitting models.",
     "fitTitle": "Fit Model",
@@ -412,24 +457,79 @@
         "conditioningFeature": "Conditioning Feature",
         "strength": "Strength",
         "stratumContrasts": "Stratum Contrasts",
-        "methods": { "tree_feature_importance": "Tree feature importance", "absolute_linear_coefficient": "Absolute linear coefficient" },
-        "provenanceKinds": { "calendar_hour": "Calendar hour", "calendar_weekday": "Calendar weekday", "lag": "Lag", "rolling_mean": "Rolling mean", "rolling_std": "Rolling standard deviation", "difference": "First difference", "rate_of_change": "Rate of change", "source": "Source value" },
-        "availability": { "historical_only": "Historical data only", "prediction_timestamp": "Prediction timestamp", "prediction_time_input": "Prediction-time input" }
+        "methods": {
+          "tree_feature_importance": "Tree feature importance",
+          "absolute_linear_coefficient": "Absolute linear coefficient"
+        },
+        "provenanceKinds": {
+          "calendar_hour": "Calendar hour",
+          "calendar_weekday": "Calendar weekday",
+          "lag": "Lag",
+          "rolling_mean": "Rolling mean",
+          "rolling_std": "Rolling standard deviation",
+          "difference": "First difference",
+          "rate_of_change": "Rate of change",
+          "source": "Source value"
+        },
+        "availability": {
+          "historical_only": "Historical data only",
+          "prediction_timestamp": "Prediction timestamp",
+          "prediction_time_input": "Prediction-time input"
+        }
       },
       "sequenceSimulation": {
-        "title": "Sequence-aware simulation", "description": "Runs a deterministic dry-run using supplied future input scenarios and recursive predictions. It does not use independent Monte Carlo sampling or future target values.",
-        "selectModel": "Select approved Transformer", "horizon": "Horizon", "run": "Run dry-run", "running": "Forecasting...",
-        "historyPlaceholder": "History rows JSON (time, target, and all inputs).", "scenariosPlaceholder": "Future input scenarios JSON (time and inputs only; do not include target).",
-        "invalidRows": "History rows and future input scenarios must each be a JSON array.", "success": "Sequence-aware dry-run completed", "error": "Sequence-aware simulation failed", "blocked": "Final risk-use gate is blocked", "needsSequence": "Independent sampling is unavailable; provide a sequence-aware history window and future input scenarios.",
-        "deterministic": "Deterministic recursive forecast", "uncertaintyUnavailable": "Uncertainty intervals are not available for this dry-run.", "deterministicMode": "Deterministic dry-run", "stochasticMode": "Stochastic sequence paths", "simulationCount": "Paths", "seed": "Seed", "stochasticComplete": "Stochastic sequence simulation", "coverageUnavailable": "Interval coverage requires future observed outcomes.", "residualMethod": "Residual method", "residualScale": "Residual scale", "windowRows": "History rows", "sequenceLength": "Sequence length", "forecastMode": "Forecast mode", "schemaVersion": "Schema version", "modelVersion": "Model version", "timestamp": "Timestamp", "predicted": "Predicted",
-        "historyTitle": "History rows (time, target, inputs)", "scenariosTitle": "Future input scenarios (time + inputs)", "addRow": "Add row", "removeRow": "Remove", "loadFromJson": "Load from JSON (optional; populates the row editor)", "noColumns": "The interactive row editor is not ready. Run time-series preparation (Prepare & Validate) for this dataset, or select a persisted time-series Transformer model whose metadata can be loaded."
+        "title": "Sequence-aware simulation",
+        "description": "Runs a deterministic dry-run using supplied future input scenarios and recursive predictions. It does not use independent Monte Carlo sampling or future target values.",
+        "selectModel": "Select approved Transformer",
+        "horizon": "Horizon",
+        "run": "Run dry-run",
+        "running": "Forecasting...",
+        "historyPlaceholder": "History rows JSON (time, target, and all inputs).",
+        "scenariosPlaceholder": "Future input scenarios JSON (time and inputs only; do not include target).",
+        "invalidRows": "History rows and future input scenarios must each be a JSON array.",
+        "success": "Sequence-aware dry-run completed",
+        "error": "Sequence-aware simulation failed",
+        "blocked": "Final risk-use gate is blocked",
+        "needsSequence": "Independent sampling is unavailable; provide a sequence-aware history window and future input scenarios.",
+        "deterministic": "Deterministic recursive forecast",
+        "uncertaintyUnavailable": "Uncertainty intervals are not available for this dry-run.",
+        "deterministicMode": "Deterministic dry-run",
+        "stochasticMode": "Stochastic sequence paths",
+        "simulationCount": "Paths",
+        "seed": "Seed",
+        "stochasticComplete": "Stochastic sequence simulation",
+        "coverageUnavailable": "Interval coverage requires future observed outcomes.",
+        "residualMethod": "Residual method",
+        "residualScale": "Residual scale",
+        "windowRows": "History rows",
+        "sequenceLength": "Sequence length",
+        "forecastMode": "Forecast mode",
+        "schemaVersion": "Schema version",
+        "modelVersion": "Model version",
+        "timestamp": "Timestamp",
+        "predicted": "Predicted",
+        "historyTitle": "History rows (time, target, inputs)",
+        "scenariosTitle": "Future input scenarios (time + inputs)",
+        "addRow": "Add row",
+        "removeRow": "Remove",
+        "loadFromJson": "Load from JSON (optional; populates the row editor)",
+        "noColumns": "The interactive row editor is not ready. Run time-series preparation (Prepare & Validate) for this dataset, or select a persisted time-series Transformer model whose metadata can be loaded.",
+        "nothingToLoad": "History/scenario JSON is empty or not a valid array; paste history rows and future input scenarios first."
       },
       "riskUse": {
-        "title": "Final risk-use gate", "checking": "Checking the final risk-use gate...",
-        "approveButton": "Approve risk use", "modalTitle": "Approve final risk-use gate",
-        "reviewerLabel": "Reviewer", "reviewerPlaceholder": "Reviewer name", "reviewerRequired": "Reviewer is required.",
-        "reasonLabel": "Reason", "reasonPlaceholder": "Justification for approving model risk use", "reasonRequired": "Reason is required.",
-        "submit": "Approve", "submitting": "Approving...", "cancel": "Cancel",
+        "title": "Final risk-use gate",
+        "checking": "Checking the final risk-use gate...",
+        "approveButton": "Approve risk use",
+        "modalTitle": "Approve final risk-use gate",
+        "reviewerLabel": "Reviewer",
+        "reviewerPlaceholder": "Reviewer name",
+        "reviewerRequired": "Reviewer is required.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Justification for approving model risk use",
+        "reasonRequired": "Reason is required.",
+        "submit": "Approve",
+        "submitting": "Approving...",
+        "cancel": "Cancel",
         "error": "Final risk-use gate approval failed",
         "reasons": {
           "model_not_validated": "The model is not validated or approved",
@@ -532,8 +632,24 @@
       "windowSkipped": "Skipped",
       "windowCoverageAdvice": "Unsupported windows do not fabricate data or metrics; compare models only within the same window and evaluation protocol.",
       "windowRecommendationError": "Failed to check time windows",
-      "models": { "naive": "Naive", "seasonal_naive": "Seasonal Naive", "dynamic_regression": "Dynamic Regression", "time_feature_random_forest": "Time-Feature Random Forest", "arima": "ARIMA", "xgboost": "XGBoost", "lightgbm": "LightGBM" },
-      "reasons": { "dependency_missing": "Required dependency is not installed", "adapter_error": "Model adapter failed", "not_implemented": "Model adapter is not enabled", "insufficient_history": "Insufficient history for this seasonal period", "not_supported": "This model is not supported for the selected data", "not_applicable": "This model is not applicable to the selected data", "unknown": "Unavailable: see engine details" },
+      "models": {
+        "naive": "Naive",
+        "seasonal_naive": "Seasonal Naive",
+        "dynamic_regression": "Dynamic Regression",
+        "time_feature_random_forest": "Time-Feature Random Forest",
+        "arima": "ARIMA",
+        "xgboost": "XGBoost",
+        "lightgbm": "LightGBM"
+      },
+      "reasons": {
+        "dependency_missing": "Required dependency is not installed",
+        "adapter_error": "Model adapter failed",
+        "not_implemented": "Model adapter is not enabled",
+        "insufficient_history": "Insufficient history for this seasonal period",
+        "not_supported": "This model is not supported for the selected data",
+        "not_applicable": "This model is not applicable to the selected data",
+        "unknown": "Unavailable: see engine details"
+      },
       "running": "Preparing...",
       "runSuccess": "Time-series preparation and validation completed",
       "runError": "Time-series preparation failed",
@@ -616,7 +732,18 @@
     "confirmDeleteModel": "Delete this model? This cannot be undone.",
     "continuousTarget": "The target \"{{column}}\" has {{n}} unique values (continuous). Logistic regression requires a binary target (0/1 or two distinct categories). Please select a different target or use a regression model instead.",
     "listTitle": "Fitted Models",
-    "selectedModel": { "title": "Selected Model", "status": "Load Status", "loaded": "Loaded", "unavailable": "Saved model could not be loaded for replay.", "type": "Model Type", "target": "Target", "inputs": "Inputs", "trainingRows": "Training Rows", "replay": "Prediction Replay", "replayReady": "Ready" },
+    "selectedModel": {
+      "title": "Selected Model",
+      "status": "Load Status",
+      "loaded": "Loaded",
+      "unavailable": "Saved model could not be loaded for replay.",
+      "type": "Model Type",
+      "target": "Target",
+      "inputs": "Inputs",
+      "trainingRows": "Training Rows",
+      "replay": "Prediction Replay",
+      "replayReady": "Ready"
+    },
     "column": {
       "type": "Type",
       "version": "Ver",
@@ -681,8 +808,6 @@
     "experimentRecommendations": "Experiment Recommendations",
     "experimentSuggestions": "Next Experiment Conditions",
     "fullValidationError": "Failed to run full validation",
-    "fullValidationError": "Failed to run full validation",
-    "experimentSuggestions": "Next Experiment Conditions",
     "treeModelAdvanced": "Tree Model Settings",
     "autoFeatureSelect": "Auto feature selection",
     "nEstimators": "Estimators",
@@ -1164,12 +1289,16 @@
     "results": "Joint Probability Results",
     "pair": "Anomaly Pair",
     "noResultRows": "No joint probability pairs available.",
-    "above": "Above limit", "below": "Below limit", "run": "Consecutive trend", "deviation": "Deviation",
+    "above": "Above limit",
+    "below": "Below limit",
+    "run": "Consecutive trend",
+    "deviation": "Deviation",
     "summaryTitle": "Joint Anomaly Probability Summary",
     "summary": "This analysis used {{mode}} for {{count}} anomaly scenarios. Compare each joint probability with the independent expectation: a higher value indicates increased co-occurrence risk, while a lower value indicates less co-occurrence. If a high-probability combination can increase NG, include it in Monte Carlo scenarios and investigate common causes by batch, machine, operator, and time. Results depend on sample size, anomaly definitions, and the correlation matrix; correlation is not causation."
   },
   "grr": {
-    "summaryTitle": "GRR result summary", "summaryAdvice": "%GRR={{pct}}%, part-to-part={{part}}%; repeatability SD={{repeatability}}, reproducibility SD={{reproducibility}}. Use the verdict and application requirements together; for marginal or unacceptable results, check fixture stability and calibration first, then operator consistency and remeasure. GRR depends on part range and study design.",
+    "summaryTitle": "GRR result summary",
+    "summaryAdvice": "%GRR={{pct}}%, part-to-part={{part}}%; repeatability SD={{repeatability}}, reproducibility SD={{reproducibility}}. Use the verdict and application requirements together; for marginal or unacceptable results, check fixture stability and calibration first, then operator consistency and remeasure. GRR depends on part range and study design.",
     "title": "Gage R&R",
     "measurementColumn": "Measurement Column",
     "partColumn": "Part Column",
@@ -1313,6 +1442,35 @@
     "confirmed": "Confirmed",
     "pending": "Pending",
     "notStarted": "Not Started"
+  },
+  "guide": {
+    "labels": {
+      "purpose": "Purpose",
+      "principle": "Principle",
+      "formula": "Formula",
+      "interpretation": "How to read it",
+      "limits": "Limitations",
+      "recommendation": "Recommendation"
+    },
+    "generic": {
+      "title": "User guide",
+      "purpose": "Understand the current analysis page and its result.",
+      "principle": "Use the displayed data and statistical assumptions as the basis for interpretation.",
+      "formula": "See the metric labels and chart annotations on the current page.",
+      "interpretation": "Combine numerical results, charts, and domain knowledge.",
+      "limits": "Results describe the selected sample and do not prove population or causal claims.",
+      "recommendation": "Verify data quality and assumptions before making process decisions."
+    },
+    "exploration": {
+      "distribution": {
+        "title": "Distribution fitting",
+        "purpose": "Compare candidate distributions for the selected column.",
+        "principle": "AIC/BIC compare relative fit; the KS test checks consistency with a candidate.",
+        "formula": "AIC=2k−2ln(L); BIC=kln(n)−2ln(L).",
+        "interpretation": "Lower AIC/BIC is preferable among candidates; a larger KS p-value means the distribution is not rejected by this sample.",
+        "limits": "A sample fit does not prove the population follows the distribution.",
+        "recommendation": "Use the selected distribution as a simulation starting point only after checking parameters, plots, and engineering plausibility."
+      }
+    }
   }
-  ,"guide": { "labels": { "purpose": "Purpose", "principle": "Principle", "formula": "Formula", "interpretation": "How to read it", "limits": "Limitations", "recommendation": "Recommendation" }, "generic": { "title": "User guide", "purpose": "Understand the current analysis page and its result.", "principle": "Use the displayed data and statistical assumptions as the basis for interpretation.", "formula": "See the metric labels and chart annotations on the current page.", "interpretation": "Combine numerical results, charts, and domain knowledge.", "limits": "Results describe the selected sample and do not prove population or causal claims.", "recommendation": "Verify data quality and assumptions before making process decisions." }, "exploration": { "distribution": { "title": "Distribution fitting", "purpose": "Compare candidate distributions for the selected column.", "principle": "AIC/BIC compare relative fit; the KS test checks consistency with a candidate.", "formula": "AIC=2k−2ln(L); BIC=kln(n)−2ln(L).", "interpretation": "Lower AIC/BIC is preferable among candidates; a larger KS p-value means the distribution is not rejected by this sample.", "limits": "A sample fit does not prove the population follows the distribution.", "recommendation": "Use the selected distribution as a simulation starting point only after checking parameters, plots, and engineering plausibility." } } }
 }
