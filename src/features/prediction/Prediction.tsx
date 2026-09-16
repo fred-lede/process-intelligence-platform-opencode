@@ -214,6 +214,33 @@ export default function Prediction() {
   const ngStatus = getNgStatus()
   const hasData = !!importResult
 
+  const profilerPerInput = (() => {
+    if (!profilerRecommendation) return []
+    const rec = profilerRecommendation as {
+      objective?: string; target_value?: number;
+      current?: Record<string, number>;
+      candidates?: Array<{input: string; value: number; predicted: number}>;
+      ranges?: Record<string, {min: number; max: number}>;
+    }
+    const obj = rec.objective ?? 'maximize'
+    const target = rec.target_value ?? 0
+    const cur = rec.current ?? {}
+    const cands = rec.candidates ?? []
+    const byInput = new Map<string, Array<{value: number; predicted: number}>>()
+    for (const c of cands) {
+      const list = byInput.get(c.input) ?? []
+      list.push(c)
+      byInput.set(c.input, list)
+    }
+    return Array.from(byInput.entries()).map(([input, items]) => {
+      const score = (c: {predicted: number}) =>
+        obj === 'target' ? Math.abs(c.predicted - target)
+          : obj === 'maximize' ? -c.predicted : c.predicted
+      const best = items.reduce((a, b) => (score(a) < score(b) ? a : b))
+      return { input, current: cur[input] ?? null, value: best.value, predicted: best.predicted }
+    })
+  })()
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {contextHolder}
@@ -243,7 +270,19 @@ export default function Prediction() {
           <Col flex="1 1 auto" style={{ minWidth: 0 }}>
             <Card title={t('prediction.profilerTitle')} size="small">
               <Alert type="warning" showIcon message={t('prediction.profilerLimit')} style={{ marginBottom: 12 }} />
-              {profilerRecommendation && <Alert type="info" showIcon message={t('prediction.recommendationReady')} description={JSON.stringify((profilerRecommendation as { best_candidate?: unknown }).best_candidate ?? profilerRecommendation)} style={{ marginBottom: 12 }} />}
+              {profilerRecommendation && profilerPerInput.length > 0 && (
+                <Alert type="info" showIcon message={t('prediction.recommendationReady')} description={
+                  <div style={{ fontSize: 12 }}>
+                    {profilerPerInput.map(({ input, current: cur, value, predicted }) => (
+                      <div key={input} style={{ marginBottom: 2 }}>
+                        <span style={{ fontWeight: 600 }}>{input}</span>: {cur !== null ? `${cur.toFixed(2)} → ` : ''}
+                        <span style={{ color: '#1677ff' }}>{value.toFixed(2)}</span>
+                        {' '}<span style={{ color: '#888' }}>(predicted: {predicted.toFixed(4)})</span>
+                      </div>
+                    ))}
+                  </div>
+                } style={{ marginBottom: 12 }} />
+              )}
               <pre style={{ fontSize: 13, marginBottom: 12, padding: '4px 8px', background: '#f5f5f5', borderRadius: 4, margin: '0 0 12px 0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{modelInfo.equation}</pre>
               <Alert
                 type="info"
