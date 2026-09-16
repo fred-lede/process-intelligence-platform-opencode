@@ -163,8 +163,8 @@ export default function ModelCenter() {
   const [sequenceSimulationMode, setSequenceSimulationMode] = useState<'sequence_aware' | 'sequence_stochastic'>('sequence_aware')
   const [sequenceSimulationCount, setSequenceSimulationCount] = useState(100)
   const [sequenceSimulationSeed, setSequenceSimulationSeed] = useState(42)
-  const [sequenceSimulationHistory, setSequenceSimulationHistory] = useState('[]')
-  const [sequenceSimulationScenarios, setSequenceSimulationScenarios] = useState('[]')
+  const [sequenceSimulationHistory, setSequenceSimulationHistory] = useState('')
+  const [sequenceSimulationScenarios, setSequenceSimulationScenarios] = useState('')
   const [sequenceSimulationResult, setSequenceSimulationResult] = useState<TimeSeriesSequenceSimulationResult | null>(null)
   const [sequenceSimulationLoading, setSequenceSimulationLoading] = useState(false)
 
