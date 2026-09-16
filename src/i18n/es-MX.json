@@ -423,7 +423,24 @@
         "selectModel": "Seleccionar Transformer aprobado", "horizon": "Horizonte", "run": "Ejecutar prueba", "running": "Pronosticando...",
         "historyPlaceholder": "JSON de filas históricas (tiempo, objetivo y todas las entradas).", "scenariosPlaceholder": "JSON de escenarios futuros (solo tiempo y entradas; no incluya objetivo).",
         "invalidRows": "Las filas históricas y los escenarios futuros deben ser arreglos JSON.", "success": "Prueba de secuencia completada", "error": "Falló la simulación consciente de secuencia", "blocked": "La compuerta final de uso de riesgo está bloqueada", "needsSequence": "El muestreo independiente no está disponible; proporcione una ventana histórica y escenarios futuros conscientes de secuencia.",
-        "deterministic": "Pronóstico recursivo determinista", "uncertaintyUnavailable": "Los intervalos de incertidumbre no están disponibles para esta prueba.", "deterministicMode": "Prueba determinista", "stochasticMode": "Rutas de secuencia estocásticas", "simulationCount": "Rutas", "seed": "Semilla", "stochasticComplete": "Simulación de secuencia estocástica", "coverageUnavailable": "La cobertura de intervalos requiere resultados futuros observados.", "residualMethod": "Método residual", "residualScale": "Escala residual", "windowRows": "Filas históricas", "sequenceLength": "Longitud de secuencia", "forecastMode": "Modo de pronóstico", "schemaVersion": "Versión de esquema", "modelVersion": "Versión del modelo", "timestamp": "Marca de tiempo", "predicted": "Predicción"
+        "deterministic": "Pronóstico recursivo determinista", "uncertaintyUnavailable": "Los intervalos de incertidumbre no están disponibles para esta prueba.", "deterministicMode": "Prueba determinista", "stochasticMode": "Rutas de secuencia estocásticas", "simulationCount": "Rutas", "seed": "Semilla", "stochasticComplete": "Simulación de secuencia estocástica", "coverageUnavailable": "La cobertura de intervalos requiere resultados futuros observados.", "residualMethod": "Método residual", "residualScale": "Escala residual", "windowRows": "Filas históricas", "sequenceLength": "Longitud de secuencia", "forecastMode": "Modo de pronóstico", "schemaVersion": "Versión de esquema", "modelVersion": "Versión del modelo", "timestamp": "Marca de tiempo", "predicted": "Predicción",
+        "historyTitle": "Filas históricas (tiempo, objetivo, entradas)", "scenariosTitle": "Escenarios futuros (tiempo + entradas)", "addRow": "Agregar fila", "removeRow": "Quitar", "loadFromJson": "Cargar desde JSON (opcional; llena el editor de filas)", "noColumns": "El editor interactivo no está listo. Ejecute la preparación temporal (Preparar y validar) para este conjunto de datos, o seleccione un modelo Transformer persistido cuya metadata pueda cargarse."
+      },
+      "riskUse": {
+        "title": "Puerta final de uso de riesgo", "checking": "Comprobando la puerta final de uso de riesgo...",
+        "approveButton": "Aprobar uso de riesgo", "modalTitle": "Aprobar la puerta final de uso de riesgo",
+        "reviewerLabel": "Revisor", "reviewerPlaceholder": "Nombre del revisor", "reviewerRequired": "El revisor es obligatorio.",
+        "reasonLabel": "Motivo", "reasonPlaceholder": "Justificación para aprobar el uso de riesgo del modelo", "reasonRequired": "El motivo es obligatorio.",
+        "submit": "Aprobar", "submitting": "Aprobando...", "cancel": "Cancelar",
+        "error": "Falló la aprobación de la puerta final de uso de riesgo",
+        "reasons": {
+          "model_not_validated": "El modelo no está validado ni aprobado",
+          "persistence_metadata_invalid": "Los metadatos persistidos del modelo son inválidos",
+          "review_provenance_missing": "No hay registros de revisión aprobada",
+          "time_series_gate_evidence_missing": "Falta la evidencia aprobada de la puerta temporal",
+          "schema_version_invalid": "La versión de esquema del modelo no es compatible",
+          "backend_provenance_invalid": "La procedencia del backend es inválida"
+        }
       },
       "detectedTimestamp": "tiempo detectado",
       "timeColumn": "Columna de tiempo",

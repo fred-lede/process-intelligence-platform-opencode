@@ -1557,6 +1557,67 @@ export interface TimeSeriesFinalRiskGate {
   }
 }
 
+export async function getTimeSeriesRiskUseGate(params: {
+  model_id: string
+  dataset_id: string
+}): Promise<TimeSeriesFinalRiskGate> {
+  return engineCall<TimeSeriesFinalRiskGate>('features/time_series/risk_use_gate', params)
+}
+
+export interface TimeSeriesRiskUseApproveParams {
+  model_id: string
+  dataset_id: string
+  reviewer: string
+  reason: string
+  decision: 'approve'
+}
+
+export interface TimeSeriesRiskUseApproveResult {
+  status: 'risk_use_approved'
+  model_id: string
+  review: {
+    reviewer: string
+    decision: 'approve'
+    reason: string
+    gate_evidence: {
+      gate_status: 'approved'
+      reviewer: string
+      reason: string
+      approved_at: string
+    }
+  }
+  gate: TimeSeriesFinalRiskGate
+}
+
+export async function approveTimeSeriesRiskUse(params: TimeSeriesRiskUseApproveParams): Promise<TimeSeriesRiskUseApproveResult> {
+  return engineCall<TimeSeriesRiskUseApproveResult>('features/time_series/risk_use_approve', params as unknown as Record<string, unknown>)
+}
+
+export interface TimeSeriesLoadedMetadata {
+  success: true
+  model_id: string
+  status: 'loaded'
+  metadata: {
+    schema_version: string
+    model_id: string
+    model_type: string
+    dataset_id: string
+    target: string
+    inputs: string[]
+    time_column: string
+  }
+}
+
+export async function loadTimeSeriesModel(params: {
+  model_id: string
+  dataset_id: string
+  target?: string
+  inputs?: string[]
+  time_column?: string
+}): Promise<TimeSeriesLoadedMetadata> {
+  return engineCall<TimeSeriesLoadedMetadata>('features/time_series/load', params)
+}
+
 export interface TimeSeriesSequenceSimulationResult {
   success?: boolean
   status: 'dry_run' | 'stochastic' | 'blocked' | 'not_supported'

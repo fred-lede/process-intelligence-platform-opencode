@@ -2237,6 +2237,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_time_series_retrain_review(params)
     if method == "features/time_series/risk_use_gate":
         return _handle_time_series_risk_use_gate(params)
+    if method == "features/time_series/risk_use_approve":
+        return _handle_time_series_risk_use_approve(params)
     if method == "features/time_series/sequence_simulation":
         return _handle_time_series_sequence_simulation(params)
     if method == "features/time_series/validation":
@@ -3055,6 +3057,63 @@ def _time_series_final_risk_gate(model_id: str, dataset_id: str) -> dict:
 
 def _handle_time_series_risk_use_gate(params: dict) -> dict:
     return _plain_types(_time_series_final_risk_gate(params["model_id"], params["dataset_id"]))
+
+
+def _handle_time_series_risk_use_approve(params: dict) -> dict:
+    """Record explicit human approval of the final risk-use gate.
+
+    Writes review provenance and approved gate evidence into the persisted
+    time-series transformer metadata so the read-only risk-use gate
+    (``_time_series_final_risk_gate``) transitions from blocked to approved.
+    """
+    import datetime as _dt
+    from pathlib import Path
+
+    model_id = params["model_id"]
+    dataset_id = params["dataset_id"]
+    decision = params.get("decision", "approve")
+    reviewer = params.get("reviewer")
+    reason = params.get("reason")
+    if decision != "approve":
+        raise ValueError("decision must be approve")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise ValueError("reviewer is required")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValueError("reason is required")
+    fit = MODEL_REGISTRY.get(model_id)
+    if fit.model_type != "time_series_transformer":
+        raise ValueError("risk-use approval requires a persisted time-series transformer model")
+    if fit.status not in {"validated", "approved"}:
+        raise ValueError("model must be validated or approved before risk-use approval")
+    _, metadata = load_estimator(_VERSION_CHAIN._project_root, model_id, df=REGISTRY.get(dataset_id))
+    approved_at = _dt.datetime.now(_dt.timezone.utc).isoformat().replace("+00:00", "Z")
+    review = {
+        "reviewer": reviewer,
+        "decision": "approve",
+        "reason": reason,
+        "gate_evidence": {
+            "gate_status": "approved",
+            "reviewer": reviewer,
+            "reason": reason,
+            "approved_at": approved_at,
+        },
+    }
+    metadata["validation_gate_evidence"] = review
+    directory = Path(_VERSION_CHAIN._project_root).resolve() / "models" / "time_series"
+    path = (directory / f"{model_id}.json").resolve()
+    if directory not in path.parents:
+        raise ValueError("invalid model metadata path")
+    path.write_text(json.dumps(metadata, default=str, indent=2), encoding="utf-8")
+    _VERSION_CHAIN.register_entity("model", "default", {
+        "model_type": fit.model_type, "model_id": model_id,
+        "dataset_id": dataset_id, "risk_use_gate": "approved", "review": review,
+    }, created_by=reviewer)
+    return _plain_types({
+        "status": "risk_use_approved",
+        "model_id": model_id,
+        "review": review,
+        "gate": _time_series_final_risk_gate(model_id, dataset_id),
+    })
 
 
 def _handle_time_series_sequence_simulation(params: dict) -> dict:

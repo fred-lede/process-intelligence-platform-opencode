@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, Input, InputNumber, Typography, Descriptions } from 'antd'
+import { Card, Table, Select, Button, Space, Alert, Tag, message, Popconfirm, Switch, Input, InputNumber, Typography, Descriptions, Modal, Form } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { ExperimentOutlined, SwapOutlined } from '@ant-design/icons'
 import Plot from '../../components/PlotChart'
@@ -8,8 +8,8 @@ import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
 import { buildModelCenterContext } from '../../lib/assistantData'
-import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult, TimeSeriesExplanationResult, TimeSeriesSequenceSimulationResult } from '../../lib/engine'
-import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeDOEContour, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, runTimeSeriesSequenceSimulation, getModelInfo, getCurrentUser, type DoeStatisticsResult, type ModelInfo, type DOEContourResult } from '../../lib/engine'
+import type { ModelFitDTO, ModelType, ModelStatus, InteractionResult, SHAPResult, ExtrapolationResult, ValidationResult, FullValidationResult, ReadinessResult, SensitivityEffectResult, TimeSeriesModelResult, TimeSeriesValidationResult, TimeSeriesLadderResult, TimeSeriesHybridResult, TimeSeriesWindowRecommendation, TimeSeriesValidationGateModelType, TimeSeriesValidationGateResult, TimeSeriesExplanationResult, TimeSeriesSequenceSimulationResult, TimeSeriesFinalRiskGate } from '../../lib/engine'
+import { checkModelApplicability, recommendModels, computeInteractions, computeSHAP, checkExtrapolation, analyzeValidation, runFullValidation, computeDOEStatistics, computeDOEContour, computeSensitivity, runReadiness, prepareTimeSeriesModel, validateTimeSeries, validateTimeSeriesGate, fitTimeSeriesLadder, fitTimeSeriesHybrid, recommendTimeSeriesWindows, explainTimeSeriesModel, runTimeSeriesSequenceSimulation, getModelInfo, getCurrentUser, getTimeSeriesRiskUseGate, approveTimeSeriesRiskUse, loadTimeSeriesModel, type DoeStatisticsResult, type ModelInfo, type DOEContourResult } from '../../lib/engine'
 
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
@@ -167,6 +167,15 @@ export default function ModelCenter() {
   const [sequenceSimulationScenarios, setSequenceSimulationScenarios] = useState('')
   const [sequenceSimulationResult, setSequenceSimulationResult] = useState<TimeSeriesSequenceSimulationResult | null>(null)
   const [sequenceSimulationLoading, setSequenceSimulationLoading] = useState(false)
+  const [finalRiskUseGate, setFinalRiskUseGate] = useState<TimeSeriesFinalRiskGate | null>(null)
+  const [finalRiskUseGateLoading, setFinalRiskUseGateLoading] = useState(false)
+  const [riskUseApproveOpen, setRiskUseApproveOpen] = useState(false)
+  const [riskUseApproveSubmitting, setRiskUseApproveSubmitting] = useState(false)
+  const [sequenceSimulationColumns, setSequenceSimulationColumns] = useState<{ timeColumn: string; target: string; inputs: string[] } | null>(null)
+  const [sequenceSimulationHistoryRows, setSequenceSimulationHistoryRows] = useState<Array<Record<string, string | number | null>>>([])
+  const [sequenceSimulationScenarioRows, setSequenceSimulationScenarioRows] = useState<Array<Record<string, string | number | null>>>([])
+  const sequenceRowKeyRef = useRef(0)
+  const [riskUseApproveForm] = Form.useForm()
 
   useEffect(() => {
     setContext(
@@ -255,6 +264,53 @@ export default function ModelCenter() {
       setSequenceSimulationModelId(selectedModelId)
     }
   }, [datasetId, selectedModelId, selectedModelInfo?.model_type])
+
+  useEffect(() => {
+    let active = true
+    if (!datasetId || !sequenceSimulationModelId) {
+      setFinalRiskUseGate(null)
+      setFinalRiskUseGateLoading(false)
+      return
+    }
+    setFinalRiskUseGateLoading(true)
+    getTimeSeriesRiskUseGate({ model_id: sequenceSimulationModelId, dataset_id: datasetId })
+      .then((gate) => { if (active) setFinalRiskUseGate(gate) })
+      .catch(() => { if (active) setFinalRiskUseGate(null) })
+      .finally(() => { if (active) setFinalRiskUseGateLoading(false) })
+    return () => { active = false }
+  }, [datasetId, sequenceSimulationModelId])
+
+  useEffect(() => {
+    let active = true
+    setSequenceSimulationColumns(null)
+    if (!datasetId || !sequenceSimulationModelId) return
+    loadTimeSeriesModel({ model_id: sequenceSimulationModelId, dataset_id: datasetId })
+      .then((loaded) => {
+        if (!active) return
+        const columns = {
+          timeColumn: loaded.metadata.time_column,
+          target: loaded.metadata.target,
+          inputs: loaded.metadata.inputs,
+        }
+        setSequenceSimulationColumns(columns)
+        seedSequenceRows(columns)
+      })
+      .catch(() => {
+        if (!active) return
+        if (timeSeriesRun?.model) {
+          const columns = {
+            timeColumn: timeSeriesRun.model.time_column,
+            target: timeSeriesRun.model.target,
+            inputs: timeSeriesRun.model.inputs,
+          }
+          setSequenceSimulationColumns(columns)
+          seedSequenceRows(columns)
+        } else {
+          setSequenceSimulationColumns(null)
+        }
+      })
+    return () => { active = false }
+  }, [datasetId, sequenceSimulationModelId])
 
   const invalidateTimeSeriesRun = () => {
     timeSeriesRequestId.current += 1
@@ -395,18 +451,12 @@ export default function ModelCenter() {
 
   const handleRunSequenceSimulation = async () => {
     if (!datasetId || !sequenceSimulationModelId) return
-    let historyRows: Array<Record<string, unknown>>
-    let inputScenarios: Array<Record<string, unknown>>
-    try {
-      const parsedHistory: unknown = JSON.parse(sequenceSimulationHistory)
-      const parsedScenarios: unknown = JSON.parse(sequenceSimulationScenarios)
-      if (!Array.isArray(parsedHistory) || !Array.isArray(parsedScenarios)) throw new Error(t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
-      historyRows = parsedHistory as Array<Record<string, unknown>>
-      inputScenarios = parsedScenarios as Array<Record<string, unknown>>
-    } catch (err) {
-      messageApi.error(err instanceof Error ? err.message : t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
+    if (!sequenceSimulationColumns) {
+      messageApi.error(t('modelCenter.timeSeries.sequenceSimulation.noColumns'))
       return
     }
+    const historyRows = sequenceSimulationHistoryRows.map(({ __rowKey, ...row }) => row)
+    const inputScenarios = sequenceSimulationScenarioRows.map(({ __rowKey, ...row }) => row)
     setSequenceSimulationLoading(true)
     setSequenceSimulationResult(null)
     try {
@@ -430,6 +480,37 @@ export default function ModelCenter() {
     }
   }
 
+  const handleApproveTimeSeriesRiskUse = async () => {
+    if (!datasetId || !sequenceSimulationModelId) return
+    let values: { reviewer?: string; reason?: string }
+    try {
+      values = await riskUseApproveForm.validateFields()
+    } catch {
+      return
+    }
+    const reviewer = values.reviewer?.trim() ?? ''
+    const reason = values.reason?.trim() ?? ''
+    if (!reviewer || !reason) return
+    setRiskUseApproveSubmitting(true)
+    try {
+      const result = await approveTimeSeriesRiskUse({
+        model_id: sequenceSimulationModelId,
+        dataset_id: datasetId,
+        reviewer,
+        reason,
+        decision: 'approve',
+      })
+      setFinalRiskUseGate(result.gate)
+      setRiskUseApproveOpen(false)
+      riskUseApproveForm.resetFields()
+      messageApi.success(t('modelCenter.timeSeries.gateApproved'))
+    } catch (err) {
+      messageApi.error(`${t('modelCenter.timeSeries.riskUse.error')}: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setRiskUseApproveSubmitting(false)
+    }
+  }
+
   const timeSeriesModelLabel = (name: string) => t(`modelCenter.timeSeries.models.${name}`, { defaultValue: name })
   const timeSeriesReason = (reason?: string | null, code?: string | null) => {
     if (!reason && !code) return '—'
@@ -440,6 +521,89 @@ export default function ModelCenter() {
     status === 'approved' ? 'success' : status === 'needs_review' ? 'warning' : 'error'
   const timeSeriesGateReason = (reason: string) =>
     t(`modelCenter.timeSeries.gateReasons.${reason}`, { defaultValue: reason })
+  const timeSeriesFinalRiskGateReason = (reason: string) =>
+    t(`modelCenter.timeSeries.riskUse.reasons.${reason}`, { defaultValue: reason })
+  const riskUseApprovable = finalRiskUseGate?.status === 'blocked'
+    && (finalRiskUseGate.reasons.includes('review_provenance_missing') || finalRiskUseGate.reasons.includes('time_series_gate_evidence_missing'))
+  const blankSequenceRow = (keys: string[], key: number): Record<string, string | number | null> => ({
+    __rowKey: key,
+    ...Object.fromEntries(keys.map((column) => [column, null])),
+  })
+  const seedSequenceRows = (columns: { timeColumn: string; target: string; inputs: string[] }) => {
+    if (sequenceSimulationHistoryRows.length === 0) {
+      sequenceRowKeyRef.current += 1
+      setSequenceSimulationHistoryRows([blankSequenceRow([columns.timeColumn, columns.target, ...columns.inputs], sequenceRowKeyRef.current)])
+    }
+    if (sequenceSimulationScenarioRows.length === 0) {
+      setSequenceSimulationScenarioRows(Array.from({ length: sequenceSimulationHorizon }, () => {
+        sequenceRowKeyRef.current += 1
+        return blankSequenceRow([columns.timeColumn, ...columns.inputs], sequenceRowKeyRef.current)
+      }))
+    }
+  }
+  const updateSequenceCell = (kind: 'history' | 'scenario', index: number, column: string, value: string | number | null) => {
+    const setter = kind === 'history' ? setSequenceSimulationHistoryRows : setSequenceSimulationScenarioRows
+    setter((rows) => rows.map((row, i) => (i === index ? { ...row, [column]: value } : row)))
+  }
+  const addSequenceRow = (kind: 'history' | 'scenario', columns: { timeColumn: string; target: string; inputs: string[] }) => {
+    const keys = kind === 'history' ? [columns.timeColumn, columns.target, ...columns.inputs] : [columns.timeColumn, ...columns.inputs]
+    sequenceRowKeyRef.current += 1
+    const row = blankSequenceRow(keys, sequenceRowKeyRef.current)
+    if (kind === 'history') {
+      setSequenceSimulationHistoryRows((rows) => [...rows, row])
+    } else {
+      setSequenceSimulationScenarioRows((rows) => [...rows, row])
+      setSequenceSimulationHorizon(sequenceSimulationScenarioRows.length + 1)
+    }
+  }
+  const removeSequenceRow = (kind: 'history' | 'scenario', index: number) => {
+    if (kind === 'history') {
+      setSequenceSimulationHistoryRows((rows) => rows.filter((_, i) => i !== index))
+    } else {
+      setSequenceSimulationScenarioRows((rows) => rows.filter((_, i) => i !== index))
+      setSequenceSimulationHorizon(Math.max(1, sequenceSimulationScenarioRows.length - 1))
+    }
+  }
+  const handleSequenceHorizonChange = (value: number | null) => {
+    const horizon = value ?? 1
+    setSequenceSimulationHorizon(horizon)
+    if (!sequenceSimulationColumns) return
+    setSequenceSimulationScenarioRows((rows) => {
+      if (rows.length === horizon) return rows
+      const next = rows.slice(0, horizon)
+      while (next.length < horizon) {
+        sequenceRowKeyRef.current += 1
+        next.push(blankSequenceRow([sequenceSimulationColumns.timeColumn, ...sequenceSimulationColumns.inputs], sequenceRowKeyRef.current))
+      }
+      return next
+    })
+  }
+  const loadHistoryRowsFromJson = () => {
+    try {
+      const parsed: unknown = JSON.parse(sequenceSimulationHistory)
+      if (!Array.isArray(parsed)) throw new Error(t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
+      setSequenceSimulationHistoryRows(parsed.map((row) => ({
+        ...(row as Record<string, string | number | null>),
+        __rowKey: ++sequenceRowKeyRef.current,
+      })))
+    } catch (err) {
+      messageApi.error(err instanceof Error ? err.message : t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
+    }
+  }
+  const loadScenarioRowsFromJson = () => {
+    try {
+      const parsed: unknown = JSON.parse(sequenceSimulationScenarios)
+      if (!Array.isArray(parsed)) throw new Error(t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
+      const rows = parsed.map((row) => ({
+        ...(row as Record<string, string | number | null>),
+        __rowKey: ++sequenceRowKeyRef.current,
+      }))
+      setSequenceSimulationScenarioRows(rows)
+      setSequenceSimulationHorizon(Math.max(1, rows.length))
+    } catch (err) {
+      messageApi.error(err instanceof Error ? err.message : t('modelCenter.timeSeries.sequenceSimulation.invalidRows'))
+    }
+  }
   const timeSeriesProvenanceKind = (kind: string) =>
     t(`modelCenter.timeSeries.explanation.provenanceKinds.${kind}`, { defaultValue: kind })
   const timeSeriesAvailability = (availability: string) =>
@@ -1303,6 +1467,23 @@ export default function ModelCenter() {
                     <Space direction="vertical" style={{ width: '100%', marginTop: 12 }} size="middle">
                       <Card size="small" title={t('modelCenter.timeSeries.sequenceSimulation.title')}>
                         <Space direction="vertical" style={{ width: '100%' }}>
+                          {finalRiskUseGateLoading ? (
+                            <Alert type="info" showIcon message={t('modelCenter.timeSeries.riskUse.checking')} />
+                          ) : finalRiskUseGate?.status === 'approved' ? (
+                            <Alert type="success" showIcon message={t('modelCenter.timeSeries.gateApproved')} />
+                          ) : finalRiskUseGate?.status === 'blocked' ? (
+                            <Alert
+                              type="error"
+                              showIcon
+                              message={t('modelCenter.timeSeries.sequenceSimulation.blocked')}
+                              description={finalRiskUseGate.reasons.map(timeSeriesFinalRiskGateReason).join(', ')}
+                              action={riskUseApprovable ? (
+                                <Button size="small" danger type="primary" onClick={() => setRiskUseApproveOpen(true)}>
+                                  {t('modelCenter.timeSeries.riskUse.approveButton')}
+                                </Button>
+                              ) : undefined}
+                            />
+                          ) : null}
                           <Alert type="info" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.description')} />
                           <Space wrap>
                             <Select
@@ -1317,7 +1498,7 @@ export default function ModelCenter() {
                             <InputNumber
                               min={1}
                               value={sequenceSimulationHorizon}
-                              onChange={(value) => setSequenceSimulationHorizon(value ?? 1)}
+                              onChange={handleSequenceHorizonChange}
                               addonBefore={t('modelCenter.timeSeries.sequenceSimulation.horizon')}
                             />
                             <Select
@@ -1341,18 +1522,134 @@ export default function ModelCenter() {
                                 : t('modelCenter.timeSeries.sequenceSimulation.run')}
                             </Button>
                           </Space>
-                          <Input.TextArea
-                            value={sequenceSimulationHistory}
-                            onChange={(event) => setSequenceSimulationHistory(event.target.value)}
-                            rows={4}
-                            placeholder={t('modelCenter.timeSeries.sequenceSimulation.historyPlaceholder')}
-                          />
-                          <Input.TextArea
-                            value={sequenceSimulationScenarios}
-                            onChange={(event) => setSequenceSimulationScenarios(event.target.value)}
-                            rows={4}
-                            placeholder={t('modelCenter.timeSeries.sequenceSimulation.scenariosPlaceholder')}
-                          />
+                          {sequenceSimulationColumns ? (
+                            <>
+                              <Typography.Title level={5}>{t('modelCenter.timeSeries.sequenceSimulation.historyTitle')}</Typography.Title>
+                              <Table
+                                size="small"
+                                pagination={false}
+                                rowKey="__rowKey"
+                                dataSource={sequenceSimulationHistoryRows}
+                                columns={[
+                                  {
+                                    title: sequenceSimulationColumns.timeColumn,
+                                    dataIndex: sequenceSimulationColumns.timeColumn,
+                                    key: sequenceSimulationColumns.timeColumn,
+                                    render: (value: unknown, _: unknown, index: number) => (
+                                      <Input
+                                        value={String((value as string | number | null) ?? '')}
+                                        onChange={(event) => updateSequenceCell('history', index, sequenceSimulationColumns.timeColumn, event.target.value)}
+                                      />
+                                    ),
+                                  },
+                                  {
+                                    title: sequenceSimulationColumns.target,
+                                    dataIndex: sequenceSimulationColumns.target,
+                                    key: sequenceSimulationColumns.target,
+                                    render: (value: unknown, _: unknown, index: number) => (
+                                      <InputNumber
+                                        style={{ width: '100%' }}
+                                        value={(value as number | null) ?? null}
+                                        onChange={(next) => updateSequenceCell('history', index, sequenceSimulationColumns.target, next)}
+                                      />
+                                    ),
+                                  },
+                                  ...sequenceSimulationColumns.inputs.map((column) => ({
+                                    title: column,
+                                    dataIndex: column,
+                                    key: column,
+                                    render: (value: unknown, _: unknown, index: number) => (
+                                      <InputNumber
+                                        style={{ width: '100%' }}
+                                        value={(value as number | null) ?? null}
+                                        onChange={(next) => updateSequenceCell('history', index, column, next)}
+                                      />
+                                    ),
+                                  })),
+                                  {
+                                    title: '',
+                                    key: 'remove',
+                                    width: 60,
+                                    render: (_: unknown, __: unknown, index: number) => (
+                                      <Button size="small" danger onClick={() => removeSequenceRow('history', index)} disabled={sequenceSimulationHistoryRows.length <= 1}>
+                                        {t('modelCenter.timeSeries.sequenceSimulation.removeRow')}
+                                      </Button>
+                                    ),
+                                  },
+                                ]}
+                              />
+                              <Button size="small" onClick={() => addSequenceRow('history', sequenceSimulationColumns)}>
+                                {t('modelCenter.timeSeries.sequenceSimulation.addRow')}
+                              </Button>
+                              <Typography.Text type="secondary">{t('modelCenter.timeSeries.sequenceSimulation.loadFromJson')}</Typography.Text>
+                              <Input.TextArea
+                                value={sequenceSimulationHistory}
+                                onChange={(event) => setSequenceSimulationHistory(event.target.value)}
+                                rows={2}
+                                placeholder={t('modelCenter.timeSeries.sequenceSimulation.historyPlaceholder')}
+                              />
+                              <Button size="small" onClick={loadHistoryRowsFromJson}>
+                                {t('modelCenter.timeSeries.sequenceSimulation.loadFromJson')}
+                              </Button>
+                              <Typography.Title level={5}>{t('modelCenter.timeSeries.sequenceSimulation.scenariosTitle')}</Typography.Title>
+                              <Table
+                                size="small"
+                                pagination={false}
+                                rowKey="__rowKey"
+                                dataSource={sequenceSimulationScenarioRows}
+                                columns={[
+                                  {
+                                    title: sequenceSimulationColumns.timeColumn,
+                                    dataIndex: sequenceSimulationColumns.timeColumn,
+                                    key: sequenceSimulationColumns.timeColumn,
+                                    render: (value: unknown, _: unknown, index: number) => (
+                                      <Input
+                                        value={String((value as string | number | null) ?? '')}
+                                        onChange={(event) => updateSequenceCell('scenario', index, sequenceSimulationColumns.timeColumn, event.target.value)}
+                                      />
+                                    ),
+                                  },
+                                  ...sequenceSimulationColumns.inputs.map((column) => ({
+                                    title: column,
+                                    dataIndex: column,
+                                    key: column,
+                                    render: (value: unknown, _: unknown, index: number) => (
+                                      <InputNumber
+                                        style={{ width: '100%' }}
+                                        value={(value as number | null) ?? null}
+                                        onChange={(next) => updateSequenceCell('scenario', index, column, next)}
+                                      />
+                                    ),
+                                  })),
+                                  {
+                                    title: '',
+                                    key: 'remove',
+                                    width: 60,
+                                    render: (_: unknown, __: unknown, index: number) => (
+                                      <Button size="small" danger onClick={() => removeSequenceRow('scenario', index)} disabled={sequenceSimulationScenarioRows.length <= 1}>
+                                        {t('modelCenter.timeSeries.sequenceSimulation.removeRow')}
+                                      </Button>
+                                    ),
+                                  },
+                                ]}
+                              />
+                              <Button size="small" onClick={() => addSequenceRow('scenario', sequenceSimulationColumns)}>
+                                {t('modelCenter.timeSeries.sequenceSimulation.addRow')}
+                              </Button>
+                              <Typography.Text type="secondary">{t('modelCenter.timeSeries.sequenceSimulation.loadFromJson')}</Typography.Text>
+                              <Input.TextArea
+                                value={sequenceSimulationScenarios}
+                                onChange={(event) => setSequenceSimulationScenarios(event.target.value)}
+                                rows={2}
+                                placeholder={t('modelCenter.timeSeries.sequenceSimulation.scenariosPlaceholder')}
+                              />
+                              <Button size="small" onClick={loadScenarioRowsFromJson}>
+                                {t('modelCenter.timeSeries.sequenceSimulation.loadFromJson')}
+                              </Button>
+                            </>
+                          ) : (
+                            <Alert type="warning" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.noColumns')} />
+                          )}
                           {sequenceSimulationResult?.status === 'blocked' && (
                             <Alert type="error" showIcon message={t('modelCenter.timeSeries.sequenceSimulation.blocked')} description={sequenceSimulationResult.final_gate.reasons.join(', ')} />
                           )}
@@ -1399,6 +1696,24 @@ export default function ModelCenter() {
                               ]} />
                             </>
                           )}
+                          <Modal
+                            title={t('modelCenter.timeSeries.riskUse.modalTitle')}
+                            open={riskUseApproveOpen}
+                            onCancel={() => setRiskUseApproveOpen(false)}
+                            onOk={handleApproveTimeSeriesRiskUse}
+                            confirmLoading={riskUseApproveSubmitting}
+                            okText={riskUseApproveSubmitting ? t('modelCenter.timeSeries.riskUse.submitting') : t('modelCenter.timeSeries.riskUse.submit')}
+                            cancelText={t('modelCenter.timeSeries.riskUse.cancel')}
+                          >
+                            <Form form={riskUseApproveForm} layout="vertical">
+                              <Form.Item name="reviewer" label={t('modelCenter.timeSeries.riskUse.reviewerLabel')} rules={[{ required: true, message: t('modelCenter.timeSeries.riskUse.reviewerRequired') }]}>
+                                <Input placeholder={t('modelCenter.timeSeries.riskUse.reviewerPlaceholder')} />
+                              </Form.Item>
+                              <Form.Item name="reason" label={t('modelCenter.timeSeries.riskUse.reasonLabel')} rules={[{ required: true, message: t('modelCenter.timeSeries.riskUse.reasonRequired') }]}>
+                                <Input.TextArea rows={3} placeholder={t('modelCenter.timeSeries.riskUse.reasonPlaceholder')} />
+                              </Form.Item>
+                            </Form>
+                          </Modal>
                         </Space>
                       </Card>
                       <Card size="small" title={t('modelCenter.timeSeries.explanation.title')}>

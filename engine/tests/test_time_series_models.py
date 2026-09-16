@@ -728,6 +728,62 @@ def test_time_series_final_risk_gate_blocks_unreviewed_and_requires_sequence_sim
     assert copula["reason"] == "needs_sequence_simulation"
 
 
+def test_time_series_risk_use_approve_writes_evidence_and_unblocks_final_gate():
+    if importlib.util.find_spec("tensorflow") is None:
+        pytest.skip("tensorflow is optional")
+    frame = pd.read_csv(
+        Path(__file__).parents[2] / "data/test_dataset_timeseries_transformer.csv"
+    )
+    input_columns = [
+        "input_temperature", "input_voltage", "input_pressure",
+        "input_speed", "input_load",
+    ]
+    dataset_id = REGISTRY.register(frame, {})
+    fitted = handle_request("features/time_series/fit", {
+        "dataset_id": dataset_id, "time_column": "datetime",
+        "target": "output_thickness", "inputs": input_columns,
+        "evaluation_protocol": "fixed_horizon_forecast",
+        "lstm_sequence_length": 1000, "transformer_sequence_length": 24,
+        "persist_models": True, "persist_model_types": ["transformer"],
+        "validation_gate_evidence": {"transformer": {"gate_status": "approved"}},
+    })
+    model_id = fitted["provenance"]["model_ids"]["transformer"]
+    MODEL_REGISTRY.transition(model_id, "pending_validation")
+    MODEL_REGISTRY.transition(model_id, "validated")
+
+    blocked = handle_request("features/time_series/risk_use_gate", {
+        "model_id": model_id, "dataset_id": dataset_id,
+    })
+    assert blocked["status"] == "blocked"
+    assert "model_not_validated" not in blocked["reasons"]
+    assert "review_provenance_missing" in blocked["reasons"]
+    assert "time_series_gate_evidence_missing" in blocked["reasons"]
+
+    with pytest.raises(ValueError, match="reviewer is required"):
+        handle_request("features/time_series/risk_use_approve", {
+            "model_id": model_id, "dataset_id": dataset_id,
+            "reviewer": "", "reason": "not acceptable",
+        })
+
+    approved = handle_request("features/time_series/risk_use_approve", {
+        "model_id": model_id, "dataset_id": dataset_id,
+        "reviewer": "qa", "reason": "manual risk review accepted",
+        "decision": "approve",
+    })
+    assert approved["status"] == "risk_use_approved"
+    assert approved["review"]["decision"] == "approve"
+    assert approved["review"]["reviewer"] == "qa"
+    assert approved["review"]["gate_evidence"]["gate_status"] == "approved"
+    assert approved["gate"]["status"] == "approved"
+    assert approved["gate"]["reasons"] == []
+
+    gate = handle_request("features/time_series/risk_use_gate", {
+        "model_id": model_id, "dataset_id": dataset_id,
+    })
+    assert gate["status"] == "approved"
+    assert gate["provenance"]["model_status"] == "validated"
+
+
 def test_time_series_sequence_simulation_uses_scenarios_and_recursive_predictions_only():
     if importlib.util.find_spec("tensorflow") is None:
         pytest.skip("tensorflow is optional")

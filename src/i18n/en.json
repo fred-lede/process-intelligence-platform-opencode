@@ -421,7 +421,24 @@
         "selectModel": "Select approved Transformer", "horizon": "Horizon", "run": "Run dry-run", "running": "Forecasting...",
         "historyPlaceholder": "History rows JSON (time, target, and all inputs).", "scenariosPlaceholder": "Future input scenarios JSON (time and inputs only; do not include target).",
         "invalidRows": "History rows and future input scenarios must each be a JSON array.", "success": "Sequence-aware dry-run completed", "error": "Sequence-aware simulation failed", "blocked": "Final risk-use gate is blocked", "needsSequence": "Independent sampling is unavailable; provide a sequence-aware history window and future input scenarios.",
-        "deterministic": "Deterministic recursive forecast", "uncertaintyUnavailable": "Uncertainty intervals are not available for this dry-run.", "deterministicMode": "Deterministic dry-run", "stochasticMode": "Stochastic sequence paths", "simulationCount": "Paths", "seed": "Seed", "stochasticComplete": "Stochastic sequence simulation", "coverageUnavailable": "Interval coverage requires future observed outcomes.", "residualMethod": "Residual method", "residualScale": "Residual scale", "windowRows": "History rows", "sequenceLength": "Sequence length", "forecastMode": "Forecast mode", "schemaVersion": "Schema version", "modelVersion": "Model version", "timestamp": "Timestamp", "predicted": "Predicted"
+        "deterministic": "Deterministic recursive forecast", "uncertaintyUnavailable": "Uncertainty intervals are not available for this dry-run.", "deterministicMode": "Deterministic dry-run", "stochasticMode": "Stochastic sequence paths", "simulationCount": "Paths", "seed": "Seed", "stochasticComplete": "Stochastic sequence simulation", "coverageUnavailable": "Interval coverage requires future observed outcomes.", "residualMethod": "Residual method", "residualScale": "Residual scale", "windowRows": "History rows", "sequenceLength": "Sequence length", "forecastMode": "Forecast mode", "schemaVersion": "Schema version", "modelVersion": "Model version", "timestamp": "Timestamp", "predicted": "Predicted",
+        "historyTitle": "History rows (time, target, inputs)", "scenariosTitle": "Future input scenarios (time + inputs)", "addRow": "Add row", "removeRow": "Remove", "loadFromJson": "Load from JSON (optional; populates the row editor)", "noColumns": "The interactive row editor is not ready. Run time-series preparation (Prepare & Validate) for this dataset, or select a persisted time-series Transformer model whose metadata can be loaded."
+      },
+      "riskUse": {
+        "title": "Final risk-use gate", "checking": "Checking the final risk-use gate...",
+        "approveButton": "Approve risk use", "modalTitle": "Approve final risk-use gate",
+        "reviewerLabel": "Reviewer", "reviewerPlaceholder": "Reviewer name", "reviewerRequired": "Reviewer is required.",
+        "reasonLabel": "Reason", "reasonPlaceholder": "Justification for approving model risk use", "reasonRequired": "Reason is required.",
+        "submit": "Approve", "submitting": "Approving...", "cancel": "Cancel",
+        "error": "Final risk-use gate approval failed",
+        "reasons": {
+          "model_not_validated": "The model is not validated or approved",
+          "persistence_metadata_invalid": "The persisted model metadata is invalid",
+          "review_provenance_missing": "No approved review provenance is recorded",
+          "time_series_gate_evidence_missing": "Approved time-series gate evidence is missing",
+          "schema_version_invalid": "The model schema version is unsupported",
+          "backend_provenance_invalid": "The backend provenance is invalid"
+        }
       },
       "detectedTimestamp": "detected time",
       "timeColumn": "Time Column",
