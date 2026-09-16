@@ -3289,6 +3289,23 @@ def _handle_time_series_explain(params: dict) -> dict:
     estimator, metadata = load_estimator(
         _VERSION_CHAIN._project_root, params["model_id"], df=df,
     )
+    if not hasattr(estimator, "feature_importances_") and not hasattr(estimator, "coef_"):
+        return _plain_types({
+            "model_id": params["model_id"],
+            "dataset_id": params["dataset_id"],
+            "status": "not_supported",
+            "feature_importance": {
+                "method": "unavailable",
+                "features": [],
+                "expected_value": None,
+                "reason": (
+                    "Transformer models do not support feature-level explanation yet. "
+                    "Tree-based (LightGBM/XGBoost) and linear models are supported."
+                ),
+            },
+            "sensitivity": {"status": "not_supported"},
+            "interactions": {"status": "not_supported"},
+        })
     feature_names = list(metadata.get("feature_names") or [])
     configuration = metadata.get("feature_configuration") or {}
     featured = build_time_features(
