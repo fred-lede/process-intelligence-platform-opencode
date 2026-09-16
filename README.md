@@ -204,7 +204,7 @@ print('GPU OK')
 │   │   ├── analysis/       # anomaly scenarios
 │   │   ├── modeling/       # metrics / fitters / registry / doe / interactions / shap / validation
 │   │   └── auth/           # 使用者角色與稽核
-│   └── tests/              # 181 tests
+│   └── tests/              # 585 tests
 ├── assets/                 # 應用程式圖示
 ├── data/                   # 測試資料範例
 └── docs/                   # 規格文件
@@ -357,11 +357,11 @@ print('GPU OK')
 
 | 項目 | 數值 |
 |------|------|
-| **測試總數** | 497 passed |
+| **測試總數** | 585 passed |
 | **跳過** | 1 |
-| **覆蓋率** | 70% |
-| **Commits** | 202 |
-| **總代碼行數** | ~15,100 行 |
+| **覆蓋率** | 83% |
+| **Commits** | 852 |
+| **總代碼行數** | ~30,700 行 |
 | **多語言** | 3（en / zh-TW / es-MX） |
 
 ## 設計原則
@@ -405,6 +405,40 @@ data/test_dataset.csv
 包含 82 筆資料，4 個輸入變數 (temperature, pressure, time, humidity) + 1 個輸出變數 (yield)，適合測試完整分析流程。
 
 ## 版本紀錄
+
+### v0.9.1（2026-09-16）
+
+**時間序列深度模型與 DOE／模型核准強化**
+- 接入 Temporal Fusion Transformer（TFT），支援 PyTorch／Apple MPS 訓練與預測；沒有 PyTorch 時仍使用既有模型。
+- 新增序列感知模擬（sequence-aware simulation）與時間序列最終風險閘門。
+- DOE 強化：Pareto、Contour、3D Surface、殘差診斷；Prediction Profiler（Maximize／Minimize／Target）；SPC 穩定性 Gate 與人工覆核稽核。
+- 報告新增「DOE 圖表與使用限制」段落；報告匯出失敗時在 UI 顯示錯誤詳細訊息。
+- 完整部署細節見 [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md)，TFT 部署見 [docs/deployment-time-series.md](docs/deployment-time-series.md)。
+
+### v0.9.0（2026-09-15）
+
+- 首次支援時間序列深度模型：將 Temporal Fusion Transformer（TFT）接入時間序列模型階梯。
+- 序列感知（sequence-aware）模擬流程與時間序列最終風險閘門。
+- 詳見 [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md) 與 [docs/deployment-time-series.md](docs/deployment-time-series.md)。
+
+### v0.8.3（2026-09-11）
+
+- 新增依目前頁面切換的使用說明視窗，涵蓋功能目的、統計原理、公式、圖表判讀、限制與工程建議。
+- 使用說明支援繁體中文、英文、西班牙文。
+
+### v0.8.2（2026-09-10）
+
+**蒙地卡羅抽樣分布**
+- 預設可依資料健檢的 `best_distribution` 自動選擇抽樣方式。
+- 支援 `uniform`、`triangular`、`normal` 與 `empirical`（Bootstrap）。
+- 仍可手動選擇歷史資料 Bootstrap 或各欄位常態抽樣。
+- 模擬結果記錄實際抽樣方式、輸入分布參數與外推風險。
+
+### v0.8.1（2026-09-10）
+
+**敏感度分析與效應量**
+- 新增 permutation-RMSE 敏感度分析與標準化效應量表／圖，整合至模型中心、報告與 AI 摘要。
+- Excel 報告加入敏感度指標。
 
 ### v0.8.0（2026-09-09）
 
@@ -560,34 +594,6 @@ data/test_dataset.csv
 
 - 初始版本：Data Import、Process Definition、Exploration、Model Center、Validation、Monte Carlo、SPC、Reports
 - 三語支援（en / zh-TW / es-MX）
-
-### v0.8.3（2026-09-11）
-
-- 新增依目前頁面切換的使用說明視窗，涵蓋功能目的、統計原理、公式、圖表判讀、限制與工程建議。
-- 使用說明支援繁體中文、英文、西班牙文。
-
-### v0.9.1（2026-09-16）
-
-**時間序列深度模型與 DOE／模型核准強化**
-- 接入 Temporal Fusion Transformer（TFT），支援 PyTorch／Apple MPS 訓練與預測；沒有 PyTorch 時仍使用既有模型。
-- 新增序列感知模擬（sequence-aware simulation）與時間序列最終風險閘門。
-- DOE 強化：Pareto、Contour、3D Surface、殘差診斷；Prediction Profiler（Maximize／Minimize／Target）；SPC 穩定性 Gate 與人工覆核稽核。
-- 報告新增「DOE 圖表與使用限制」段落；報告匯出失敗時在 UI 顯示錯誤詳細訊息。
-- 完整部署細節見 [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md)，TFT 部署見 [docs/deployment-time-series.md](docs/deployment-time-series.md)。
-
-### v0.9.0（2026-09-15）
-
-- 首次支援時間序列深度模型：將 Temporal Fusion Transformer（TFT）接入時間序列模型階梯。
-- 序列感知（sequence-aware）模擬流程與時間序列最終風險閘門。
-- 詳見 [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md) 與 [docs/deployment-time-series.md](docs/deployment-time-series.md)。
-
-### v0.8.2（2026-09-10）
-
-**蒙地卡羅抽樣分布**
-- 預設可依資料健檢的 `best_distribution` 自動選擇抽樣方式。
-- 支援 `uniform`、`triangular`、`normal` 與 `empirical`（Bootstrap）。
-- 仍可手動選擇歷史資料 Bootstrap 或各欄位常態抽樣。
-- 模擬結果記錄實際抽樣方式、輸入分布參數與外推風險。
 
 ## 開發者
 

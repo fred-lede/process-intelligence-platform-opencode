@@ -86,10 +86,6 @@ Multiple scenario fixtures are provided. See the test-data guides: [繁體中文
 
 ## Version history
 
-### v0.8.3 (2026-09-11)
-
-Added page-specific usage guides with statistical principles, formulas, chart interpretation, limitations, and engineering recommendations in English, Traditional Chinese, and Spanish.
-
 ### v0.9.1 (2026-09-16)
 
 **Time-series deep models and DOE / model governance hardening**
@@ -104,6 +100,10 @@ Added page-specific usage guides with statistical principles, formulas, chart in
 - Added time-series deep models for the first time: Temporal Fusion Transformer (TFT) integrated into the time-series model ladder.
 - Added sequence-aware simulation flow and a time-series final risk gate.
 - See [docs/releases/v0.9.1.md](docs/releases/v0.9.1.md) and [docs/deployment-time-series.md](docs/deployment-time-series.md).
+
+### v0.8.3 (2026-09-11)
+
+Added page-specific usage guides with statistical principles, formulas, chart interpretation, limitations, and engineering recommendations in English, Traditional Chinese, and Spanish.
 
 ### v0.8.2 (2026-09-10)
 
