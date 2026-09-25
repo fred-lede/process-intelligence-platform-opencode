@@ -86,7 +86,7 @@ export default function Exploration() {
       .filter(([, s]) => s.numeric)
       .map(([name]) => name)
     const fromRoles = fields
-      .filter((f) => f.confirmed && (f.role === 'input' || f.role === 'output') && f.dataType === 'continuous')
+      .filter((f) => f.confirmed && (f.role === 'input' || f.role === 'process_input' || f.role === 'material_input' || f.role === 'output') && f.dataType === 'continuous')
       .map((f) => f.originalName)
     return Array.from(new Set([...fromStats, ...fromRoles]))
   }, [importResult, fields])

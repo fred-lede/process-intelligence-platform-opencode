@@ -184,6 +184,8 @@
     "role": {
       "identifier": "識別欄位",
       "input": "輸入參數",
+      "process_input": "製程參數",
+      "material_input": "來料／零件規格",
       "output": "輸出結果",
       "quality_label": "品質結果",
       "category": "類別",

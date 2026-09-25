@@ -114,7 +114,7 @@ export default function ProcessDefine() {
   }, [importResult, fields])
 
   const inputs = useMemo(
-    () => fields.filter((f) => f.role === 'input').map((f) => f.originalName),
+    () => fields.filter((f) => f.role === 'input' || f.role === 'process_input' || f.role === 'material_input').map((f) => f.originalName),
     [fields],
   )
 

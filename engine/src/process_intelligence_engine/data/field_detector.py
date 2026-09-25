@@ -19,6 +19,8 @@ from enum import Enum
 class FieldRole(str, Enum):
     IDENTIFIER = "identifier"
     INPUT = "input"
+    PROCESS_INPUT = "process_input"
+    MATERIAL_INPUT = "material_input"
     OUTPUT = "output"
     QUALITY_LABEL = "quality_label"
     CATEGORY = "category"

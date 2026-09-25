@@ -198,7 +198,7 @@ export default function ModelCenter() {
         : interactionModelType === 'residual_hybrid' ? 'hybrid' : 'notModeled'
   useEffect(() => {
     if (!datasetId || !fields.length) return
-    runReadiness(datasetId, fields.filter(f => f.role === 'input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))).then(setReadiness).catch(() => setReadiness(null))
+    runReadiness(datasetId, fields.filter(f => f.role === 'input' || f.role === 'process_input' || f.role === 'material_input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))).then(setReadiness).catch(() => setReadiness(null))
   }, [datasetId, fields])
   useEffect(() => {
     let active = true
@@ -214,7 +214,7 @@ export default function ModelCenter() {
     return () => { active = false }
   }, [datasetId, target, selectedInputs, modelType])
   const inputOptions = fields
-    .filter((f) => f.role === 'input')
+    .filter((f) => f.role === 'input' || f.role === 'process_input' || f.role === 'material_input')
     .map((f) => ({ label: f.originalName, value: f.originalName }))
   const outputOptions = fields
     .filter((f) => f.role === 'output')

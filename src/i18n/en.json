@@ -184,6 +184,8 @@
     "role": {
       "identifier": "Identifier",
       "input": "Input",
+      "process_input": "Process parameter",
+      "material_input": "Incoming/part specification",
       "output": "Output",
       "quality_label": "Quality Label",
       "category": "Category",

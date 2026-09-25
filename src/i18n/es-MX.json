@@ -186,6 +186,8 @@
     "role": {
       "identifier": "Identificador",
       "input": "Entrada",
+      "process_input": "Parámetro de proceso",
+      "material_input": "Especificación de material/pieza",
       "output": "Salida",
       "quality_label": "Etiqueta de Calidad",
       "category": "Categoría",

@@ -64,6 +64,8 @@ export interface ImportResult {
 export type FieldRole =
   | 'identifier'
   | 'input'
+  | 'process_input'
+  | 'material_input'
   | 'output'
   | 'quality_label'
   | 'category'

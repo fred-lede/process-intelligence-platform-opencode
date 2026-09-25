@@ -72,7 +72,7 @@ export default function Report() {
 
     setGenerating(true)
     try {
-      const readiness = fields.length ? await runReadiness(datasetId, fields.filter(f => f.role === 'input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))) : undefined
+      const readiness = fields.length ? await runReadiness(datasetId, fields.filter(f => f.role === 'input' || f.role === 'process_input' || f.role === 'material_input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))) : undefined
       const result = await generateReport({
         project_name: 'Process Analysis Report',
         operator: 'Fred Wang',

@@ -49,7 +49,7 @@ export function buildDataImportContext(opts: {
   quality?: { issues: Array<{ check: string; column: string | null; severity: string; message: string }> }
 }): string {
   if (!opts.fields.length && opts.rowCount === null) return ''
-  const inputs = opts.fields.filter((f) => f.role === 'input').map((f) => f.originalName)
+  const inputs = opts.fields.filter((f) => f.role === 'input' || f.role === 'process_input' || f.role === 'material_input').map((f) => f.originalName)
   const outputs = opts.fields.filter((f) => f.role === 'output').map((f) => f.originalName)
   const lines = [
     `Imported dataset: ${opts.rowCount ?? 'N/A'} rows x ${opts.columnCount ?? 'N/A'} columns.`,

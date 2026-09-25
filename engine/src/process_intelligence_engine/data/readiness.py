@@ -11,7 +11,7 @@ def analyze_readiness(df: pd.DataFrame, fields: list[dict], spec: dict | None = 
     diagnostics = []
     for field in fields:
         column, role = str(field.get("name", "")), field.get("role", "")
-        if role not in ("input", "output") or column not in df.columns:
+        if role not in ("input", "process_input", "material_input", "output") or column not in df.columns:
             continue
         series = df[column]
         numeric = pd.to_numeric(series, errors="coerce")

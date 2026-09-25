@@ -44,6 +44,8 @@ interface DataImportProps {
 const ROLE_OPTIONS: { value: FieldRole; color: string }[] = [
   { value: 'identifier', color: 'blue' },
   { value: 'input', color: 'geekblue' },
+  { value: 'process_input', color: 'blue' },
+  { value: 'material_input', color: 'orange' },
   { value: 'output', color: 'purple' },
   { value: 'quality_label', color: 'magenta' },
   { value: 'category', color: 'cyan' },
@@ -155,7 +157,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
 
   useEffect(() => {
     if (!importResult || !fields.length) return
-    const selected = fields.filter(f => f.role === 'input' || f.role === 'output').map(f => ({ name: f.originalName, role: f.role }))
+    const selected = fields.filter(f => ['input', 'process_input', 'material_input', 'output'].includes(f.role)).map(f => ({ name: f.originalName, role: f.role }))
     if (!selected.length) return
     runReadiness(importResult.dataset_id, selected, spec ? (spec as unknown as Record<string, unknown>) : undefined).then(setReadiness).catch(() => setReadiness(null))
   }, [importResult, fields, spec])
@@ -249,7 +251,7 @@ export default function DataImport({ onDetected, onFinished }: DataImportProps) 
           .map((f) => f.originalName),
         batch_columns: [],
         input_columns: finalFields
-          .filter((f) => f.role === 'input')
+          .filter((f) => f.role === 'input' || f.role === 'process_input' || f.role === 'material_input')
           .map((f) => f.originalName),
         output_columns: finalFields
           .filter((f) => f.role === 'output')
