@@ -478,6 +478,20 @@ export default function Exploration() {
                     line: { dash: 'dot' as const, color: '#f5222d' },
                   }))
                 : []),
+              ...(spec?.inputRanges?.[trendColumn ?? '']
+                ? [
+                    ...(spec.inputRanges[trendColumn ?? '']?.lower != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.lower!, name: `${t('processDefine.inputLower')} ${spec.inputRanges[trendColumn ?? '']!.lower}`, color: '#13c2c2' }] : []),
+                    ...(spec.inputRanges[trendColumn ?? '']?.nominal != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.nominal!, name: `${t('processDefine.inputNominal')} ${spec.inputRanges[trendColumn ?? '']!.nominal}`, color: '#722ed1' }] : []),
+                    ...(spec.inputRanges[trendColumn ?? '']?.upper != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.upper!, name: `${t('processDefine.inputUpper')} ${spec.inputRanges[trendColumn ?? '']!.upper}`, color: '#13c2c2' }] : []),
+                  ].map(({ value, name, color }) => ({
+                    x: scatterData.x,
+                    y: scatterData.x.map(() => value),
+                    type: 'scatter' as const,
+                    mode: 'lines',
+                    name,
+                    line: { dash: 'dot' as const, color },
+                  }))
+                : []),
             ]}
             layout={{
               title: { text: trendColumn },
