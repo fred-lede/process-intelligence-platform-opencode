@@ -236,8 +236,8 @@ export default function ProcessDefine() {
     if (!importResult) return
     try {
       const result = await analyzeSPC({ dataset_id: importResult.dataset_id, column: fieldName })
-      const lcl = result.lcl
-      const ucl = result.ucl
+      const lcl = result.control_limits.i_lcl ?? result.control_limits.x_lcl
+      const ucl = result.control_limits.i_ucl ?? result.control_limits.x_ucl
       if (lcl == null || ucl == null) throw new Error('Unable to calculate automatic control limits')
       setManualLimits(prev => ({ ...prev, [fieldName]: { lcl, ucl } }))
       setControlLimit(fieldName, { lcl, ucl })
