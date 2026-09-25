@@ -29,6 +29,7 @@ import {
   runQualityChecks,
   suggestSpecLimits,
   registerAnomalyEvent,
+  analyzeSPC,
   type AnomalyScenario,
   type QualityIssue,
   type QualityReport,
@@ -231,6 +232,20 @@ export default function ProcessDefine() {
     }
   }
 
+  const handleAuto3Sigma = async (fieldName: string) => {
+    if (!importResult) return
+    try {
+      const result = await analyzeSPC({ dataset_id: importResult.dataset_id, column: fieldName })
+      const lcl = result.lcl
+      const ucl = result.ucl
+      if (lcl == null || ucl == null) throw new Error('Unable to calculate automatic control limits')
+      setManualLimits(prev => ({ ...prev, [fieldName]: { lcl, ucl } }))
+      setControlLimit(fieldName, { lcl, ucl })
+    } catch (e) {
+      setError(String(e))
+    }
+  }
+
   const inputColumns: ColumnsType<{ name: string }> = [
     {
       title: t('processDefine.inputName'),
@@ -325,9 +340,9 @@ export default function ProcessDefine() {
       title: '',
       key: 'auto',
       width: 120,
-      render: (_: unknown, __: unknown) => (
+      render: (_: unknown, record: { name: string }) => (
         <Tooltip title={t('processDefine.auto3sigma')}>
-          <Tag color="default" style={{ cursor: 'pointer' }}>
+          <Tag color="default" style={{ cursor: 'pointer' }} onClick={() => void handleAuto3Sigma(record.name)}>
             <InfoCircleOutlined /> 3σ
           </Tag>
         </Tooltip>
