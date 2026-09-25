@@ -213,7 +213,11 @@ export default function Exploration() {
       setSeries(seriesRes)
       if (spcRes.control_limits) {
         const cl = spcRes.control_limits
-        setTrendCtrl({ ucl: cl.i_ucl ?? cl.x_ucl, lcl: cl.i_lcl ?? cl.x_lcl })
+        const xLimits = (cl as { x?: { ucl?: number; lcl?: number } }).x
+        setTrendCtrl({
+          ucl: cl.i_ucl ?? cl.x_ucl ?? xLimits?.ucl ?? (spcRes as { ucl?: number }).ucl,
+          lcl: cl.i_lcl ?? cl.x_lcl ?? xLimits?.lcl ?? (spcRes as { lcl?: number }).lcl,
+        })
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
