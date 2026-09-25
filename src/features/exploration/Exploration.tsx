@@ -480,9 +480,9 @@ export default function Exploration() {
                 : []),
               ...(spec?.inputRanges?.[trendColumn ?? '']
                 ? [
-                    ...(spec.inputRanges[trendColumn ?? '']?.lower != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.lower!, name: `${t('processDefine.inputLower')} ${spec.inputRanges[trendColumn ?? '']!.lower}`, color: '#13c2c2' }] : []),
-                    ...(spec.inputRanges[trendColumn ?? '']?.nominal != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.nominal!, name: `${t('processDefine.inputNominal')} ${spec.inputRanges[trendColumn ?? '']!.nominal}`, color: '#722ed1' }] : []),
-                    ...(spec.inputRanges[trendColumn ?? '']?.upper != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.upper!, name: `${t('processDefine.inputUpper')} ${spec.inputRanges[trendColumn ?? '']!.upper}`, color: '#13c2c2' }] : []),
+                    ...(spec.inputRanges[trendColumn ?? '']?.lower != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.lower!, name: `${fields.find(f => f.originalName === trendColumn)?.role === 'material_input' ? 'LSL' : 'LOL'} ${spec.inputRanges[trendColumn ?? '']!.lower}`, color: '#13c2c2' }] : []),
+                    ...(spec.inputRanges[trendColumn ?? '']?.nominal != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.nominal!, name: `${fields.find(f => f.originalName === trendColumn)?.role === 'material_input' ? 'Target' : 'Nominal'} ${spec.inputRanges[trendColumn ?? '']!.nominal}`, color: '#722ed1' }] : []),
+                    ...(spec.inputRanges[trendColumn ?? '']?.upper != null ? [{ value: spec.inputRanges[trendColumn ?? '']!.upper!, name: `${fields.find(f => f.originalName === trendColumn)?.role === 'material_input' ? 'USL' : 'UOL'} ${spec.inputRanges[trendColumn ?? '']!.upper}`, color: '#13c2c2' }] : []),
                   ].map(({ value, name, color }) => ({
                     x: scatterData.x,
                     y: scatterData.x.map(() => value),
