@@ -235,7 +235,7 @@ export default function SPC() {
         data.push({
           x: [xs[0], xs[xs.length - 1]], y: [v, v],
           mode: 'lines', name: ref ? `${name} (ref)` : name,
-          line: { color: '#f5222d', width: 1.5 },
+          line: { color: '#f5222d', width: 1.5, dash: 'dot' },
         })
       }
       push(spec?.lsl ?? null, 'LSL')
@@ -258,7 +258,7 @@ export default function SPC() {
       }
       if (cl.i_center != null && x.length > 0) {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.i_center, cl.i_center],
-          mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' } })
+          mode: 'lines', name: 'CL', line: { color: '#595959', dash: 'solid' } })
       }
       addSpecLines()
       const violX = (res.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)
@@ -388,7 +388,7 @@ export default function SPC() {
       }
       if (cl.x_center != null && x.length > 0) {
         data.push({ x: [x[0], x[x.length - 1]], y: [cl.x_center, cl.x_center],
-          mode: 'lines', name: 'CL', line: { color: '#52c41a', dash: 'dash' } })
+          mode: 'lines', name: 'CL', line: { color: '#595959', dash: 'solid' } })
       }
       addSpecLines(true)
       const violX = (res.violations ?? []).map(v => x[v.point_idx] ?? v.point_idx)

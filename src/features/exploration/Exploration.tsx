@@ -466,16 +466,17 @@ export default function Exploration() {
                 line: { dash: 'dash' as const, color: '#fa8c16' },
               }] : []),
               ...(spec && trendColumn === spec.outputField
-                ? [spec.lsl, spec.usl]
-                    .filter((v): v is number => v != null)
-                    .map((v, i) => ({
-                      x: scatterData.x,
-                      y: scatterData.x.map(() => v),
-                      type: 'scatter' as const,
-                      mode: 'lines',
-                      name: i === 0 ? `LSL ${v}` : `USL ${v}`,
-                      line: { dash: 'dash' as const, color: i === 0 ? '#f5222d' : '#fa8c16' },
-                    }))
+                ? [
+                    ...(spec.lsl != null ? [{ value: spec.lsl, name: `LSL ${spec.lsl}` }] : []),
+                    ...(spec.usl != null ? [{ value: spec.usl, name: `USL ${spec.usl}` }] : []),
+                  ].map(({ value, name }) => ({
+                    x: scatterData.x,
+                    y: scatterData.x.map(() => value),
+                    type: 'scatter' as const,
+                    mode: 'lines',
+                    name,
+                    line: { dash: 'dot' as const, color: '#f5222d' },
+                  }))
                 : []),
             ]}
             layout={{
