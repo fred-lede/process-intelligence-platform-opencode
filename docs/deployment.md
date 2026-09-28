@@ -64,6 +64,18 @@ npm run engine:build -- --with-cuda
 
 註：`nvidia-*` 是 xgboost 在 **Linux** 上的相依（其 wheel 的 platform marker 為 `platform_system == 'Linux'`），所以這兩個產物的差異主要出現在 Linux。
 
+**發行流程產生的變體**（`.github/workflows/release.yml`）
+
+| 平台 | 產物 |
+|---|---|
+| macOS（arm64 / x86_64） | CPU 版 |
+| Linux（x64） | **CPU 版** 與 **CUDA 版**（productName 加上 `(CUDA)` 以免檔名衝突） |
+| Windows（x64） | CPU 版 |
+
+Windows 沒有另立 CUDA 產物，因為那會產生**位元組完全相同**的檔案：Windows 的 xgboost wheel 本身已含 GPU 程式碼（DLL 內可見 `gpu_hist`、`cuInit`、`cudaFree`，且不含 CPU-only 建置的「GPU Tree Learner was not enabled」字串），而且它不依賴任何 `nvidia-*` 套件（那些是 Linux-only marker）。若在 Windows 上需要 GPU **LightGBM**，那需要從原始碼編譯，見上方 LightGBM GPU 章節。
+
+Linux 的兩個安裝檔共用同一個 app identifier，**只需安裝其中一個**。
+
 ### PyInstaller 無法跨平台／跨架構編譯
 
 凍結後的引擎架構跟隨建置 runner。macOS x86_64 因此使用 Intel runner（`macos-13`）；CI 另有一道 `lipo -archs` 檢查，引擎架構與 bundle 目標不符時直接讓建置失敗，避免悄悄出貨無法執行的產物。

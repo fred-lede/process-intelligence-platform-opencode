@@ -16,15 +16,27 @@ jobs:
         settings:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
+            engine_args: ''
           # Intel runner on purpose: PyInstaller cannot cross-compile, so the
           # frozen engine inherits the runner's architecture. Building the
           # x86_64 bundle on an arm64 runner would ship an arm64 engine.
           - platform: 'macos-13'
             args: '--target x86_64-apple-darwin'
+            engine_args: ''
           - platform: 'ubuntu-22.04'
             args: ''
+            engine_args: ''
+          # CPU / CUDA variants are only meaningful on Linux: xgboost declares
+          # its `nvidia-*` CUDA dependencies with a Linux-only platform marker,
+          # so on Windows and macOS there is nothing for --with-cuda to add.
+          # productName is overridden so the two Linux artifacts do not collide
+          # in the release; the app identifier is the same, so install one.
+          - platform: 'ubuntu-22.04'
+            args: '--config {"productName":"Process Intelligence Platform (CUDA)"}'
+            engine_args: '-- --with-cuda'
           - platform: 'windows-latest'
             args: ''
+            engine_args: ''
     runs-on: ${{ matrix.settings.platform }}
 
     steps:
@@ -56,7 +68,7 @@ jobs:
           git diff --exit-code
 
       - name: build frozen analysis engine
-        run: npm run engine:build
+        run: npm run engine:build ${{ matrix.settings.engine_args }}
 
       - name: verify frozen engine architecture (macOS)
         if: matrix.settings.platform == 'macos-latest' || matrix.settings.platform == 'macos-13'
