@@ -366,12 +366,22 @@ print('GPU OK')
 
 | 項目 | 數值 |
 |------|------|
-| **測試總數** | 585 passed |
-| **跳過** | 1 |
-| **覆蓋率** | 83% |
-| **Commits** | 852 |
-| **總代碼行數** | ~30,700 行 |
-| **多語言** | 3（en / zh-TW / es-MX） |
+| **引擎測試** | 645 passed / 12 skipped |
+| **覆蓋率** | 78%（`pytest --cov`，僅涵蓋 Python 引擎） |
+| **Commits** | 881 |
+| **應用程式碼行數** | ~32,400 行（`engine/src` + `src` + `src-tauri/src`） |
+| **測試程式碼行數** | ~9,800 行（`engine/tests`） |
+| **多語言** | 3（en / zh-TW / es-MX，1345 keys 對齊） |
+
+量測方式（可重跑驗證）：
+
+```bash
+git rev-list --count HEAD
+find engine/src src src-tauri/src -type f \( -name '*.py' -o -name '*.ts' -o -name '*.tsx' -o -name '*.rs' \) | xargs wc -l | tail -1
+cd engine && .venv/bin/pytest -q          # addopts 已含 --cov
+```
+
+`validate` workflow 每次 push 與 PR 都會執行前端的 typecheck、production build、i18n key 對齊與出貨相依稽核，以及引擎的 pytest 與 Rust 的 `cargo test`。
 
 ## 設計原則
 
@@ -414,6 +424,14 @@ data/test_dataset.csv
 包含 82 筆資料，4 個輸入變數 (temperature, pressure, time, humidity) + 1 個輸出變數 (yield)，適合測試完整分析流程。
 
 ## 版本紀錄
+
+### v0.9.8（2026-09-28）
+
+**README 指標改為實測值**
+
+- 「測試統計」表原本宣稱 585 passed / 1 skipped / 83% 覆蓋率 / 852 commits / ~30,700 行，實測為 **645 passed / 12 skipped / 78% / 881 commits / ~32,400 行應用程式碼**（另有 ~9,800 行測試碼）。已全部更正為量測值。
+- 表下補上量測指令，讓這些數字可被重跑驗證；並註明 CI 每次都執行哪些檢查。
+- 先前版本紀錄中的數字（例如 v0.3.0 的「345 passed」）保留為當時的歷史紀錄，不回改。
 
 ### v0.9.7（2026-09-28）
 
