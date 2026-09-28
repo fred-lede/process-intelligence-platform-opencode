@@ -1870,9 +1870,17 @@ export interface UploadPreview {
   masked_columns: string[]
   excluded_columns: string[]
   mask_strategies: Record<string, string>
-  noise_config: Record<string, { std: number; method: string }>
+  /** `sigma` is the resolved Gaussian sigma (absolute, in the column's units). */
+  noise_config: Record<string, { sigma: number; method: string; column_std?: number; ratio?: number }>
   upload_hash: string
   timestamp: string
+  seed: number
+  /** Fingerprint of the local pseudonym key; never the key itself. */
+  pseudonym_key_id: string
+  /** False when no key is configured, so pseudonyms will not repeat later. */
+  pseudonyms_stable: boolean
+  /** Operator-facing warnings, e.g. noise that is too small to protect. */
+  warnings: string[]
 }
 
 export interface CloudPreviewParams {
@@ -1880,7 +1888,11 @@ export interface CloudPreviewParams {
   sensitive_columns?: string[]
   excluded_columns?: string[]
   strategy_overrides?: Record<string, string>
+  /** Absolute Gaussian sigma. Prefer `noise_ratio`: an absolute sigma means
+   *  different things on columns with different units. */
   noise_std?: number
+  /** Gaussian sigma as a fraction of each column's standard deviation. */
+  noise_ratio?: number
   seed?: number
 }
 
@@ -1899,6 +1911,7 @@ export interface CloudUploadParams {
   excluded_columns?: string[]
   strategy_overrides?: Record<string, string>
   noise_std?: number
+  noise_ratio?: number
   seed?: number
   operator: string
   provider: string
@@ -1915,10 +1928,11 @@ export interface UploadRecord {
   row_count: number
   columns_uploaded: string[]
   mask_rules: Record<string, string>
-  noise_rules: Record<string, { std: number; method: string }>
+  noise_rules: Record<string, { sigma: number; method: string; column_std?: number; ratio?: number }>
   upload_hash: string
   purpose: string
   timestamp: string
+  pseudonym_key_id?: string
 }
 
 export async function previewCloudUpload(params: CloudPreviewParams): Promise<UploadPreview> {

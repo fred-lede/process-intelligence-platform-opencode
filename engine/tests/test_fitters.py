@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 from process_intelligence_engine.modeling.fitters import (
+    _design_matrix,
     fit_doe_linear,
     fit_doe_quadratic,
     fit_random_forest,
@@ -111,6 +112,44 @@ def test_residual_hybrid_fit_is_better_than_linear_alone():
     hybrid = fit_residual_hybrid(df, target="y", inputs=["x"], random_state=11)
     assert hybrid.model_type == "residual_hybrid"
     assert hybrid.metrics["r2"] > 0.9
+
+
+def test_residual_hybrid_reports_every_doe_term():
+    # Regression: the fitter used to `return` from inside its coefficient loop,
+    # so `coefficients` held a single term and the UI displayed an equation that
+    # did not describe the model that had actually been fitted.
+    rng = np.random.default_rng(5)
+    n = 300
+    x1 = rng.uniform(0, 1, n)
+    x2 = rng.uniform(0, 1, n)
+    x3 = rng.uniform(0, 1, n)
+    y = 1.0 + 2.0 * x1 - x2 + 0.5 * x3 + x1 * x2 + rng.normal(0, 0.01, n)
+    df = pd.DataFrame({"x1": x1, "x2": x2, "x3": x3, "y": y})
+
+    inputs = ["x1", "x2", "x3"]
+    fit = fit_residual_hybrid(df, target="y", inputs=inputs, random_state=3)
+
+    expected = {
+        "x1", "x2", "x3",
+        "x1^2", "x2^2", "x3^2",
+        "x1*x2", "x1*x3", "x2*x3",
+        "_intercept",
+    }
+    assert fit.coefficients is not None
+    assert set(fit.coefficients) == expected
+    # The reported terms must match the DOE design matrix that was fitted.
+    assert len(fit.coefficients) == len(_design_matrix(df, inputs, degree=2).columns)
+
+
+def test_residual_hybrid_single_input_keeps_quadratic_term():
+    rng = np.random.default_rng(9)
+    n = 300
+    x = rng.uniform(0, 1, n)
+    y = 1.0 + 2.0 * x + np.sin(10 * x) + rng.normal(0, 0.02, n)
+    df = pd.DataFrame({"x": x, "y": y})
+    fit = fit_residual_hybrid(df, target="y", inputs=["x"], random_state=11)
+    assert fit.coefficients is not None
+    assert set(fit.coefficients) == {"x", "x^2", "_intercept"}
 
 
 def test_fit_dto_is_json_serializable():

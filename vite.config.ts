@@ -8,12 +8,34 @@ export default defineConfig({
   clearScreen: false,
   build: {
     chunkSizeWarningLimit: 5000,
-    rollupOptions: {
+    // Vite 8 ships Rolldown instead of Rollup. `build.rollupOptions` still
+    // works via a compatibility layer but is deprecated, and the *object* form
+    // of `output.manualChunks` was removed outright — it is what made the build
+    // fail with "manualChunks is not a function". Rolldown's replacement is
+    // `output.codeSplitting` groups.
+    rolldownOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-antd': ['antd'],
-          'vendor-plotly': ['react-plotly.js'],
+        codeSplitting: {
+          // The first group whose `test` matches captures the module, so the
+          // plotly group — whose path also contains "react" — is listed before
+          // the react group. `includeDependenciesRecursively` reproduces the
+          // dependency-inclusive behaviour of the old object form.
+          groups: [
+            {
+              name: 'vendor-plotly',
+              test: /node_modules\/(plotly\.js|react-plotly\.js)\//,
+              includeDependenciesRecursively: true,
+            },
+            {
+              name: 'vendor-antd',
+              test: /node_modules\/(antd|@ant-design)\//,
+              includeDependenciesRecursively: true,
+            },
+            {
+              name: 'vendor-react',
+              test: /node_modules\/(react|react-dom|scheduler)\//,
+            },
+          ],
         },
       },
     },

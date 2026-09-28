@@ -64,26 +64,154 @@ pub type Result<T> = std::result::Result<T, EngineError>;
 /// Pending request registry shared between the manager and the reader thread.
 type Pending = Arc<Mutex<HashMap<String, mpsc::Sender<Value>>>>;
 
+/// Everything needed to spawn the engine child process.
+///
+/// The engine can be launched in two shapes: a frozen standalone executable
+/// (how shipped builds work) or a Python interpreter running the package
+/// module (how development works). Both speak the same JSON-lines protocol.
+#[derive(Debug, Clone)]
+pub struct EngineLaunch {
+    /// Executable to spawn.
+    pub program: PathBuf,
+    /// Arguments passed to the executable.
+    pub args: Vec<String>,
+    /// Working directory for the child, when one is required.
+    pub working_dir: Option<PathBuf>,
+    /// Which candidate matched, for logs and error messages.
+    pub source: &'static str,
+}
+
+/// Module invoked when the engine is launched through a Python interpreter.
+const ENGINE_MODULE: &str = "process_intelligence_engine.main";
+
+/// Name of the frozen engine executable produced by `scripts/build-engine.mjs`.
+fn frozen_engine_name() -> &'static str {
+    if cfg!(windows) {
+        "process-intelligence-engine.exe"
+    } else {
+        "process-intelligence-engine"
+    }
+}
+
+/// Interpreter path inside a virtualenv, which differs by platform.
+fn venv_python(venv_root: &std::path::Path) -> PathBuf {
+    if cfg!(windows) {
+        venv_root.join("Scripts").join("python.exe")
+    } else {
+        venv_root.join("bin").join("python")
+    }
+}
+
+/// Build the launch spec for a Python interpreter running the engine module.
+fn python_launch(python: PathBuf, working_dir: Option<PathBuf>, source: &'static str) -> EngineLaunch {
+    EngineLaunch {
+        program: python,
+        args: vec!["-m".to_string(), ENGINE_MODULE.to_string()],
+        working_dir,
+        source,
+    }
+}
+
+/// Decide how to start the engine.
+///
+/// Resolution order, first match wins:
+///
+/// 1. `PROCESS_INTELLIGENCE_ENGINE` — explicit developer/support override. If
+///    the value names a Python interpreter the package module is run, so
+///    pointing it at a hand-made venv works; otherwise it is executed directly.
+/// 2. The frozen engine shipped inside the app bundle
+///    (`$RESOURCE/engine/process-intelligence-engine[.exe]`).
+/// 3. A virtualenv shipped inside the app bundle (`$RESOURCE/engine/venv/…`).
+/// 4. The development checkout's `engine/.venv/…`.
+///
+/// When nothing matches, every path that was tried is reported so the failure
+/// names the missing artifact instead of surfacing as a generic start error.
+pub fn resolve_launch(resources_dir: Option<&std::path::Path>) -> std::result::Result<EngineLaunch, String> {
+    let mut tried: Vec<String> = Vec::new();
+
+    if let Some(raw) = std::env::var_os("PROCESS_INTELLIGENCE_ENGINE") {
+        let override_path = PathBuf::from(&raw);
+        let looks_like_python = override_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.starts_with("python"))
+            .unwrap_or(false);
+        let display = override_path.display().to_string();
+        tried.push(format!("[PROCESS_INTELLIGENCE_ENGINE] {display}"));
+        if looks_like_python {
+            return Ok(python_launch(override_path, None, "PROCESS_INTELLIGENCE_ENGINE"));
+        }
+        return Ok(EngineLaunch {
+            program: override_path,
+            args: Vec::new(),
+            working_dir: None,
+            source: "PROCESS_INTELLIGENCE_ENGINE",
+        });
+    }
+
+    if let Some(resources) = resources_dir {
+        let engine_dir = resources.join("engine");
+
+        let frozen = engine_dir.join(frozen_engine_name());
+        if frozen.is_file() {
+            return Ok(EngineLaunch {
+                program: frozen,
+                args: Vec::new(),
+                working_dir: Some(engine_dir),
+                source: "bundled frozen engine",
+            });
+        }
+        tried.push(frozen.display().to_string());
+
+        let bundled_venv_python = venv_python(&engine_dir.join("venv"));
+        if bundled_venv_python.is_file() {
+            return Ok(python_launch(
+                bundled_venv_python,
+                Some(engine_dir.clone()),
+                "bundled virtualenv",
+            ));
+        }
+        tried.push(bundled_venv_python.display().to_string());
+    } else {
+        tried.push("(no resource directory available)".to_string());
+    }
+
+    // Development checkout: `engine/.venv` next to `src-tauri/`.
+    if let Some(repo_root) = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent() {
+        let engine_root = repo_root.join("engine");
+        let dev_python = venv_python(&engine_root.join(".venv"));
+        if dev_python.is_file() {
+            return Ok(python_launch(dev_python, Some(engine_root), "development virtualenv"));
+        }
+        tried.push(dev_python.display().to_string());
+    }
+
+    Err(format!(
+        "no analysis engine found. Install the packaged app, or run \
+         `cd engine && uv venv --python 3.12 && uv sync --extra dev`, or set \
+         PROCESS_INTELLIGENCE_ENGINE to the engine executable. Paths tried:\n  - {}",
+        tried.join("\n  - ")
+    ))
+}
+
 /// Manages the Python engine subprocess and its request/response loop.
 pub struct EngineManager {
     child: Mutex<Option<Child>>,
     stdin: Mutex<Option<ChildStdin>>,
     pending: Pending,
     next_id: Mutex<u64>,
-    python_path: String,
-    engine_module: String,
+    launch: EngineLaunch,
 }
 
 impl EngineManager {
-    /// Create a new manager. `python_path` is checked at start time.
-    pub fn new(python_path: impl Into<String>, engine_module: impl Into<String>) -> Self {
+    /// Create a new manager from a resolved launch spec.
+    pub fn new(launch: EngineLaunch) -> Self {
         Self {
             child: Mutex::new(None),
             stdin: Mutex::new(None),
             pending: Arc::new(Mutex::new(HashMap::new())),
             next_id: Mutex::new(0),
-            python_path: python_path.into(),
-            engine_module: engine_module.into(),
+            launch,
         }
     }
 
@@ -108,17 +236,19 @@ impl EngineManager {
     pub fn start(&self) -> Result<()> {
         self.kill_child();
 
-        let mut cmd = Command::new(&self.python_path);
-        // Resolve the project-local package instead of any stale globally
-        // installed copy when launched from Finder/Launchpad.
-        if let Some(engine_root) = std::path::Path::new(&self.python_path)
-            .parent()
-            .and_then(|venv| venv.parent())
-        {
-            cmd.current_dir(engine_root);
+        log::info!(
+            "starting engine from {} ({}), program={} args={:?}",
+            self.launch.source,
+            self.launch.program.display(),
+            self.launch.program.display(),
+            self.launch.args
+        );
+
+        let mut cmd = Command::new(&self.launch.program);
+        if let Some(dir) = self.launch.working_dir.as_ref() {
+            cmd.current_dir(dir);
         }
-        cmd.arg("-m")
-            .arg(&self.engine_module)
+        cmd.args(&self.launch.args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
@@ -126,9 +256,13 @@ impl EngineManager {
         #[cfg(target_os = "macos")]
         configure_macos_weasyprint_libraries(&mut cmd);
 
-        let mut child = cmd
-            .spawn()
-            .map_err(|e| EngineError::Start(e.to_string()))?;
+        let mut child = cmd.spawn().map_err(|e| {
+            EngineError::Start(format!(
+                "could not launch {} engine at {}: {e}",
+                self.launch.source,
+                self.launch.program.display()
+            ))
+        })?;
 
         let stdin = child
             .stdin
@@ -287,21 +421,19 @@ impl Drop for EngineManager {
     }
 }
 
-/// Build a fresh EngineManager pointing at the bundled engine module.
-pub fn default_engine() -> EngineManager {
-    // Dev: the engine lives in `engine/` relative to the repo root, with a
-    // venv at `.venv/bin/python`. In a bundled build the path is resolved
-    // at runtime from the app resource dir instead.
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let python = std::path::Path::new(manifest_dir)
-        .parent()
-        .map(|root| root.join("engine").join(".venv").join("bin").join("python"))
-        .unwrap_or_else(|| std::path::PathBuf::from("./engine/.venv/bin/python"));
-
-    let python = python.to_string_lossy().to_string();
-    append_runtime_log(&format!("engine python path: {python}"));
-    log::info!("engine python path: {python}");
-    EngineManager::new(python, "process_intelligence_engine.main")
+/// Build an EngineManager for the given resource directory.
+///
+/// `resources_dir` is `app.path().resource_dir()` in the running app; pass
+/// `None` (tests, CLI tools) to resolve against the development checkout only.
+pub fn default_engine(resources_dir: Option<PathBuf>) -> Result<EngineManager> {
+    let launch = resolve_launch(resources_dir.as_deref()).map_err(EngineError::Start)?;
+    append_runtime_log(&format!(
+        "engine launch: source={} program={} args={:?}",
+        launch.source,
+        launch.program.display(),
+        launch.args
+    ));
+    Ok(EngineManager::new(launch))
 }
 
 #[cfg(test)]
@@ -310,7 +442,7 @@ mod tests {
 
     #[test]
     fn pings_live_engine() {
-        let manager = default_engine();
+        let manager = default_engine(None).expect("engine launch should resolve");
         manager.start().expect("engine should start");
         let resp = manager
             .call("engine/ping", json!({}), Duration::from_secs(10))
@@ -327,7 +459,7 @@ mod tests {
             .unwrap()
             .join("data")
             .join("test_dataset.csv");
-        let manager = default_engine();
+        let manager = default_engine(None).expect("engine launch should resolve");
         manager.start().expect("engine should start");
 
         let imported = manager
@@ -364,5 +496,44 @@ mod tests {
         );
         eprintln!("time_series took {:?}", elapsed);
         manager.stop();
+    }
+
+    #[test]
+    fn frozen_engine_name_matches_build_script() {
+        // scripts/build-engine.mjs stages the PyInstaller bundle under exactly
+        // this name; renaming one side silently breaks shipping builds.
+        assert_eq!(
+            frozen_engine_name(),
+            if cfg!(windows) {
+                "process-intelligence-engine.exe"
+            } else {
+                "process-intelligence-engine"
+            }
+        );
+    }
+
+    #[test]
+    fn venv_python_uses_platform_layout() {
+        let root = std::path::Path::new("/tmp/does-not-matter");
+        let python = venv_python(root);
+        if cfg!(windows) {
+            assert_eq!(python, root.join("Scripts").join("python.exe"));
+        } else {
+            assert_eq!(python, root.join("bin").join("python"));
+        }
+    }
+
+    #[test]
+    fn unresolved_engine_reports_every_path_tried() {
+        let missing = std::path::PathBuf::from("/nonexistent-resource-dir-for-test");
+        match resolve_launch(Some(&missing)) {
+            // A development venv may legitimately satisfy this checkout; it
+            // must not, however, have come from the bogus resource directory.
+            Ok(launch) => assert!(!launch.program.starts_with(&missing)),
+            Err(message) => {
+                assert!(message.contains("no analysis engine found"), "{message}");
+                assert!(message.contains("nonexistent-resource-dir-for-test"), "{message}");
+            }
+        }
     }
 }

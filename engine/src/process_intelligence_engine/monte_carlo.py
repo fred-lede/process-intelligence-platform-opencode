@@ -131,11 +131,16 @@ def predict_output(
     coefficients: dict[str, float],
     inputs: dict[str, float],
     model: Any = None,
+    feature_names: list[str] | None = None,
 ) -> float:
     """Predict output using model coefficients or trained model object.
 
     Supports all model types: doe_linear, doe_quadratic, logistic_regression,
     weibull_regression, random_forest, xgboost, lightgbm, residual_hybrid.
+
+    ``feature_names`` must be the fitted input order: deriving it from the dict
+    keys silently permutes the columns whenever training order is not
+    alphabetical.
     """
     # Use trained model object when available (tree models)
     if model is not None:
@@ -158,7 +163,8 @@ def predict_output(
                     )
                 input_array = np.array([features])
             else:
-                input_array = np.array([[float(inputs.get(col, 0.0)) for col in sorted(inputs.keys())]])
+                order = list(feature_names) if feature_names else sorted(inputs.keys())
+                input_array = np.array([[float(inputs.get(col, 0.0)) for col in order]])
             pred = model.predict(input_array)
             return float(pred[0])
         except Exception:
@@ -384,7 +390,7 @@ def run_monte_carlo(
 
     # Predict outputs
     output_values = np.array([
-        predict_output(model_type, coefficients, {col: sampled_inputs[col][i] for col in input_columns}, model=model)
+        predict_output(model_type, coefficients, {col: sampled_inputs[col][i] for col in input_columns}, model=model, feature_names=input_columns)
         for i in range(n_simulations)
     ], dtype=float)
 
@@ -438,7 +444,7 @@ def run_monte_carlo(
                 predict_output(model_type, coefficients, {
                     col: (modified_arr if col == target else sampled_inputs[col])[i]
                     for col in input_columns
-                }, model=model)
+                }, model=model, feature_names=input_columns)
                 for i in range(n_simulations)
             ])
             shift_ng = int(np.sum(shifted_outputs < lsl))
@@ -458,7 +464,7 @@ def run_monte_carlo(
             if target in multi_inputs:
                 multi_inputs[target] = apply_anomalies(multi_inputs[target], [anomaly], rng)
         multi_outputs = np.array([
-            predict_output(model_type, coefficients, {col: multi_inputs[col][i] for col in input_columns}, model=model)
+            predict_output(model_type, coefficients, {col: multi_inputs[col][i] for col in input_columns}, model=model, feature_names=input_columns)
             for i in range(n_simulations)
         ], dtype=float)
         if lsl is not None:

@@ -90,7 +90,7 @@ from process_intelligence_engine.spc import (
     compute_spc_suggestions,
 )
 from process_intelligence_engine.monte_carlo import run_monte_carlo
-from process_intelligence_engine.prediction import predict_single, get_input_ranges, SUPPORTED_MODELS
+from process_intelligence_engine.prediction import predict_single, get_input_ranges, SUPPORTED_MODELS, PREDICTION_CONTRACT
 from process_intelligence_engine.settings import get_settings_manager
 from process_intelligence_engine.features.time_series import (
     compute_time_features,
@@ -707,6 +707,7 @@ def _handle_modeling_fit(params: dict) -> dict:
             "training_inputs": inputs,
             "fit_snapshot": fit.to_dto(),
             "prediction_check": prediction_check(fit, df),
+            "prediction_contract": PREDICTION_CONTRACT,
         },
         created_by=params.get("operator", "anonymous"),
         parameters_hash=hashlib.sha256(json.dumps(hyperparams, sort_keys=True).encode()).hexdigest(),
@@ -836,7 +837,8 @@ def _handle_doe_contour(params: dict) -> dict:
         row = []
         for x in xs:
             values = {**baseline, x_factor: float(x), y_factor: float(y)}
-            row.append(predict_single(fit.model_type, fit.coefficients or {}, values, fit.model))
+            row.append(predict_single(fit.model_type, fit.coefficients or {}, values, fit.model,
+                                      feature_names=fit.selected_inputs or fit.inputs))
         z.append(row)
     return {"x_factor": x_factor, "y_factor": y_factor, "x": xs.tolist(), "y": ys.tolist(), "z": z, "ranges": {x_factor: [x_low, x_high], y_factor: [y_low, y_high]}, "baseline": baseline, "curvature_terms": curvature_terms}
 
@@ -855,7 +857,8 @@ def _handle_profiler_recommend(params: dict) -> dict:
         values = [low, high, (low + high) / 2]
         for value in values:
             point = {**current, name: float(value)}
-            candidates.append({"input": name, "value": float(value), "predicted": predict_single(fit.model_type, fit.coefficients or {}, point, fit.model)})
+            candidates.append({"input": name, "value": float(value), "predicted": predict_single(fit.model_type, fit.coefficients or {}, point, fit.model,
+                                                                                              feature_names=fit.selected_inputs or fit.inputs)})
     target = params.get("target_value")
     def score(item):
         return abs(item["predicted"] - target) if objective == "target" and target is not None else (-item["predicted"] if objective == "maximize" else item["predicted"])
@@ -1374,13 +1377,21 @@ def _handle_auth_logout(params: dict) -> dict:
 
 
 def _handle_auth_register(params: dict) -> dict:
+    # Reaching this handler already requires the admin role (see
+    # auth.policy): the caller used to be able to pick any role, including
+    # admin, with no session at all.
     username = params.get("username", "")
     role = params.get("role", "viewer")
+    password = params.get("password", "")
+    if not password:
+        raise ValueError("password is required to register a user")
     try:
         user_role = UserRole(role)
     except ValueError:
         raise ValueError(f"Invalid role: {role}")
-    user = AUTH_MANAGER.register_user(username, user_role)
+    if user_role == UserRole.ADMIN and not params.get("confirm_admin"):
+        raise ValueError("registering an admin requires confirm_admin=true")
+    user = AUTH_MANAGER.register_user(username, user_role, password)
     return {"success": True, "username": user.username, "role": user.role.value}
 
 
@@ -1396,8 +1407,15 @@ def _handle_users_list(params: dict) -> dict:
 def _handle_current_user(params: dict) -> dict:
     user = AUTH_MANAGER.current_user
     if user:
-        return {"username": user.username, "role": user.role.value}
-    return {"username": None, "role": None}
+        return {
+            "username": user.username,
+            "role": user.role.value,
+            # True when nobody has logged in and the machine owner's implicit
+            # role is in effect, so the UI can offer a login without implying
+            # the session is anonymous.
+            "is_local_session": AUTH_MANAGER.is_local_session,
+        }
+    return {"username": None, "role": None, "is_local_session": False}
 
 
 def _handle_ai_chat(params: dict) -> dict:
@@ -1828,7 +1846,8 @@ def _handle_prediction_predict(params: dict) -> dict:
     fit = MODEL_REGISTRY.get(model_id)
 
     input_values = params.get("input_values", {})
-    predicted = predict_single(fit.model_type, fit.coefficients or {}, input_values, model=fit.model)
+    predicted = predict_single(fit.model_type, fit.coefficients or {}, input_values, model=fit.model,
+                               feature_names=fit.selected_inputs or fit.inputs)
 
     return {
         "success": True,
@@ -2012,6 +2031,15 @@ def handle_request(method: str, params: dict) -> dict:
     (import, detect_fields, quality, distribution).
     Phase 2 methods: analysis/detect_anomalies, analysis/package.
     """
+    # Authorise before dispatching. Roles were previously recorded but never
+    # consulted, so every method was reachable by anyone speaking the protocol.
+    try:
+        AUTH_MANAGER.require(method)
+    except KeyError:
+        # Unclassified method: the policy fails closed, but the caller should
+        # see the dispatcher's contract for an unknown method.
+        raise ValueError(f"Unknown method: {method}")
+
     if method == "engine/ping":
         return {"pong": True, "version": __import__('process_intelligence_engine').__version__}
 
@@ -3654,6 +3682,7 @@ def _handle_cloud_preview(params: dict) -> dict:
     sensitive_columns = params.get("sensitive_columns", [])
     excluded_columns = params.get("excluded_columns", [])
     noise_std = float(params.get("noise_std", 0.0))
+    noise_ratio = float(params.get("noise_ratio", 0.0))
     seed = int(params.get("seed", 42))
     strategy_overrides = params.get("strategy_overrides", {})
 
@@ -3664,6 +3693,7 @@ def _handle_cloud_preview(params: dict) -> dict:
         strategy_overrides=strategy_overrides,
         noise_std=noise_std,
         seed=seed,
+        noise_ratio=noise_ratio,
     )
     return _plain_types(preview.to_dict())
 
@@ -3675,6 +3705,7 @@ def _handle_cloud_upload(params: dict) -> dict:
     sensitive_columns = params.get("sensitive_columns", [])
     excluded_columns = params.get("excluded_columns", [])
     noise_std = float(params.get("noise_std", 0.0))
+    noise_ratio = float(params.get("noise_ratio", 0.0))
     seed = int(params.get("seed", 42))
     strategy_overrides = params.get("strategy_overrides", {})
     operator = params.get("operator", "anonymous")
@@ -3689,6 +3720,7 @@ def _handle_cloud_upload(params: dict) -> dict:
         strategy_overrides=strategy_overrides,
         noise_std=noise_std,
         seed=seed,
+        noise_ratio=noise_ratio,
     )
     record = record_upload(operator, provider, model_version, preview, purpose)
 

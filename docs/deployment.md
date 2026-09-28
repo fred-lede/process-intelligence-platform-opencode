@@ -4,16 +4,51 @@
 
 ## 共通建置流程
 
+開發環境（`npm run tauri dev`）直接使用 `engine/.venv`：
+
 ```bash
 npm install
 cd engine
 uv venv --python 3.12
 uv sync --extra dev
 cd ..
+npm run tauri dev
+```
+
+**發行建置必須先把引擎凍結成獨立執行檔再打包**，否則安裝後的 App 沒有 Python 可用，分析引擎無法啟動：
+
+```bash
+npm install
+npm run engine:build     # PyInstaller -> src-tauri/resources/engine/
 npm run tauri build
 ```
 
+`npm run build:app` 等同上面兩行。`scripts/build-engine.mjs` 會建立引擎 venv、安裝相依套件、以 PyInstaller 產生 `src-tauri/resources/engine/process-intelligence-engine[.exe]`，並在結尾對凍結後的執行檔送出 `engine/ping` 煙霧測試。Tauri 透過 `tauri.conf.json` 的 `bundle.resources` 將 `src-tauri/resources/engine/` 複製到 `$RESOURCE/engine/`。
+
 在各目標作業系統原生 runner 上建置；不要把 macOS 的 venv 或系統函式庫複製到 Windows 或 Linux 產物中。
+
+### 引擎解析順序
+
+執行時 `src-tauri/src/engine/mod.rs` 依序尋找，第一個存在者勝出：
+
+1. `PROCESS_INTELLIGENCE_ENGINE` 環境變數（除錯／支援用；值為 Python 直譯器時以 `-m process_intelligence_engine.main` 執行）
+2. `$RESOURCE/engine/process-intelligence-engine[.exe]`（發行版預設）
+3. `$RESOURCE/engine/venv/…`（若改為隨附 venv 而非凍結執行檔）
+4. 開發檢查區的 `engine/.venv/…`
+
+全部落空時，啟動錯誤會列出所有嘗試過的路徑，而不是只回一句籠統的啟動失敗。
+
+### 深度學習模型（TFT）
+
+`--with-dl` 會一併打包 torch / pytorch-forecasting / lightning（產物大幅變大）；`--with-tensorflow` 另外加入 tensorflow。預設兩者皆排除：引擎以 `importlib.util.find_spec` 偵測不到時會自動退回既有模型，TFT 相關功能停用，其餘功能不受影響。
+
+```bash
+npm run engine:build -- --with-dl
+```
+
+### PyInstaller 無法跨平台／跨架構編譯
+
+凍結後的引擎架構跟隨建置 runner。macOS x86_64 因此使用 Intel runner（`macos-13`）；CI 另有一道 `lipo -archs` 檢查，引擎架構與 bundle 目標不符時直接讓建置失敗，避免悄悄出貨無法執行的產物。
 
 ## v0.6.0 多層級資料範本
 

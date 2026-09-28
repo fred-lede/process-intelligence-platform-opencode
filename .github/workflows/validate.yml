@@ -1,0 +1,111 @@
+name: validate
+
+# Runs on every push to the main branches and on every pull request.
+#
+# This exists because a dependency change can break the production build
+# without anyone noticing: `npm audit fix --force` once bumped Vite to a major
+# version that made `vite build` fail outright, and nothing in CI would have
+# caught it before release. Each job below fails loudly instead.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    name: frontend (typecheck, build, shipped-dependency audit)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: install frontend dependencies
+        run: npm ci
+
+      - name: verify synchronized project version
+        run: |
+          npm run version:sync
+          git diff --exit-code
+
+      - name: type-check
+        run: npx tsc --noEmit
+
+      - name: production build
+        run: npm run build
+
+      # Only *shipped* dependencies gate the PR. Dev-toolchain advisories (the
+      # Vite dev server, for example) do not reach users and must not block
+      # unrelated work; they are tracked separately.
+      - name: audit shipped dependencies
+        run: npm audit --omit=dev --audit-level=moderate
+
+  engine:
+    name: engine (pytest)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: sync engine environment
+        run: uv sync --project engine --extra dev --extra bundle
+
+      - name: run engine tests
+        run: .venv/bin/pytest -q
+        working-directory: engine
+
+  rust:
+    name: rust (cargo test against a live engine)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: install frontend dependencies
+        run: npm ci
+
+      # tauri::generate_context! reads `frontendDist`, so the bundle must exist
+      # before the Rust crate can compile.
+      - name: build frontend bundle
+        run: npm run build
+
+      - name: setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # The Rust engine tests spawn the real Python engine, so the development
+      # virtualenv has to exist for them to be meaningful rather than skipped.
+      - name: sync engine environment
+        run: uv sync --project engine --extra dev
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: run Rust tests
+        run: cargo test
+        working-directory: src-tauri

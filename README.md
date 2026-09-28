@@ -80,6 +80,15 @@ cargo --version
 npm run tauri dev
 ```
 
+發行建置（安裝檔）必須先凍結分析引擎，否則安裝後的 App 沒有 Python 可用、引擎無法啟動：
+
+```bash
+npm run engine:build   # PyInstaller -> src-tauri/resources/engine/
+npm run tauri build
+```
+
+`npm run build:app` 等同上面兩行。詳見 [部署指南](docs/deployment.md#共通建置流程)。
+
 ### 首次部署注意事項
 
 在新電腦上首次部署時，請確保：

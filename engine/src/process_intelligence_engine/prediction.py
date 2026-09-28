@@ -20,12 +20,21 @@ _COEFF_RENAMES = {
     "x2x2": "x2_x_x2",
 }
 
+# Version of the prediction semantics that replay checks are compared against.
+# Bump whenever a fix changes predicted values, so projects saved under an
+# older contract are reported as needing a refit instead of as corruption.
+# 2 = residual_hybrid predicts DOE trend + residual; tree models honour the
+#     fitted feature order (1 = hybrid returned the residual alone, and the
+#     model object was fed sorted feature names).
+PREDICTION_CONTRACT = 2
+
 
 def predict_single(
     model_type: str,
     coefficients: dict[str, float],
     inputs: dict[str, float],
     model: Any = None,
+    feature_names: list[str] | None = None,
 ) -> float:
     """Predict output using model coefficients or the trained model object.
 
@@ -33,7 +42,12 @@ def predict_single(
         model_type: one of all supported model types
         coefficients: dict of model coefficients
         inputs: dict mapping factor names to their values
-        model: optional trained sklearn model object (used for tree models / residual_hybrid)
+        model: optional trained sklearn model object (used for tree models /
+            residual_hybrid)
+        feature_names: the fitted input order. Required for model-object
+            prediction to be trustworthy: deriving the order from the dict
+            silently permuted columns whenever the training order was not
+            alphabetical.
 
     Returns:
         Predicted output value
@@ -46,9 +60,15 @@ def predict_single(
 
     # Use trained model object when available (tree models, residual_hybrid)
     if model is not None:
+        order = list(feature_names) if feature_names else sorted(inputs.keys())
+        missing = [name for name in order if name not in inputs]
+        if missing:
+            raise ValueError(
+                f"missing input values for {missing}; model was fitted on {order}"
+            )
         try:
             import numpy as np
-            input_array = np.array([[float(inputs.get(col, 0.0)) for col in sorted(inputs.keys())]])
+            input_array = np.array([[float(inputs[name]) for name in order]])
             pred = model.predict(input_array)
             return float(pred[0])
         except Exception:

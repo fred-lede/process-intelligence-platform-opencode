@@ -1,6 +1,8 @@
 import math
 import importlib.util
 import json
+import sys
+import types
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +15,21 @@ from process_intelligence_engine.modeling import time_series_models
 from process_intelligence_engine.modeling.time_series_persistence import load_estimator
 
 
+def _simulate_installed(monkeypatch, *names):
+    """Make optional dependencies look installed.
+
+    ``time_series_models`` probes ``importlib.util.find_spec`` and then, for
+    tensorflow, performs a real ``import`` — so patching ``find_spec`` alone
+    does not simulate an installed package. Registering a stub in
+    ``sys.modules`` satisfies that follow-up import without needing the real
+    (heavy) dependency, which is what keeps these tests environment-independent.
+    """
+    for name in names:
+        module = types.ModuleType(name)
+        setattr(module, "__version__", "test-stub")
+        monkeypatch.setitem(sys.modules, name, module)
+
+
 def test_time_series_lstm_reports_insufficient_sequence_history(monkeypatch):
     original_find_spec = importlib.util.find_spec
     monkeypatch.setattr(
@@ -20,6 +37,7 @@ def test_time_series_lstm_reports_insufficient_sequence_history(monkeypatch):
         "find_spec",
         lambda name: object() if name == "tensorflow" else original_find_spec(name),
     )
+    _simulate_installed(monkeypatch, "tensorflow")
     dataset_id = REGISTRY.register(pd.DataFrame({
         "ts": pd.date_range("2026-01-01", periods=50, freq="h"),
         "y": [float(index) for index in range(50)],
@@ -87,6 +105,9 @@ def test_advanced_time_series_rows_report_insufficient_sequence_history(monkeypa
         if name in {"tensorflow", "pytorch_forecasting"}
         else original_find_spec(name),
     )
+    # tensorflow is really imported after the find_spec probe; the others only
+    # need find_spec. Stub it so "insufficient_history" is the sole reason.
+    _simulate_installed(monkeypatch, "tensorflow")
     dataset_id = REGISTRY.register(pd.DataFrame({
         "ts": pd.date_range("2026-01-01", periods=100, freq="h"),
         "y": [float(index) for index in range(100)],

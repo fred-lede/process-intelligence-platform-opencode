@@ -10,8 +10,15 @@ release/
 src-tauri/target/
 src-tauri/gen/
 
+# Frozen analysis engine (built by scripts/build-engine.mjs, shipped via
+# bundle.resources). Never commit the bundle itself — CI builds it per target.
+src-tauri/resources/engine/*
+!src-tauri/resources/engine/.gitkeep
+
 # Python
 engine/.venv/
+engine/build/
+engine/dist/
 engine/__pycache__/
 engine/**/__pycache__/
 engine/**/*.pyc

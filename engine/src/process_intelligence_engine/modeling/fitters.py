@@ -391,6 +391,39 @@ def fit_lightgbm(
     )
 
 
+class HybridPredictor:
+    """Self-contained predictor for ``residual_hybrid``: DOE trend + RF residual.
+
+    The fitted artefact is a *pair* of models, but every consumer — the
+    prediction handler, the profile/contour scans and the project replay check —
+    calls ``fit.model.predict(X)``. Storing this wrapper keeps the composition
+    inside the model object instead of letting callers mistake the residual
+    learner for the whole prediction (which returned the residual alone,
+    roughly centred on zero, instead of Y).
+    """
+
+    def __init__(self, doe, rf, inputs: list[str], degree: int = 2) -> None:
+        self.doe = doe
+        self.rf = rf
+        self.inputs = list(inputs)
+        self.degree = degree
+
+    def predict(self, X):
+        X = np.asarray(X, dtype=float)
+        if X.ndim == 1:
+            X = X.reshape(1, -1)
+        if X.shape[1] != len(self.inputs):
+            raise ValueError(
+                f"expected {len(self.inputs)} input columns {self.inputs}, "
+                f"got {X.shape[1]}"
+            )
+        # Rebuild the DOE design matrix exactly the way it was built at fit
+        # time, so the linear part sees the same columns in the same order.
+        frame = pd.DataFrame({name: X[:, i] for i, name in enumerate(self.inputs)})
+        design = _design_matrix(frame, self.inputs, self.degree).to_numpy(dtype=float)
+        return self.doe.predict(design) + self.rf.predict(X)
+
+
 def fit_residual_hybrid(
     df: pd.DataFrame,
     target: str,
@@ -405,8 +438,11 @@ def fit_residual_hybrid(
         raise ValueError("at least one input is required")
     y = df[target].to_numpy(dtype=float)
     X = df[inputs].to_numpy(dtype=float)
-    D = _design_matrix(df, inputs, degree=2).to_numpy(dtype=float)
-    doe_cols = _design_matrix(df, inputs, degree=2).columns
+    # Build the design matrix once: the DOE fit and the coefficient table must
+    # describe the same columns.
+    design = _design_matrix(df, inputs, degree=2)
+    D = design.to_numpy(dtype=float)
+    doe_cols = design.columns
     n = len(df)
     # Single index scheme: shuffle row indices once, share across DOE+RF.
     idx = np.arange(n)
@@ -430,24 +466,27 @@ def fit_residual_hybrid(
     y_test = y[test_idx]
     coefs = dict(zip(doe_cols, doe.coef_.tolist()))
     n_predictors = len(doe_cols) - 1  # exclude intercept "1"
-    coefficients = {}
+    # Collect EVERY DOE term before returning. An early return here silently
+    # truncated the reported equation to a single coefficient, so the UI showed
+    # a model that had not been fitted.
+    coefficients: dict[str, float] = {}
     for name, c in coefs.items():
         if name == "1":
             continue
         coefficients[name] = float(c)
-        coefficients["_intercept"] = float(doe.intercept_)
-        return ModelFit(
-            model_type="residual_hybrid",
-            target=target,
-            inputs=list(inputs),
-            metrics=_compute_all_metrics(y_test, y_pred, n_predictors),
-            coefficients=coefficients,
-            equation="Y = f_DOE(X) + r_RF(X)",
-            n_train=len(train_idx),
-            n_test=len(test_idx),
-            created_at=_now(),
-            model=rf,
-        )
+    coefficients["_intercept"] = float(doe.intercept_)
+    return ModelFit(
+        model_type="residual_hybrid",
+        target=target,
+        inputs=list(inputs),
+        metrics=_compute_all_metrics(y_test, y_pred, n_predictors),
+        coefficients=coefficients,
+        equation="Y = f_DOE(X) + r_RF(X)",
+        n_train=len(train_idx),
+        n_test=len(test_idx),
+        created_at=_now(),
+        model=HybridPredictor(doe, rf, list(inputs)),
+    )
 
 
 def fit_logistic_regression(

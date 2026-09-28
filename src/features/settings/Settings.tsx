@@ -43,6 +43,9 @@ export default function Settings() {
   const [cloudConfirming, setCloudConfirming] = useState(false)
   const [cloudHistory, setCloudHistory] = useState<UploadRecord[]>([])
   const [cloudNoiseStd, setCloudNoiseStd] = useState(0)
+  // Relative noise is the safer default: an absolute sigma means different
+  // things on a 0-1 column and a 0-10000 column.
+  const [cloudNoiseRatio, setCloudNoiseRatio] = useState(0)
   const [cloudPurpose, setCloudPurpose] = useState('')
   const [cloudProvider, setCloudProvider] = useState('custom')
   const [cloudModelVersion, setCloudModelVersion] = useState('unknown')
@@ -558,13 +561,22 @@ export default function Settings() {
               onChange={e => setCloudModelVersion(e.target.value)}
               style={{ width: 140 }}
             />
-            <span style={{ color: '#6b7280', fontSize: 12 }}>{t('cloud.noise')}</span>
+            <span style={{ color: '#6b7280', fontSize: 12 }}>{t('cloud.noiseStd')}</span>
             <InputNumber
               value={cloudNoiseStd}
               onChange={v => setCloudNoiseStd(v ?? 0)}
               min={0}
               max={1}
               step={0.1}
+              style={{ width: 80 }}
+            />
+            <span style={{ color: '#6b7280', fontSize: 12 }}>{t('cloud.noiseRatio')}</span>
+            <InputNumber
+              value={cloudNoiseRatio}
+              onChange={v => setCloudNoiseRatio(v ?? 0)}
+              min={0}
+              max={1}
+              step={0.05}
               style={{ width: 80 }}
             />
             <Button
@@ -582,6 +594,7 @@ export default function Settings() {
                     excluded_columns: excluded,
                     strategy_overrides: overrides,
                     noise_std: cloudNoiseStd,
+                    noise_ratio: cloudNoiseRatio,
                   })
                   setCloudPreview(result)
                 } catch {
@@ -631,7 +644,31 @@ export default function Settings() {
                   {cloudPreview.upload_hash}
                 </Typography.Text>
               </Descriptions.Item>
+              <Descriptions.Item label={t('cloud.pseudonymKey')} span={2}>
+                <Typography.Text type="secondary" style={{ fontSize: 11, fontFamily: 'monospace' }}>
+                  {cloudPreview.pseudonym_key_id}
+                </Typography.Text>{' '}
+                <Typography.Text type={cloudPreview.pseudonyms_stable ? 'secondary' : 'warning'} style={{ fontSize: 11 }}>
+                  ({cloudPreview.pseudonyms_stable ? t('cloud.pseudonymsStable') : t('cloud.pseudonymsEphemeral')})
+                </Typography.Text>
+              </Descriptions.Item>
             </Descriptions>
+          )}
+
+          {/* Masking that looks applied but is not protective must be visible
+              before the operator confirms, not discovered afterwards. */}
+          {cloudPreview && cloudPreview.warnings.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginTop: 8 }}
+              message={t('cloud.warnings')}
+              description={
+                <ul style={{ margin: 0, paddingInlineStart: 18 }}>
+                  {cloudPreview.warnings.map(w => <li key={w}>{w}</li>)}
+                </ul>
+              }
+            />
           )}
 
           {cloudHistory.length > 0 && (
@@ -668,6 +705,7 @@ export default function Settings() {
               excluded_columns: excluded,
               strategy_overrides: overrides,
               noise_std: cloudNoiseStd,
+              noise_ratio: cloudNoiseRatio,
               operator: currentUser.username || 'anonymous',
               provider: cloudProvider,
               model_version: cloudModelVersion,

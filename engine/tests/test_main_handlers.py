@@ -2,6 +2,7 @@
 
 import json
 
+import numpy as np
 import pytest
 
 from types import SimpleNamespace
@@ -687,7 +688,9 @@ def test_handle_cloud_preview_passes_strategy_overrides(tmp_path):
         },
     )
     assert result["noise_config"]["temperature"]["method"] == "gaussian"
-    assert result["noise_config"]["temperature"]["std"] == 0.5
+    # "sigma" is the resolved Gaussian sigma; the key was renamed from "std"
+    # because the value is no longer always an absolute standard deviation.
+    assert result["noise_config"]["temperature"]["sigma"] == 0.5
 
 
 def test_handle_cloud_preview_and_upload_consistent(tmp_path):
@@ -721,6 +724,53 @@ def test_handle_cloud_preview_and_upload_consistent(tmp_path):
     assert result["record_id"]
     assert result["columns_uploaded"]
     assert "operator" in result["masked_columns"]
+
+
+def test_cloud_preview_hash_matches_what_upload_records(tmp_path):
+    # End-to-end version of the consistency guarantee: the hash the operator
+    # approves must be the hash recorded for the data actually transmitted.
+    csv_text = "\n".join(
+        ["temperature,operator,ok_flag", "230.5,Alice,OK", "241.0,Bob,NG", "255.2,Carol,OK"]
+    )
+    dataset_id = _import_csv_and_return_id(tmp_path, csv_text)
+    params = {
+        "dataset_id": dataset_id,
+        "sensitive_columns": ["operator"],
+        "strategy_overrides": {"operator": "hash", "temperature": "noise"},
+        "noise_ratio": 0.02,
+        "seed": 11,
+    }
+
+    preview = handle_request("cloud/preview", dict(params))
+    upload = handle_request("cloud/upload", {**params, "operator": "qa", "provider": "azure",
+                                             "model_version": "m", "purpose": "p"})
+    assert preview["upload_hash"] == upload["upload_hash"]
+
+
+def test_cloud_preview_surfaces_negligible_noise_warning(tmp_path):
+    rows = ["big_col,flag"] + [f"{10000 + i * 0.5},OK" for i in range(40)]
+    dataset_id = _import_csv_and_return_id(tmp_path, "\n".join(rows))
+
+    result = handle_request("cloud/preview", {
+        "dataset_id": dataset_id,
+        "strategy_overrides": {"big_col": "noise"},
+        "noise_std": 0.0001,
+    })
+    assert any("negligible" in w for w in result["warnings"])
+
+
+def test_cloud_preview_noise_ratio_scales_per_column(tmp_path):
+    rows = ["small,large,flag"]
+    rng = np.random.default_rng(3)
+    for i in range(80):
+        rows.append(f"{rng.uniform(0, 1):.6f},{rng.normal(10000, 50):.6f},OK")
+    dataset_id = _import_csv_and_return_id(tmp_path, "\n".join(rows))
+
+    result = handle_request("cloud/preview", {"dataset_id": dataset_id, "noise_ratio": 0.05})
+    sigma_small = result["noise_config"]["small"]["sigma"]
+    sigma_large = result["noise_config"]["large"]["sigma"]
+    assert sigma_large > 100 * sigma_small
+    assert result["noise_config"]["small"]["ratio"] == 0.05
 
 
 def test_handle_report_list_returns_registry(tmp_path):

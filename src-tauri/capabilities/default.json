@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
+  "description": "Capabilities for the main window: dialogs, IPC to the Rust shell, and file access limited to the paths the user picks in a file dialog.",
   "windows": [
     "main"
   ],
@@ -9,9 +9,9 @@
     "core:default",
     "dialog:default",
     "fs:default",
-    {
-      "identifier": "fs:allow-write-text-file",
-      "allow": [{ "path": "**" }]
-    }
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-write-file",
+    "fs:allow-exists"
   ]
 }

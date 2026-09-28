@@ -281,3 +281,30 @@ def test_grant_rechecks_preview_after_configuration_change(orchestrator, project
     with pytest.raises(PermissionError, match="current preview"):
         orchestrator.grant_project_cloud_consent(project.project_root, preview.payload_hash)
     assert ProjectManifest.load(project.project_root).assistant_policy["cloud_consent"] is False
+
+
+def test_grant_refuses_without_any_preview(orchestrator, project):
+    # Consent must not be grantable from a client-supplied hash alone.
+    enable_cloud(orchestrator)
+    with pytest.raises(PermissionError, match="current preview"):
+        orchestrator.grant_project_cloud_consent(project.project_root, "")
+    with pytest.raises(PermissionError, match="current preview"):
+        orchestrator.grant_project_cloud_consent(project.project_root, "deadbeef" * 8)
+    assert ProjectManifest.load(project.project_root).assistant_policy["cloud_consent"] is False
+
+
+def test_grant_refuses_a_foreign_project(orchestrator, project, tmp_path):
+    enable_cloud(orchestrator)
+    preview = orchestrator.preview_cloud(request(project, "openai"))
+    foreign = tmp_path / "some-other-project"
+    foreign.mkdir()
+    with pytest.raises(PermissionError, match="current project"):
+        orchestrator.grant_project_cloud_consent(str(foreign), preview.payload_hash)
+
+
+def test_grant_accepts_the_previewed_payload(orchestrator, project):
+    enable_cloud(orchestrator)
+    preview = orchestrator.preview_cloud(request(project, "openai"))
+    policy = orchestrator.grant_project_cloud_consent(project.project_root, preview.payload_hash)
+    assert policy["cloud_consent"] is True
+    assert policy["preview_hash"] == preview.payload_hash

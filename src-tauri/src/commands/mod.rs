@@ -58,7 +58,10 @@ pub async fn engine_call(
 
 /// Initialize application state and start the engine on app setup.
 pub fn setup_engine(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    let engine = std::sync::Arc::new(crate::engine::default_engine());
+    // In a packaged app the frozen engine is shipped under the resource
+    // directory; in development the resolver falls back to `engine/.venv`.
+    let resources_dir = app.path().resource_dir().ok();
+    let engine = std::sync::Arc::new(crate::engine::default_engine(resources_dir)?);
     let state = AppState { engine };
     app.manage(state);
 

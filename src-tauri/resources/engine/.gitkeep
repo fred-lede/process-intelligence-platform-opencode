@@ -1,0 +1,6 @@
+# The frozen analysis engine is staged here by scripts/build-engine.mjs and
+# shipped by Tauri via `bundle.resources` in tauri.conf.json
+# (source "resources/engine/" -> target "$RESOURCE/engine/").
+#
+# Contents are gitignored. Release builds always regenerate them; see
+# .github/workflows/release.yml.

@@ -16,7 +16,10 @@ jobs:
         settings:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-          - platform: 'macos-latest'
+          # Intel runner on purpose: PyInstaller cannot cross-compile, so the
+          # frozen engine inherits the runner's architecture. Building the
+          # x86_64 bundle on an arm64 runner would ship an arm64 engine.
+          - platform: 'macos-13'
             args: '--target x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
             args: ''
@@ -42,10 +45,31 @@ jobs:
       - name: install frontend dependencies
         run: npm ci
 
+      - name: setup uv (frozen engine build)
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
       - name: verify synchronized project version
         run: |
           npm run version:sync
           git diff --exit-code
+
+      - name: build frozen analysis engine
+        run: npm run engine:build
+
+      - name: verify frozen engine architecture (macOS)
+        if: matrix.settings.platform == 'macos-latest' || matrix.settings.platform == 'macos-13'
+        run: |
+          set -euo pipefail
+          exe="src-tauri/resources/engine/process-intelligence-engine"
+          wanted="${{ contains(matrix.settings.args, 'aarch64') && 'arm64' || 'x86_64' }}"
+          actual="$(lipo -archs "$exe")"
+          echo "frozen engine arch=$actual wanted=$wanted"
+          case "$actual" in
+            *"$wanted"*) ;;
+            *) echo "::error::frozen engine architecture ($actual) does not match the bundle target ($wanted)"; exit 1 ;;
+          esac
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable

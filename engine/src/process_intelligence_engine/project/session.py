@@ -42,11 +42,14 @@ def prediction_check(fit, df):
             matrix = _build_design_matrix(df, inputs, degree).to_numpy(dtype=float)
             return fit.model.predict(matrix).tolist()
         return fit.model.predict(df[inputs].to_numpy(dtype=float)).tolist()
-    return [predict_single(fit.model_type, fit.coefficients or {}, row, model=fit.model)
+    return [predict_single(fit.model_type, fit.coefficients or {}, row, model=fit.model,
+                           feature_names=inputs)
             for row in df[fit.inputs].to_dict(orient="records")]
 
 
 def rebuild_model(entity, df, fitters):
+    from process_intelligence_engine.prediction import PREDICTION_CONTRACT
+
     recipe = entity.metadata["recipe"]
     snapshot = entity.metadata["fit_snapshot"]
     kind = snapshot["model_type"]
@@ -55,6 +58,19 @@ def rebuild_model(entity, df, fitters):
     expected = np.asarray(entity.metadata["prediction_check"], dtype=float)
     actual = np.asarray(prediction_check(fit, df), dtype=float)
     if actual.shape != expected.shape or not np.allclose(actual, expected, rtol=1e-8, atol=1e-10, equal_nan=False):
+        saved_contract = entity.metadata.get("prediction_contract")
+        if saved_contract != PREDICTION_CONTRACT:
+            # The stored predictions came from a defective predictor, so a
+            # mismatch here is expected rather than corruption. Say so plainly
+            # instead of implying the dataset or the model was tampered with.
+            raise ValueError(
+                f"Model {entity.entity_id} was saved under prediction contract "
+                f"{saved_contract if saved_contract is not None else 'unknown (pre-fix)'} "
+                f"but this engine implements contract {PREDICTION_CONTRACT}: the older "
+                f"predictor returned the residual alone for residual_hybrid and ignored "
+                f"the fitted feature order for tree models. Refit and re-approve this "
+                f"model to restore the trust chain."
+            )
         raise ValueError(f"Model replay differs from saved predictions: {entity.entity_id}; refit and review required")
     fit.model_id = snapshot["model_id"]
     fit.version = snapshot["version"]

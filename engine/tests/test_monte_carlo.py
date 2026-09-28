@@ -260,3 +260,34 @@ def test_predict_quadratic_trained_model_uses_fitter_feature_order():
     prediction = predict_output("doe_quadratic", {}, inputs, model=model)
     expected = float(np.array([1.0, 2.5, 2.5**2, 1.5, 1.5**2, 2.5 * 1.5]).sum())
     assert abs(prediction - expected) < 1e-8
+
+
+def test_predict_tree_model_uses_fitted_feature_order():
+    """Tree models must be fed the fitted input order, not sorted dict keys.
+
+    Regression: the Monte Carlo path built its feature array from
+    ``sorted(inputs.keys())``, so any model fitted on a non-alphabetical input
+    order silently received its columns swapped.
+    """
+    import pandas as pd
+
+    from process_intelligence_engine.modeling.fitters import fit_random_forest
+
+    rng = np.random.default_rng(1)
+    n = 400
+    x1 = rng.uniform(0, 1, n)
+    x2 = rng.uniform(0, 1, n)
+    y = 100.0 + 5.0 * x1 + 0.2 * x2 + rng.normal(0, 0.02, n)
+    df = pd.DataFrame({"x1": x1, "x2": x2, "y": y})
+    fit = fit_random_forest(df, target="y", inputs=["x2", "x1"], random_state=1)
+
+    point = {"x1": 1.0, "x2": 0.0}
+    direct = float(fit.model.predict([[0.0, 1.0]])[0])  # fitted order [x2, x1]
+
+    with_order = predict_output("random_forest", {}, point, model=fit.model,
+                                feature_names=["x2", "x1"])
+    assert with_order == pytest.approx(direct, abs=1e-9)
+
+    # Without the fitted order the columns are swapped, giving a different value.
+    without_order = predict_output("random_forest", {}, point, model=fit.model)
+    assert abs(without_order - with_order) > 1.0
