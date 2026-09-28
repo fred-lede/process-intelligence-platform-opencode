@@ -3883,7 +3883,7 @@ def _reload_chain_for_project(root: str) -> dict:
     for item in chain.get_chain_summary():
         entity = chain.get_entity(item["entity_id"])
         if entity.entity_type == "model_state" and entity.metadata["model_id"] in models.list_ids():
-            models.get(entity.metadata["model_id"]).status = entity.metadata["status"]
+            models.restore_status(entity.metadata["model_id"], entity.metadata["status"])
     gates = GateManager(project_root=root, project_id="default")
     approvals = type(APPROVAL_WORKFLOW)()
     approvals.load(chain._project_root / "audit" / "approvals.json")

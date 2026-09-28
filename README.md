@@ -415,6 +415,17 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.6（2026-09-28）
+
+**模型註冊表治理：讀取改為快照、刪除受狀態限制**
+
+- **`get()` 不再回傳活物件**：原本呼叫端可透過回傳值直接設定 `status = "approved"` 或改寫係數，完全繞過狀態機（而且專案還原路徑 `main.py` 就是這樣做的）。現在回傳**中繼資料的快照**（inputs/metrics/coefficients/status），但**刻意共用配適好的 estimator** —— 深拷貝隨機森林在「走訪所有模型」的處理函式中會造成真實的效能問題，而 estimator 只被 `.predict()` 讀取。
+- **`delete()` 受狀態限制**：只有 `draft` 與 `retired` 可刪除；帶有核准權重的模型（`pending_validation`/`validated`/`approved`）會拒絕刪除並提示改用 retire，讓「曾經被核准」的紀錄得以留存。
+- **新增 `restore_status()`**：專案重播時還原已持久化的狀態（該狀態不必然能由單一合法轉移抵達）。這是唯一獲准繞過狀態圖的路徑，IPC 處理函式只能用 `transition()`。
+- `transition()` 現在回傳快照，且**改動回傳值不會影響已儲存的狀態**。
+- **更正一項審閱報告的說法**：報告稱「狀態轉移未寫入版本鏈」—— 實際上 `_handle_modeling_transition` 與 `_handle_modeling_delete` 已經呼叫 `_VERSION_CHAIN.register_entity(...)`（`main.py:744`、`:752`）。所以那項不是缺口。
+- 新增／更新 6 個測試，並經 RED 驗證 —— 修正前 5 項失敗。測試 645 passed / 12 skipped。
+
 ### v0.9.5（2026-09-28）
 
 **SPC 管制圖統計修正（c4 / d2 誤用、A3 公式、WE 區間寬度、Cp≡Pp）**
