@@ -454,11 +454,16 @@ mod tests {
     #[test]
     fn time_series_returns_fast_live_engine() {
         let manifest = env!("CARGO_MANIFEST_DIR");
+        // The time-series sample, not `test_dataset.csv`: that file was
+        // regenerated to the multi-level template (input_*/output_*/result) and
+        // no longer carries `time` or `temperature`, which is what this test
+        // used to ask for. It went unnoticed because there was no CI running
+        // these tests.
         let csv = std::path::Path::new(manifest)
             .parent()
             .unwrap()
             .join("data")
-            .join("test_dataset.csv");
+            .join("test_dataset_timeseries.csv");
         let manager = default_engine(None).expect("engine launch should resolve");
         manager.start().expect("engine should start");
 
@@ -480,8 +485,8 @@ mod tests {
                 "features/time_series",
                 json!({
                     "dataset_id": dataset_id,
-                    "time_column": "time",
-                    "value_columns": ["temperature"],
+                    "time_column": "datetime",
+                    "value_columns": ["input_temperature"],
                     "window_sizes": [3, 5, 10],
                 }),
                 Duration::from_secs(10),
