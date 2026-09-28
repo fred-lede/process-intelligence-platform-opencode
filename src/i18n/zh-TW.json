@@ -50,6 +50,7 @@
   "assistant": {
     "title": "AI 助手",
     "placeholder": "輸入訊息...",
+    "needsProject": "請先開啟或建立專案，才能與助手對話。",
     "thinking": "思考中...",
     "clear": "清除對話",
     "clearConfirm": "確定要清除這個對話嗎？",

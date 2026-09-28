@@ -50,6 +50,7 @@
   "assistant": {
     "title": "Asistente de IA",
     "placeholder": "Escribe tu mensaje...",
+    "needsProject": "Abre o crea un proyecto para conversar con el asistente.",
     "thinking": "Pensando...",
     "clear": "Limpiar",
     "clearConfirm": "¿Limpiar esta conversación?",

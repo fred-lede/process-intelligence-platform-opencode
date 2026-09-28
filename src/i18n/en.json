@@ -50,6 +50,7 @@
   "assistant": {
     "title": "AI Assistant",
     "placeholder": "Type your message...",
+    "needsProject": "Open or create a project to chat with the assistant.",
     "thinking": "Thinking...",
     "clear": "Clear",
     "clearConfirm": "Clear this conversation?",

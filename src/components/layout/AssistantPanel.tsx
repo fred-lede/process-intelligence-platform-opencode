@@ -220,6 +220,19 @@ export default function AssistantPanel({ activeTab, activeProject }: AssistantPa
             />
             <Button aria-label={t('assistant.send', { defaultValue: 'Send' })} type="primary" icon={<SendOutlined />} onClick={() => void handleSend()} loading={loading} disabled={!input.trim() || busy || !!pendingTransfer || !projectReady} />
           </Space.Compact>
+          {/* The input is disabled until a project is open. Say why, instead of
+              leaving the user with a box that silently refuses input -- that
+              reads as a bug during testing. */}
+          {!projectReady && !busy && !pendingTransfer && (
+            <Typography.Text
+              type="secondary"
+              style={{ fontSize: 12, display: 'block', marginTop: 6 }}
+            >
+              {t('assistant.needsProject', {
+                defaultValue: 'Open or create a project to chat with the assistant.',
+              })}
+            </Typography.Text>
+          )}
         </div>
       </div>
     </Sider>
