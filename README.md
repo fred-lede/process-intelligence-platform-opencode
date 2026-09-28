@@ -347,7 +347,7 @@ print('GPU OK')
 
 - **English**（預設）
 - **繁體中文**（zh-TW）
-- **Español (México)**（es-MX）— 709 keys 完整翻譯（三語 key set 完全一致）
+- **Español (México)**（es-MX）— 1345 keys 完整翻譯（三語 key set 完全一致，並由 `scripts/check-i18n-parity.mjs` 在 CI 中驗證）
 
 ### 模型類型（8 種）
 
@@ -414,6 +414,16 @@ data/test_dataset.csv
 包含 82 筆資料，4 個輸入變數 (temperature, pressure, time, humidity) + 1 個輸出變數 (yield)，適合測試完整分析流程。
 
 ## 版本紀錄
+
+### v0.9.7（2026-09-28）
+
+**i18n key 對齊，並在 CI 加上對齊檢查**
+
+- **es-MX 缺 6 個生效中的 key**：`settings.modelSettings` 與 `settings.lightgbmDevice*`（`lightgbmDevice`／`Auto`／`Cpu`／`Gpu`／`Note`）。它們被 `Settings.tsx:399-416` 的 LightGBM 裝置選單使用，所以西語使用者看到的是原始 key 而非翻譯。已補上。
+- **三語的死 key 移除**：`en` 的 `guide.exploration.distribution.*` 與 `zh-TW`／`es-MX` 的 `guideDistribution.*`（各 7 個）**兩者都沒有任何程式引用**。說明視窗的正文來自 `src/components/guide/guideContent.ts`（各語系內嵌文字），i18n 只提供 `guide.labels.*` 與 `guide.generic.*`。因此正解是刪除，而非把舊名改成新名。
+- **結果**：三個語系現在都是 **1345 keys，完全對齊**（先前 en/zh-TW 各 1345 但相差 7 個、es-MX 1339）。
+- **新增 `scripts/check-i18n-parity.mjs`** 並接入 CI 的 frontend job。缺 key 在執行期不會拋錯（i18next 會顯示原始 key 或退回英文），所以漂移只有使用者回報才會發現 —— 這正是這次的情況。已 RED 驗證：移除一個 key 會 exit 1 並指出 `settings.lightgbmDeviceGpu missing from: es-MX`。
+- README 的 key 數宣稱由 709 更正為 1345。
 
 ### v0.9.6（2026-09-28）
 

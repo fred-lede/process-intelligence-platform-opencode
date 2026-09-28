@@ -1021,7 +1021,13 @@
     "connectionFailed": "Error de conexión",
     "refreshModels": "Actualizar Modelos",
     "enabled": "Habilitado",
-    "disabled": "Deshabilitado"
+    "disabled": "Deshabilitado",
+    "modelSettings": "Configuración del modelo",
+    "lightgbmDevice": "Dispositivo de LightGBM",
+    "lightgbmDeviceAuto": "Automático (intenta GPU, si falla usa CPU)",
+    "lightgbmDeviceCpu": "CPU",
+    "lightgbmDeviceGpu": "GPU (se requiere NVIDIA CUDA)",
+    "lightgbmDeviceNote": "La GPU requiere NVIDIA CUDA y LightGBM compilado con -DUSE_GPU=1. Apple MPS no es compatible."
   },
   "monteCarlo": {
     "title": "Simulación Monte Carlo",
@@ -1471,14 +1477,5 @@
       "limits": "Los resultados describen la muestra seleccionada y no prueban población ni causalidad.",
       "recommendation": "Verifica la calidad de datos y los supuestos antes de decidir."
     }
-  },
-  "guideDistribution": {
-    "title": "Ajuste de distribución",
-    "purpose": "Compara distribuciones candidatas para la columna seleccionada.",
-    "principle": "AIC/BIC comparan el ajuste relativo; la prueba KS verifica la consistencia.",
-    "formula": "AIC=2k−2ln(L); BIC=kln(n)−2ln(L).",
-    "interpretation": "Un AIC/BIC menor suele ser preferible; un p-value KS mayor indica que esta muestra no rechaza la distribución.",
-    "limits": "El ajuste de una muestra no demuestra que la población siga esa distribución.",
-    "recommendation": "Revisa parámetros, gráficos y plausibilidad antes de usarla en simulación."
   }
 }
