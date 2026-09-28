@@ -415,6 +415,19 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.2（2026-09-28）
+
+**安全性強化、預測與去識別化修正、引擎隨附打包**
+
+- **權限強制**：126 個 IPC 方法全部納入角色檢查（`auth/policy.py`）。原本角色只被記錄、從未被檢查，且 `authenticate()` 對任何使用者接受任意非空密碼。新增本機信任工作階段（`PROCESS_INTELLIGENCE_LOCAL_ROLE`，出廠 admin），桌面 App 免登入即可使用；登入受限帳號後權限真實生效。未分類方法 fail closed。
+- **去識別化**：改為帶金鑰的 HMAC 假名化（128 bits），取代可被列舉還原的無鹽截斷 SHA-256；噪音改為依各欄位尺度縮放；預覽與實際傳送的 payload 共用單一轉換，稽核雜湊現在確實描述傳送的內容（原本有三種情況不一致）。預覽會顯示無效遮罩的警告與金鑰指紋。
+- **預測修正**：`residual_hybrid` 原本只回傳殘差而非 DOE 趨勢加殘差（實測 104 的值回傳 -0.00）；模型輸入原本使用排序後的欄位順序而非配適順序，會靜默對調欄位（`prediction.py` 與 `monte_carlo.py`）。新增預測契約版本，舊專案會得到明確的「請重新配適」訊息。
+- **引擎隨附打包**：以 PyInstaller 凍結引擎並透過 `bundle.resources` 出貨，執行時由資源目錄解析，開發環境回退路徑會列出所有嘗試過的候選。安裝版不再需要系統 Python。
+- **Tauri 安全**：設定 CSP（原本為 `null`）並分離 dev 政策；檔案系統權限收斂至對話框選取的路徑，取代 `**`。補上原本缺少的 `fs:allow-write-file`，修正 PDF／Excel 匯出無法寫檔的問題。
+- **依賴**：`plotly.js` 4.1.1 與 `react-plotly.js` 4.1（清除 critical 的 maplibre-gl 公告）；`xlsx` 改用隨附的 SheetJS 0.20.3 tarball（npm registry 版本無可用修補，且 npm 12 預設封鎖遠端 tarball URL）；Vite 8（Rolldown），建置時間 15.6s → 1.8s。
+- **CI**：新增 `validate` workflow（typecheck、production build、出貨相依稽核、pytest、cargo test）。僅出貨相依會阻擋 PR。此 workflow 上線後立即找出兩個既有問題：`xlsx` 的遠端 URL 相依，以及一個自 v0.6.0 資料集改版後就腐化的 Rust 時間序列測試。
+- **測試**：引擎 634 passed / 12 skipped；`cargo test` 於 CI 通過（含兩個 live-engine 測試）。
+
 ### v0.9.1（2026-09-16）
 
 **時間序列深度模型與 DOE／模型核准強化**
