@@ -129,3 +129,22 @@ Windows 請改用 `.venv\Scripts\python`。測試全部通過後，再於 Tauri 
 ### 專案目錄中的模型與模擬目錄
 
 `models/` 與 `simulations/` 是預留的資產目錄，目前可保持空白。模型版本與模擬紀錄的實際索引、追溯與重建來源是 `registry/version_chain.jsonl`；模型與模擬完成後不會自動在這兩個目錄產生檔案。
+
+## Vendored 依賴：`vendor/xlsx-0.20.3.tgz`
+
+前端匯入／匯出 Excel 使用 SheetJS，而 **npm registry 上的 `xlsx` 停在 0.18.5，帶有未修補的 prototype pollution 與 ReDoS**（`npm audit` 對它回報 `No fix available`）。修好的版本只在 SheetJS 官方 CDN 發佈。
+
+npm 12 起 `allow-remote` 預設為 `none`，會拒絕任何指向 tarball URL 的相依，因此**不能**在 `package.json` 直接寫 CDN 網址（會得到 `EALLOWREMOTE`）。`allow-file` 的預設仍為 `all`，所以改為隨 repo 附帶該 tarball，以 `file:` 引用：
+
+```json
+"xlsx": "file:vendor/xlsx-0.20.3.tgz"
+```
+
+`package-lock.json` 以 integrity 雜湊鎖定該檔，`npm ci` 會驗證。
+
+**維護注意事項**
+
+- `vendor/xlsx-0.20.3.tgz` **必須保留在版本控制中**，不要加入 `.gitignore`，也不要為了「乾淨」而刪除；刪掉會讓 `npm ci` 失敗。
+- **不要**改回 CDN 網址，也**不要**用 `npm config set allow-remote all` 之類的全域放寬來繞過 —— 那等於對整個相依樹重新開放任意 tarball URL（npm 官方明列為不建議）。
+- SheetJS 官方亦建議 vendoring（降低供應鏈攻擊面、可離線建置）。
+- 升級時：抓取新版 tarball 放入 `vendor/`，更新 `package.json` 路徑後執行 `npm install`，並以 `npm ci --allow-remote=none` 驗證在硬化預設下仍可安裝。
