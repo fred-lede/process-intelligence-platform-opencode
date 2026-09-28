@@ -20,6 +20,14 @@ _D4: dict[int, float] = {2: 3.267, 3: 2.574, 4: 2.282, 5: 2.114, 6: 2.004, 7: 1.
                          8: 1.864, 9: 1.816, 10: 1.777}
 _d2: dict[int, float] = {2: 1.128, 3: 1.693, 4: 2.059, 5: 2.326, 6: 2.534, 7: 2.704,
                          8: 2.847, 9: 2.970, 10: 3.078}
+# c4 = sqrt(2/(n-1)) * Γ(n/2) / Γ((n-1)/2): the divisor that turns the mean
+# sample standard deviation into an unbiased sigma estimate for S charts.
+# Using d2 here instead (as this module used to) understates sigma by ~2.5x at
+# n=5, which both narrows the A3 limits and inflates the Western Electric
+# scores. Values generated from the formula above.
+_c4: dict[int, float] = {2: 0.797885, 3: 0.886227, 4: 0.921318, 5: 0.939986,
+                         6: 0.951533, 7: 0.959369, 8: 0.965030, 9: 0.969311,
+                         10: 0.972659}
 _B3: dict[int, float] = {2: 0, 3: 0, 4: 0, 5: 0, 6: 0.030, 7: 0.118, 8: 0.185,
                          9: 0.239, 10: 0.284}
 _B4: dict[int, float] = {2: 3.267, 3: 2.568, 4: 2.266, 5: 2.089, 6: 1.970, 7: 1.882,
@@ -52,8 +60,17 @@ def compute_capability(
     overall_std = float(np.std(arr, ddof=1)) if arr.size > 1 else 0.0
 
     if subgroup_size <= 1 or arr.size < 2:
-        # Use overall std as the within estimate
-        sigma_within = overall_std
+        # Individuals: the within estimate comes from the average moving range
+        # (d2 for n=2 is 1.128), not from the total standard deviation. Using
+        # the total made Cp == Pp and Cpk == Ppk by construction, which is
+        # exactly the distinction these two index pairs exist to draw. This
+        # also matches the docstring and compute_i_mr above.
+        if arr.size > 1:
+            mr_bar = float(np.mean(np.abs(np.diff(arr))))
+            d2_i = _d2[2]
+            sigma_within = _safe_div(mr_bar, d2_i) if d2_i else 0.0
+        else:
+            sigma_within = 0.0
         n_subgroups = int(arr.size)
     else:
         n = arr.size
@@ -293,7 +310,10 @@ def compute_xbar_r(
     rcl_lcl = d3 * r_bar
     sigma_est = _safe_div(r_bar, d2)
 
-    violations = detect_we_violations(np.array(xbars), x_double_bar, sigma_est)
+    # Same as the X-bar/S chart: the Western Electric rules run on subgroup
+    # means, so the zone width is sigma/sqrt(n), not the individual sigma.
+    sigma_xbar = _safe_div(sigma_est, math.sqrt(subgroup_size))
+    violations = detect_we_violations(np.array(xbars), x_double_bar, sigma_xbar)
 
     cap = compute_capability(
         np.concatenate([np.asarray(s, dtype=float) for s in subgroups]).tolist(),
@@ -336,9 +356,11 @@ def compute_xbar_s(
     if subgroup_size not in _A2:
         raise ValueError(f"subgroup_size {subgroup_size} not supported; use 2–10")
 
-    # A3 = 3/(d2 * sqrt(n))
-    d2_n = _d2[subgroup_size]
-    a3 = 3.0 / (d2_n * math.sqrt(subgroup_size))
+    # A3 = 3/(c4 * sqrt(n)) and the S-chart sigma divisor are both c4-based.
+    # This used to compute A2 = 3/(d2 * sqrt(n)) instead, which narrowed the
+    # X-bar limits by roughly 2.5x at n=5 and produced constant false alarms.
+    c4_n = _c4[subgroup_size]
+    a3 = 3.0 / (c4_n * math.sqrt(subgroup_size))
     b3 = _B3[subgroup_size]
     b4 = _B4[subgroup_size]
 
@@ -358,14 +380,20 @@ def compute_xbar_s(
 
     x_double_bar = float(np.mean(xbars))
     s_bar = float(np.mean(ss))
-    sigma_est = _safe_div(s_bar, d2_n)
+    # s_bar / c4 is the unbiased sigma of a single measurement.
+    sigma_est = _safe_div(s_bar, c4_n)
 
     xcl_ucl = x_double_bar + a3 * s_bar
     xcl_lcl = x_double_bar - a3 * s_bar
     scl_ucl = b4 * s_bar
     scl_lcl = b3 * s_bar
 
-    violations = detect_we_violations(np.array(xbars), x_double_bar, sigma_est)
+    # The Western Electric rules run on the plotted statistic, which here is
+    # the subgroup MEAN, so they need sigma/sqrt(n) rather than the
+    # individual-measurement sigma. Passing the latter widened every zone by
+    # sqrt(n) and made the rules under-trigger.
+    sigma_xbar = _safe_div(sigma_est, math.sqrt(subgroup_size))
+    violations = detect_we_violations(np.array(xbars), x_double_bar, sigma_xbar)
 
     cap = compute_capability(
         np.concatenate([np.asarray(s, dtype=float) for s in subgroups]).tolist(),
