@@ -189,6 +189,128 @@ class ExcelReportGenerator(ReportGenerator):
                 for row in suggestion_rows:
                     ws_sug.append(row)
 
+        # Sheet: distributions (best fit per column, as HTML's 正常分布 table)
+        fits = self.data.distribution_fits or {}
+        if fits:
+            ws_d = wb.create_sheet("分佈配適")
+            header(ws_d, ["欄位", "最佳分布", "AIC", "KS p 值", "偏態", "峰度"])
+            for col, entries in fits.items():
+                if not entries:
+                    continue
+                f = entries[0]
+                ws_d.append([
+                    col, f.get("name", ""), f.get("aic", ""), f.get("ks_p_value", ""),
+                    f.get("skewness", ""), f.get("kurtosis", ""),
+                ])
+
+        # Sheet: anomaly scenarios
+        anomalies = self.data.anomalies or []
+        if anomalies:
+            ws_a = wb.create_sheet("異常情境")
+            header(ws_a, ["名稱", "類型", "欄位", "方向", "閾值", "發生機率", "信心度"])
+            for a in anomalies:
+                ws_a.append([
+                    a.get("name", ""), a.get("type", ""), a.get("target_input", ""),
+                    a.get("direction", ""), a.get("threshold", ""),
+                    a.get("occurrence_probability", ""), a.get("confidence", ""),
+                ])
+
+        # Sheet: Monte Carlo risk (summary, percentiles, anomaly contribution)
+        mc = self.data.monte_carlo or {}
+        if mc:
+            ws_mc = wb.create_sheet("蒙地卡羅")
+            header(ws_mc, ["項目", "值"])
+            for key in ("n_simulations", "seed", "ng_count", "ng_probability",
+                        "output_mean", "output_std", "output_median"):
+                if mc.get(key) is not None:
+                    ws_mc.append([key, mc.get(key)])
+            mc_cap = mc.get("capability") or {}
+            for key in ("pp", "ppk", "cp", "cpk", "sigma_overall"):
+                if mc_cap.get(key) is not None:
+                    ws_mc.append([f"capability.{key}", mc_cap.get(key)])
+            pct = mc.get("percentiles") or {}
+            if pct:
+                ws_mc.append([])
+                header(ws_mc, ["百分位", "值"])
+                for k in ("p1", "p5", "p50", "p95", "p99"):
+                    if pct.get(k) is not None:
+                        ws_mc.append([k, pct.get(k)])
+            rankings = mc.get("anomaly_rankings") or []
+            if rankings:
+                ws_mc.append([])
+                header(ws_mc, ["異常 ID", "欄位", "NG 數", "NG 機率"])
+                for r in rankings:
+                    ws_mc.append([
+                        r.get("anomaly_id", ""), r.get("target_input", ""),
+                        r.get("ng_count", ""), r.get("ng_probability", ""),
+                    ])
+
+        # Sheet: credibility (the six-dimension confidence score)
+        cred = self.data.credibility or {}
+        if cred:
+            ws_c = wb.create_sheet("可信度")
+            header(ws_c, ["維度", "分數"])
+            ws_c.append(["綜合可信度", cred.get("composite", "")])
+            ws_c.append(["等級", cred.get("level", "")])
+            for label, key in (
+                ("資料覆蓋", "data_coverage"), ("預測準確", "predictive_acc"),
+                ("統計穩定", "statistical_stability"), ("工程合理", "engineering_reasonable"),
+                ("驗證程度", "validation_degree"), ("外推風險", "extrapolation_risk"),
+            ):
+                if cred.get(key) is not None:
+                    ws_c.append([label, cred.get(key)])
+
+        # Sheet: proposed process window
+        window = self.data.process_window or {}
+        if window.get("column_limits"):
+            ws_w = wb.create_sheet("建議製程窗口")
+            header(ws_w, ["欄位", "Min", "Max", "中心"])
+            for col, vals in window["column_limits"].items():
+                ws_w.append([col, vals.get("min", ""), vals.get("max", ""), vals.get("center", "")])
+            if window.get("basis"):
+                ws_w.append([])
+                ws_w.append(["基準", window.get("basis")])
+
+        # Sheet: governance and traceability (chain steps, gates, unconfirmed
+        # items, extrapolation warnings). HTML carries these as Appendix A/C and
+        # the evidence summary; Excel carried none of it, which undercuts the
+        # platform's traceability claim.
+        steps = (self.data.chain_trace or {}).get("steps", [])
+        gates = self.data.gate_summary or {}
+        unconfirmed = self.data.unconfirmed_items or []
+        ex = self.data.extrapolation_summary or {}
+        if steps or gates or unconfirmed or ex:
+            ws_g = wb.create_sheet("治理與追溯")
+            header(ws_g, ["項目", "值"])
+            for key, value in gates.items():
+                ws_g.append([f"gate.{key}", value])
+            for item in unconfirmed:
+                ws_g.append(["未確認項目", item])
+            for key in ("out_of_range_ratio", "max_risk_score", "recommendation"):
+                if ex.get(key) not in (None, ""):
+                    ws_g.append([f"外推.{key}", ex.get(key)])
+            if steps:
+                ws_g.append([])
+                header(ws_g, ["Step", "Entity ID", "Operator", "Timestamp", "Status"])
+                for step in steps:
+                    ws_g.append([
+                        step.get("step", ""), step.get("entity_id", ""), step.get("operator", ""),
+                        step.get("timestamp", ""), step.get("status", ""),
+                    ])
+
+        # Sheet: source label legend (Appendix B); falls back to the standard set
+        labels = self.data.source_labels or {
+            "ai_guess": "AI guess",
+            "stat_sig": "Statistically significant",
+            "eng_hypothesis": "Engineering hypothesis",
+            "exp_confirmed": "Experiment confirmed",
+            "unverified": "Unverified",
+        }
+        ws_l = wb.create_sheet("來源標籤")
+        header(ws_l, ["Label Key", "Meaning"])
+        for key, value in labels.items():
+            ws_l.append([key, value])
+
         # Sheet 5: Recommendations
         if self.data.recommendations:
             ws5 = wb.create_sheet("實驗建議")

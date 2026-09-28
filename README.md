@@ -425,6 +425,17 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.9（2026-09-28）
+
+**Excel 報告補齊 HTML 已有的區塊**
+
+- `excel.py` 原本只有 102 行（`html.py` 571 行），產出 7 個 Sheet，卻靜默丟棄 `main.py` 已收進 `ReportData` 的資料。實測同一份報告：**Excel 8.8 KB vs HTML 52 KB**；HTML 有 20 個區塊，Excel 只有 7 個。
+- **新增 12 個 Sheet**：規格（LSL/USL／目標，原本完全沒有）、資料品質、最終模型（含**係數表**）、SPC（管制界限 + **Cp/Cpk/Pp/Ppk** + σ + 違規數）、SPC 優化建議、分佈配適、異常情境、蒙地卡羅（含百分位與異常貢獻排名）、可信度（六維）、建議製程窗口、治理與追溯（Gate／未確認項目／外推警告／版本鏈步驟）、來源標籤。
+- 模型比較由 7 欄擴充為 11 欄（補 AUC／Accuracy／Shape k／AIC）。
+- 新增 `tests/test_reporting_excel.py`（14 個測試）：斷言每個有值的區塊都要獨立出現在 workbook 中 —— 缺區塊的檔案「開啟正常」，只有機械化斷言才抓得到。**RED 驗證：修正前 14 項中 9 項失敗**。
+- 測試：659 passed / 12 skipped。
+- 註：`monte_carlo` 與 `credibility` 目前仍由報告產生端決定是否填入；若該次分析未執行模擬或驗證，對應 Sheet 不會出現（這是預期行為，非遺漏）。
+
 ### v0.9.8（2026-09-28）
 
 **README 指標改為實測值**
