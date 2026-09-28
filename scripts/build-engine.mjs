@@ -18,7 +18,17 @@
  *   node scripts/build-engine.mjs                  # base bundle (no DL stack)
  *   node scripts/build-engine.mjs --with-dl        # + torch / pytorch-forecasting
  *   node scripts/build-engine.mjs --with-tensorflow
+ *   node scripts/build-engine.mjs --with-cuda      # + CUDA runtime libs (~450 MB)
  *   node scripts/build-engine.mjs --skip-smoke     # skip the engine/ping check
+ *
+ * CPU vs CUDA
+ * -----------
+ * The default bundle is CPU-only and drops the `nvidia-*` CUDA runtime wheels
+ * that xgboost pulls in on Linux; they are ~450 MB, about a third of the whole
+ * bundle, for a path that is off by default and additionally needs a system
+ * CUDA toolkit and an NVIDIA GPU. Build with `--with-cuda` when a GPU machine
+ * actually needs them. (The CPU bundle runs on GPU machines too -- it simply
+ * trains on the CPU.)
  *
  * PyInstaller cannot cross-compile: run this on each target OS (CI does).
  */
@@ -39,6 +49,7 @@ const stageDir = join(repoRoot, 'src-tauri', 'resources', 'engine')
 const flags = new Set(process.argv.slice(2))
 const withDl = flags.has('--with-dl')
 const withTensorflow = flags.has('--with-tensorflow')
+const withCuda = flags.has('--with-cuda')
 const skipSmoke = flags.has('--skip-smoke')
 
 const isWindows = process.platform === 'win32'
@@ -105,6 +116,7 @@ function buildFrozenEngine() {
       env: {
         PIE_WITH_DL: withDl ? '1' : '0',
         PIE_WITH_TENSORFLOW: withTensorflow ? '1' : '0',
+        PIE_WITH_CUDA: withCuda ? '1' : '0',
       },
     },
   )
@@ -208,7 +220,7 @@ async function main() {
   if (!existsSync(specFile)) throw new Error(`spec not found: ${specFile}`)
 
   console.log(`building frozen engine for ${process.platform}/${process.arch}`)
-  console.log(`  with DL stack: ${withDl ? 'yes' : 'no'}   with tensorflow: ${withTensorflow ? 'yes' : 'no'}`)
+  console.log(`  with DL stack: ${withDl ? 'yes' : 'no'}   with tensorflow: ${withTensorflow ? 'yes' : 'no'}   with CUDA: ${withCuda ? 'yes' : 'no'}`)
 
   ensureVenv()
   installBuildDeps()

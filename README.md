@@ -415,6 +415,15 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.4（2026-09-28）
+
+**引擎 bundle 縮小一半：移除未使用的 polars、預設排除 CUDA 執行期**
+
+- 凍結引擎從 **1332 MB 降至 664 MB**（減少 667 MB）。實測來源：`_internal/nvidia` 452 MB、`_internal/_polars_runtime_32` 211 MB。
+- **移除 `polars` 相依**：全 engine 與 tests 完全沒有 `import polars`（先前唯一的 `pl.` 命中是 `lightning.pytorch` 的別名），移除後 634 個測試仍全數通過。
+- **CPU / CUDA 產物區分**：Linux 上 xgboost 會拉入約 450 MB 的 `nvidia-*` CUDA 執行期函式庫，而 GPU 訓練是選配、預設關閉，且還需系統 CUDA toolkit 與 NVIDIA 顯卡。**預設產物為 CPU 版**；需要時以 `npm run engine:build -- --with-cuda` 建置。CPU 版在 GPU 機器上同樣可執行，只是訓練走 CPU。
+- 煙霧測試確認凍結引擎在移除上述項目後仍正常啟動並回應 `engine/ping`。
+
 ### v0.9.3（2026-09-28）
 
 **助手輸入框停用時顯示原因**

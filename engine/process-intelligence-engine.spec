@@ -41,7 +41,6 @@ for package in (
     "scipy",
     "numba",
     "llvmlite",
-    "polars",
     "gplearn",
     "pyDOE2",
     "weasyprint",
@@ -57,6 +56,15 @@ for package in (
     binaries += pkg_binaries
     hiddenimports += pkg_hidden
 
+# CUDA runtime libraries that xgboost pulls in on Linux (`nvidia-nccl-cu12`
+# and friends). They account for roughly 450 MB -- about a third of the whole
+# bundle -- and the GPU path is opt-in, off by default, and additionally needs
+# a system CUDA toolkit and an NVIDIA GPU. Shipping them by default is not a
+# good trade; build with PIE_WITH_CUDA=1 if a GPU deployment needs them.
+if os.environ.get("PIE_WITH_CUDA", "0") != "1":
+    binaries = [b for b in binaries if "/nvidia/" not in b[0].replace("\\", "/")]
+    datas = [d for d in datas if "/nvidia/" not in d[0].replace("\\", "/")]
+
 excludes = [
     "tkinter",
     "matplotlib",
@@ -66,6 +74,9 @@ excludes = [
     "pytest_cov",
     "coverage",
 ]
+
+if os.environ.get("PIE_WITH_CUDA", "0") != "1":
+    excludes += ["nvidia"]
 
 if not with_dl:
     excludes += ["torch", "pytorch_forecasting", "lightning", "pytorch_lightning"]

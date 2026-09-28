@@ -46,6 +46,24 @@ npm run tauri build
 npm run engine:build -- --with-dl
 ```
 
+### CPU 版與 CUDA 版
+
+**預設產物是 CPU 版。** Linux 上 xgboost 會拉入 `nvidia-*` 系列的 CUDA 執行期函式庫（`nvidia-nccl-cu12` 等），約 **450 MB**、佔整個 bundle 的三分之一；而 GPU 訓練是選配、預設關閉，且還需要系統 CUDA toolkit 與 NVIDIA 顯卡。因此預設將它們排除。
+
+| 選項 | 內容 | 大約大小（Linux） |
+|---|---|---|
+| 預設 | CPU 版 | 約 660 MB |
+| `--with-cuda` | 加上 CUDA 執行期函式庫 | 約 1.1 GB |
+| `--with-dl` | 加上 torch / lightning（TFT） | 再大幅增加數 GB |
+
+```bash
+npm run engine:build -- --with-cuda
+```
+
+**CPU 版在 GPU 機器上也能正常執行**，只是訓練走 CPU。只有確定要在部署機器上使用 GPU 訓練時才需要 `--with-cuda`。
+
+註：`nvidia-*` 是 xgboost 在 **Linux** 上的相依（其 wheel 的 platform marker 為 `platform_system == 'Linux'`），所以這兩個產物的差異主要出現在 Linux。
+
 ### PyInstaller 無法跨平台／跨架構編譯
 
 凍結後的引擎架構跟隨建置 runner。macOS x86_64 因此使用 Intel runner（`macos-13`）；CI 另有一道 `lipo -archs` 檢查，引擎架構與 bundle 目標不符時直接讓建置失敗，避免悄悄出貨無法執行的產物。
