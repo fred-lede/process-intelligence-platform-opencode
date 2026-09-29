@@ -425,6 +425,26 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.26（2026-09-28）
+
+**使用者說明：補上 GRR 的適用範圍限制**
+
+- grr 的 `limits` 原先只談樣本量、零件範圍與代表性，但**沒提那個會讓整個結果失效的前提**：引擎實作的是 **AIEM（全距法），只適用於 crossed（零件與操作者交叉）研究**。
+- 若資料為 **nested**（零件嵌套於機台／批次／產線內），AIEM 會**高估零件變異、使 %GRR 失真**。三語皆已補上此限制與處置建議（改用嵌套設計的變異數分解）。
+- 改的是 **`explorationGrrExtra`** 而非 `grrNotes` —— 說明由覆蓋鏈組成（`grrNotes` → `explorationGrrExtra` → `grrSteps`），改 notes 會通過編譯、畫面不變、等於沒改。
+- 驗證：crossed-only 與 nested 用語在三語皆出現；`tsc`／`build`／`check:guide`／`check:i18n` 全過。
+
+### v0.9.25（2026-09-28）
+
+**使用者說明：GRR 補上方法與最低要求、distribution 補上候選清單**
+
+- **grr**：加入引擎實況 —— 方法為 **AIEM（Average and Range／全距法）**、**crossed** 研究；**至少 3 次量測**、**建議至少 10 個零件**才穩健；選用 **X-bar 管制圖**檢視量測穩定度。
+- **重要更正**：`data/grr.py` **沒有 ANOVA** 路徑。我先前「ANOVA vs 全距法」的說法是**錯的**，未寫入說明。
+- **distribution**：列出 **7 種候選分布** —— normal、lognormal、weibull、gamma、beta、triangular、uniform。
+- 改的是 **`grrSteps`／`distributionSteps`**，因為 `steps` 是該欄位的最高優先序來源。
+- 內容量（實測）：`AIEM` 與 `至少 3 次量測` 在三語皆出現；7 種分布在三語皆 7/7。
+- 驗證：`tsc`／`build`／`check:guide`／`check:i18n` 全過（含全形字元守衛，確認新增文字未污染 en／es-MX）。
+
 ### v0.9.23（2026-09-28）
 
 **修正：英文與西班牙文語系中的全形中文標點**
