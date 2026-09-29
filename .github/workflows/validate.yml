@@ -40,7 +40,12 @@ jobs:
         run: npm run build
 
       - name: verify i18n key parity
-        run: node scripts/check-i18n-parity.mjs
+        run: npm run check:i18n
+
+      # A page with no guide entry renders generic boilerplate rather than
+      # failing, so this has to be asserted mechanically.
+      - name: verify user-guide coverage
+        run: npm run check:guide
 
       # Only *shipped* dependencies gate the PR. Dev-toolchain advisories (the
       # Vite dev server, for example) do not reach users and must not block

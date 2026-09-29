@@ -425,6 +425,23 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.10（2026-09-28）
+
+**使用者說明改為可機械驗證，並接入 CI**
+
+- **審查結論：內容本身是完整的。** 逐一呼叫 `getGuideSection()` 驗證 15 個頁面 + `exploration` 的 4 個子頁籤（共 19 個目標）× 3 語系，**全部都有專屬內容**，沒有缺頁或空欄位。
+- **但原本無法驗證，且新增頁面會靜默退化成罐頭文字**：
+  - `topics` 的型別是 `Record<string, Partial<Record<locale, Partial<GuideSection>>>>` —— 每一層都是 `Partial`，所以少頁面／少語系／少欄位，編譯器都不會報錯。
+  - `getGuideSection()` 找不到條目時會回傳 `common[lang]` 通用文字（`base = { ...common[lang], title: '' }`），所以漏寫說明不會有任何錯誤或空白，使用者只會看到「說明目前頁面的用途與結果」這種無意義內容。
+  - 內容還分散在 `topics` 資料與約 15 段程式碼中的語言三元運算式（`distributionSteps`／`trendSteps`／`timeseriesSteps`／`grrSteps`／`explorationGrrExtra`／`predictionProfilerNotes`／`approvalSpcNotes`／`dataImportContract`…），因此無法只讀資料回答「說明是否完整」。
+- **新增 `scripts/check-guide-coverage.mjs`**（接進 CI）：
+  - 頁面清單**從 `src/types` 的 `AppTab` union 解析而來** —— 新增頁面會直接讓檢查失敗，直到補上說明。
+  - 呼叫真的 `getGuideSection()`（對話框的唯一出口），斷言 8 個欄位皆非空。
+  - 以「不存在的頁面」取得通用 baseline，偵測「只有罐頭文字」的情況（不需匯出 `common`）。
+  - **RED 驗證**：暫時加入一個沒有說明的頁面 → 檢查 exit 1 並逐語系指出 `renders only the generic boilerplate (no guide entry?)`。
+- `package.json` 新增 `check:i18n` 與 `check:guide` 兩個腳本，CI 的 frontend job 都會執行。
+- 未做（建議後續）：把分散在程式碼三元式中的欄位搬回 `topics` 資料、移除 `Partial`、處理未使用的 `title`。目前檢查已能覆蓋這些風險，所以不急。
+
 ### v0.9.9（2026-09-28）
 
 **Excel 報告補齊 HTML 已有的區塊**

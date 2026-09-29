@@ -1,7 +1,7 @@
 {
   "name": "process-intelligence-platform",
   "private": true,
-  "version": "0.9.9",
+  "version": "0.9.10",
   "type": "module",
   "author": "Fred Wang",
   "description": "AI-powered process intelligence platform for DOE and manufacturing analysis",
@@ -12,6 +12,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "engine:build": "node scripts/build-engine.mjs",
+    "check:i18n": "node scripts/check-i18n-parity.mjs",
+    "check:guide": "node --experimental-strip-types scripts/check-guide-coverage.mjs",
     "build:app": "npm run engine:build && npm run tauri build"
   },
   "dependencies": {
