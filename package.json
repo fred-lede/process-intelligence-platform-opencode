@@ -1,7 +1,7 @@
 {
   "name": "process-intelligence-platform",
   "private": true,
-  "version": "0.9.11",
+  "version": "0.9.12",
   "type": "module",
   "author": "Fred Wang",
   "description": "AI-powered process intelligence platform for DOE and manufacturing analysis",
