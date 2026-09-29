@@ -32,6 +32,12 @@ const LOCALES = ['zh-TW', 'en', 'es-MX']
 const REQUIRED = ['title', 'purpose', 'principle', 'formula', 'interpretation', 'limits', 'recommendation', 'steps']
 // Compared against the generic baseline: at least one of these must be specific.
 const BESPOKE = ['purpose', 'principle', 'interpretation', 'formula', 'limits', 'recommendation']
+// Full-width punctuation, CJK symbols and CJK ideographs. A non-Chinese locale
+// must contain none of these: they leak in when text is copied from the zh-TW
+// entry, and neither the compiler nor check-i18n-parity (which only compares key
+// sets) can see it. Legitimate maths glyphs such as U+2212 minus and U+00D7
+// multiply are deliberately outside these ranges.
+const FORBIDDEN_IN_NON_ZH = /[\u3000-\u303F\uFF00-\uFFEF\u4E00-\u9FFF]/
 
 // Pages the app exposes, straight from the AppTab union: take the declaration
 // up to the first blank line and collect its quoted members.
@@ -77,6 +83,19 @@ for (const { label, tab, sub } of targets) {
     if (isBoilerplate) {
       console.log(`  ${label} [${lang}]: renders only the generic boilerplate (no guide entry?)`)
       failures++
+      continue
+    }
+    // Locale integrity: a non-Chinese locale must carry no full-width or CJK
+    // character at all. This is the check that would have caught the en/es
+    // strings shipping '%GRR=GRR variation／total variation×100%；...' for so
+    // long: the text rendered, so nothing else flagged it.
+    if (lang !== 'zh-TW') {
+      const dirty = REQUIRED.filter((f) => FORBIDDEN_IN_NON_ZH.test(String(section[f] ?? '')))
+      if (dirty.length) {
+        const hit = String(section[dirty[0]]).match(FORBIDDEN_IN_NON_ZH)[0]
+        console.log(`  ${label} [${lang}]: full-width/CJK char ${JSON.stringify(hit)} in ${dirty.join(', ')}`)
+        failures++
+      }
     }
   }
 }
