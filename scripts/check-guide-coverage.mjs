@@ -85,12 +85,20 @@ for (const { label, tab, sub } of targets) {
       failures++
       continue
     }
+    // `contract` is rendered by the modal as well, but only when a page defines one
+    // (today only dataImport). It is not in REQUIRED, so an empty contract would ship
+    // silently as a blank section -- assert it whenever the page provides one.
+    if (section.contract !== undefined && !String(section.contract).trim()) {
+      console.log(`  ${label} [${lang}]: defined but empty contract`)
+      failures++
+      continue
+    }
     // Locale integrity: a non-Chinese locale must carry no full-width or CJK
     // character at all. This is the check that would have caught the en/es
     // strings shipping '%GRR=GRR variation／total variation×100%；...' for so
     // long: the text rendered, so nothing else flagged it.
     if (lang !== 'zh-TW') {
-      const dirty = REQUIRED.filter((f) => FORBIDDEN_IN_NON_ZH.test(String(section[f] ?? '')))
+      const dirty = [...REQUIRED, 'contract'].filter((f) => FORBIDDEN_IN_NON_ZH.test(String(section[f] ?? '')))
       if (dirty.length) {
         const hit = String(section[dirty[0]]).match(FORBIDDEN_IN_NON_ZH)[0]
         console.log(`  ${label} [${lang}]: full-width/CJK char ${JSON.stringify(hit)} in ${dirty.join(', ')}`)
