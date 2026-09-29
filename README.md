@@ -425,6 +425,15 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.15（2026-09-28）
+
+**使用者說明：驗證頁面改為列舉功能**
+
+- 先前 validation 說明未列出**五個可信度等級**（production_ready／engineering_reference／exploratory／needs_more_data／not_recommended）、未說明六個維度的名稱、未提 Durbin-Watson 的判讀方式，也沒有把「實驗建議 → 實驗記錄 → 可信度累積」的流程串起來。
+- 改寫驗證（三語）：五種建議原因碼（interaction／transformation／range_expansion／new_factor／replicate）與對應處置；k-fold 各折的**離散程度**判讀（平均好但折間差異大＝對切分敏感）；殘差結構（彎曲＝結構不足、擴散＝異方差）；Durbin-Watson 判讀；**六維度名稱**與等級對應用途；planned／actual 與 predicted／actual 的實驗記錄流程；以及 11 步流程。
+- 明確寫入**時間序列不可隨機切分**（會高估表現）。
+- 內容量（實測）：en 4,142 字元、zh-TW 1,328、es-MX 4,423。
+
 ### v0.9.14（2026-09-28）
 
 **使用者說明：Copula 頁面改為列舉功能**
