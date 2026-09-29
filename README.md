@@ -425,6 +425,31 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.30（2026-09-28）
+
+**使用者說明：distribution 補上 k／n 定義與樣本量下限**
+
+- `formula` 用了 k 與 n 卻**都沒定義**，`limits` 也沒有樣本量下限 —— **用幾個點配適的結果，與用幾千點配適的結果看起來一樣權威**。
+- 補上（三語）：k 為配適參數個數、n 為樣本數；**AIC／BIC 只衡量相對配適，並不檢定該分布是否正確**；**樣本量小時 AIC／BIC 排序不穩定，最佳分布可能只是偶然，不宜據以設定模擬分布**。
+- 來源為 `distributionExtra`（0.9.29 已移除被遮蔽的 `distributionNotes`，extra 現為唯一來源）。腳本**讀取實際字串作為搜尋鍵**而非憑記憶重建，且每處需恰好匹配一次才寫入。
+- 驗證：k／n 與樣本量下限在三語皆出現；`tsc`／`build`／`check:guide`／`check:i18n` 全過。**此為覆蓋鏈核對後的最後一個內容缺口。**
+
+### v0.9.29（2026-09-28）
+
+**重構：實際刪除五個被遮蔽的 const，並更正 v0.9.28 的不實記錄**
+
+- **v0.9.28 的 commit message 聲稱完成了這項刪除並附有雜湊證明 —— 兩者都沒發生。** 該 helper 因這些 const 採 **ASI 結尾（無分號）** 而中止，掃描在等一個不存在的 `;`；而我自己的命令鏈中 `;` 與 `&&` 混用，使失敗沒有阻止後續步驟，commit 就這樣帶著不存在的工作推送出去。v0.9.28 實際只含版號與雜湊工具。
+- 本版**真正執行刪除**：`processNotes`、`modelCenterTimeSeriesNotes`、`approvalSpcNotes`（其頁面由 `*Detail` 支撐，三語皆 7/7 欄位）、`grrNotes`、`distributionNotes`（其欄位被 `explorationGrrExtra`／`distributionExtra` 完全涵蓋，逐欄位確認）。
+- 保留 `explorationGrrExtra`、`distributionExtra`、`trendNotes`、`timeseriesNotes`、`predictionProfilerNotes` —— 它們仍是各自欄位的唯一來源。**先前「9 個死代碼」的說法是錯的：舊不等於死。**
+- **證明而非聲稱**：528 格（頁 × 語系 × 欄位）雜湊在刪除前後**逐格完全相同**。commit 前另加斷言：五個名稱確已消失、五個活躍 const 仍在。失敗兩次皆因寫入置於驗證之後，**沒有任何半套修改落地**。
+
+### v0.9.28（2026-09-28）
+
+**雜湊工具（附帶更正說明）**
+
+- 本版實際只包含版號升版與 `scripts/hash-guide-output.mjs`（逐格雜湊工具，用於證明重構不影響輸出）。
+- **其 commit message 描述的五個 const 刪除與雜湊證明並未發生** —— 詳見 v0.9.29 的更正。保留此條目是為了不讓 history 出現無法解釋的落差。
+
 ### v0.9.27（2026-09-28）
 
 **使用者說明：補上 trend 與 timeseries 沒說出來的失效前提**
