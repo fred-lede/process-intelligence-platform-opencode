@@ -2416,7 +2416,7 @@ dependencies = [
 
 [[package]]
 name = "process-intelligence-platform"
-version = "0.9.29"
+version = "0.9.30"
 dependencies = [
  "log",
  "serde",
