@@ -425,6 +425,17 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.11（2026-09-28）
+
+**使用者說明：從「只講原則」改為列舉功能（modelCenter 先行）**
+
+- 先前說明雖然每頁都有內容，但**深度不足**：只解釋目的與原則，不列舉頁面實際提供的選項。實測 modelCenter 的 `principle`／`formula`／`steps` 幾乎全在講時間序列模式，對標準建模只有一句「preserves the existing DOE, AI, and hybrid flows」——**8 種模型類型一個都沒提**。
+- 本版改寫 **modelCenter**（三語）：列出 8 種模型類型（doe_linear／doe_quadratic／random_forest／xgboost／lightgbm／residual_hybrid／logistic_regression／weibull_regression，各含目標型態與適用場景）、6 種 DOE 設計範本、SHAP／敏感度／交叉驗證／外推／Prediction Profiler、模型治理與核准流程，以及 12 步操作流程。
+- 內容量：en 約 1,695 → **4,752 字元（2.8×）**；zh-TW 1,828、es-MX 5,287。**8/8 模型名稱在三語皆出現**（已驗證）。
+- **實作注意**：內容必須放在 return 的**最後**一個 spread。`...modelCenterTimeSeriesNotes` 排在 `...topic` 之後，若把內容寫進 `topics.modelCenter` 會被靜默覆蓋 —— 這是實測確認的，不是推測。
+- 限制的寫法照使用者核可的方向偏直言（例如「自動特徵選取可能丟掉工程上重要但本樣本微弱的因子」）。
+- 其餘頁面依同一標準待辦，順序：spc → monteCarlo／copula／validation → settings／reports，最後檢視 zh-TW 是否需整體補齊（zh-TW 總量仍明顯少於 en／es-MX）。
+
 ### v0.9.10（2026-09-28）
 
 **使用者說明改為可機械驗證，並接入 CI**
