@@ -425,6 +425,15 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.9.32（2026-09-28）
+
+**修正：dataImport 的 `interpretation` 不再被元件覆蓋**
+
+- `GuideModal` 原本對 dataImport 用**三段硬編碼字串取代 `section.interpretation`**，因此 **0.9.18 為該頁三語寫的 interpretation 從未顯示過**。硬編碼內容住在元件內、不在 `guideContent.ts`，這也是**守衛看不到它**、且兩者會各自漂移的原因。
+- **先合併、再刪除**：硬編碼那段提到「各欄位的 n、最小值、最大值、平均值、標準差、最佳分布與問題數」，而 guide 版本未提逐欄統計 —— 直接刪除會無聲遺失該指示。故先併入 guide（zh +39／en +128／es-MX +136 字元），再移除硬編碼分支。
+- 驗證：元件內已無硬編碼字串且改用 `section.interpretation`（斷言）；**逐欄統計與編碼指引在三語皆存在**（`len` zh 265／en 717／es-MX 746）；`tsc`／`build`／`check:guide`／`check:i18n` 全過。
+- 此為「內容存在但永遠不被渲染」問題的**渲染層**案例，與 0.9.26 的 GRR（資料層覆蓋）同類。
+
 ### v0.9.31（2026-09-28）
 
 **守衛補強：涵蓋被渲染卻未受保護的 `contract` 欄位**
