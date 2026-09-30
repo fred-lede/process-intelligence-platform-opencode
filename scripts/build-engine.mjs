@@ -52,6 +52,11 @@ const withTensorflow = flags.has('--with-tensorflow')
 const withCuda = flags.has('--with-cuda')
 const skipSmoke = flags.has('--skip-smoke')
 
+// How long the frozen engine gets to answer engine/ping. Overridable because a cold
+// first launch on macOS (Gatekeeper evaluating a binary it has not seen before) can
+// take far longer than a warm one, and a hard 120s made that look like a hang.
+const smokeTimeoutMs = Number(process.env.SMOKE_TIMEOUT_MS ?? 120_000)
+
 const isWindows = process.platform === 'win32'
 const exeName = isWindows ? 'process-intelligence-engine.exe' : 'process-intelligence-engine'
 const venvPython = join(engineDir, '.venv', isWindows ? 'Scripts' : 'bin', isWindows ? 'python.exe' : 'python')
@@ -157,8 +162,8 @@ function dirSize(path) {
   return total
 }
 
-function smokeTest() {
-  const exe = join(stageDir, exeName)
+export function smokeTest(exeOverride) {
+  const exe = exeOverride ?? join(stageDir, exeName)
   if (!existsSync(exe)) throw new Error(`staged executable missing: ${exe}`)
 
   console.log('\nsmoke test: engine/ping against the frozen engine')
@@ -182,11 +187,35 @@ function smokeTest() {
     }
 
     const timer = setTimeout(
-      () => finish(new Error(`engine did not answer engine/ping within 120s\n--- stderr ---\n${stderr.slice(-4000)}`)),
-      120_000,
+      () =>
+        finish(
+          new Error(
+            `engine did not answer engine/ping within ${Math.round(smokeTimeoutMs / 1000)}s` +
+              ` (raise it with SMOKE_TIMEOUT_MS)` +
+              `\n--- stderr ---\n${
+                stderr.slice(-4000) ||
+                '(empty -- the process produced no stderr, which points to a process that is alive but not answering, rather than one crashing with a traceback)'
+              }`,
+          ),
+        ),
+      smokeTimeoutMs,
     )
 
     child.on('error', (e) => finish(e))
+    // Report an early death as an early death. Without this handler a binary killed at
+    // startup -- Gatekeeper quarantine on a freshly rebuilt executable, a missing
+    // dylib, an architecture mismatch -- was indistinguishable from a slow one: the
+    // script waited out the entire timeout and then blamed a lack of response, with an
+    // empty stderr and no exit code to go on.
+    child.on('exit', (code, signal) => {
+      if (settled) return
+      finish(
+        new Error(
+          `engine exited before answering engine/ping (code ${code ?? 'null'}, signal ${signal ?? 'none'})` +
+            `\n--- stderr ---\n${stderr.slice(-4000) || '(empty)'}`,
+        ),
+      )
+    })
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString()
     })
@@ -212,6 +241,11 @@ function smokeTest() {
       finish(new Error(`unexpected engine/ping response: ${line}`))
     })
 
+    // A child that dies before it reads stdin makes this pipe raise EPIPE, and an
+    // unhandled 'error' event on a stream takes the whole process down with a stack
+    // trace -- hiding the exit that actually happened. Swallow it here; the child's
+    // 'exit' handler is what reports the news.
+    child.stdin.on('error', () => {})
     child.stdin.write(`${JSON.stringify({ id: '1', method: 'engine/ping', params: {} })}\n`)
   })
 }
@@ -233,7 +267,11 @@ async function main() {
   console.log('tauri.conf.json ships src-tauri/resources/engine/ via bundle.resources')
 }
 
-main().catch((error) => {
-  console.error(`\nbuild-engine failed: ${error.message}`)
-  process.exit(1)
-})
+// Only run the build when invoked directly: importing this module (from a test, say)
+// must not kick off a full PyInstaller build as a side effect.
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error(`\nbuild-engine failed: ${error.message}`)
+    process.exit(1)
+  })
+}
