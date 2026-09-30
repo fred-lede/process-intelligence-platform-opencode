@@ -47,6 +47,14 @@ jobs:
       - name: verify user-guide coverage
         run: npm run check:guide
 
+      # The smoke test is the only thing that catches a frozen engine which cannot
+      # start at all, and its failure messages are what a developer acts on. This
+      # drives the real check against three stubs -- one that dies, one that answers,
+      # one that hangs -- so the diagnostics are exercised rather than assumed.
+      # The stubs are /bin/sh scripts, so this step is POSIX-only by nature.
+      - name: verify build smoke-test diagnostics
+        run: SMOKE_TIMEOUT_MS=2000 node scripts/test-smoke-timeout.mjs
+
       # Only *shipped* dependencies gate the PR. Dev-toolchain advisories (the
       # Vite dev server, for example) do not reach users and must not block
       # unrelated work; they are tracked separately.
