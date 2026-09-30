@@ -113,9 +113,15 @@ for (const { label, tab, sub } of targets) {
 // normal, since Chinese carries far more meaning per character and a full-width
 // glyph is counted once while its English phrase takes many). Counted as a flag, not
 // as proof: read the fields before calling a divergence a content gap.
+// Sentence counter, deliberately conservative about ASCII periods. Splitting on every
+// '.' counts the '.' in a decimal, in an ellipsis and in a step number as sentence ends,
+// which flagged eight pages spuriously: '99.73%' split after '99.', 'F(x1,...,xp)'
+// split three times, and '1. Select' split once per step. A CJK terminator always ends a
+// sentence; an ASCII period only does when whitespace follows and the next character
+// starts a sentence (capital or opening bracket).
 const countSentences = (s) =>
   String(s ?? '')
-    .split(/(?<=[.。！？!?])\s*/)
+    .split(/(?<=[。！？!?])\s*|(?<=\.)\s+(?=[A-Z(["'])/)
     .filter((x) => x.trim().length > 3).length
 
 const PARITY_FIELDS = ['purpose', 'principle', 'formula', 'interpretation', 'limits', 'recommendation', 'steps']
