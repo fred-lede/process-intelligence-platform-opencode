@@ -425,7 +425,25 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
-### v0.9.32（2026-09-28）
+### v0.10.1（2026-09-30）
+
+**修正：建置腳本會回報「引擎啟動即死」，並在 EPIPE 下存活**
+
+- `build-engine.mjs` 的 smoke test **沒有 `child.on('exit')` 處理器**，因此凍結引擎在回答 `engine/ping` 前就結束時，腳本會**等滿 120 秒**再報「did not answer within 120s」加一段**空白的 stderr** —— 而這正是 macOS Gatekeeper 終止、缺 dylib、架構不符的表現。**唯一能區分「死了」與「慢」的資訊（結束碼）被丟棄。**
+- 補上：`exit` 處理器回報 **code 與 signal**（實測提早死亡 **5 毫秒**就報出，不再等 120 秒）；`SMOKE_TIMEOUT_MS` 可調（冷啟動的 Gatekeeper 評估可能超過硬編的 120 秒）；逾時訊息明確說明「**stderr 為空**」。
+- **另一個靠實際執行測試才發現的缺陷**：子行程已死時 `child.stdin.write()` 會觸發**未處理的 EPIPE 事件，讓整個 Node 行程以堆疊崩潰**，再次吞掉結束碼。測試第一次執行就炸了 —— 不是讀程式碼發現的。
+- 新增 `scripts/test-smoke-timeout.mjs`，用三個 stub 驅動**真正的 `smokeTest()`**：立即結束（報 code 3）、正常回應、靜默掛住。`smokeTest` 改為匯出，`main()` 只在直接執行時啟動，避免 import 觸發整包 PyInstaller 建置。
+- **這不修復建置失敗本身，只讓原因可回報。** 註：使用者實測 0.10.1 建置正常、0.10.0 失敗，而兩者引擎二進位僅差版本字串 —— 該次失敗判定為**環境性／暫時性**，機制未證實（已查證建置腳本每次全清 dist/work 快取，排除陳舊快取的可能）。
+
+### v0.10.0（2026-09-30）
+
+**進版：將 0.9.11–0.9.32 的說明工作標記為 minor release**
+
+- 涵蓋：13 頁列舉式說明改寫、en／es-MX 全形標點污染的修正與守衛、被遮蔽 const 的移除（含更正 v0.9.28 的不實記錄）、以及兩件「內容存在但永不顯示」的修正（GRR 的 crossed-only 限制屬資料層、dataImport 的 interpretation 屬渲染層）。
+- 版本同步於 `VERSION`、`package.json`、`Cargo.toml`、`Cargo.lock`、`tauri.conf.json`、engine `__init__.py` 共六處，提交前已逐一驗證。
+- 註：本條目為補記（進版當時未同步寫入 README）。
+
+### v0.9.32（2026-09-30）
 
 **修正：dataImport 的 `interpretation` 不再被元件覆蓋**
 
