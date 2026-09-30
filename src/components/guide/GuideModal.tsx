@@ -15,9 +15,10 @@ export default function GuideModal({ open, tab, subtab, onClose }: Props) {
   const contractTitle = isZh ? '建議的資料契約' : isEs ? 'Contrato de datos sugerido' : 'Suggested data contract'
   const contractHeaders = isZh ? ['類型', '範本基礎', '額外要求'] : isEs ? ['Tipo', 'Plantilla base', 'Requisitos adicionales'] : ['Type', 'Template basis', 'Additional requirements']
   const contractData = (section.contract ?? []).map(([type, template, requirement], index) => ({ key: index, type, template, requirement }))
-  const interpretation = tab === 'dataImport'
-    ? (isZh ? '查看各欄位的 n、最小值、最大值、平均值、標準差、最佳分布與問題數。warning 需人工判斷，blocked 或嚴重問題應先處理；最佳分布只是樣本配適結果。' : isEs ? 'Revisa n, mínimo, máximo, media, desviación estándar, mejor distribución y problemas de cada campo. warning requiere revisión; blocked o problemas críticos deben resolverse. La mejor distribución es solo un ajuste muestral.' : 'Review n, min, max, mean, standard deviation, best distribution, and issue count for each field. warning requires review; blocked or critical issues should be resolved first. A best distribution is only a sample fit.')
-    : section.interpretation
+  // The interpretation now comes from the guide content, like every other field. It
+  // used to be overridden here in three hardcoded languages, which kept that text
+  // outside check:guide and meant dataImport's section.interpretation never rendered.
+  const interpretation = section.interpretation
   return <Modal open={open} title={title} onCancel={onClose} onOk={onClose} width={720}>
     <Typography.Paragraph><Typography.Text strong>{t('guide.labels.purpose')}</Typography.Text><br />{section.purpose}</Typography.Paragraph>
     <Typography.Paragraph><Typography.Text strong>{i18n.language.toLowerCase().startsWith('zh') ? '操作步驟' : i18n.language.toLowerCase().startsWith('es') ? 'Pasos' : 'Steps'}</Typography.Text><br />{section.steps}</Typography.Paragraph>
