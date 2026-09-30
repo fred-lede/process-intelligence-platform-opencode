@@ -108,7 +108,31 @@ for (const { label, tab, sub } of targets) {
   }
 }
 
+// Structural parity: sentence counts per field, across locales. This is the sound
+// completeness signal -- character ratios are not (a zh/en ratio of 0.25-0.5 is
+// normal, since Chinese carries far more meaning per character and a full-width
+// glyph is counted once while its English phrase takes many). Counted as a flag, not
+// as proof: read the fields before calling a divergence a content gap.
+const countSentences = (s) =>
+  String(s ?? '')
+    .split(/(?<=[.。！？!?])\s*/)
+    .filter((x) => x.trim().length > 3).length
+
+const PARITY_FIELDS = ['purpose', 'principle', 'formula', 'interpretation', 'limits', 'recommendation', 'steps']
+let parityNotes = 0
+for (const { label, tab, sub } of targets) {
+  const counts = LOCALES.map((lang) => {
+    const section = getGuideSection(tab, sub, lang)
+    return [lang, PARITY_FIELDS.reduce((a, f) => a + countSentences(section[f]), 0)]
+  })
+  if (new Set(counts.map(([, n]) => n)).size > 1) {
+    parityNotes++
+    console.log(`  NOTE ${label}: sentence counts differ -- ${counts.map(([l, n]) => `${l}=${n}`).join(' ')}`)
+  }
+}
+
 console.log(`checked ${targets.length} page(s) x ${LOCALES.length} locales`)
+if (parityNotes) console.log(`${parityNotes} page(s) flagged for sentence-count divergence (informational, not a failure)`)
 if (failures) {
   console.error(`\n${failures} guide gap(s) -- users would see missing or generic text on these pages.`)
   process.exit(1)
