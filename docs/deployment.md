@@ -53,6 +53,32 @@ sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librs
 
 這組依賴同時是**本機能否執行 Rust 檢查**的前提：缺少時所有 Rust 改動都無法在本機驗證，只能等 CI。若 CI 日後升級至 ubuntu-24.04，`.github/workflows/*.yml` 中的 `libappindicator3-dev` 必須同步改名為 `libayatana-appindicator3-dev`，否則 rust job 會直接失敗。
 
+### Linux 產物格式：只發 deb 與 rpm
+
+Linux **不產生 AppImage**。Tauri 的 AppImage 步驟會以 linuxdeploy 掃描 AppDir 內所有 ELF 並嘗試部署其相依，而 PyInstaller 引擎內含 scipy 隨附的**多份 `libquadmath`／`libgfortran`（不同雜湊檔名、同一 soname）**，linuxdeploy 無法以 soname 解析其中一份而中止：
+
+```
+ERROR: Could not find dependency: libquadmath-828275a7.so.0.0.0
+ERROR: Failed to deploy dependencies for existing files
+failed to bundle project: `failed to run .../linuxdeploy-x86_64.AppImage`
+```
+
+引擎本身是自帶 RPATH 的獨立 bundle，不需要 linuxdeploy 重新部署其相依。因此建置時明確指定：
+
+```bash
+npm run tauri build -- --bundles deb,rpm
+```
+
+發行流程（`.github/workflows/release.yml`）的兩個 Linux 項目（CPU 與 CUDA）已固定使用 `--bundles deb,rpm`。
+
+**診斷提示**：Tauri 預設只顯示 `failed to run linuxdeploy`，把真正原因吞掉。要看到上面的 `Could not find dependency` 必須加 `--verbose`：
+
+```bash
+npm run tauri build -- --bundles appimage --verbose
+```
+
+另：`libfuse2` 常被誤判為此錯誤的原因。linuxdeploy 本身若能執行 `--version` 即與 FUSE 無關（本機 `libfuse2t64` 已安裝，仍出現此錯誤）。
+
 ### 引擎解析順序
 
 執行時 `src-tauri/src/engine/mod.rs` 依序尋找，第一個存在者勝出：

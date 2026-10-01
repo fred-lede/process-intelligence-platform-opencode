@@ -23,8 +23,14 @@ jobs:
           - platform: 'macos-13'
             args: '--target x86_64-apple-darwin'
             engine_args: ''
+          # Linux ships deb and rpm only. The AppImage step runs linuxdeploy across the
+          # PyInstaller engine, and scipy vendors several copies of libquadmath under
+          # different hashed names, so linuxdeploy cannot resolve one of them by soname
+          # and aborts: "Could not find dependency: libquadmath-828275a7.so.0.0.0". The
+          # engine is a self-contained bundle with its own RPATH and does not need
+          # linuxdeploy to deploy its dependencies.
           - platform: 'ubuntu-22.04'
-            args: ''
+            args: '--bundles deb,rpm'
             engine_args: ''
           # CPU / CUDA variants are only meaningful on Linux: xgboost declares
           # its `nvidia-*` CUDA dependencies with a Linux-only platform marker,
@@ -32,7 +38,7 @@ jobs:
           # productName is overridden so the two Linux artifacts do not collide
           # in the release; the app identifier is the same, so install one.
           - platform: 'ubuntu-22.04'
-            args: '--config {"productName":"Process Intelligence Platform (CUDA)"}'
+            args: '--bundles deb,rpm --config {"productName":"Process Intelligence Platform (CUDA)"}'
             engine_args: '-- --with-cuda'
           - platform: 'windows-latest'
             args: ''
