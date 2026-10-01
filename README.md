@@ -425,6 +425,16 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.10.3（2026-09-30）
+
+**報告卡片改為真正「開啟」；Linux 只發 deb／rpm；新增 CUDA 建置入口**
+
+- **報告卡片開啟**（`34da266`）：PDF／Excel 卡片原本會跳存檔對話框，與按鈕上的「開啟」不符。改由新的 Rust `open_report` 指令處理 —— 寫入 app cache 後交棒給系統預設檢視器（`xdg-open`／`open`／`explorer`）。**未採用 opener plugin**：它會拉進 `zbus`、把 `wry` 從 0.55.1 升到 0.57.0、並需要新 capability —— 為了開啟一個檔案去改整個視窗依賴的 webview 層並不划算。寫檔刻意放在 Rust 而非 fs plugin，因為 fs capability 限於「使用者在對話框選的路徑」，cache 路徑不在其中。
+- **Linux 產物格式**（`09def32`、`e1bcbd4`）：AppImage 步驟以 linuxdeploy 掃描 PyInstaller 引擎時，無法以 soname 解析 scipy 隨附的 `libquadmath-828275a7.so.0.0.0`（同一 soname 有多份不同雜湊檔名）而中止。Linux 改為只產生 deb 與 rpm，目標固定在 `src-tauri/tauri.linux.conf.json`（Tauri v2 自動合併的平台設定檔），**因此建置指令不需任何平台參數，macOS／Windows 不受影響**。
+- **CUDA 建置入口**（`e1bcbd4`）：新增 `npm run build:cuda`（CPU 版維持 `npm run build:app`）。`--with-cuda` 屬於引擎腳本而非 Tauri 旗標，兩者不可混用 —— 詳見 `docs/deployment.md`。
+- 文件補充：Linux 建置依賴（含 `libappindicator3-dev` 與 `libayatana-appindicator3-dev` 的互斥差異、`libdbus-1-dev` 的必要性）、AppImage 失敗的真因與**「Tauri 會吞掉 linuxdeploy 訊息，需 `--verbose`」**、以及 `libfuse2` 是常見誤判。
+- 驗證：使用者實機確認 PDF／Excel 可直接開啟、`npm run build:app` 於 Linux 完成並只產出 deb／rpm；`cargo check`、`tsc`、`build`、`check:guide`、`check:i18n` 皆通過。
+
 ### v0.10.2（2026-09-30）
 
 **修正：Excel 報告匯出失敗（`Cannot convert {} to Excel`）與 HTML／Excel 的呈現不一致**
