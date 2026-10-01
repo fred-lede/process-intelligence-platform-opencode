@@ -1295,6 +1295,122 @@ def _handle_report_export(params):
     return _render_saved_report(data, params.get("format", "html"), entity.entity_id)
 
 
+def _handle_device_probe(params: dict) -> dict:
+    """Report what GPU acceleration is actually available, item by item.
+
+    Deliberately not a single boolean: "cannot use CUDA" has several distinct causes
+    with different fixes -- no driver, a CPU-only bundle, or torch genuinely absent
+    because this build ships no deep-learning stack -- and someone who has just set
+    the device to 'gpu' needs to know which one applies.
+
+    Nothing here runs a real GPU computation, so a passing probe is evidence that the
+    pieces are present, not proof that a fit will succeed.
+    """
+    import importlib.util
+    import shutil
+    import site
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    out: dict = {}
+
+    # 1. Driver / device visibility. Works without torch, and when it is missing nothing
+    #    further can succeed, which is why it is reported first and separately.
+    smi = shutil.which("nvidia-smi")
+    if not smi:
+        out["nvidia_smi"] = {"available": False, "reason": "nvidia-smi not found on PATH"}
+    else:
+        try:
+            proc = subprocess.run(
+                [smi, "--query-gpu=name,driver_version", "--format=csv,noheader"],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+            gpus = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+            out["nvidia_smi"] = {
+                "available": proc.returncode == 0 and bool(gpus),
+                "path": smi,
+                "gpus": gpus,
+                "reason": None if gpus else (proc.stderr or "").strip() or "no GPU reported",
+            }
+        except Exception as exc:  # a hanging or broken driver is itself a finding
+            out["nvidia_smi"] = {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+
+    # 2. CUDA runtime libraries inside this build. This is the difference between the
+    #    CUDA and CPU bundles, so it is what tells a user which one they installed.
+    roots = []
+    meipass = getattr(sys, "_MEIPASS", None)  # set only inside a PyInstaller bundle
+    if meipass:
+        roots.append(Path(meipass))
+    roots.append(Path(sys.prefix))
+    for entry in site.getsitepackages() if hasattr(site, "getsitepackages") else []:
+        roots.append(Path(entry))
+    found: list[str] = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for pattern in ("nvidia/*/lib/libcudart*.so*", "nvidia/**/libcublas*.so*", "**/libcudart*.so*"):
+            found += [str(p) for p in root.glob(pattern)]
+    found = sorted({p for p in found if "/nvidia/" in p or "cudart" in p})
+    out["cuda_runtime_in_bundle"] = {"present": bool(found), "libraries": found[:12],
+                                     "count": len(found)}
+
+    # 3. torch, when this build has it. find_spec succeeding does not mean the import
+    #    works, so the import is attempted and its failure reported rather than
+    #    collapsed into "unavailable".
+    if importlib.util.find_spec("torch") is None:
+        out["torch"] = {"installed": False, "cuda_available": False,
+                        "reason": "torch is not installed in this build (no deep-learning stack)"}
+    else:
+        try:
+            import torch  # noqa: PLC0415 - optional, probed at runtime
+
+            available = bool(torch.cuda.is_available())
+            out["torch"] = {
+                "installed": True,
+                "cuda_available": available,
+                "device_count": torch.cuda.device_count(),
+                "version": getattr(torch, "__version__", None),
+                "cuda_version": getattr(getattr(torch, "version", None), "cuda", None),
+                "reason": None if available else "torch.cuda.is_available() is False",
+            }
+        except Exception as exc:
+            out["torch"] = {"installed": True, "cuda_available": False,
+                            "reason": f"import failed: {type(exc).__name__}: {exc}"}
+
+    # 4. Whether the boosters were built with GPU support. xgboost reports this directly;
+    #    lightgbm does not, and saying so is better than inventing a verdict.
+    try:
+        import xgboost
+
+        info = xgboost.build_info()
+        cuda = bool(info.get("USE_CUDA"))
+        out["xgboost_gpu"] = {"supported": cuda, "version": xgboost.__version__,
+                              "reason": None if cuda else "this xgboost build has USE_CUDA=False"}
+    except Exception as exc:
+        out["xgboost_gpu"] = {"supported": False, "reason": f"{type(exc).__name__}: {exc}"}
+
+    try:
+        import lightgbm
+
+        out["lightgbm_gpu"] = {
+            "supported": None,
+            "version": lightgbm.__version__,
+            "reason": "LightGBM does not expose its device support; only a trial fit with "
+                      "device_type='gpu' can confirm it. Not attempted by this probe.",
+        }
+    except Exception as exc:
+        out["lightgbm_gpu"] = {"supported": False, "reason": f"{type(exc).__name__}: {exc}"}
+
+    # A single headline for the UI, derived from the items above so the two cannot disagree.
+    out["cuda_usable"] = bool(
+        out["nvidia_smi"].get("available")
+        and out["cuda_runtime_in_bundle"].get("present")
+        and (out["torch"].get("cuda_available") or out["xgboost_gpu"].get("supported"))
+    )
+    return out
+
+
 def _handle_report_list(params: dict) -> dict:
     return {"reports": REPORT_REGISTRY.list()}
 
@@ -2158,6 +2274,9 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_report_delete(params)
     if method == "report/export":
         return _handle_report_export(params)
+
+    if method == "system/device_probe":
+        return _handle_device_probe(params)
 
     if method == "auth/login":
         return _handle_auth_login(params)
