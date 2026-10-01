@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, Table, Form, Input, Select, Button, Space, Alert, Tag, Descriptions, Modal, message, InputNumber, Typography, Switch } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { UserOutlined, HistoryOutlined, CloudOutlined, CheckCircleOutlined, ReloadOutlined, ExperimentOutlined } from '@ant-design/icons'
-import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing, previewCloudUpload, confirmCloudUpload, listCloudUploadRecords, getDataAssets, detectFields, type UploadPreview, type UploadRecord, type DataAsset, type DetectedField } from '../../lib/engine'
+import { login, logout, registerUser, getCurrentUser, getAuditLog, listUsers, getSettings, updateSettings, testConnection, listAIModels, enginePing, previewCloudUpload, confirmCloudUpload, listCloudUploadRecords, getDataAssets, detectFields, type UploadPreview, type UploadRecord, type DataAsset, type DetectedField, probeDevice, type DeviceProbeResult } from '../../lib/engine'
 import { useAIStore } from '../../stores/aiStore'
 import type { UserRole, AuditEntry, UserRecord, AIProviderConfig } from '../../lib/engine'
 
@@ -28,6 +28,20 @@ export default function Settings() {
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; error?: string } | null>(null)
+  const [deviceProbe, setDeviceProbe] = useState<DeviceProbeResult | null>(null)
+  const [probing, setProbing] = useState(false)
+
+  const runDeviceProbe = async () => {
+    setProbing(true)
+    try {
+      setDeviceProbe(await probeDevice())
+    } catch (e) {
+      setDeviceProbe(null)
+      messageApi.error(String(e))
+    } finally {
+      setProbing(false)
+    }
+  }
 
   const [aiForm] = Form.useForm()
   const [modelForm] = Form.useForm()
@@ -415,6 +429,48 @@ export default function Settings() {
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               {t('settings.lightgbmDeviceNote')}
             </Typography.Text>
+            <Space style={{ marginTop: 8 }} wrap>
+              <Button size="small" loading={probing} onClick={runDeviceProbe}>
+                {probing ? t('settings.deviceProbeTesting') : t('settings.deviceProbeTest')}
+              </Button>
+              {deviceProbe && (
+                <Tag color={deviceProbe.cuda_usable ? 'success' : 'warning'}>
+                  {deviceProbe.cuda_usable ? t('settings.deviceProbeOk') : t('settings.deviceProbeFail')}
+                </Tag>
+              )}
+            </Space>
+            {deviceProbe && (
+              <div style={{ marginTop: 8 }}>
+                {/* Every item is shown separately, with its reason. "Cannot use CUDA" has
+                    several causes needing different fixes, and one red light would not say
+                    which one this machine has. */}
+                <Descriptions size="small" column={1} bordered>
+                  <Descriptions.Item label={t('settings.deviceProbeDriver')}>
+                    {deviceProbe.nvidia_smi.available
+                      ? (deviceProbe.nvidia_smi.gpus ?? []).join('; ')
+                      : (deviceProbe.nvidia_smi.reason ?? '—')}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t('settings.deviceProbeRuntime')}>
+                    {deviceProbe.cuda_runtime_in_bundle.present
+                      ? String(deviceProbe.cuda_runtime_in_bundle.count)
+                      : '—'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t('settings.deviceProbeTorch')}>
+                    {deviceProbe.torch.installed
+                      ? (deviceProbe.torch.cuda_available ? 'CUDA' : (deviceProbe.torch.reason ?? '—'))
+                      : (deviceProbe.torch.reason ?? '—')}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={t('settings.deviceProbeBoosters')}>
+                    {[deviceProbe.xgboost_gpu, deviceProbe.lightgbm_gpu]
+                      .map((b) => (b.supported === null ? '?' : b.supported ? '✓' : '✗'))
+                      .join(' / ')}
+                  </Descriptions.Item>
+                </Descriptions>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {t('settings.deviceProbeNote')}
+                </Typography.Text>
+              </div>
+            )}
             <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
               <Button
                 type="primary"
