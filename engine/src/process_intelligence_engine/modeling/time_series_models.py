@@ -537,7 +537,15 @@ def fit_time_series_ladder(df: pd.DataFrame, time_column: str, target: str, inpu
                     default_root_dir=str(lightning_root),
                 )
                 trainer.fit(tft_model, train_dataloaders=train_loader)
-                raw_prediction = tft_model.predict(validation_loader, mode="quantiles")
+                # predict() builds its own Trainer from trainer_kwargs. Left unset, Lightning
+                # defaults to devices="auto", so on a multi-GPU host it selects DDP and the
+                # env-based TCPStore rendezvous fails on Windows. Pin it to the same single
+                # device trainer.fit already uses, so prediction matches training.
+                raw_prediction = tft_model.predict(
+                    validation_loader,
+                    mode="quantiles",
+                    trainer_kwargs={"accelerator": "auto", "devices": 1},
+                )
                 quantiles = raw_prediction.detach().cpu().numpy()
                 if quantiles.ndim == 3:
                     quantiles = quantiles[:, 0, :]

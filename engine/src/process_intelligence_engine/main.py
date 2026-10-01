@@ -1295,6 +1295,47 @@ def _handle_report_export(params):
     return _render_saved_report(data, params.get("format", "html"), entity.entity_id)
 
 
+def _find_cuda_runtime_libraries(roots) -> list[str]:
+    """Locate the CUDA runtime that ships inside this build, on any OS.
+
+    The two wheel layouts have nothing in common beyond the library names, which is why
+    this cannot be a single glob. On Linux the runtime is installed as an ``nvidia/*``
+    namespace package of POSIX shared objects; on Windows there is no ``nvidia``
+    directory at all and the runtime arrives as ``.dll`` files placed directly in
+    ``torch/lib``. Matching only the Linux shape reports a working Windows CUDA build
+    (e.g. torch 2.14.1+cu132 on an RTX 5090) as CPU-only.
+
+    Returned paths are filtered to genuine CUDA runtime libraries so the caller can use
+    a non-empty result as evidence; the comparison is done on a normalised, lowercased
+    form because the path separator differs per platform.
+    """
+    patterns = (
+        # Linux / ROCm wheel: shared objects under the nvidia namespace package.
+        "nvidia/*/lib/libcudart*.so*",
+        "nvidia/**/libcublas*.so*",
+        "**/libcudart*.so*",
+        # Windows wheel: DLLs bundled straight into torch/lib, no nvidia/ package.
+        "torch/lib/cudart*.dll",
+        "torch/lib/cublas*.dll",
+        "nvidia/**/cudart*.dll",
+        "nvidia/**/cublas*.dll",
+        "**/cudart*.dll",
+        "**/cublas*.dll",
+    )
+    found: list[str] = []
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for pattern in patterns:
+            found += [str(p) for p in root.glob(pattern)]
+
+    def _is_cuda_runtime(path: str) -> bool:
+        flat = path.replace("\\", "/").lower()
+        return "/nvidia/" in flat or "cudart" in flat or "cublas" in flat
+
+    return sorted({p for p in found if _is_cuda_runtime(p)})
+
+
 def _handle_device_probe(params: dict) -> dict:
     """Report what GPU acceleration is actually available, item by item.
 
@@ -1345,15 +1386,9 @@ def _handle_device_probe(params: dict) -> dict:
     roots.append(Path(sys.prefix))
     for entry in site.getsitepackages() if hasattr(site, "getsitepackages") else []:
         roots.append(Path(entry))
-    found: list[str] = []
-    for root in roots:
-        if not root.is_dir():
-            continue
-        for pattern in ("nvidia/*/lib/libcudart*.so*", "nvidia/**/libcublas*.so*", "**/libcudart*.so*"):
-            found += [str(p) for p in root.glob(pattern)]
-    found = sorted({p for p in found if "/nvidia/" in p or "cudart" in p})
+    found = _find_cuda_runtime_libraries(roots)
     out["cuda_runtime_in_bundle"] = {"present": bool(found), "libraries": found[:12],
-                                     "count": len(found)}
+                                     "count": len(found), "source": "filesystem"}
 
     # 3. torch, when this build has it. find_spec succeeding does not mean the import
     #    works, so the import is attempted and its failure reported rather than
@@ -1377,6 +1412,25 @@ def _handle_device_probe(params: dict) -> dict:
         except Exception as exc:
             out["torch"] = {"installed": True, "cuda_available": False,
                             "reason": f"import failed: {type(exc).__name__}: {exc}"}
+
+        # torch.version.cuda is the platform-independent witness that the installed wheel
+        # is a CUDA build: None on a CPU bundle, a version string otherwise. It is
+        # consulted after the filesystem scan rather than instead of it, so that a build
+        # which repackages the runtime where the patterns do not anticipate it -- a
+        # PyInstaller bundle, a vendored torch -- is not misreported as CPU-only. That
+        # false negative is what made a working Windows cu132 install tell the user their
+        # GPU was unusable, so torch gets the final say on its own build's CUDA support.
+        if out["torch"].get("installed") and out["torch"].get("cuda_version"):
+            bundle = out["cuda_runtime_in_bundle"]
+            if not bundle["present"]:
+                bundle["present"] = True
+                bundle["source"] = "torch"
+                bundle["reason"] = (
+                    "torch reports a CUDA build (torch.version.cuda="
+                    f"{out['torch']['cuda_version']}) but its runtime libraries were not "
+                    "matched by the filesystem scan; treated as CUDA-capable on torch's "
+                    "own authority."
+                )
 
     # 4. Whether the boosters were built with GPU support. xgboost reports this directly;
     #    lightgbm does not, and saying so is better than inventing a verdict.
@@ -2867,7 +2921,15 @@ def _handle_time_series_predict(params: dict) -> dict:
         model.eval()
         validation_set = TimeSeriesDataSet.from_dataset(training, all_frame, min_prediction_idx=split, stop_randomization=True)
         loader = validation_set.to_dataloader(train=False, batch_size=64, num_workers=0)
-        predictions = model.predict(loader, mode="prediction").detach().cpu().numpy().reshape(-1)
+        predictions = model.predict(
+            loader,
+            mode="prediction",
+            # Same reason as the in-memory fit path: predict() builds its own Trainer, and
+            # without this its devices="auto" default picks DDP on a multi-GPU host, whose
+            # TCPStore rendezvous fails on Windows.
+            trainer_kwargs={"accelerator": "auto", "devices": 1},
+        ).detach().cpu().numpy().reshape(-1)
+
         return _plain_types({"success": True, "model_id": params["model_id"], "predictions": list(predictions), "metadata": metadata})
     feature_names = metadata.get("feature_names") or []
     if feature_names and not all(c in df.columns for c in feature_names):

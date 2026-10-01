@@ -42,6 +42,8 @@ PY
 
 ## Windows（CPU）
 
+> **注意：Windows 上從 PyPI 裝的 `torch` 是 CPU-only。** 自 PyTorch 2.11 起，PyPI 只為 Linux x86_64／aarch64 提供 CUDA wheel，Windows 的 PyPI 預設 wheel 不含 CUDA，`torch.cuda.is_available()` 會是 `False`。要在 Windows 使用 GPU，請改用下方〈Windows（NVIDIA CUDA）〉，不要用本節的 `pip install torch`。
+
 在 PowerShell 中：
 
 ```powershell
@@ -60,6 +62,52 @@ python -m pip install pytorch-forecasting
 python -c "import torch, pytorch_forecasting; print(torch.__version__); print('CUDA:', torch.cuda.is_available()); print(pytorch_forecasting.__version__)"
 python -m pytest tests/test_time_series_models.py -k "tft or advanced_time_series_rows" -q
 ```
+
+## Windows（NVIDIA CUDA）
+
+先確認驅動程式：
+
+```powershell
+nvidia-smi --query-gpu=name,driver_version --format=csv
+```
+
+**選擇 CUDA wheel 版本時，必須先確認 GPU 的 compute capability：**
+
+| 顯示卡 | compute capability | 最低可用 wheel |
+| --- | --- | --- |
+| RTX 50 系列（Blackwell，例如 RTX 5090） | `sm_120` | **cu128 或更新**（cu118 **不支援**） |
+| RTX 40 系列（Ada，例如 RTX 4070 Ti） | `sm_89` | cu118 起即可 |
+| RTX 30 系列（Ampere） | `sm_86` | cu118 起即可 |
+
+`cu118` 的 wheel 最高只到 Hopper（`sm_90`），在 50 系列上會退回 CPU 或直接失敗。`cu128`（自 torch 2.7 起）與 `cu130`／`cu132` 都原生支援 Blackwell。CUDA 13.x 需要較新的驅動程式（R580 以上）；若驅動程式較舊，請選 `cu128`。
+
+在 PowerShell 中：
+
+```powershell
+cd engine
+uv venv --python 3.12 .venv-tft
+.\.venv-tft\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+
+# 兩種安裝方式擇一。uv 必須在已 activate 的 venv 中執行，否則要加 --python .venv-tft。
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu132
+# uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu132
+
+python -m pip install pytorch-forecasting
+```
+
+`torchvision` 並非 TFT 所需（`pytorch-forecasting` 不會 import 它），可省略；保留是為了與官方安裝指令一致。
+
+驗證（`torch.cuda` 為 `True` 且 capability 為 `(12, 0)` 代表 50 系列已被正確辨識）：
+
+```powershell
+python -c "import torch; print(torch.__version__, torch.version.cuda); print('CUDA:', torch.cuda.is_available()); print(torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0))"
+```
+
+若在 Windows 看到 `triton not found; flop counting will not work for triton kernels` 警告，屬正常現象：Triton 不提供 Windows 輪廓，TFT 不使用它，可忽略。
+
+多張 GPU 同時存在時（例如 RTX 5090 + RTX 4070 Ti），TFT 仍應正確運作。預測階段若出現 `unmatched '}' in format string`，代表 Lightning 選用了 DDP；引擎已將 `predict()` 的 trainer 固定為單一裝置以避免此問題。
 
 ## Linux（CPU）
 
@@ -82,7 +130,7 @@ python -m pytest tests/test_time_series_models.py -k 'tft or advanced_time_serie
 nvidia-smi
 ```
 
-建立 venv 與專案依賴後，使用 PyTorch selector 提供且符合此主機 driver/CUDA 的命令。下列是 **CUDA 11.8 wheel 的示例**，不是固定版本承諾：
+建立 venv 與專案依賴後，使用 PyTorch selector 提供且符合此主機 driver/CUDA 的命令。**wheel 版本必須符合顯示卡的 compute capability**（對照表見上方〈Windows（NVIDIA CUDA）〉）：`cu118` 最高只到 Hopper（`sm_90`），**無法執行 Blackwell 50 系列的 `sm_120`**，需改用 `cu128`／`cu130`／`cu132`。下列是 **cu118 wheel 的示例**，不是固定版本承諾：
 
 ```bash
 cd engine
@@ -91,7 +139,7 @@ source .venv-tft/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 
-# 以 PyTorch selector 為準；此行僅為 cu118 範例。
+# 以 PyTorch selector 為準；此行僅為 cu118 範例（Hopper 及以下適用）。
 python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 python -m pip install pytorch-forecasting
 ```
@@ -125,10 +173,22 @@ PY
 
 安裝成功後，Model Center 的 TFT capability 應顯示依賴可用、資料 contract、sequence length、可用序列數與運算裝置（例如 `pytorch/mps`）；符合至少 128 組訓練序列時會執行 TFT 訓練並列入比較。資料不足或缺少套件時，應明確顯示 `insufficient_history` 或 `dependency_missing`，不是引擎啟動失敗。Lightning 訓練產物會寫入系統暫存目錄，不應觸發 Tauri 開發程序重啟。
 
+### 以 `system/device_probe` 確認加速器
+
+設定頁的「測試 CUDA 可用性」會呼叫 `system/device_probe`，逐一回報驅動程式、此版本內含的 CUDA runtime、torch 與 booster 的 GPU 支援，並給出總結 `cuda_usable`。也可直接從 `engine/` 內執行：
+
+```bash
+python -c "import sys, json; sys.path.insert(0,'src'); from process_intelligence_engine import main; print(json.dumps(main._handle_device_probe({}), indent=2, default=str))"
+```
+
+`cuda_usable: true` 代表驅動程式、CUDA runtime 與 torch／booster 齊備。該探測**不會**實際執行 GPU 運算，通過只代表元件齊備，不代表配適一定能成功；它也不會掩蓋 `torch.cuda.is_available()` 為 `False` 的情況（此時 `torch` 欄位會附上原因）。
+
 ## Fallback 與排錯
 
 - **一般使用／CPU 不足／CUDA 不可用：** 不啟用 `.venv-tft`，繼續使用 `engine/.venv` 與現有 Naive、ARIMA、Dynamic Regression、樹模型或 Transformer（TensorFlow）流程。
-- **`torch.cuda.is_available()` 為 `False`：** 不要強制設定 CUDA；改用 Linux CPU 指令，或依官方 selector 換成與 driver 相容的 wheel。
+- **`torch.cuda.is_available()` 為 `False`：** 不要強制設定 CUDA；確認安裝的是 CPU wheel（Windows 上 `pip install torch` 即為此情形），改用對應平台的 CUDA wheel，或退回 CPU 指令。
+- **Windows 顯示 `cuda_usable: false` 但 GPU 正常：** 確認 `torch/lib/` 內存在 `cudart*.dll`；此為 CUDA build 應具備的檔案。
+- **預測階段出現 `unmatched '}' in format string`：** 主機有多張 GPU 時，Lightning 的 `predict()` 預設 `devices="auto"` 會選用 DDP，而 DDP 的環境變數 rendezvous 在 Windows 上失敗。將 `predict()` 的 trainer 固定為單一裝置即可。
 - **macOS 顯示 MPS 不可用：** 使用 CPU，勿嘗試 CUDA wheel。
 - **`No module named pytorch_forecasting`：** 確認已 activate `.venv-tft`，且安裝順序為 `torch` 後 `pytorch-forecasting`。
 - **資料不符合門檻：** 保持傳統/既有模型；TFT 需要時間欄、target、已選 inputs、sequence length 24，且訓練區至少 128 個可用序列。

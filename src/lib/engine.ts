@@ -672,7 +672,15 @@ export async function deleteReport(reportId: string): Promise<{ deleted: boolean
 
 export interface DeviceProbeResult {
   nvidia_smi: { available: boolean; gpus?: string[]; path?: string; reason?: string | null }
-  cuda_runtime_in_bundle: { present: boolean; count: number; libraries: string[] }
+  cuda_runtime_in_bundle: {
+    present: boolean
+    count: number
+    libraries: string[]
+    // 'filesystem' when the runtime libraries were located on disk, 'torch' when torch's own
+    // torch.version.cuda had to stand in for a scan that did not match this build's layout.
+    source?: 'filesystem' | 'torch'
+    reason?: string | null
+  }
   torch: {
     installed: boolean
     cuda_available: boolean
