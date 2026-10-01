@@ -425,6 +425,17 @@ data/test_dataset.csv
 
 ## 版本紀錄
 
+### v0.10.2（2026-09-30）
+
+**修正：Excel 報告匯出失敗（`Cannot convert {} to Excel`）與 HTML／Excel 的呈現不一致**
+
+- **症狀**：報告產生失敗，`engine error: Cannot convert {} to Excel`。
+- **根因**：製程定義契約的 `spec` 除 `limits` 外還帶 **`input_ranges`**（欄位 → [下限, 上限]）。規格表把 `spec` 中**除了 `limits` 以外的每個鍵直接寫入儲存格**，而 openpyxl 只接受純量，因此空的 `input_ranges` 以 `{}` 抵達寫入器，讓整份匯出中止。**先重現**：測試在修正前以使用者所見的逐字訊息失敗。
+- **修法**：新增 `cell_value()`（轉純量）與 `flatten_rows()`（**展開**巢狀結構，保留內容而非丟棄），`input_ranges` 因此成為 `input_ranges.t = 170.0 – 190.0`。同一防護套用至所有直接寫入原始值的區塊（gate 摘要、模型指標與係數、外推摘要、來源標籤）。
+- **HTML 一致性**：HTML 原本不崩，但會把同一欄位 `str()` 成 `{'t': [170.0, 190.0]}`。轉換邏輯改置於 **`base.py`（兩者共用）**，避免兩份實作日後漂移；HTML 的規格列改用同一展開方式。
+- 驗證：修改前 RED、修改後 GREEN；新增渲染器一致性測試（斷言兩者輸出相同標籤與值，且 HTML 不得退回 repr）；**完整 engine 套件 663 passed, 12 skipped**。
+- 註：PDF 在本專案由 HTML 轉出，隨 HTML 一併修正，但未單獨驗證其輸出。
+
 ### v0.10.1（2026-09-30）
 
 **修正：建置腳本會回報「引擎啟動即死」，並在 EPIPE 下存活**
