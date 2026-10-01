@@ -20,7 +20,12 @@ dependencies = [
     # the engine cannot start without it, so it is a hard runtime dependency.
     "aiohttp>=3.9.0",
     # PDF report export.
-    "weasyprint>=60.0",
+    # Upper bound deliberate. WeasyPrint 70 emits a DeprecationWarning that HarfBuzz-Subset
+    # "will be required by future versions", and libharfbuzz-subset is absent both from the
+    # build machine and from the frozen bundle -- so a future release would break PDF export
+    # in the packaged app with no change to our code. Raise this bound only after installing
+    # libharfbuzz-subset0 and collecting it into the spec's binaries.
+    "weasyprint>=60.0,<71",
 ]
 
 [project.optional-dependencies]

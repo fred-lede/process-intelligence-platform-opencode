@@ -820,7 +820,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.12.0" },
     { name = "shap", specifier = ">=0.45.0" },
     { name = "statsmodels", specifier = ">=0.14.0" },
-    { name = "weasyprint", specifier = ">=60.0" },
+    { name = "weasyprint", specifier = ">=60.0,<71" },
     { name = "xgboost", specifier = ">=2.0.0" },
 ]
 provides-extras = ["dev", "bundle"]
