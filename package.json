@@ -15,7 +15,7 @@
     "check:i18n": "node scripts/check-i18n-parity.mjs",
     "check:guide": "node --experimental-strip-types scripts/check-guide-coverage.mjs",
     "build:app": "npm run engine:build && npm run tauri build",
-    "build:cuda": "npm run engine:build -- --with-cuda && npm run tauri build"
+    "build:cuda": "npm run engine:build -- --with-dl --with-cuda && npm run tauri build"
   },
   "dependencies": {
     "@ant-design/icons": "^5.5.1",

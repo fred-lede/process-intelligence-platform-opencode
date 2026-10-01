@@ -18,7 +18,7 @@
  *   node scripts/build-engine.mjs                  # base bundle (no DL stack)
  *   node scripts/build-engine.mjs --with-dl        # + torch / pytorch-forecasting
  *   node scripts/build-engine.mjs --with-tensorflow
- *   node scripts/build-engine.mjs --with-cuda      # + CUDA runtime libs (~450 MB)
+ *   node scripts/build-engine.mjs --with-dl --with-cuda   # + DL stack and CUDA runtime
  *   node scripts/build-engine.mjs --skip-smoke     # skip the engine/ping check
  *
  * CPU vs CUDA
@@ -29,6 +29,12 @@
  * CUDA toolkit and an NVIDIA GPU. Build with `--with-cuda` when a GPU machine
  * actually needs them. (The CPU bundle runs on GPU machines too -- it simply
  * trains on the CPU.)
+ *
+ * `--with-cuda` is not sufficient on its own. It only controls whether the
+ * `nvidia-*` runtime libraries are kept; whether torch is bundled at all is
+ * decided by `--with-dl`, because the spec excludes torch, lightning and
+ * pytorch-forecasting when the DL stack is off. A GPU bundle therefore needs
+ * both. `npm run build:cuda` passes both.
  *
  * PyInstaller cannot cross-compile: run this on each target OS (CI does).
  */
@@ -51,6 +57,10 @@ const withDl = flags.has('--with-dl')
 const withTensorflow = flags.has('--with-tensorflow')
 const withCuda = flags.has('--with-cuda')
 const skipSmoke = flags.has('--skip-smoke')
+
+// Keep in step with [[tool.uv.index]] in engine/pyproject.toml, which is what the locked
+// path uses. Only the unlocked fallback below needs it spelled out.
+const cudaIndexUrl = 'https://download.pytorch.org/whl/cu132'
 
 // How long the frozen engine gets to answer engine/ping. Overridable because a cold
 // first launch on macOS (Gatekeeper evaluating a binary it has not seen before) can
@@ -92,11 +102,23 @@ function installBuildDeps() {
   // Runtime, dev and build-only dependencies all come from the locked
   // environment, so the frozen engine cannot drift from what the tests ran
   // against. PyInstaller is declared in the `bundle` extra for that reason.
+  //
+  // The deep-learning stack lives in the `dl` extra for the same reason: `uv sync`
+  // prunes anything the lockfile does not contain, so an undeclared torch would be
+  // uninstalled from the venv by the build that is supposed to bundle it.
+  const extras = ['dev', 'bundle']
+  if (withDl) extras.push('dl')
   if (existsSync(join(engineDir, 'uv.lock'))) {
-    uv(['sync', '--project', engineDir, '--extra', 'dev', '--extra', 'bundle'])
+    uv(['sync', '--project', engineDir, ...extras.flatMap((extra) => ['--extra', extra])])
   } else {
     uv(['pip', 'install', '--python', venvPython, '-e', engineDir])
     uv(['pip', 'install', '--python', venvPython, 'pyinstaller'])
+    if (withDl) {
+      // Mirrors the [tool.uv.sources] redirect in pyproject.toml. --index-url replaces
+      // PyPI entirely, so pytorch-forecasting has to be installed separately from PyPI.
+      uv(['pip', 'install', '--python', venvPython, '--index-url', cudaIndexUrl, 'torch', 'torchvision'])
+      uv(['pip', 'install', '--python', venvPython, 'pytorch-forecasting'])
+    }
   }
 }
 

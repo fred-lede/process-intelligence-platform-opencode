@@ -41,6 +41,35 @@ bundle = [
     # Tauri bundle ships (see scripts/build-engine.mjs).
     "pyinstaller>=6.0",
 ]
+dl = [
+    # The optional deep-learning stack behind the TFT ladder. It has to be declared here,
+    # not installed ad hoc: `uv sync` makes the venv match the lockfile exactly and
+    # uninstalls anything it does not know about, so a hand-installed torch is silently
+    # deleted the next time the engine is built. build:cuda syncs this extra.
+    #
+    # torch and torchvision are redirected to the CUDA index below, because the PyPI
+    # wheels are CPU-only on Windows (PyPI ships CUDA wheels for Linux only, since
+    # PyTorch 2.11), which would make a "CUDA" build silently CPU-only. pytorch-forecasting
+    # stays on PyPI and pulls in lightning and torchmetrics transitively.
+    "torch>=2.7",
+    "torchvision>=0.22",
+    "pytorch-forecasting>=1.8",
+]
+
+# Torch is installed from PyTorch's CUDA index rather than PyPI. To target a different
+# CUDA variant, change the URL below and re-lock (`uv lock --project engine`); cu128 is
+# the conservative choice for hosts whose driver predates CUDA 13 (R580), and note that
+# cu118 cannot run Blackwell (sm_120) at all.
+[[tool.uv.index]]
+name = "pytorch-cuda"
+url = "https://download.pytorch.org/whl/cu132"
+# Only resolve the packages that name this index below, so every other dependency still
+# comes from PyPI.
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cuda" }
+torchvision = { index = "pytorch-cuda" }
 
 [build-system]
 requires = ["setuptools>=68.0.0"]
