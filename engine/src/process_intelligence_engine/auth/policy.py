@@ -74,6 +74,9 @@ VIEWER_METHODS: frozenset[str] = frozenset({
     "ai/models",
     "ai/health",
     "settings/get",
+    # Read-only hardware/driver diagnostic: persists nothing and makes no network egress
+    # (nvidia-smi is a local subprocess), so VIEWER by the classification rule above.
+    "system/device_probe",
     "experiment/list",
     "experiment/get",
     "experiment/suggest_next",
