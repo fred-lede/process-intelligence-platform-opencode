@@ -4,7 +4,7 @@ import html as _html
 from datetime import datetime
 from typing import Any
 
-from .base import ReportGenerator
+from .base import ReportGenerator, flatten_rows
 from .models import ReportData
 from .charting import histogram_svg, heatmap_svg, control_chart_svg
 
@@ -133,7 +133,11 @@ class HTMLReportGenerator(ReportGenerator):
         for col, vals in (self.data.spec or {}).items():
             if col == "limits":
                 continue
-            spec_rows.append(f"<tr><td>{self._e(col)}</td><td>{self._e(vals)}</td></tr>")
+            # Structured values are expanded into one row per entry, matching the Excel
+            # export. str()'ing them instead produced "{'t': [170.0, 190.0]}" -- no crash,
+            # but the two renderers then described the same content differently.
+            for label, value in flatten_rows(str(col), vals):
+                spec_rows.append(f"<tr><td>{self._e(label)}</td><td>{self._e(value)}</td></tr>")
         if limits:
             for key in ("lsl", "usl", "target", "cl"):
                 if limits.get(key) is not None:

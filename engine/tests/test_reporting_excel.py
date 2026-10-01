@@ -164,3 +164,28 @@ def test_nested_values_anywhere_do_not_break_the_workbook():
         source_labels={"ai_guess": {"meaning": "AI guess"}},
     )
     ExcelReportGenerator(data).generate()  # must not raise
+
+
+def test_both_renderers_present_a_structured_spec_value_the_same_way():
+    """Excel and HTML must not describe the same field differently.
+
+    Excel raised on a dict and HTML str()'d it into "{'t': [170.0, 190.0]}" -- two
+    renderers, two outcomes, one report. Both now expand it into per-entry rows.
+    """
+    from process_intelligence_engine.reporting.html import HTMLReportGenerator
+
+    data = ReportData(
+        project_name="P",
+        spec={"limits": {"lsl": 1.0, "usl": 2.0}, "input_ranges": {"t": [170.0, 190.0]}},
+    )
+
+    xlsx = load_workbook(BytesIO(ExcelReportGenerator(data).generate()))
+    xls_flat = [str(c.value) for row in xlsx["規格"].iter_rows() for c in row if c.value is not None]
+    assert "input_ranges.t" in xls_flat, xls_flat
+    assert any("170" in v and "190" in v for v in xls_flat), xls_flat
+
+    raw = HTMLReportGenerator(data).generate()
+    page = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+    assert "input_ranges.t" in page, "HTML should use the same flattened label"
+    assert "170" in page and "190" in page
+    assert "[170.0, 190.0]" not in page, "HTML should not fall back to a Python repr"
