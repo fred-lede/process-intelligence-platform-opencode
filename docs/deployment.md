@@ -27,6 +27,32 @@ npm run tauri build
 
 在各目標作業系統原生 runner 上建置；不要把 macOS 的 venv 或系統函式庫複製到 Windows 或 Linux 產物中。
 
+### Linux 建置依賴（Rust／Tauri）
+
+在 Linux 上從原始碼建置（`cargo check`、`cargo test`、`npm run tauri build`）需要系統開發套件，與 CI 的 rust job 相同：
+
+```bash
+sudo apt-get update
+sudo apt-get install -y libwebkit2gtk-4.1-dev librsvg2-dev patchelf libdbus-1-dev
+```
+
+**套件名稱隨發行版而異，而且互斥。** Ubuntu 22.04（CI 使用的版本）提供 `libappindicator3-dev`；較新的發行版已改為 `libayatana-appindicator3-dev`。在新系統上安裝舊名會直接失敗：
+
+```
+libayatana-appindicator3-1 : Conflicts: libappindicator3-1
+E: Error, pkgProblemResolver::Resolve generated breaks
+```
+
+24.04 以後請改用：
+
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libdbus-1-dev
+```
+
+**`libdbus-1-dev` 為必要項目**：`libdbus-sys` 已在相依圖中，缺少時 `cargo check` 會以 `The system library 'dbus-1' required by crate 'libdbus-sys' was not found` 中止。GTK 堆疊（`atk`、`gtk` 等）由 `libwebkit2gtk-4.1-dev` 一併帶入，因此不必逐一套件列出。
+
+這組依賴同時是**本機能否執行 Rust 檢查**的前提：缺少時所有 Rust 改動都無法在本機驗證，只能等 CI。若 CI 日後升級至 ubuntu-24.04，`.github/workflows/*.yml` 中的 `libappindicator3-dev` 必須同步改名為 `libayatana-appindicator3-dev`，否則 rust job 會直接失敗。
+
 ### 引擎解析順序
 
 執行時 `src-tauri/src/engine/mod.rs` 依序尋找，第一個存在者勝出：

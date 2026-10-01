@@ -19,6 +19,9 @@ tauri-build = { version = "2.6.3", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
+# Decoding a report payload in the open_report command. Already present transitively;
+# declared directly because we call it, so a future dependency bump cannot remove it.
+base64 = "0.22"
 log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"

@@ -4,6 +4,7 @@ import { Card, Button, Space, Alert, message, Tag, List, Popconfirm, Typography 
 import { FileTextOutlined, DownloadOutlined, DeleteOutlined } from '@ant-design/icons'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeTextFile, writeFile } from '@tauri-apps/plugin-fs'
+import { invoke } from '@tauri-apps/api/core'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useModelStore } from '../../stores/modelStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
@@ -33,7 +34,16 @@ export default function Report() {
         setLastFormat('html')
       } else {
         setLastFormat(format)
-        await saveReportOutput(format, result)
+        // Open with the OS viewer instead of asking where to save: the button says 開啟, and
+        // a preview is impossible for these formats anyway. The Rust command writes the
+        // payload into the app cache directory and hands that path to the system viewer, so
+        // nothing is written to a location the user has to choose.
+        const name = `process-analysis-report-${id}.${format === 'pdf' ? 'pdf' : 'xlsx'}`
+        const opened = await invoke<string>('open_report', {
+          fileName: name,
+          contentBase64: result.content_base64 ?? '',
+        })
+        messageApi.success(opened)
       }
     } catch (e) { messageApi.error(String(e)) }
   }

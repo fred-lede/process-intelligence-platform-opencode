@@ -76,3 +76,56 @@ pub fn setup_engine(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Er
 
     Ok(())
 }
+
+/// Write a generated report into the app cache and open it with the OS default viewer.
+///
+/// The write happens here rather than through the fs plugin on purpose: that capability is
+/// scoped to paths the user picks in a file dialog, and a cache path is not one of them.
+/// Doing it in Rust also avoids a plugin and a permission for what is a single OS call, and
+/// keeps the webview layer untouched.
+#[tauri::command]
+pub async fn open_report(
+    app: tauri::AppHandle,
+    file_name: String,
+    content_base64: String,
+) -> Result<String, String> {
+    use base64::Engine as _;
+
+    // Base name only: a crafted name must not escape the cache directory via "../".
+    let base = file_name.rsplit(['/', '\\']).next().unwrap_or("").trim();
+    if base.is_empty() || base == "." || base == ".." {
+        return Err(format!("invalid report file name: {file_name:?}"));
+    }
+
+    let dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| format!("no cache directory: {e}"))?
+        .join("reports");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(content_base64.as_bytes())
+        .map_err(|e| format!("invalid report payload: {e}"))?;
+
+    let path = dir.join(base);
+    std::fs::write(&path, &bytes).map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+
+    // A report is small enough that the write above is not worth a thread hop, but the
+    // viewer is handed off and not waited on -- a slow or missing viewer must not hold the
+    // command open, and its failure is reported rather than swallowed.
+    let opener = if cfg!(target_os = "macos") {
+        "open"
+    } else if cfg!(target_os = "windows") {
+        "explorer"
+    } else {
+        "xdg-open"
+    };
+    std::process::Command::new(opener)
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("cannot open {} with {opener}: {e}", path.display()))?;
+
+    log::info!("opened report {}", path.display());
+    Ok(path.to_string_lossy().to_string())
+}
