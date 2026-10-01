@@ -92,6 +92,10 @@ SPC 頁面的圖表類型、輸出欄位、子群組大小與 grain/filter 選�
 
 專案 venv 已安裝 Python `weasyprint` 套件，但它仍須載入 Pango、GObject 與字型相關的系統函式庫。以下指令供建置機與執行 PDF 匯出的工作站使用。詳細的發行版版本需求請以 [WeasyPrint 官方安裝文件](https://doc.courtbouillon.org/weasyprint/latest/first_steps.html) 為準。
 
+**打包凍結引擎時另有一項要求**：`libharfbuzz-subset` 只在執行時以 `dlopen` 載入，並非任何被收集函式庫的相依項目，因此 PyInstaller 無法自動發現它，必須由 `engine/process-intelligence-engine.spec` 明確收集。**若建置機未安裝它，bundle 仍會成功建置、HTML 匯出正常，但 PDF 匯出會失效**，而且不會有任何錯誤指出原因。spec 在找不到時會印出警告；發行流程已在 Ubuntu 安裝 `libharfbuzz-subset0`、在 macOS 安裝 `harfbuzz`（僅在缺少時）。建置後請確認輸出含 `harfbuzz-subset: bundling N file(s)` 一行。
+
+WeasyPrint 亦已宣告 HarfBuzz-Subset 將於未來版本成為強制需求，因此 `engine/pyproject.toml` 目前將其上界設為 `<71`，待 bundle 能穩定收進該函式庫後再放寬。
+
 ### macOS
 
 ```bash
