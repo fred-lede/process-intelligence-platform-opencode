@@ -121,3 +121,46 @@ def test_section_reaches_the_workbook_on_its_own(kwargs, expected_sheet):
 def test_minimal_report_still_opens():
     names = sheet_names(ReportData(project_name="Empty"))
     assert names[0] == "專案資訊"
+
+
+def test_empty_input_ranges_does_not_crash_the_workbook():
+    """The exact failure reported by a user: "Cannot convert {} to Excel".
+
+    The process-definition contract carries input_ranges (column -> [low, high]) and
+    other structured keys alongside 'limits'. The specification sheet wrote every key
+    except 'limits' straight into a cell, and openpyxl cannot render a dict -- so an
+    empty input_ranges reached the writer as {} and took the whole export down.
+    """
+    data = ReportData(project_name="P", spec={"limits": {"lsl": 1.0}, "input_ranges": {}})
+    ExcelReportGenerator(data).generate()  # must not raise
+
+
+def test_spec_input_ranges_reach_the_workbook_as_values():
+    """Non-scalar spec content should be flattened into readable rows, not dropped."""
+    data = ReportData(
+        project_name="P",
+        spec={"limits": {"lsl": 1.0, "usl": 2.0}, "input_ranges": {"t": [170.0, 190.0]}},
+    )
+    wb = load_workbook(BytesIO(ExcelReportGenerator(data).generate()))
+    assert "規格" in wb.sheetnames
+    flat = [str(c.value) for row in wb["規格"].iter_rows() for c in row if c.value is not None]
+    assert any("170" in v for v in flat), flat
+    assert any("190" in v for v in flat), flat
+
+
+def test_nested_values_anywhere_do_not_break_the_workbook():
+    """The same class of bug from every other section that writes a raw value.
+
+    openpyxl takes scalars only, so any dict or list reaching a cell fails the whole
+    export -- not just the one in the specification sheet that was reported. Each
+    section below is given a structured value it could plausibly receive.
+    """
+    data = ReportData(
+        project_name="P",
+        gate_summary={"data_import": {"status": "confirmed", "detail": "ok"}},
+        unconfirmed_items=["approval"],
+        best_model={"model_id": "m1", "metrics": {"r2": 0.9, "extra": {"a": 1}}, "coefficients": {"x": [1.0, 2.0]}},
+        extrapolation_summary={"max_risk_score": {"score": 0.4}},
+        source_labels={"ai_guess": {"meaning": "AI guess"}},
+    )
+    ExcelReportGenerator(data).generate()  # must not raise

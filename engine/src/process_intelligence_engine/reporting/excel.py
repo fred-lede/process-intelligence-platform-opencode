@@ -7,6 +7,37 @@ from .base import ReportGenerator
 from .models import ReportData
 
 
+def _cell(value: Any) -> Any:
+    """Coerce a value into something openpyxl can actually write.
+
+    openpyxl accepts scalars only and raises "Cannot convert {0!r} to Excel" for
+    anything else. That is how an empty ``input_ranges`` dict -- part of the
+    process-definition contract, alongside ``limits`` -- took down the entire
+    report export: the specification sheet wrote every non-``limits`` key of the
+    spec straight into a cell. Lists are joined, dicts rendered as key/value
+    pairs, and None becomes an empty cell, so no section can fail this way again.
+    """
+    if value is None or isinstance(value, (str, int, float, bool, datetime)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return " – ".join("" if v is None else str(v) for v in value)
+    if isinstance(value, dict):
+        if not value:
+            return ""
+        return ", ".join(f"{k}={_cell(v)}" for k, v in value.items())
+    return str(value)
+
+
+def _flatten_rows(label: str, value: Any) -> list[tuple[str, Any]]:
+    """Expand nested structures into (label, scalar) rows so content is kept, not dropped."""
+    if isinstance(value, dict):
+        rows: list[tuple[str, Any]] = []
+        for key, sub in value.items():
+            rows += _flatten_rows(f"{label}.{key}" if label else str(key), sub)
+        return rows
+    return [(label, _cell(value))]
+
+
 class ExcelReportGenerator(ReportGenerator):
     """Generate Excel report."""
     
@@ -49,16 +80,21 @@ class ExcelReportGenerator(ReportGenerator):
                 cell.font = Font(bold=True)
 
         # Sheet: Specifications. The report's own contract (LSL/USL/target) was
-        # collected into ReportData but never written to any sheet.
+        # collected into ReportData but never written to any sheet. Structured keys
+        # such as input_ranges are expanded into rows rather than written raw.
         spec = self.data.spec or {}
         limits = spec.get("limits") or {}
-        spec_rows = [(k, v) for k, v in spec.items() if k != "limits"]
+        spec_rows: list[tuple[str, Any]] = []
+        for key, value in spec.items():
+            if key == "limits":
+                continue
+            spec_rows += _flatten_rows(str(key), value)
         spec_rows += [(k, limits[k]) for k in ("lsl", "usl", "target", "cl") if limits.get(k) is not None]
         if spec_rows:
             ws_spec = wb.create_sheet("規格")
             header(ws_spec, ["欄位/項目", "規格值"])
             for key, value in spec_rows:
-                ws_spec.append([key, value])
+                ws_spec.append([key, _cell(value)])
 
         # Sheet: Data quality
         quality = self.data.quality_summary or {}
@@ -125,12 +161,12 @@ class ExcelReportGenerator(ReportGenerator):
                 if best.get(key) not in (None, ""):
                     ws_bm.append([key, best.get(key)])
             for key, value in (best.get("metrics") or {}).items():
-                ws_bm.append([f"metrics.{key}", value])
+                ws_bm.append([f"metrics.{key}", _cell(value)])
             if coefs:
                 ws_bm.append([])
                 header(ws_bm, ["係數項", "係數值"])
                 for term, value in coefs.items():
-                    ws_bm.append([term, value])
+                    ws_bm.append([term, _cell(value)])
         
         # Sheet 4: Interactions
         if self.data.interactions.get("matrix"):
@@ -283,12 +319,12 @@ class ExcelReportGenerator(ReportGenerator):
             ws_g = wb.create_sheet("治理與追溯")
             header(ws_g, ["項目", "值"])
             for key, value in gates.items():
-                ws_g.append([f"gate.{key}", value])
+                ws_g.append([f"gate.{key}", _cell(value)])
             for item in unconfirmed:
-                ws_g.append(["未確認項目", item])
+                ws_g.append(["未確認項目", _cell(item)])
             for key in ("out_of_range_ratio", "max_risk_score", "recommendation"):
                 if ex.get(key) not in (None, ""):
-                    ws_g.append([f"外推.{key}", ex.get(key)])
+                    ws_g.append([f"外推.{key}", _cell(ex.get(key))])
             if steps:
                 ws_g.append([])
                 header(ws_g, ["Step", "Entity ID", "Operator", "Timestamp", "Status"])
@@ -309,7 +345,7 @@ class ExcelReportGenerator(ReportGenerator):
         ws_l = wb.create_sheet("來源標籤")
         header(ws_l, ["Label Key", "Meaning"])
         for key, value in labels.items():
-            ws_l.append([key, value])
+            ws_l.append([key, _cell(value)])
 
         # Sheet 5: Recommendations
         if self.data.recommendations:
