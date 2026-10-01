@@ -56,6 +56,44 @@ for package in (
     binaries += pkg_binaries
     hiddenimports += pkg_hidden
 
+# HarfBuzz-Subset: WeasyPrint 70 warns that it "will be required by future versions"
+# for font subsetting. It is loaded at runtime, is not a dependency of any library
+# collected above, and so nothing pulls it in transitively -- which is why it is
+# missing from the bundle today. Added explicitly, and its absence is reported rather
+# than ignored, so a build never silently produces a PDF-incapable engine.
+#
+#   Linux:  sudo apt-get install -y libharfbuzz-subset0
+#   macOS:  brew install harfbuzz          (ships libharfbuzz-subset*.dylib)
+import glob
+import sys
+
+_subset_patterns = []
+if sys.platform.startswith("linux"):
+    _subset_patterns = ["/usr/lib/*/libharfbuzz-subset.so*", "/usr/lib/libharfbuzz-subset.so*"]
+elif sys.platform == "darwin":
+    _subset_patterns = [
+        "/opt/homebrew/lib/libharfbuzz-subset*.dylib",
+        "/usr/local/lib/libharfbuzz-subset*.dylib",
+    ]
+
+_subset_seen = set()
+for _pattern in _subset_patterns:
+    for _path in glob.glob(_pattern):
+        _real = os.path.realpath(_path)
+        if _real in _subset_seen:
+            continue
+        _subset_seen.add(_real)
+        binaries.append((_real, "."))
+
+if _subset_seen:
+    print(f"harfbuzz-subset: bundling {len(_subset_seen)} file(s)")
+else:
+    print(
+        "WARNING: libharfbuzz-subset not found -- PDF font subsetting will break once "
+        "WeasyPrint requires it. Install libharfbuzz-subset0 (Linux) or harfbuzz via "
+        "Homebrew (macOS) on this build machine and rebuild."
+    )
+
 # CUDA runtime libraries that xgboost pulls in on Linux (`nvidia-nccl-cu12`
 # and friends). They account for roughly 450 MB -- about a third of the whole
 # bundle -- and the GPU path is opt-in, off by default, and additionally needs

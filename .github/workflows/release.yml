@@ -46,7 +46,21 @@ jobs:
         if: matrix.settings.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          # libharfbuzz-subset0 is required for WeasyPrint's PDF font subsetting: it is
+          # not a dependency of anything else installed here, and PyInstaller cannot
+          # discover a library that is only dlopen'd at runtime, so the spec collects it
+          # explicitly. Without it the bundle builds, exports HTML, and cannot write PDF.
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libharfbuzz-subset0
+
+      - name: install dependencies (macOS only)
+        if: matrix.settings.platform == 'macos-latest' || matrix.settings.platform == 'macos-13'
+        run: |
+          # libharfbuzz-subset ships inside the harfbuzz formula and is required for
+          # WeasyPrint's PDF font subsetting. The runner usually has harfbuzz already as
+          # a transitive Homebrew dependency, but relying on that is how a bundle ends up
+          # without the library it needs: install it only when missing, and let a genuine
+          # failure fail the build rather than masking it with `|| true`.
+          brew list harfbuzz >/dev/null 2>&1 || brew install harfbuzz
 
       - name: setup node
         uses: actions/setup-node@v4
