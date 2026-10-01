@@ -25,6 +25,17 @@ npm run tauri build
 
 `npm run build:app` 等同上面兩行。`scripts/build-engine.mjs` 會建立引擎 venv、安裝相依套件、以 PyInstaller 產生 `src-tauri/resources/engine/process-intelligence-engine[.exe]`，並在結尾對凍結後的執行檔送出 `engine/ping` 煙霧測試。Tauri 透過 `tauri.conf.json` 的 `bundle.resources` 將 `src-tauri/resources/engine/` 複製到 `$RESOURCE/engine/`。
 
+**CPU 版與 CUDA 版各有一個入口，不要混用參數：**
+
+```bash
+npm run build:app     # CPU 版（預設，跨平台）
+npm run build:cuda    # CUDA 版（僅 Windows 與 Linux）
+```
+
+`build:cuda` 等同 `npm run engine:build -- --with-cuda && npm run tauri build`。**`--with-cuda` 屬於引擎建置腳本，不是 Tauri 的旗標** —— 若寫成 `npm run build:app -- --with-cuda`，該參數會被送給 `tauri build` 而失敗。CUDA 只在 Windows 與 Linux 有意義（xgboost 以 Linux 平台標記宣告其 `nvidia-*` 相依，macOS 沒有東西可加），bundle 會增加約 450 MB 並需要系統 CUDA toolkit。
+
+CUDA 版與 CPU 版的產物**檔名相同**，先後建置會互相覆蓋。發行流程以 `--config '{"productName":"Process Intelligence Platform (CUDA)"}'` 區分；本機若需並存，請自行加上同樣的覆寫。
+
 在各目標作業系統原生 runner 上建置；不要把 macOS 的 venv 或系統函式庫複製到 Windows 或 Linux 產物中。
 
 ### Linux 建置依賴（Rust／Tauri）
@@ -63,13 +74,15 @@ ERROR: Failed to deploy dependencies for existing files
 failed to bundle project: `failed to run .../linuxdeploy-x86_64.AppImage`
 ```
 
-引擎本身是自帶 RPATH 的獨立 bundle，不需要 linuxdeploy 重新部署其相依。因此建置時明確指定：
+引擎本身是自帶 RPATH 的獨立 bundle，不需要 linuxdeploy 重新部署其相依。因此 Linux 的 bundle 目標由 **`src-tauri/tauri.linux.conf.json`** 固定：
 
-```bash
-npm run tauri build -- --bundles deb,rpm
+```json
+{ "bundle": { "targets": ["deb", "rpm"] } }
 ```
 
-發行流程（`.github/workflows/release.yml`）的兩個 Linux 項目（CPU 與 CUDA）已固定使用 `--bundles deb,rpm`。
+Tauri v2 會自動合併平台專屬設定檔（`tauri.linux.conf.json`／`tauri.macos.conf.json`／`tauri.windows.conf.json`），所以**建置指令不需要任何平台參數** —— `npm run build:app` 在 Linux 上就只會產生 deb 與 rpm，在 macOS／Windows 上則不受影響。把平台條件寫進設定檔而不是 npm script，是為了避免在跨平台 script 裡塞 `cmd` 與 `sh` 不相容的語法。
+
+發行流程（`.github/workflows/release.yml`）的兩個 Linux 項目（CPU 與 CUDA）另有 `--bundles deb,rpm`，與設定檔重複但無害；設定檔才是單一來源。
 
 **診斷提示**：Tauri 預設只顯示 `failed to run linuxdeploy`，把真正原因吞掉。要看到上面的 `Could not find dependency` 必須加 `--verbose`：
 
