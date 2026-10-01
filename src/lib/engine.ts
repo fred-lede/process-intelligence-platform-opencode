@@ -670,6 +670,29 @@ export async function deleteReport(reportId: string): Promise<{ deleted: boolean
   return engineCall<{ deleted: boolean }>('report/delete', { report_id: reportId })
 }
 
+export interface DeviceProbeResult {
+  nvidia_smi: { available: boolean; gpus?: string[]; path?: string; reason?: string | null }
+  cuda_runtime_in_bundle: { present: boolean; count: number; libraries: string[] }
+  torch: {
+    installed: boolean
+    cuda_available: boolean
+    device_count?: number
+    version?: string | null
+    cuda_version?: string | null
+    reason?: string | null
+  }
+  xgboost_gpu: { supported: boolean; version?: string; reason?: string | null }
+  // null, not false: LightGBM exposes no way to ask, and a fabricated verdict would be
+  // worse than admitting the limit. Only a trial fit can answer it.
+  lightgbm_gpu: { supported: boolean | null; version?: string; reason?: string | null }
+  cuda_usable: boolean
+}
+
+/** Probe what GPU acceleration this build actually has. Reads the environment only. */
+export async function probeDevice(): Promise<DeviceProbeResult> {
+  return engineCall<DeviceProbeResult>('system/device_probe', {})
+}
+
 // --- Phase 6: Auth & Audit -----------------------------------------------
 
 export type UserRole = 'admin' | 'engineer' | 'reviewer' | 'viewer'

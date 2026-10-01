@@ -1027,7 +1027,16 @@
     "lightgbmDeviceAuto": "Automático (intenta GPU, si falla usa CPU)",
     "lightgbmDeviceCpu": "CPU",
     "lightgbmDeviceGpu": "GPU (se requiere NVIDIA CUDA)",
-    "lightgbmDeviceNote": "La GPU requiere NVIDIA CUDA y LightGBM compilado con -DUSE_GPU=1. Apple MPS no es compatible."
+    "lightgbmDeviceNote": "La GPU requiere NVIDIA CUDA y LightGBM compilado con -DUSE_GPU=1. Apple MPS no es compatible.",
+    "deviceProbeTest": "Probar disponibilidad de CUDA",
+    "deviceProbeTesting": "Probando…",
+    "deviceProbeOk": "CUDA parece utilizable",
+    "deviceProbeFail": "CUDA no es utilizable en esta compilación",
+    "deviceProbeNote": "Solo sondeo: comprueba el controlador, las bibliotecas de CUDA incluidas en esta compilación, torch y el soporte GPU de los boosters. No ejecuta ningún cálculo en GPU, así que un resultado positivo significa que las piezas están presentes, no que un ajuste vaya a funcionar.",
+    "deviceProbeDriver": "Controlador NVIDIA",
+    "deviceProbeRuntime": "CUDA incluido en esta compilación",
+    "deviceProbeTorch": "torch",
+    "deviceProbeBoosters": "Soporte GPU de los boosters"
   },
   "monteCarlo": {
     "title": "Simulación Monte Carlo",
