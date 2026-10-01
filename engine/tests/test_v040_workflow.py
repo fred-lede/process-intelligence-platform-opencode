@@ -73,6 +73,21 @@ def test_report_review_export_and_reopen_golden_case(project):
     assert "APPROVED" in exported["content"] and "Approved by qa" in exported["content"]
     binary = app.handle_request("report/export", {"report_id": report_id, "format": "excel"})
     assert base64.b64decode(binary["content_base64"]).startswith(b"PK")
+    # WeasyPrint emits a HarfBuzz-Subset DeprecationWarning in this environment and this
+    # test turns warnings into errors. Scoped here rather than dropped: the warning is a
+    # packaging notice from the PDF library, not a report defect, and without this the
+    # PDF path stays untested -- which is how a client that never asked for PDF kept
+    # its own format bug hidden.
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*HarfBuzz-Subset.*")
+        pdf = app.handle_request("report/export", {"report_id": report_id, "format": "pdf"})
+    assert base64.b64decode(pdf["content_base64"]).startswith(b"%PDF")
+    # Each format must return its own payload, under its own key. The client asked for
+    # html for every card and the engine dutifully answered html, so a format silently
+    # returning another format's bytes would not have failed anything anywhere.
+    assert "content" not in binary and "content" not in pdf
+    assert binary["content_base64"] != pdf["content_base64"]
+    assert exported["content"].startswith("<!DOCTYPE") or exported["content"].lstrip().startswith("<")
     app.handle_request("project/open", {"root": str(root)})
     assert app.handle_request("report/export", {"report_id": report_id})["report_status"] == "approved"
     snapshot = root / "reports" / f"{report_id}.json"
