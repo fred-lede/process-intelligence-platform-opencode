@@ -22,9 +22,19 @@ export default function Report() {
   useEffect(() => { listReports().then(r => setSavedReports(r.reports)).catch(e => messageApi.error(String(e))) }, [])
   const openSaved = async (id: string) => {
     try {
-      const result = await exportReport(id)
-      setReportHtml(result.content)
-      setLastFormat('html')
+      // Open each card in the format it was generated in. Asking for HTML
+      // unconditionally showed an HTML preview for a PDF or Excel report, because
+      // the request -- not the engine -- decided the format.
+      const record = savedReports.find(report => report.report_id === id)
+      const format = (record?.format as 'html' | 'pdf' | 'excel' | undefined) ?? 'html'
+      const result = await exportReport(id, format)
+      if (format === 'html') {
+        setReportHtml(result.content ?? '')
+        setLastFormat('html')
+      } else {
+        setLastFormat(format)
+        await saveReportOutput(format, result)
+      }
     } catch (e) { messageApi.error(String(e)) }
   }
   const removeSaved = async (id: string) => {

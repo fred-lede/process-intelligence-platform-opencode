@@ -641,8 +641,14 @@ export async function generateReport(params: ReportParams): Promise<ReportResult
   return engineCall<ReportResult>('report/generate', params as unknown as Record<string, unknown>)
 }
 
-export async function exportReport(reportId: string): Promise<ReportResult> {
-  return engineCall('report/export', { report_id: reportId, format: 'html' })
+export async function exportReport(
+  reportId: string,
+  format: 'html' | 'pdf' | 'excel' = 'html',
+): Promise<ReportResult> {
+  // The format was hardcoded to 'html' here, so opening a saved PDF or Excel report
+  // rendered an HTML preview instead: the engine returned HTML for every card because
+  // that is what it was asked for, and the engine side was correct all along.
+  return engineCall('report/export', { report_id: reportId, format })
 }
 
 export interface ReportRecord {
