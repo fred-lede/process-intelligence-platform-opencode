@@ -186,30 +186,56 @@ npm run build:cuda
 
 這會把 3.3 GB 的 CUDA 引擎建置到 `src-tauri\resources\engine\`，**但不會產生可用的 installer**（會在 bundling 階段失敗，屬預期現象）。
 
-接著把整個 `engine\` 目錄複製到安裝目錄下、覆蓋既有的 CPU 引擎：
+接著把 `src-tauri\resources\engine\` 複製到安裝目錄。**必須先刪除整個目的目錄再複製**：
 
 ```powershell
 # 先關閉 App（含背景程序），否則檔案會被鎖住
-Stop-Process -Name "Process Intelligence Platform" -Force -ErrorAction SilentlyContinue
+Stop-Process -Name "process-intelligence-platform" -Force -ErrorAction SilentlyContinue
 
 $installed = "$env:LOCALAPPDATA\Process Intelligence Platform\engine"   # NSIS 安裝位置
 # 若改用 MSI 安裝，位置通常為：
 # $installed = "$env:ProgramFiles\Process Intelligence Platform\engine"
 
-Copy-Item -Recurse -Force "src-tauri\resources\engine\*" $installed
+Remove-Item -Recurse -Force $installed
+Copy-Item -Recurse "$PWD\src-tauri\resources\engine" $installed
 ```
+
+**不要用 `Copy-Item -Recurse -Force "$src\*" $installed` 覆蓋。** `-Force` 只覆寫同名檔案，**不會刪除目的端多出來的檔案**：那會把舊的 CPU 引擎檔留在原地，形成兩個版本混雜的目錄。兩個引擎的檔案清單並不完全相同，混雜的結果無法從檔案大小看出來。
+
+**來源是 `src-tauri\resources\engine`（封裝後的產物），不是 repo 的 `engine\`。** 後者是開發用的資料夾，內含 `.venv`（約 3.6 GB）、`build`（約 3.6 GB）、`src`、`tests`、`pyproject.toml` 等；複製它會讓安裝目錄從 3.3 GB 膨脹到 10 GB 以上，而且真正的引擎仍然是舊的。
 
 `engine\` 必須是**主程式同層的子目錄**（即 `resource_dir()` 回傳的位置，見上方〈引擎解析順序〉第 2 項）。不要複製成 `engine\engine\`。
 
-**第 3 階段 — 驗證**
-
-啟動 App，於設定頁執行裝置探測，或直接對凍結後的引擎驗證：
+**檢查安裝目錄的內容。** 它只應該有這三項：
 
 ```powershell
-& "$installed\process-intelligence-engine.exe" system/device_probe
+Get-ChildItem $installed -Force | Select-Object Name, Length
 ```
 
-預期 `cuda_usable: true`、`torch` 版本帶 `+cu132`、`xgboost_gpu.supported: true`。
+```
+_internal\                          # 引擎本體（含 torch/lib）
+process-intelligence-engine.exe
+.gitkeep
+```
+
+以檔案大小判斷版本：
+
+| 版本 | `engine\` 目錄大小 | 檔案數 |
+|---|---|---|
+| CPU 版 | 約 0.45 GB | 約 6,700 |
+| CUDA 版 | 約 3.3 GB | 約 9,600 |
+
+出現 `.venv`、`build`、`src`、`tests` 或目錄明顯大於 3.3 GB，就是複製了錯誤的來源或用了合併式覆蓋。
+
+**第 3 階段 — 驗證**
+
+啟動 App，於設定頁執行裝置探測，或直接對凍結後的引擎驗證（引擎走 stdin/stdout 的 JSON 協定，不是命令列參數）：
+
+```powershell
+'{ "id": 1, "method": "system/device_probe", "params": {} }' | & "$installed\process-intelligence-engine.exe"
+```
+
+預期 `torch.import_ok: true`、`torch.cuda_available: true`、`torch.version` 帶 `+cu132`、`device_count` 為實際 GPU 數、`xgboost_gpu.supported: true`。**單看 `cuda_usable: true` 不足以確認**：它只檢查 nvidia-smi 與磁碟上的 CUDA DLL，即使 torch 根本 import 不進去也會是 true（torchgen 缺失時就是如此）；`torch.import_ok` 才是關鍵欄位。
 
 若想避免搬檔，可用環境變數指向外部引擎做測試（僅本次工作階段有效）：
 
@@ -245,7 +271,7 @@ npm run build:cuda
 uv sync --project engine --extra dev --extra bundle --extra dl
 ```
 
-建置完成後把整個 `engine\` 覆蓋到目標機的安裝目錄（見上方第 2 階段的 `Copy-Item`）。
+建置完成後，把 `src-tauri\resources\engine\` 以**先刪再複製**的方式放到目標機的安裝目錄（見上方第 2 階段；不要用 `Copy-Item -Force` 合併覆蓋）。
 
 **診斷要點**：`--with-dl` 的凍結引擎若缺少 `torchvision` 的原生擴充，症狀是 import 時報 `_C` 找不到；spec 已用 `collect_dynamic_libs` 收集，建置後應可在 `_internal\torchvision\` 看到 `_C_stable.pyd` 與 `image_stable.pyd`。
 

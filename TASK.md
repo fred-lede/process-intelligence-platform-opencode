@@ -2,6 +2,17 @@
 
 ## Completed
 
+### Windows 安裝目錄膨脹到 10 GB：合併式覆蓋的缺陷
+- **Status**: DONE
+- **現象**：使用者回報 Windows 安裝機的 `engine\` 目錄有 7 GB。實測 `%LOCALAPPDATA%\Process Intelligence Platform\engine` = **10.29 GB / 55,219 檔**（正常應為 3.29 GB / 9,581）。
+- **根因（兩個疊加）**：
+  1. 安裝目錄在 **19:09–19:12** 被複製進 repo 的**開發用** `engine\`：`.venv`（3.6 GB）、`build`（3.6 GB）、`src`、`tests`、`pyproject.toml`、`uv.lock`、`TASK.md`、`.coverage` 等。時間戳可證。真正的引擎 `_internal` + exe（3.3 GB）本身沒問題。
+  2. **`docs/deployment.md` 原本教錯的指令**：`Copy-Item -Recurse -Force "$src\*" $installed` 是**合併**不是取代 —— `-Force` 只覆寫同名檔，**不會刪除目的端多出來的檔案**，所以舊版引擎檔與任何誤複製的內容都會原地留存。
+- **修法**：`docs/deployment.md` 第 2 階段改為**先刪再複製**：
+  `Remove-Item -Recurse -Force $installed` → `Copy-Item -Recurse "$PWD\src-tauri\resources\engine" $installed`。並補上：來源是**封裝後**的 `src-tauri\resources\engine`（不是 repo `engine\`）、安裝目錄只應有 `_internal\`／`process-intelligence-engine.exe`／`.gitkeep`、版本大小對照表（CPU 約 0.45 GB／6,700 檔，CUDA 約 3.3 GB／9,600 檔）、以及驗證章節改用 stdin JSON（引擎是 stdin/stdout 協定，沒有命令列子命令）並註明**必須看 `torch.import_ok`，單看 `cuda_usable` 不足**（torchgen 缺失時它仍為 true）。
+- **驗證**：清乾淨後 **10.29 GB → 3.29 GB / 9,581 檔**，top level 只剩 `_internal, .gitkeep, process-intelligence-engine.exe`；對執行檔重跑 `system/device_probe` → `torch.import_ok=true`、`cuda_available=true`、`device_count=2`、`version=2.14.1+cu132`、`cuda_version=13.2`、`cuda_usable=true`。
+- **Files changed** — `docs/deployment.md`
+
 ### CUDA 引擎其實從未可用：torchgen 缺失 + npm 11 吞掉所有 `--flags`
 - **Status**: DONE
 - **背景**：3.3 GB 的 CUDA 引擎無法打包進 MSI／NSIS（兩者都有約 2 GB 硬上限），決定改成兩階段部署。在實機安裝 NSIS 版並替換引擎後，對 **frozen exe** 跑 `system/device_probe` 才發現真相：`torch.installed=true` 但 **`cuda_available=false`、`reason="import failed: ModuleNotFoundError: No module named 'torchgen'"`**。先前整條 CUDA 驗證之所以「通過」，是因為 `cuda_usable` 只檢查 nvidia-smi 與檔案系統上的 CUDA DLL；torch 根本 import 不進去，而 `engine/ping` 煙霧測試從不 import torch，所以兩道關卡都放行了
@@ -317,10 +328,7 @@
 
 ## In Progress
 
-### 提交本批修正
-- **Status**: IN PROGRESS
-- 待 commit 的檔案：`engine/process-intelligence-engine.spec`、`engine/src/process_intelligence_engine/main.py`、`scripts/build-engine.mjs`、`scripts/test-smoke-timeout.mjs`、`package.json`、`.github/workflows/release.yml`、`docs/deployment.md`、`README.md`
-- 待決：是否 `git push`（`ce58041` 之後的 commit 尚未推送）
+（無）
 
 ## Pending
 
