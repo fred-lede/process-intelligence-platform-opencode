@@ -2,6 +2,22 @@
 
 ## Completed
 
+### CUDA 引擎其實從未可用：torchgen 缺失 + npm 11 吞掉所有 `--flags`
+- **Status**: DONE
+- **背景**：3.3 GB 的 CUDA 引擎無法打包進 MSI／NSIS（兩者都有約 2 GB 硬上限），決定改成兩階段部署。在實機安裝 NSIS 版並替換引擎後，對 **frozen exe** 跑 `system/device_probe` 才發現真相：`torch.installed=true` 但 **`cuda_available=false`、`reason="import failed: ModuleNotFoundError: No module named 'torchgen'"`**。先前整條 CUDA 驗證之所以「通過」，是因為 `cuda_usable` 只檢查 nvidia-smi 與檔案系統上的 CUDA DLL；torch 根本 import 不進去，而 `engine/ping` 煙霧測試從不 import torch，所以兩道關卡都放行了
+- **Bug E — `torchgen` 未被收集**：torch 在 `torch/utils/_python_dispatch.py`、`torch/_library/utils.py`、`torch/_custom_op/impl.py` 於 `import torch` 時就 eager import `torchgen`。`torchgen` 是頂層套件，torch 內部不帶路徑引用它，PyInstaller 的 torch hook 也不收 → frozen bundle 缺它 → 任何 `import torch` 當場死亡。**修法**：spec 於 `with_dl` 時 `collect_all("torchgen")`，找不到（未安裝）時印 WARNING 而非靜默
+- **Bug F — npm 11.19.1 會丟棄傳給 script 的所有 `--flags`（最關鍵）**：`npm run engine:build -- --with-dl --with-cuda` 印出 `npm warn Unknown cli config "--with-dl"` 並**把旗標當成 npm 自己的組態吃掉**，腳本收到的 `argv` 為空 → 安靜地建出 CPU 版。實測連 `--` 分隔符也無效（`argv: []`）。這表示 `package.json` 的 `build:cuda`（`npm run engine:build -- --with-dl --with-cuda`）**從實作起就沒有真的開啟過 CUDA**，release.yml 的 `engine_args: '-- --with-cuda'` 同理。**修法**：旗標改為寫死在具名 script —— `engine:build:dl`、`engine:build:cuda`、`engine:build:dl:cuda`、`engine:build:tensorflow`；`build:cuda` 改呼叫 `engine:build:dl:cuda`；release.yml 的 matrix 由 `engine_args` 改為 `engine_script` 名稱
+- **煙霧測試強化**：`smokeTest()` 過去只驗 `engine/ping`（不 import torch）。現在 `--with-dl` 時會再送 `system/device_probe` 並**強制 `import torch`**；`torch.import_ok!==true` 即讓建置失敗。`_handle_device_probe` 的 torch 區塊新增 `import_ok` 欄位，讓「bundle 壞掉」與「本來就是 CPU 版」可區分（先前只有 `installed`／`cuda_available` 無法分辨）。`smokeTest(exe, {probe})` 新增第二參數以便測試
+- **驗證（實機，非推論）**：
+  - 守門測試：對**已知損壞的已安裝引擎**跑 `smokeTest(exe,{probe:true})` → 正確 reject，訊息含 `torch does not import ... No module named 'torchgen'`（證明守門有效）
+  - `npm run engine:build:dl:cuda` → `with DL stack: yes  with CUDA: yes`、`collected torchgen (50 hidden imports)`、`collected torchvision extension _C_stable.pyd / image_stable.pyd`、`torch 2.14.1+cu132 imports (cuda_available=true)`、`smoke test passed`、bundle **3369.3 MB**
+  - 把新引擎覆蓋到 NSIS 安裝目錄（`%LOCALAPPDATA%\Process Intelligence Platform\engine`）後跑 `system/device_probe` → **`import_ok=true`、`cuda_available=true`、`device_count=2`、`version=2.14.1+cu132`、`cuda_version=13.2`、`cuda_usable=true`**
+  - `engine/tests/test_device_probe.py` → **10 passed**（`--basetemp` 繞過 tmp_path 權限問題）
+  - `node --check` 對 `build-engine.mjs`、`test-smoke-timeout.mjs` 通過；`scripts/test-smoke-timeout.mjs` 已擴充 DL probe 案例（POSIX-only，本機未執行）
+- **Windows GPU 部署結論**：CPU 版（MSI 269.9 MB／NSIS 199.3 MB，已實測內含 6719 檔、585.6 MB 未壓縮、**無 torch DLL**）先安裝，再以 3.3 GB CUDA 引擎覆蓋 `engine\`。兩階段流程寫入 `docs/deployment.md`（另有 `deployment-time-series{,_En}.md` 交叉連結）
+- **Files changed** — `engine/process-intelligence-engine.spec`（collect_all torchgen）、`engine/src/process_intelligence_engine/main.py`（`import_ok` 欄位）、`scripts/build-engine.mjs`（smokeTest 加 DL probe + `{probe}` 參數）、`scripts/test-smoke-timeout.mjs`（+2 案例、修正 id）、`package.json`（具名 engine scripts + `build:cuda`）、`.github/workflows/release.yml`（`engine_args`→`engine_script`）、`docs/deployment.md`、`README.md`
+- **已完成之先前 commit**：`24fad30`、`743ca03`、`a29beaa`、`ce58041`（docs 兩階段部署）
+
 ### build:cuda 根本失效：torch 被刪除 + 產出的引擎沒有 GPU（3 個 bug）
 - **Status**: DONE（未 commit）
 - **背景**：使用者執行 `npm run build:cuda` 後，`torch==2.14.1+cu132`、`torchmetrics==1.9.0`、`torchvision==0.29.1+cu132` 全部從 `.venv` 消失；隨後 `tauri build` 報 `program not found: cargo`
@@ -300,6 +316,11 @@
 - **Files changed** — `src-tauri/src/commands/mod.rs`, `src-tauri/src/engine/mod.rs`, `engine/src/process_intelligence_engine/gates/manager.py`, `engine/src/process_intelligence_engine/main.py`
 
 ## In Progress
+
+### 提交本批修正
+- **Status**: IN PROGRESS
+- 待 commit 的檔案：`engine/process-intelligence-engine.spec`、`engine/src/process_intelligence_engine/main.py`、`scripts/build-engine.mjs`、`scripts/test-smoke-timeout.mjs`、`package.json`、`.github/workflows/release.yml`、`docs/deployment.md`、`README.md`
+- 待決：是否 `git push`（`ce58041` 之後的 commit 尚未推送）
 
 ## Pending
 

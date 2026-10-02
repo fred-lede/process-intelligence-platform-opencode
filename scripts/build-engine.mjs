@@ -184,9 +184,17 @@ function dirSize(path) {
   return total
 }
 
-export function smokeTest(exeOverride) {
+export function smokeTest(exeOverride, { probe = withDl } = {}) {
   const exe = exeOverride ?? join(stageDir, exeName)
   if (!existsSync(exe)) throw new Error(`staged executable missing: ${exe}`)
+
+  // Requests run in one process, in order. engine/ping proves the process speaks the
+  // protocol at all; when the DL stack was requested, system/device_probe then forces a
+  // real `import torch`. Ping alone is not enough: torch is imported lazily, so a bundle
+  // missing torchgen (or the torchvision extension) answers ping perfectly and only dies
+  // at the first TFT fit. That gap let a CUDA engine ship whose torch could not import.
+  const requests = [{ id: 'ping', method: 'engine/ping', params: {} }]
+  if (probe) requests.push({ id: 'probe', method: 'system/device_probe', params: {} })
 
   console.log('\nsmoke test: engine/ping against the frozen engine')
   return new Promise((resolvePromise, rejectPromise) => {
@@ -212,7 +220,7 @@ export function smokeTest(exeOverride) {
       () =>
         finish(
           new Error(
-            `engine did not answer engine/ping within ${Math.round(smokeTimeoutMs / 1000)}s` +
+            `engine did not answer within ${Math.round(smokeTimeoutMs / 1000)}s` +
               ` (raise it with SMOKE_TIMEOUT_MS)` +
               `\n--- stderr ---\n${
                 stderr.slice(-4000) ||
@@ -233,7 +241,7 @@ export function smokeTest(exeOverride) {
       if (settled) return
       finish(
         new Error(
-          `engine exited before answering engine/ping (code ${code ?? 'null'}, signal ${signal ?? 'none'})` +
+          `engine exited before answering (code ${code ?? 'null'}, signal ${signal ?? 'none'})` +
             `\n--- stderr ---\n${stderr.slice(-4000) || '(empty)'}`,
         ),
       )
@@ -241,26 +249,67 @@ export function smokeTest(exeOverride) {
     child.stderr.on('data', (chunk) => {
       stderr += chunk.toString()
     })
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString()
-      const line = stdout.split('\n').find((l) => l.trim().length > 0)
-      if (!line) return
-      let parsed
-      try {
-        parsed = JSON.parse(line)
-      } catch {
-        return // partial line; wait for more
-      }
+
+    const evaluate = (parsed) => {
       if (parsed?.error) {
-        finish(new Error(`engine returned an error to engine/ping: ${JSON.stringify(parsed.error)}`))
+        finish(
+          new Error(`engine returned an error to ${parsed.id}: ${JSON.stringify(parsed.error)}`),
+        )
         return
       }
-      if (parsed?.result?.pong === true) {
-        console.log(`smoke test passed (engine version ${parsed.result.version ?? 'unknown'})`)
+      if (parsed?.id === 'ping') {
+        if (parsed?.result?.pong !== true) {
+          finish(new Error(`unexpected engine/ping response: ${JSON.stringify(parsed)}`))
+          return
+        }
+        console.log(`  engine/ping ok (version ${parsed.result.version ?? 'unknown'})`)
+        return
+      }
+      if (parsed?.id === 'probe') {
+        const torch = parsed?.result?.torch ?? {}
+        if (torch.import_ok !== true) {
+          finish(
+            new Error(
+              `the DL stack was requested but torch does not import in the frozen engine: ` +
+                `${torch.reason ?? 'unknown reason'}\n` +
+                `--- the engine answers engine/ping and then fails at the first TFT fit ---` +
+                `\n--- stderr ---\n${stderr.slice(-4000) || '(empty)'}`,
+            ),
+          )
+          return
+        }
+        console.log(`  torch ${torch.version} imports (cuda_available=${torch.cuda_available})`)
+        if (withCuda && torch.cuda_available !== true) {
+          // Not fatal: a build machine may legitimately have no usable GPU/driver. But a
+          // CUDA engine that cannot see CUDA is worth saying out loud rather than
+          // discovering on the target machine.
+          console.log(
+            `  WARNING: --with-cuda was requested but torch.cuda.is_available() is false ` +
+              `(${torch.reason ?? 'no reason given'}); verify on the deployment machine`,
+          )
+        }
+        console.log('smoke test passed')
         finish()
         return
       }
-      finish(new Error(`unexpected engine/ping response: ${line}`))
+    }
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString()
+      let index
+      while ((index = stdout.indexOf('\n')) !== -1) {
+        const line = stdout.slice(0, index)
+        stdout = stdout.slice(index + 1)
+        if (!line.trim()) continue
+        let parsed
+        try {
+          parsed = JSON.parse(line)
+        } catch {
+          continue // partial line; wait for more
+        }
+        evaluate(parsed)
+        if (settled) return
+      }
     })
 
     // A child that dies before it reads stdin makes this pipe raise EPIPE, and an
@@ -268,7 +317,9 @@ export function smokeTest(exeOverride) {
     // trace -- hiding the exit that actually happened. Swallow it here; the child's
     // 'exit' handler is what reports the news.
     child.stdin.on('error', () => {})
-    child.stdin.write(`${JSON.stringify({ id: '1', method: 'engine/ping', params: {} })}\n`)
+    for (const request of requests) {
+      child.stdin.write(`${JSON.stringify(request)}\n`)
+    }
   })
 }
 

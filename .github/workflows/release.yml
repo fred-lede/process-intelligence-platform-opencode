@@ -16,13 +16,13 @@ jobs:
         settings:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-            engine_args: ''
+            engine_script: 'engine:build'
           # Intel runner on purpose: PyInstaller cannot cross-compile, so the
           # frozen engine inherits the runner's architecture. Building the
           # x86_64 bundle on an arm64 runner would ship an arm64 engine.
           - platform: 'macos-13'
             args: '--target x86_64-apple-darwin'
-            engine_args: ''
+            engine_script: 'engine:build'
           # Linux ships deb and rpm only. The AppImage step runs linuxdeploy across the
           # PyInstaller engine, and scipy vendors several copies of libquadmath under
           # different hashed names, so linuxdeploy cannot resolve one of them by soname
@@ -31,18 +31,23 @@ jobs:
           # linuxdeploy to deploy its dependencies.
           - platform: 'ubuntu-22.04'
             args: '--bundles deb,rpm'
-            engine_args: ''
+            engine_script: 'engine:build'
           # CPU / CUDA variants are only meaningful on Linux: xgboost declares
           # its `nvidia-*` CUDA dependencies with a Linux-only platform marker,
           # so on Windows and macOS there is nothing for --with-cuda to add.
           # productName is overridden so the two Linux artifacts do not collide
           # in the release; the app identifier is the same, so install one.
+          #
+          # The flags live in the script name, not in an argument string:
+          # `npm run engine:build -- --with-cuda` is not reliably forwarded.
+          # npm 11 parses the trailing `--flags` as npm config and drops them
+          # (argv is empty), so the job would silently publish a CPU build.
           - platform: 'ubuntu-22.04'
             args: '--bundles deb,rpm --config {"productName":"Process Intelligence Platform (CUDA)"}'
-            engine_args: '-- --with-cuda'
+            engine_script: 'engine:build:cuda'
           - platform: 'windows-latest'
             args: ''
-            engine_args: ''
+            engine_script: 'engine:build'
     runs-on: ${{ matrix.settings.platform }}
 
     steps:
@@ -88,7 +93,7 @@ jobs:
           git diff --exit-code
 
       - name: build frozen analysis engine
-        run: npm run engine:build ${{ matrix.settings.engine_args }}
+        run: npm run ${{ matrix.settings.engine_script }}
 
       - name: verify frozen engine architecture (macOS)
         if: matrix.settings.platform == 'macos-latest' || matrix.settings.platform == 'macos-13'

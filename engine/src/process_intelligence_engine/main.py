@@ -1394,7 +1394,7 @@ def _handle_device_probe(params: dict) -> dict:
     #    works, so the import is attempted and its failure reported rather than
     #    collapsed into "unavailable".
     if importlib.util.find_spec("torch") is None:
-        out["torch"] = {"installed": False, "cuda_available": False,
+        out["torch"] = {"installed": False, "import_ok": False, "cuda_available": False,
                         "reason": "torch is not installed in this build (no deep-learning stack)"}
     else:
         try:
@@ -1403,6 +1403,7 @@ def _handle_device_probe(params: dict) -> dict:
             available = bool(torch.cuda.is_available())
             out["torch"] = {
                 "installed": True,
+                "import_ok": True,
                 "cuda_available": available,
                 "device_count": torch.cuda.device_count(),
                 "version": getattr(torch, "__version__", None),
@@ -1410,7 +1411,12 @@ def _handle_device_probe(params: dict) -> dict:
                 "reason": None if available else "torch.cuda.is_available() is False",
             }
         except Exception as exc:
-            out["torch"] = {"installed": True, "cuda_available": False,
+            # find_spec found torch but the import raised: a broken bundle, not a CPU
+            # build. "installed" stays True (the package is physically present) and
+            # import_ok carries the distinction, because a caller that only reads
+            # cuda_available or installed cannot tell this apart from a CPU-only build
+            # and goes looking at the driver instead of the packaging.
+            out["torch"] = {"installed": True, "import_ok": False, "cuda_available": False,
                             "reason": f"import failed: {type(exc).__name__}: {exc}"}
 
         # torch.version.cuda is the platform-independent witness that the installed wheel

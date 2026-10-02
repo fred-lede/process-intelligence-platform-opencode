@@ -116,6 +116,28 @@ if with_dl:
             binaries.append((extension, "torchvision"))
             print(f"  collected torchvision extension {os.path.basename(extension)}")
 
+    # torchgen: torch imports it eagerly from torch.utils._python_dispatch,
+    # torch._library.utils and torch._custom_op.impl, all of which run during a plain
+    # `import torch`. It is a top-level package, so nothing inside torch references it
+    # by a path PyInstaller's torch hook can follow, and the hook does not collect it.
+    # Without it every torch import dies at startup with
+    #   ModuleNotFoundError: No module named 'torchgen'
+    # which the device probe reports only as "cuda_available: false" -- the CUDA DLLs
+    # are still on disk, so the DLL-based check passes and the failure looks like a
+    # driver problem instead of a packaging one.
+    try:
+        import torchgen  # noqa: F401
+    except ImportError:
+        print("WARNING: torchgen is not installed; every torch import will fail in the frozen engine")
+    else:
+        gen_datas, gen_binaries, gen_hidden = collect_all(
+            "torchgen", filter_submodules=_is_not_test_submodule
+        )
+        datas += gen_datas
+        binaries += gen_binaries
+        hiddenimports += gen_hidden
+        print(f"  collected torchgen ({len(gen_hidden)} hidden imports)")
+
 # HarfBuzz-Subset: WeasyPrint 70 warns that it "will be required by future versions"
 # for font subsetting. It is loaded at runtime, is not a dependency of any library
 # collected above, and so nothing pulls it in transitively -- which is why it is

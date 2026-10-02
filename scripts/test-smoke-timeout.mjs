@@ -5,6 +5,12 @@
 // stderr -- the exit code was thrown away, which is exactly the information needed to
 // tell a Gatekeeper kill from a slow start.
 //
+// Extended for the DL probe: engine/ping alone passed a bundle whose torch could not
+// import, because torch is imported lazily. The probe cases below answer ping and then
+// either fail or succeed the device probe, and assert the smoke test reacts to each.
+//
+// POSIX-only: the stubs are #!/bin/sh scripts.
+//
 // Run with a short timeout so the hang case does not take 120s:
 //   SMOKE_TIMEOUT_MS=1500 node scripts/test-smoke-timeout.mjs
 
@@ -21,10 +27,45 @@ const stub = (name, body) => {
   return p
 }
 
-const run = async (name, exe) => {
+const PONG = JSON.stringify({ id: 'ping', result: { pong: true, version: 'test' } })
+const PROBE_OK = JSON.stringify({
+  id: 'probe',
+  result: {
+    torch: {
+      installed: true,
+      import_ok: true,
+      cuda_available: false,
+      version: '2.14.1+cu132',
+      reason: 'torch.cuda.is_available() is False',
+    },
+  },
+})
+const PROBE_BROKEN = JSON.stringify({
+  id: 'probe',
+  result: {
+    torch: {
+      installed: true,
+      import_ok: false,
+      cuda_available: false,
+      reason: "import failed: ModuleNotFoundError: No module named 'torchgen'",
+    },
+  },
+})
+
+// Answers each request line by line; the engine keeps stdin open, so the loop blocks
+// after the last reply until the smoke test kills the child.
+const responder = (pong, probe) =>
+  `while IFS= read -r line; do
+  case "$line" in
+    *engine/ping*) printf '%s\\n' '${pong}' ;;
+    *system/device_probe*) printf '%s\\n' '${probe}' ;;
+  esac
+done`
+
+const run = async (name, exe, opts) => {
   const started = Date.now()
   try {
-    await smokeTest(exe)
+    await smokeTest(exe, opts)
     return { name, ms: Date.now() - started, error: null, full: '' }
   } catch (e) {
     return { name, ms: Date.now() - started, error: e.message.split('\n')[0], full: e.message }
@@ -33,8 +74,10 @@ const run = async (name, exe) => {
 
 const cases = [
   await run('dies-at-startup', stub('dies', 'exit 3')),
-  await run('answers-pong', stub('pong', `printf '%s\\n' '{"id":"1","result":{"pong":true,"version":"test"}}'`)),
+  await run('answers-pong', stub('pong', responder(PONG, PROBE_OK))),
   await run('silent-hang', stub('hang', 'sleep 30')),
+  await run('dl-import-ok', stub('dlok', responder(PONG, PROBE_OK)), { probe: true }),
+  await run('dl-import-broken', stub('dlbad', responder(PONG, PROBE_BROKEN)), { probe: true }),
 ]
 
 const budget = Number(process.env.SMOKE_TIMEOUT_MS ?? 120_000)
@@ -64,6 +107,16 @@ for (const c of cases) {
       failures++
     } else if (!/no stderr/.test(c.full)) {
       console.log('    FAIL: the timeout message should explain that stderr was empty')
+      failures++
+    }
+  }
+  if (c.name === 'dl-import-ok' && c.error) {
+    console.log('    FAIL: a probe with torch.import_ok=true should resolve, not error')
+    failures++
+  }
+  if (c.name === 'dl-import-broken') {
+    if (!c.error || !/torch does not import/.test(c.error)) {
+      console.log('    FAIL: a probe with torch.import_ok=false must fail the build')
       failures++
     }
   }

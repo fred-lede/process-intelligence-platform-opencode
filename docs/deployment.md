@@ -25,14 +25,26 @@ npm run tauri build
 
 `npm run build:app` 等同上面兩行。`scripts/build-engine.mjs` 會建立引擎 venv、安裝相依套件、以 PyInstaller 產生 `src-tauri/resources/engine/process-intelligence-engine[.exe]`，並在結尾對凍結後的執行檔送出 `engine/ping` 煙霧測試。Tauri 透過 `tauri.conf.json` 的 `bundle.resources` 將 `src-tauri/resources/engine/` 複製到 `$RESOURCE/engine/`。
 
-**CPU 版與 CUDA 版各有一個入口，不要混用參數：**
+**CPU 版與 CUDA 版各有一個入口：**
 
 ```bash
 npm run build:app     # CPU 版（預設，跨平台）
 npm run build:cuda    # CUDA 版（僅 Windows 與 Linux）
 ```
 
-`build:cuda` 等同 `npm run engine:build -- --with-dl --with-cuda && npm run tauri build`。**`--with-cuda` 屬於引擎建置腳本，不是 Tauri 的旗標** —— 若寫成 `npm run build:app -- --with-cuda`，該參數會被送給 `tauri build` 而失敗。
+`build:cuda` 等同 `npm run engine:build:dl:cuda && npm run tauri build`。
+
+**旗標一律寫在 npm script 名稱裡，不要用 `--` 傳遞。** 引擎變體各有專屬 script：
+
+| Script | 傳給引擎建置腳本的旗標 |
+|---|---|
+| `engine:build` | （無，CPU 版） |
+| `engine:build:dl` | `--with-dl` |
+| `engine:build:cuda` | `--with-cuda` |
+| `engine:build:dl:cuda` | `--with-dl --with-cuda` |
+| `engine:build:tensorflow` | `--with-tensorflow` |
+
+**`npm run engine:build -- --with-cuda` 看起來合理，但在 npm 11 上不會生效**：npm 把 `--with-cuda` 當成自己的組態旗標（印出 `npm warn Unknown cli config "--with-cuda"`）並丟掉，腳本收到的 `argv` 是空的，結果安靜地建出 CPU 版。加上 `--` 分隔符也一樣。因此發行流程改以 script 名稱區分變體，而不是傳參數字串；若需要組合出表中沒有的旗標，請直接呼叫 `node scripts/build-engine.mjs --with-dl --with-tensorflow`。
 
 `--with-dl` 不可省略：Windows 的 CUDA 幾乎全部來自 torch（TFT 的相依），不是 xgboost。若只給 `--with-cuda`，引擎不會變大也不會有 GPU 加速。
 
@@ -112,7 +124,7 @@ npm run tauri build -- --bundles appimage --verbose
 `--with-dl` 會一併打包 torch / pytorch-forecasting / lightning（產物大幅變大）；`--with-tensorflow` 另外加入 tensorflow。預設兩者皆排除：引擎以 `importlib.util.find_spec` 偵測不到時會自動退回既有模型，TFT 相關功能停用，其餘功能不受影響。
 
 ```bash
-npm run engine:build -- --with-dl
+npm run engine:build:dl
 ```
 
 ### CPU 版與 CUDA 版
@@ -126,8 +138,8 @@ npm run engine:build -- --with-dl
 | `--with-dl --with-cuda`（Windows） | 加上 torch CUDA（cu132 wheel） | — | **3.3 GB** |
 
 ```bash
-npm run engine:build -- --with-cuda                  # Linux
-npm run engine:build -- --with-dl --with-cuda       # Windows
+npm run engine:build:cuda              # Linux
+npm run engine:build:dl:cuda           # Windows
 ```
 
 **CPU 版在 GPU 機器上也能正常執行**，只是訓練走 CPU。
@@ -260,7 +272,7 @@ Linux 的兩個安裝檔共用同一個 app identifier，**只需安裝其中一
 Sequence-aware simulation 的 Transformer 使用 TensorFlow／Keras，**不在預設依賴內**，引擎以 `importlib.util.find_spec` 偵測不到時會停用該模型，其餘功能不受影響：
 
 ```bash
-npm run engine:build -- --with-tensorflow
+npm run engine:build:tensorflow
 ```
 
 **LSTM 與 Transformer 因此在「CPU 版」與「CUDA 版」中都是 unavailable。** 這不是打包失敗 —— 打包自檢（`engine/ping` 與 `engine/capabilities`）都通過，缺的是執行期套件。`--with-tensorflow` 會增加數百 MB（TensorFlow 本體約 600 MB，且 Linux 另需 `libnvinfer` 等系統函式庫），因此預設排除。
@@ -269,7 +281,7 @@ npm run engine:build -- --with-tensorflow
 
 ```bash
 # Windows：GPU + TFT（Transformer 仍需另外加 --with-tensorflow）
-npm run engine:build -- --with-dl --with-cuda
+npm run engine:build:dl:cuda
 ```
 
 驗證模型可用性：
