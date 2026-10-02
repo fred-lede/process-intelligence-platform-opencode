@@ -32,7 +32,11 @@ npm run build:app     # CPU 版（預設，跨平台）
 npm run build:cuda    # CUDA 版（僅 Windows 與 Linux）
 ```
 
-`build:cuda` 等同 `npm run engine:build -- --with-cuda && npm run tauri build`。**`--with-cuda` 屬於引擎建置腳本，不是 Tauri 的旗標** —— 若寫成 `npm run build:app -- --with-cuda`，該參數會被送給 `tauri build` 而失敗。CUDA 只在 Windows 與 Linux 有意義（xgboost 以 Linux 平台標記宣告其 `nvidia-*` 相依，macOS 沒有東西可加），bundle 會增加約 450 MB 並需要系統 CUDA toolkit。
+`build:cuda` 等同 `npm run engine:build -- --with-dl --with-cuda && npm run tauri build`。**`--with-cuda` 屬於引擎建置腳本，不是 Tauri 的旗標** —— 若寫成 `npm run build:app -- --with-cuda`，該參數會被送給 `tauri build` 而失敗。
+
+`--with-dl` 不可省略：Windows 的 CUDA 幾乎全部來自 torch（TFT 的相依），不是 xgboost。若只給 `--with-cuda`，引擎不會變大也不會有 GPU 加速。
+
+CUDA 只在 Windows 與 Linux 有意義（xgboost 以 Linux 平台標記宣告其 `nvidia-*` 相依，macOS 沒有東西可加）。**兩平台的增量差異極大**：Linux 只增加約 450 MB（`nvidia-*` 執行期函式庫），Windows 則因 torch 而增加約 2.8 GB。Windows 產物因此無法打包成 installer，詳見下方〈Windows GPU 部署〉。
 
 CUDA 版與 CPU 版的產物**檔名相同**，先後建置會互相覆蓋。發行流程以 `--config '{"productName":"Process Intelligence Platform (CUDA)"}'` 區分；本機若需並存，請自行加上同樣的覆寫。
 
@@ -113,23 +117,129 @@ npm run engine:build -- --with-dl
 
 ### CPU 版與 CUDA 版
 
-**預設產物是 CPU 版。** Linux 上 xgboost 會拉入 `nvidia-*` 系列的 CUDA 執行期函式庫（`nvidia-nccl-cu12` 等），約 **450 MB**、佔整個 bundle 的三分之一；而 GPU 訓練是選配、預設關閉，且還需要系統 CUDA toolkit 與 NVIDIA 顯卡。因此預設將它們排除。
+**預設產物是 CPU 版。** GPU 訓練是選配、預設關閉，且還需要 NVIDIA 顯卡與對應驅動程式，因此預設不打包 CUDA 相依。
 
-| 選項 | 內容 | 大約大小（Linux） |
-|---|---|---|
-| 預設 | CPU 版 | 約 660 MB |
-| `--with-cuda` | 加上 CUDA 執行期函式庫 | 約 1.1 GB |
-| `--with-dl` | 加上 torch / lightning（TFT） | 再大幅增加數 GB |
+| 選項 | 內容 | Linux | Windows |
+|---|---|---|---|
+| 預設 | CPU 版 | 約 660 MB | 約 450 MB |
+| `--with-cuda`（Linux） | 加上 `nvidia-*` CUDA 執行期函式庫 | 約 1.1 GB | — |
+| `--with-dl --with-cuda`（Windows） | 加上 torch CUDA（cu132 wheel） | — | **3.3 GB** |
 
 ```bash
-npm run engine:build -- --with-cuda
+npm run engine:build -- --with-cuda                  # Linux
+npm run engine:build -- --with-dl --with-cuda       # Windows
 ```
 
-**CPU 版在 GPU 機器上也能正常執行**，只是訓練走 CPU。只有確定要在部署機器上使用 GPU 訓練時才需要 `--with-cuda`。
+**CPU 版在 GPU 機器上也能正常執行**，只是訓練走 CPU。
 
-註：`nvidia-*` 是 xgboost 在 **Linux** 上的相依（其 wheel 的 platform marker 為 `platform_system == 'Linux'`），所以這兩個產物的差異主要出現在 Linux。
+註：`nvidia-*` 是 xgboost 在 **Linux** 上的相依（其 wheel 的 platform marker 為 `platform_system == 'Linux'`）。Windows 的 xgboost wheel 本身已含 GPU 程式碼（DLL 內可見 `gpu_hist`、`cuInit`、`cudaFree`），不依賴任何 `nvidia-*` 套件，所以 Windows 的 GPU 能力只會隨 `--with-dl`（TFT／torch）一起進來。若在 Windows 上需要 GPU **LightGBM**，那需要從原始碼編譯，見上方 LightGBM GPU 章節。
 
-**發行流程產生的變體**（`.github/workflows/release.yml`）
+### Windows GPU 部署：先裝 CPU 版，再替換引擎
+
+**Windows 的 CUDA 引擎（3.3 GB）無法打包進 installer，因此 GPU 部署必須分兩階段。**
+
+原因是兩個 installer 後端都有約 2 GB 的硬上限：
+
+| 目標 | 錯誤 | 原因 |
+|---|---|---|
+| MSI | `LGHT0001 ... 0x8000FFFF (E_UNEXPECTED)`，堆疊停在 `CreateCabFinish` | WiX v3 無法建出這麼大的 cabinet |
+| NSIS | `Internal compiler error #12345: error mmapping file ... is out of range` | `makensis` 是 32-bit 程序，無法 mmap 超過 2 GB |
+
+3.3 GB 中有 3.0 GB 是 torch，其中 `torch/lib` 單獨就佔 2.9 GB（38 個檔案，`cublasLt64_13.dll` 434 MB、`torch_cuda.dll` 407 MB、`torch_cpu.dll` 292 MB、`cufft64_12.dll` 277 MB、`cudnn_engines_precompiled64_9.dll` 212 MB）。這些都是 GPU 訓練的必要組件，沒有辦法裁切到 2 GB 以下。
+
+注意 `tauri.conf.json` 的 `bundle.targets` 為 `all`，MSI 會先被嘗試；MSI 失敗會中止整個 bundling，**連 NSIS 也不會繼續執行**，所以兩種 installer 會同時失效而不是只有 MSI。
+
+#### 部署步驟
+
+**第 1 階段 — 建立並安裝 CPU 版**
+
+```powershell
+npm run build:app
+```
+
+產物：
+
+- MSI：`src-tauri\target\release\bundle\msi\Process Intelligence Platform_0.10.4_x64_en-US.msi`
+- NSIS：`src-tauri\target\release\bundle\nsis\Process Intelligence Platform_0.10.4_x64-setup.exe`
+
+正常安裝後，啟動 App 即可使用（TFT 會顯示為 unavailable，xgboost 走 CPU）。
+
+**第 2 階段 — 建置 CUDA 引擎並替換**
+
+在**開發機**（需要 Rust toolchain、Python 3.12、Visual Studio Build Tools）執行：
+
+```powershell
+npm run build:cuda
+```
+
+這會把 3.3 GB 的 CUDA 引擎建置到 `src-tauri\resources\engine\`，**但不會產生可用的 installer**（會在 bundling 階段失敗，屬預期現象）。
+
+接著把整個 `engine\` 目錄複製到安裝目錄下、覆蓋既有的 CPU 引擎：
+
+```powershell
+# 先關閉 App（含背景程序），否則檔案會被鎖住
+Stop-Process -Name "Process Intelligence Platform" -Force -ErrorAction SilentlyContinue
+
+$installed = "$env:LOCALAPPDATA\Process Intelligence Platform\engine"   # NSIS 安裝位置
+# 若改用 MSI 安裝，位置通常為：
+# $installed = "$env:ProgramFiles\Process Intelligence Platform\engine"
+
+Copy-Item -Recurse -Force "src-tauri\resources\engine\*" $installed
+```
+
+`engine\` 必須是**主程式同層的子目錄**（即 `resource_dir()` 回傳的位置，見上方〈引擎解析順序〉第 2 項）。不要複製成 `engine\engine\`。
+
+**第 3 階段 — 驗證**
+
+啟動 App，於設定頁執行裝置探測，或直接對凍結後的引擎驗證：
+
+```powershell
+& "$installed\process-intelligence-engine.exe" system/device_probe
+```
+
+預期 `cuda_usable: true`、`torch` 版本帶 `+cu132`、`xgboost_gpu.supported: true`。
+
+若想避免搬檔，可用環境變數指向外部引擎做測試（僅本次工作階段有效）：
+
+```powershell
+$env:PROCESS_INTELLIGENCE_ENGINE = "D:\path\to\src-tauri\resources\engine\process-intelligence-engine.exe"
+```
+
+#### 注意事項
+
+- **CPU 版與 CUDA 版產物檔名相同**，`build:app` 與 `build:cuda` 會互相覆蓋 `src-tauri\resources\engine\`。要同時保留兩者，建置後先把目錄改名或複製到別處。
+- 切換引擎不需要重新安裝 App，也不需要重新建置 Rust 前端；`resources` 只在 bundling 時被複製。
+- 這個兩階段流程是 **Windows 專屬**。Linux 的 CUDA 增量只有 450 MB，可以正常打包成 deb／rpm，不需要替換引擎。
+
+### 在其他機器上重建 CUDA 引擎
+
+替換引擎只需要 CUDA 引擎，不需要整包 App。以下是給「拿到別人產出的 CUDA 引擎、要自己重新凍結」的人：
+
+**先決條件**：Python 3.12、uv、Rust toolchain（`rustup`）、Visual Studio Build Tools（含 C++ 工具鏈）。Rust 不在 PATH 時（例如 CI 或新開的 shell）需先補上：
+
+```powershell
+$env:Path = "$env:USERPROFILE\.cargo\bin;$env:Path"
+```
+
+```powershell
+npm run build:cuda
+```
+
+`build:cuda` 會依序執行 `uv sync --extra dev --extra bundle --extra dl`（dl 提供 torch／torchvision／pytorch-forecasting，並指向 cu132 index）、`uv pip install xgboost`、PyInstaller 凍結，最後跑 `engine/ping` 與 `engine/capabilities` 自檢。產物落在 `src-tauri\resources\engine\`。
+
+**`uv sync` 會移除未宣告的套件** —— 日後執行不帶 `--extra dl` 的 `uv sync`，會讓 torch 被 prune 掉。恢復 GPU 環境：
+
+```powershell
+uv sync --project engine --extra dev --extra bundle --extra dl
+```
+
+建置完成後把整個 `engine\` 覆蓋到目標機的安裝目錄（見上方第 2 階段的 `Copy-Item`）。
+
+**診斷要點**：`--with-dl` 的凍結引擎若缺少 `torchvision` 的原生擴充，症狀是 import 時報 `_C` 找不到；spec 已用 `collect_dynamic_libs` 收集，建置後應可在 `_internal\torchvision\` 看到 `_C_stable.pyd` 與 `image_stable.pyd`。
+
+### 發行流程產生的變體
+
+`.github/workflows/release.yml`：
 
 | 平台 | 產物 |
 |---|---|
@@ -137,13 +247,38 @@ npm run engine:build -- --with-cuda
 | Linux（x64） | **CPU 版** 與 **CUDA 版**（productName 加上 `(CUDA)` 以免檔名衝突） |
 | Windows（x64） | CPU 版 |
 
-Windows 沒有另立 CUDA 產物，因為那會產生**位元組完全相同**的檔案：Windows 的 xgboost wheel 本身已含 GPU 程式碼（DLL 內可見 `gpu_hist`、`cuInit`、`cudaFree`，且不含 CPU-only 建置的「GPU Tree Learner was not enabled」字串），而且它不依賴任何 `nvidia-*` 套件（那些是 Linux-only marker）。若在 Windows 上需要 GPU **LightGBM**，那需要從原始碼編譯，見上方 LightGBM GPU 章節。
+Windows 沒有另立 CUDA 產物，因為 3.3 GB 的 CUDA 引擎無法通過 installer 的 2 GB 上限（見上方〈Windows GPU 部署〉）。若要為 Windows 提供 GPU 版，發行流程需要改為附加可下載的引擎套件，而非內嵌於 installer。
 
 Linux 的兩個安裝檔共用同一個 app identifier，**只需安裝其中一個**。
 
 ### PyInstaller 無法跨平台／跨架構編譯
 
 凍結後的引擎架構跟隨建置 runner。macOS x86_64 因此使用 Intel runner（`macos-13`）；CI 另有一道 `lipo -archs` 檢查，引擎架構與 bundle 目標不符時直接讓建置失敗，避免悄悄出貨無法執行的產物。
+
+### 深層學習（Transformer）需要 DL 額外套件
+
+Sequence-aware simulation 的 Transformer 使用 TensorFlow／Keras，**不在預設依賴內**，引擎以 `importlib.util.find_spec` 偵測不到時會停用該模型，其餘功能不受影響：
+
+```bash
+npm run engine:build -- --with-tensorflow
+```
+
+**LSTM 與 Transformer 因此在「CPU 版」與「CUDA 版」中都是 unavailable。** 這不是打包失敗 —— 打包自檢（`engine/ping` 與 `engine/capabilities`）都通過，缺的是執行期套件。`--with-tensorflow` 會增加數百 MB（TensorFlow 本體約 600 MB，且 Linux 另需 `libnvinfer` 等系統函式庫），因此預設排除。
+
+要同時得到 GPU 與深度學習，需兩者並用：
+
+```bash
+# Windows：GPU + TFT（Transformer 仍需另外加 --with-tensorflow）
+npm run engine:build -- --with-dl --with-cuda
+```
+
+驗證模型可用性：
+
+```powershell
+& "src-tauri\resources\engine\process-intelligence-engine.exe" capabilities
+```
+
+`lstm_available` / `transformer_available` / `temporal_fusion_transformer_available` 三個欄位會如實反映實際狀態。
 
 ## v0.6.0 多層級資料範本
 

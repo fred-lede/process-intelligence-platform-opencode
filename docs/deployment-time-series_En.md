@@ -44,6 +44,58 @@ python -m pip install pytorch-forecasting
 python -m pytest tests/test_time_series_models.py -k "tft or advanced_time_series_rows" -q
 ```
 
+> **Note: `torch` installed from PyPI on Windows is CPU-only.** Since PyTorch 2.11, PyPI ships CUDA wheels only for Linux x86_64/aarch64; the default Windows wheel contains no CUDA and `torch.cuda.is_available()` returns `False`. To use a GPU on Windows, follow [Windows NVIDIA CUDA](#windows-nvidia-cuda) instead of `pip install torch`.
+
+## Windows NVIDIA CUDA
+
+Confirm the driver first:
+
+```powershell
+nvidia-smi --query-gpu=name,driver_version --format=csv
+```
+
+**The CUDA wheel version must match the GPU's compute capability:**
+
+| GPU | Compute capability | Minimum usable wheel |
+| --- | --- | --- |
+| RTX 50 series (Blackwell, e.g. RTX 5090) | `sm_120` | **cu128 or newer** (cu118 is **not** supported) |
+| RTX 40 series (Ada, e.g. RTX 4070 Ti) | `sm_89` | cu118 and up |
+| RTX 30 series (Ampere) | `sm_86` | cu118 and up |
+
+The `cu118` wheel tops out at Hopper (`sm_90`), so on a 50-series GPU it falls back to CPU or fails outright. `cu128` (from torch 2.7) and `cu130`/`cu132` support Blackwell natively. CUDA 13.x needs a newer driver (R580+); pick `cu128` if your driver is older.
+
+In PowerShell:
+
+```powershell
+cd engine
+uv venv --python 3.12 .venv-tft
+.\.venv-tft\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+
+# Pick one of the following. uv must run inside the activated venv, otherwise add --python .venv-tft.
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu132
+# uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu132
+
+python -m pip install pytorch-forecasting
+```
+
+`torchvision` is not required by TFT (`pytorch-forecasting` never imports it) and can be omitted; it is kept here to match the official install command.
+
+Verify (`CUDA: True` with capability `(12, 0)` means a 50-series GPU is correctly detected):
+
+```powershell
+python -c "import torch; print(torch.__version__, torch.version.cuda); print('CUDA:', torch.cuda.is_available()); print(torch.cuda.get_device_name(0), torch.cuda.get_device_capability(0))"
+```
+
+The `triton not found; flop counting will not work for triton kernels` warning on Windows is expected: Triton ships no Windows wheel and TFT does not use it.
+
+With multiple GPUs present (e.g. RTX 5090 + RTX 4070 Ti), TFT should still work. If prediction fails with `unmatched '}' in format string`, Lightning selected DDP; the engine pins `predict()` to a single device to avoid this.
+
+### Deploying the CUDA engine to a Windows install
+
+The CUDA engine is **3.3 GB and cannot be packaged into an installer** — both MSI (WiX v3 fails cabinet creation) and NSIS (`makensis` is a 32-bit process) have a hard ~2 GB ceiling. Install the CPU build, then replace the engine directory. See [`deployment.md`](deployment.md#windows-gpu-部署先裝-cpu-版再替換引擎) for the full procedure (Windows-only, two-stage engine swap).
+
 ## Linux CPU
 
 ```bash

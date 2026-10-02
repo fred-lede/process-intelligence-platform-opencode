@@ -109,6 +109,10 @@ python -c "import torch; print(torch.__version__, torch.version.cuda); print('CU
 
 多張 GPU 同時存在時（例如 RTX 5090 + RTX 4070 Ti），TFT 仍應正確運作。預測階段若出現 `unmatched '}' in format string`，代表 Lightning 選用了 DDP；引擎已將 `predict()` 的 trainer 固定為單一裝置以避免此問題。
 
+### 將 CUDA 引擎部署到 Windows 安裝機
+
+CUDA 引擎為 **3.3 GB，無法打包進 installer**（MSI 的 WiX v3 與 NSIS 的 32-bit `makensis` 都有約 2 GB 的硬上限）。正確流程是：先安裝 CPU 版，再整個替換 `engine\` 目錄。完整步驟見 [deployment.md](deployment.md#windows-gpu-部署先裝-cpu-版再替換引擎)（Windows 專屬，兩階段替換引擎）。
+
 ## Linux（CPU）
 
 ```bash
