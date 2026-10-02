@@ -263,6 +263,10 @@ export function smokeTest(exeOverride, { probe = withDl } = {}) {
           return
         }
         console.log(`  engine/ping ok (version ${parsed.result.version ?? 'unknown'})`)
+        // CPU builds send no probe request, so ping is the last expected answer and
+        // the ping branch must finish the test itself. Only the probe branch had a
+        // finish() call, which made every probe-less smoke test hang until timeout.
+        if (!requests.some((r) => r.id === 'probe')) finish()
         return
       }
       if (parsed?.id === 'probe') {

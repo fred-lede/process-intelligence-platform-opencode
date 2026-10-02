@@ -101,6 +101,13 @@ for (const c of cases) {
     console.log('    FAIL: a valid pong response should resolve, not error')
     failures++
   }
+  if (c.name === 'answers-pong' && !c.error && c.ms > budget / 2) {
+    // With probe disabled, pong is the LAST expected answer. It once only logged and
+    // returned, so the ping-less finish never happened and the CPU smoke test waited
+    // out the full timer before its timeout assertion masked the bug as a "pass".
+    console.log(`    FAIL: took ${c.ms}ms -- pong without a pending probe must finish immediately`)
+    failures++
+  }
   if (c.name === 'silent-hang') {
     if (!c.error || !/did not answer/.test(c.error)) {
       console.log('    FAIL: expected the timeout message for a silent hang')
