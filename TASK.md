@@ -2,6 +2,20 @@
 
 ## Completed
 
+### Overlay 覆蓋圖 + Six Sigma 補強（Crystal Ball 對照缺口盤點）
+- **Status**: DONE
+- **背景**：使用者提供 Crystal Ball 4 圖表 + 2 報告材料（調參/DFSS 脈絡）要求盤點缺口。證據先行盤點結果：敏感度（資料層）、預測圖（histogram/CDF/capability）、統計報告（percentiles/skew/kurtosis）已涵蓋；缺 Overlay 覆蓋圖、DPMO/Z 顯示、極端百分位、龍捲風圖渲染。
+- **實作**：
+  - 引擎 `monte_carlo.py`：percentiles 加 `p0_1`/`p99_9`；return 加 `dpmo`（=ng_probability×1e6，無規格界時 None）、`z_lsl`/`z_usl`
+  - 引擎 `main.py`：新 `monte_carlo/compare` handler（baseline vs candidate：mean shift / mean_shift_pct / std_reduction_pct / 兩份 histogram+CDF / 兩者 DPMO；KeyError 攔下轉結構化錯誤）；`policy.py` reader 清單加 `monte_carlo/compare`
+  - 前端 `engine.ts`：`MonteCarloPercentiles` 加 p0_1/p99_9；`MonteCarloResult` 加 dpmo/z_lsl/z_usl；新 `MonteCarloComparison`/`MonteCarloCompareResult` 型別 + `compareMonteCarlo()`
+  - 前端 `MonteCarlo.tsx`：Overlay 卡（設為基準 → 新設定重跑 → 比較；barmode overlay 疊 histogram + 雙 CDF y2 軸；mean shift/std reduction/DPMO Statistic 色碼）；DPMO/Z 顯示於 capability 卡；百分位 7 卡；切換模型清除基準快照
+  - 前端 `ModelCenter.tsx`：敏感度龍捲風式橫條圖（最大貢獻紅色置頂）保留表格
+  - i18n 三語 16 鍵同步；es-MX `sourceFromNode` 確認 `{{name}}` 正確（TASK.md 遺留 follow-up 已被修復）
+- **驗證**：`test_monte_carlo.py` 24/24、`test_main_monte_carlo.py` 14/14；全引擎 680 passed, 13 skipped（唯一失敗 `test_v040_workflow` golden case 為 pre-existing，Windows 缺 Tesseract，與本批無關）；`tsc --noEmit` EXIT 0；`npm run build` ✓ 1.20s
+- **Commits** — `e9008b8`（引擎百分位/DPMO）、`e4b825e`（compare handler）、`2849cf8`（前端 Overlay + 龍捲風圖）
+- **計畫文件** — `docs/superpowers/plans/2026-10-05-overlay-sixsigma-enhancements.md`
+
 ### Windows 安裝目錄膨脹到 10 GB：合併式覆蓋的缺陷
 - **Status**: DONE
 - **現象**：使用者回報 Windows 安裝機的 `engine\` 目錄有 7 GB。實測 `%LOCALAPPDATA%\Process Intelligence Platform\engine` = **10.29 GB / 55,219 檔**（正常應為 3.29 GB / 9,581）。
