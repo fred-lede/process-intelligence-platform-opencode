@@ -49,6 +49,23 @@ def sample_from_distribution(
         log_sigma = math.sqrt(math.log(1.0 + (sigma / mu) ** 2))
         return rng.lognormal(log_mu, log_sigma, n).tolist()
 
+    if dist_name == "weibull" and len(arr) >= 2:
+        try:
+            from scipy.stats import weibull_min
+            positive = arr[arr > 0]
+            if positive.size < 2:
+                raise ValueError("weibull needs positive data")
+            shape, loc, scale = weibull_min.fit(positive, floc=0)
+            return rng.weibull(shape, n).tolist()
+        except Exception:
+            pass  # fall through to empirical fallback
+
+    if dist_name == "poisson" and len(arr) >= 2:
+        lam = float(arr.mean())
+        if lam > 0 and np.allclose(arr, np.round(arr)):
+            return rng.poisson(lam, n).astype(float).tolist()
+        # λ≤0 或非整數計數資料 → fall through to empirical fallback
+
     # Histogram / empirical resampling fallback
     if len(arr) > 0:
         indices = rng.integers(0, len(arr), n)

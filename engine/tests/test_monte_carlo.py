@@ -241,6 +241,31 @@ def test_sample_distribution_unknown_type():
     assert len(samples) == 10
 
 
+def test_sample_from_weibull():
+    values = [10.0, 12.0, 11.0, 13.0, 12.5, 11.5, 12.0, 10.5, 13.5, 12.0]
+    samples = sample_from_distribution(values, dist_name="weibull", n=200, seed=42)
+    assert len(samples) == 200
+    assert all(s >= 0 for s in samples)
+    assert all(isinstance(s, float) for s in samples)
+    # fallback 只會重放原始 10 個離散值；weibull 抽樣應產生連續新值
+    assert len(set(samples)) > 20
+
+
+def test_sample_from_poisson():
+    values = [2.0, 3.0, 1.0, 4.0, 2.0, 3.0, 2.0, 1.0, 3.0, 2.0]
+    samples = sample_from_distribution(values, dist_name="poisson", n=200, seed=42)
+    assert len(samples) == 200
+    assert all(s >= 0 and float(s).is_integer() for s in samples)
+    # poisson(λ=2) 抽樣應產生超出原始值域的整數（如 0,5,6...），非只重放 [1..4]
+    assert min(samples) < 1 or max(samples) > 4
+
+
+def test_sample_poisson_negative_mean_falls_back():
+    values = [-1.0, -2.0, -3.0, -1.0, -2.0]
+    samples = sample_from_distribution(values, dist_name="poisson", n=50, seed=42)
+    assert len(samples) == 50  # fallback empirical，不拋例外
+
+
 def test_predict_output_missing_coefficient():
     coeffs = {"_intercept": 10.0}
     inputs = {"x1": 5.0}
