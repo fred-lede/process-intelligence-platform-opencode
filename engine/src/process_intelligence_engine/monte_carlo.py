@@ -329,19 +329,35 @@ def run_monte_carlo(
             values = df[col].to_numpy(dtype=float)
             spec = input_distributions.get(col, {})
             name = str(spec.get("name", "empirical")).lower()
-            if name in ("normal", "norm") and len(values) > 1:
-                mu, sigma = float(np.mean(values)), float(np.std(values, ddof=1))
-                sampled_inputs[col] = rng.normal(mu, sigma, n_simulations)
-                applied_distributions[col] = {"name": "normal", "mean": mu, "std": sigma}
-            elif name in ("uniform", "triangular", "triangle"):
-                lo, hi = float(np.min(values)), float(np.max(values))
-                if name == "uniform":
-                    sampled_inputs[col] = rng.uniform(lo, hi, n_simulations)
-                    applied_distributions[col] = {"name": "uniform", "min": lo, "max": hi}
-                else:
-                    mode = float(spec.get("params", [lo, (lo + hi) / 2, hi])[1]) if spec.get("params") else (lo + hi) / 2
-                    sampled_inputs[col] = rng.triangular(lo, mode, hi, n_simulations)
-                    applied_distributions[col] = {"name": "triangular", "min": lo, "mode": mode, "max": hi}
+            normed = {
+                "normal": "normal", "norm": "normal",
+                "triangular": "triangular", "triangle": "triangular",
+                "uniform": "uniform",
+                "lognormal": "lognormal", "lognorm": "lognormal",
+                "weibull": "weibull",
+                "poisson": "poisson",
+            }.get(name)
+            if normed and len(values) >= 2:
+                # 抽樣結果連同實際套用參數記錄進 applied_distributions，
+                # 與前端顯示慣例（name/mean/std/min/mode/max）相容。
+                sub_rng = np.random.default_rng(int(rng.integers(1 << 31)))
+                sampled_inputs[col] = np.asarray(
+                    sample_from_distribution(
+                        values.tolist(), dist_name=normed,
+                        n=n_simulations, seed=int(sub_rng.integers(1 << 31))),
+                    dtype=float)
+                applied_distributions[col] = {"name": normed}
+                if normed == "normal":
+                    applied_distributions[col].update(
+                        mean=float(np.mean(values)), std=float(np.std(values, ddof=1)))
+                elif normed == "uniform":
+                    applied_distributions[col].update(
+                        min=float(np.min(values)), max=float(np.max(values)))
+                elif normed == "triangular":
+                    lo, hi = float(np.min(values)), float(np.max(values))
+                    applied_distributions[col].update(
+                        min=lo, max=hi, mode=float(spec.get("params", [lo, (lo + hi) / 2, hi])[1])
+                        if spec.get("params") else (lo + hi) / 2)
             else:
                 row_indices = rng.integers(0, len(df), size=n_simulations)
                 sampled_inputs[col] = values[row_indices]

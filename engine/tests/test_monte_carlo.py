@@ -266,6 +266,58 @@ def test_sample_poisson_negative_mean_falls_back():
     assert len(samples) == 50  # fallback empirical，不拋例外
 
 
+def test_run_monte_carlo_input_distributions_extended():
+    """auto 分支須真正以 lognormal 抽樣，非落入 bootstrap。"""
+    import pandas as pd
+    rng = np.random.default_rng(7)
+    n = 120
+    thickness = rng.lognormal(1.0, 0.3, n)  # 右偏、恆正
+    x2 = rng.normal(50, 3, n)
+    y = 10 + 2 * thickness - 1.5 * x2 + rng.normal(0, 0.5, n)
+    df = pd.DataFrame({"thickness": thickness, "x2": x2, "y": y})
+    coeffs = {"_intercept": float(y.mean()), "thickness": 2.0, "x2": -1.5}
+    result = run_monte_carlo(
+        df=df, model_type="doe_linear", coefficients=coeffs,
+        input_columns=["thickness", "x2"], output_column="y",
+        n_simulations=2000, seed=42,
+        sampling_method="auto",
+        input_distributions={
+            "thickness": {"name": "lognormal"},
+            "x2": {"name": "normal"},
+        },
+    )
+    applied = result["input_distributions"]
+    assert applied["thickness"]["name"] == "lognormal"
+    assert applied["x2"]["name"] == "normal"
+    # lognormal 抽樣應產生連續新值（fallback 只會重放原始 120 值）
+    assert len(set(result["output_values"])) > 500
+
+
+def test_run_monte_carlo_poisson_input():
+    """auto 分支須以 poisson 整數抽樣 defects 欄。"""
+    import pandas as pd
+    rng = np.random.default_rng(11)
+    n = 150
+    defects = rng.poisson(3, n).astype(float)
+    x2 = rng.normal(50, 3, n)
+    y = 10 + 0.5 * defects - 1.0 * x2 + rng.normal(0, 0.3, n)
+    df = pd.DataFrame({"defects": defects, "x2": x2, "y": y})
+    coeffs = {"_intercept": float(y.mean()), "defects": 0.5, "x2": -1.0}
+    result = run_monte_carlo(
+        df=df, model_type="doe_linear", coefficients=coeffs,
+        input_columns=["defects", "x2"], output_column="y",
+        n_simulations=1500, seed=42,
+        sampling_method="auto",
+        input_distributions={
+            "defects": {"name": "poisson"},
+            "x2": {"name": "triangular"},
+        },
+    )
+    applied = result["input_distributions"]
+    assert applied["defects"]["name"] == "poisson"
+    assert applied["x2"]["name"] == "triangular"
+
+
 def test_predict_output_missing_coefficient():
     coeffs = {"_intercept": 10.0}
     inputs = {"x1": 5.0}
