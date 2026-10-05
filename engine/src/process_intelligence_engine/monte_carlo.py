@@ -475,11 +475,13 @@ def run_monte_carlo(
     output_median = float(np.median(output_values))
 
     percentiles = {
+        "p0_1": float(np.percentile(output_values, 0.1)),
         "p1": float(np.percentile(output_values, 1)),
         "p5": float(np.percentile(output_values, 5)),
         "p50": float(np.percentile(output_values, 50)),
         "p95": float(np.percentile(output_values, 95)),
         "p99": float(np.percentile(output_values, 99)),
+        "p99_9": float(np.percentile(output_values, 99.9)),
     }
 
     # Specification violation counting
@@ -549,6 +551,17 @@ def run_monte_carlo(
     else:
         multi_anomaly_ng = 0
 
+    # DPMO / Z-scores（僅在規格界存在時有意義）
+    dpmo: float | None = None
+    z_lsl = z_usl = None
+    if lsl is not None or usl is not None:
+        dpmo = float(ng_probability) * 1e6
+        if output_std > 0:
+            if lsl is not None:
+                z_lsl = (output_mean - lsl) / output_std
+            if usl is not None:
+                z_usl = (usl - output_mean) / output_std
+
     return {
         "n_simulations": n_simulations,
         "seed": seed,
@@ -560,6 +573,9 @@ def run_monte_carlo(
         "output_std": output_std,
         "output_median": output_median,
         "percentiles": percentiles,
+        "dpmo": dpmo,
+        "z_lsl": z_lsl,
+        "z_usl": z_usl,
         "histogram": _compute_histogram(output_values),
         "cdf_data": _compute_cdf(output_values),
         "boxplot_data": _compute_boxplot(output_values),

@@ -266,6 +266,35 @@ def test_sample_poisson_negative_mean_falls_back():
     assert len(samples) == 50  # fallback empirical，不拋例外
 
 
+def test_monte_carlo_extreme_percentiles_and_dpmo():
+    rng = np.random.default_rng(3)
+    df = _make_simple_dataset(rng)
+    result = run_monte_carlo(
+        df=df, model_type="doe_linear",
+        coefficients={"_intercept": 10.0, "x1": 2.0, "x2": -1.5},
+        input_columns=["x1", "x2"], output_column="y",
+        n_simulations=3000, seed=42,
+        lsl=100.0, usl=170.0,
+    )
+    p = result["percentiles"]
+    assert "p0_1" in p and "p99_9" in p
+    # bootstrap 抽樣自有限離散輸出值，極端外側百分位可能與相鄰百分位相等
+    assert p["p0_1"] <= p["p1"] <= p["p99"] <= p["p99_9"]
+    assert result["dpmo"] == pytest.approx(result["ng_probability"] * 1e6)
+
+
+def test_monte_carlo_dpmo_none_without_spec():
+    rng = np.random.default_rng(3)
+    df = _make_simple_dataset(rng)
+    result = run_monte_carlo(
+        df=df, model_type="doe_linear",
+        coefficients={"_intercept": 10.0, "x1": 2.0, "x2": -1.5},
+        input_columns=["x1", "x2"], output_column="y",
+        n_simulations=500, seed=42,
+    )
+    assert result["dpmo"] is None
+
+
 def test_run_monte_carlo_input_distributions_extended():
     """auto 分支須真正以 lognormal 抽樣，非落入 bootstrap。"""
     import pandas as pd
