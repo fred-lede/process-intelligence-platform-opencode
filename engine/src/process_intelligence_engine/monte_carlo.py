@@ -13,25 +13,29 @@ from .copula import compute_joint_probabilities, CopulaResult
 from .spc import compute_capability
 
 
-def sample_from_distribution(
+def sample_with_name(
     values: list[float],
     dist_name: str = "normal",
     n: int = 1000,
     seed: int | None = None,
-) -> list[float]:
-    """Sample from a statistical distribution or fall back to histogram sampling.
+    params: dict[str, Any] | None = None,
+) -> tuple[list[float], str]:
+    """Sample from a statistical distribution; return (samples, applied_name).
 
-    Supported distributions: ``"normal"``, ``"gamma"``, ``"lognormal"``.
-    Unknown distribution names fall back to resampling from the input values.
+    Supported: normal/gamma/lognormal/uniform/triangular/weibull/poisson.
+    Failed fits and unknown names fall back to empirical resampling, and
+    the applied name reflects what was actually used so callers record
+    truthful sampling metadata.
     """
     rng = np.random.default_rng(seed)
     arr = np.array(values, dtype=float)
+    params = params or {}
 
     if dist_name == "normal" and len(arr) >= 2:
         mu, sigma = float(arr.mean()), float(arr.std(ddof=1))
         if sigma <= 0:
             sigma = 1.0
-        return rng.normal(mu, sigma, n).tolist()
+        return rng.normal(mu, sigma, n).tolist(), "normal"
 
     if dist_name == "gamma" and len(arr) >= 2:
         mu, sigma = float(arr.mean()), float(arr.std(ddof=1))
@@ -39,15 +43,33 @@ def sample_from_distribution(
             sigma = 1.0
         k = (mu / sigma) ** 2
         theta = sigma ** 2 / mu
-        return rng.gamma(k, theta, n).tolist()
+        return rng.gamma(k, theta, n).tolist(), "gamma"
 
     if dist_name == "lognormal" and len(arr) >= 2:
         mu, sigma = float(arr.mean()), float(arr.std(ddof=1))
-        if sigma <= 0:
-            sigma = 1.0
-        log_mu = math.log(mu / math.sqrt(1.0 + (sigma / mu) ** 2))
-        log_sigma = math.sqrt(math.log(1.0 + (sigma / mu) ** 2))
-        return rng.lognormal(log_mu, log_sigma, n).tolist()
+        if mu > 0 and sigma > 0:
+            log_mu = math.log(mu / math.sqrt(1.0 + (sigma / mu) ** 2))
+            log_sigma = math.sqrt(math.log(1.0 + (sigma / mu) ** 2))
+            return rng.lognormal(log_mu, log_sigma, n).tolist(), "lognormal"
+        # 非正均值/零變異 → empirical fallback（lognormal 物理上恆正）
+
+    if dist_name == "uniform" and len(arr) >= 2:
+        lo, hi = float(arr.min()), float(arr.max())
+        if hi > lo:
+            return rng.uniform(lo, hi, n).tolist(), "uniform"
+
+    if dist_name == "triangular" and len(arr) >= 2:
+        lo, hi = float(arr.min()), float(arr.max())
+        if hi > lo:
+            mode = params.get("mode")
+            if mode is None and params.get("params"):
+                p = params["params"]
+                if isinstance(p, (list, tuple)) and len(p) >= 2:
+                    mode = float(p[1])
+            if mode is None:
+                mode = (lo + hi) / 2
+            mode = min(max(float(mode), lo), hi)  # clamp 進 [lo, hi]
+            return rng.triangular(lo, mode, hi, n).tolist(), "triangular"
 
     if dist_name == "weibull" and len(arr) >= 2:
         try:
@@ -56,21 +78,37 @@ def sample_from_distribution(
             if positive.size < 2:
                 raise ValueError("weibull needs positive data")
             shape, loc, scale = weibull_min.fit(positive, floc=0)
-            return rng.weibull(shape, n).tolist()
+            # rng.weibull 回傳標準 Weibull（scale=1）；須乘回擬合的 scale，
+            # 否則抽樣值量級錯誤（差 1/scale 倍）。
+            return (scale * rng.weibull(shape, n)).tolist(), "weibull"
         except Exception:
             pass  # fall through to empirical fallback
 
     if dist_name == "poisson" and len(arr) >= 2:
         lam = float(arr.mean())
-        if lam > 0 and np.allclose(arr, np.round(arr)):
-            return rng.poisson(lam, n).astype(float).tolist()
-        # λ≤0 或非整數計數資料 → fall through to empirical fallback
+        integerish = bool(np.all(arr == np.round(arr))) if bool(np.isfinite(arr).all()) else False
+        if lam > 0 and lam < 9e18 and integerish:
+            try:
+                return rng.poisson(lam, n).astype(float).tolist(), "poisson"
+            except (ValueError, OverflowError):
+                pass  # 超大 λ → empirical fallback
 
     # Histogram / empirical resampling fallback
     if len(arr) > 0:
         indices = rng.integers(0, len(arr), n)
-        return arr[indices].tolist()
-    return [0.0] * n
+        return arr[indices].tolist(), "empirical"
+    return [0.0] * n, "empirical"
+
+
+def sample_from_distribution(
+    values: list[float],
+    dist_name: str = "normal",
+    n: int = 1000,
+    seed: int | None = None,
+) -> list[float]:
+    """Backward-compatible wrapper: samples only (no applied name)."""
+    samples, _ = sample_with_name(values, dist_name=dist_name, n=n, seed=seed)
+    return samples
 
 
 def _get_magnitude(anomaly: dict[str, Any], rng: np.random.Generator) -> float:
@@ -338,26 +376,30 @@ def run_monte_carlo(
                 "poisson": "poisson",
             }.get(name)
             if normed and len(values) >= 2:
-                # 抽樣結果連同實際套用參數記錄進 applied_distributions，
-                # 與前端顯示慣例（name/mean/std/min/mode/max）相容。
-                sub_rng = np.random.default_rng(int(rng.integers(1 << 31)))
-                sampled_inputs[col] = np.asarray(
-                    sample_from_distribution(
-                        values.tolist(), dist_name=normed,
-                        n=n_simulations, seed=int(sub_rng.integers(1 << 31))),
-                    dtype=float)
-                applied_distributions[col] = {"name": normed}
-                if normed == "normal":
-                    applied_distributions[col].update(
-                        mean=float(np.mean(values)), std=float(np.std(values, ddof=1)))
-                elif normed == "uniform":
-                    applied_distributions[col].update(
-                        min=float(np.min(values)), max=float(np.max(values)))
-                elif normed == "triangular":
+                # 呼叫 sample_with_name 取得 (samples, applied_name)；
+                # applied_name 反映實際套用（fit 失敗 fallback 時為 empirical），
+                # 統計報告不再宣稱未真正使用的分佈。
+                seed_i = int(rng.integers(1 << 31))
+                tri_params: dict[str, Any] | None = None
+                if normed == "triangular" and spec.get("params"):
+                    p = spec["params"]
+                    if isinstance(p, (list, tuple)) and len(p) >= 2:
+                        tri_params = {"mode": float(p[1])}
+                samples, applied_name = sample_with_name(
+                    values.tolist(), dist_name=normed,
+                    n=n_simulations, seed=seed_i, params=tri_params)
+                sampled_inputs[col] = np.asarray(samples, dtype=float)
+                entry: dict[str, Any] = {"name": applied_name}
+                if applied_name == "normal":
+                    entry.update(mean=float(np.mean(values)),
+                                 std=float(np.std(values, ddof=1)))
+                elif applied_name == "uniform":
+                    entry.update(min=float(np.min(values)), max=float(np.max(values)))
+                elif applied_name == "triangular":
                     lo, hi = float(np.min(values)), float(np.max(values))
-                    applied_distributions[col].update(
-                        min=lo, max=hi, mode=float(spec.get("params", [lo, (lo + hi) / 2, hi])[1])
-                        if spec.get("params") else (lo + hi) / 2)
+                    mode = tri_params["mode"] if tri_params else (lo + hi) / 2
+                    entry.update(min=lo, max=hi, mode=mode)
+                applied_distributions[col] = entry
             else:
                 row_indices = rng.integers(0, len(df), size=n_simulations)
                 sampled_inputs[col] = values[row_indices]
