@@ -2016,6 +2016,44 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     return {"success": True, "result": result}
 
 
+def _handle_monte_carlo_compare(params: dict) -> dict:
+    """Run two Monte Carlo simulations and return overlay comparison stats.
+
+    調參前（baseline）vs 調參後（candidate）對比：mean shift、std reduction、
+    兩份 histogram/CDF 疊加資料、兩者 DPMO。統計對比不依賴等量樣本。
+    """
+    # unknown model/dataset：_handle_monte_carlo_run 內部直接拋 KeyError，
+    # 必須攔下轉為結構化錯誤，讓 compare 對壞參數回報而不中斷 dispatcher。
+    try:
+        baseline = _handle_monte_carlo_run(dict(params.get("baseline", {})))
+        candidate = _handle_monte_carlo_run(dict(params.get("candidate", {})))
+    except KeyError as exc:
+        return {"success": False,
+                "error": {"code": "MONTE_CARLO_COMPARE_FAILED",
+                          "message": f"Unknown dataset or model: {exc}"}}
+    if not baseline.get("success") or not candidate.get("success"):
+        return {"success": False,
+                "error": {"code": "MONTE_CARLO_COMPARE_FAILED",
+                          "baseline_error": baseline.get("error"),
+                          "candidate_error": candidate.get("error")}}
+    b = baseline["result"]
+    c = candidate["result"]
+    mean_shift = c["output_mean"] - b["output_mean"]
+    mean_shift_pct = mean_shift / b["output_mean"] if b["output_mean"] else 0.0
+    std_reduction_pct = (1.0 - c["output_std"] / b["output_std"]) if b["output_std"] else 0.0
+    return {"success": True, "comparison": {
+        "mean_shift": mean_shift,
+        "mean_shift_pct": mean_shift_pct,
+        "std_reduction_pct": std_reduction_pct,
+        "baseline": {"mean": b["output_mean"], "std": b["output_std"],
+                     "histogram": b["histogram"], "cdf_data": b["cdf_data"]},
+        "candidate": {"mean": c["output_mean"], "std": c["output_std"],
+                      "histogram": c["histogram"], "cdf_data": c["cdf_data"]},
+        "dpmo_baseline": b.get("dpmo"),
+        "dpmo_candidate": c.get("dpmo"),
+    }}
+
+
 def _handle_prediction_predict(params: dict) -> dict:
     """Predict output for given input values."""
     model_id = params["model_id"]
@@ -2414,6 +2452,8 @@ def handle_request(method: str, params: dict) -> dict:
 
     if method == "monte_carlo/run":
         return _handle_monte_carlo_run(params)
+    if method == "monte_carlo/compare":
+        return _handle_monte_carlo_compare(params)
 
     if method == "prediction/predict":
         return _handle_prediction_predict(params)

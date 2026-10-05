@@ -88,6 +88,7 @@ VIEWER_METHODS: frozenset[str] = frozenset({
     "spc/batch_analyze",
     "spc/capability",
     "monte_carlo/run",
+    "monte_carlo/compare",
     "prediction/predict",
     "prediction/model_info",
     "prediction/scenario/list",

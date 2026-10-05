@@ -31,7 +31,6 @@ def test_monte_carlo_run_basic(tmp_path):
     did = _import_csv_for_mc(tmp_path)
     fit = _fit_model(tmp_path, did)
     model_id = fit["model_id"]
-
     result = handle_request("monte_carlo/run", {
         "dataset_id": did,
         "model_id": model_id,
@@ -272,3 +271,38 @@ def test_monte_carlo_run_capability_none_without_spec(tmp_path):
     })
     cap = result["result"]["capability"]
     assert cap["pp"] is None and cap["ppk"] is None
+
+
+def test_monte_carlo_compare_overlay(tmp_path):
+    """monte_carlo/compare：兩份模擬疊加對比（mean shift / std reduction / CDF）。"""
+    did = _import_csv_for_mc(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+
+    base = {"dataset_id": did, "model_id": model_id,
+            "n_simulations": 2000, "seed": 42,
+            "lsl": 50.0, "usl": 200.0}
+    cand = dict(base, n_simulations=1500, seed=7)
+    result = handle_request("monte_carlo/compare", {"baseline": base, "candidate": cand})
+    assert result["success"] is True
+    c = result["comparison"]
+    assert c["baseline"]["histogram"]["counts"]
+    assert c["candidate"]["histogram"]["counts"]
+    assert c["baseline"]["cdf_data"]["x"] and c["candidate"]["cdf_data"]["x"]
+    assert isinstance(c["mean_shift"], float)
+    assert isinstance(c["mean_shift_pct"], float)
+    assert isinstance(c["std_reduction_pct"], float)
+    assert c["dpmo_baseline"] is not None and c["dpmo_candidate"] is not None
+    # 相同模型、不同 seed：mean 接近，std_reduction 應接近 0
+    assert abs(c["mean_shift_pct"]) < 0.05
+    import json
+    json.dumps(result)
+
+
+def test_monte_carlo_compare_reports_failed_baseline(tmp_path):
+    did = _import_csv_for_mc(tmp_path)
+    base = {"dataset_id": did, "model_id": "nonexistent", "n_simulations": 100}
+    cand = dict(base)
+    result = handle_request("monte_carlo/compare", {"baseline": base, "candidate": cand})
+    assert result["success"] is False
+    assert result["error"]["code"] == "MONTE_CARLO_COMPARE_FAILED"
