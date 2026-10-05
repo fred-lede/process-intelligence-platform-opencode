@@ -1101,11 +1101,13 @@ export interface MonteCarloAnomalyRanking {
 }
 
 export interface MonteCarloPercentiles {
+  p0_1: number
   p1: number
   p5: number
   p50: number
   p95: number
   p99: number
+  p99_9: number
 }
 
 export interface MonteCarloResult {
@@ -1117,12 +1119,31 @@ export interface MonteCarloResult {
   output_std: number
   output_median: number
   percentiles: MonteCarloPercentiles
+  dpmo?: number | null
+  z_lsl?: number | null
+  z_usl?: number | null
   histogram: MonteCarloHistogram
   cdf_data: MonteCarloCDFData
   boxplot_data: MonteCarloBoxplotData
   anomaly_rankings: MonteCarloAnomalyRanking[]
   multi_anomaly_ng: number
   capability?: SPCCapability | null
+}
+
+export interface MonteCarloComparison {
+  mean_shift: number
+  mean_shift_pct: number
+  std_reduction_pct: number
+  baseline: { mean: number; std: number; histogram: MonteCarloHistogram; cdf_data: MonteCarloCDFData }
+  candidate: { mean: number; std: number; histogram: MonteCarloHistogram; cdf_data: MonteCarloCDFData }
+  dpmo_baseline: number | null
+  dpmo_candidate: number | null
+}
+
+export interface MonteCarloCompareResult {
+  success: boolean
+  comparison?: MonteCarloComparison
+  error?: { code: string; message?: string; baseline_error?: unknown; candidate_error?: unknown }
 }
 
 export interface MonteCarloAnalysisResult {
@@ -1160,6 +1181,10 @@ export interface MonteCarloParams {
 
 export async function analyzeMonteCarlo(params: MonteCarloParams): Promise<MonteCarloAnalysisResult> {
   return engineCall<MonteCarloAnalysisResult>('monte_carlo/run', params as unknown as Record<string, unknown>)
+}
+
+export async function compareMonteCarlo(params: { baseline: MonteCarloParams; candidate: MonteCarloParams }): Promise<MonteCarloCompareResult> {
+  return engineCall<MonteCarloCompareResult>('monte_carlo/compare', params as unknown as Record<string, unknown>)
 }
 
 // --- Phase 10: Interactive Prediction (What-if) --------------------------------

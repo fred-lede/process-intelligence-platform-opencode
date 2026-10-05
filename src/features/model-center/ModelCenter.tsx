@@ -2059,6 +2059,22 @@ export default function ModelCenter() {
           <Button type="primary" loading={sensitivityLoading} onClick={handleComputeSensitivity} disabled={!models.length || !datasetId || timeSeriesActive}>
             {sensitivityLoading ? t('modelCenter.computing') : t('modelCenter.computeSensitivity')}
           </Button>
+          {sensitivity && sensitivity.items.length > 0 && (
+            <Plot
+              data={[{
+                type: 'bar', orientation: 'h',
+                y: [...sensitivity.items].reverse().map(i => i.input),
+                x: [...sensitivity.items].reverse().map(i => i.sensitivity * 100),
+                marker: { color: [...sensitivity.items].reverse().map(i =>
+                  i === sensitivity.items[0] ? '#ff4d4f' : '#1677ff') },
+              }]}
+              layout={{
+                height: Math.max(180, sensitivity.items.length * 42),
+                margin: { l: 140, r: 20, t: 10, b: 40 },
+                xaxis: { title: t('modelCenter.sensitivity') },
+              }}
+            />
+          )}
           {sensitivity && <Table size="small" pagination={false} rowKey="input" dataSource={sensitivity.items} columns={[
             { title: t('modelCenter.input'), dataIndex: 'input', key: 'input' },
             { title: t('modelCenter.sensitivity'), dataIndex: 'sensitivity', key: 'sensitivity', render: (v: number) => `${(v * 100).toFixed(1)}%` },

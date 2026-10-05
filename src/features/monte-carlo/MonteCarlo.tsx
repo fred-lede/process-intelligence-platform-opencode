@@ -5,7 +5,7 @@ import Plot from '../../components/PlotChart'
 import NodeSourceFilter from '../../components/NodeSourceFilter'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { analyzeMonteCarlo, getFlowGraph, listModels, type MonteCarloResult } from '../../lib/engine'
+import { analyzeMonteCarlo, compareMonteCarlo, getFlowGraph, listModels, type MonteCarloComparison, type MonteCarloParams, type MonteCarloResult } from '../../lib/engine'
 import {
   consumeNodeContext,
   dataSourceLoaded,
@@ -62,6 +62,9 @@ export default function MonteCarlo() {
   const [enableAnomalies, setEnableAnomalies] = useState<boolean>(false)
   const [samplingMethod, setSamplingMethod] = useState<'auto' | 'bootstrap' | 'normal'>('auto')
   const [result, setResult] = useState<MonteCarloResult | null>(null)
+  const [baselineSnapshot, setBaselineSnapshot] = useState<MonteCarloResult | null>(null)
+  const [comparison, setComparison] = useState<MonteCarloComparison | null>(null)
+  const [compareLoading, setCompareLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const hasTimeSeriesModels = models.some(model => model.model_type.startsWith('time_series_'))
@@ -124,6 +127,43 @@ export default function MonteCarlo() {
     setSelectedModel(modelId)
     setResult(null)
     setError(null)
+    // 基準屬於該模型的模擬；切換模型後舊基準不得誤用於 Overlay。
+    setBaselineSnapshot(null)
+  }
+
+  const buildParams = (): MonteCarloParams => ({
+    dataset_id: importResult!.dataset_id,
+    model_id: selectedModel!,
+    n_simulations: nSimulations,
+    seed,
+    sampling_method: samplingMethod,
+    enable_anomalies: enableAnomalies,
+    lsl: spec?.lsl ?? undefined,
+    usl: spec?.usl ?? undefined,
+    ...(nodeFilterColumn && nodeFilterValue
+      ? { filter_column: nodeFilterColumn, filter_value: nodeFilterValue }
+      : {}),
+  })
+
+  const handleCompare = async () => {
+    if (!importResult || !selectedModel || !baselineSnapshot || !result) return
+    setCompareLoading(true)
+    setError(null)
+    try {
+      const res = await compareMonteCarlo({
+        baseline: { ...buildParams(), seed: baselineSnapshot.seed },
+        candidate: buildParams(),
+      })
+      if (!res.success || !res.comparison) {
+        setError(res.error?.message ?? res.error?.code ?? t('monteCarlo.runFailed'))
+        return
+      }
+      setComparison(res.comparison)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setCompareLoading(false)
+    }
   }
 
   const histogramTrace = result ? {
@@ -268,13 +308,15 @@ export default function MonteCarlo() {
 
           <Row gutter={16}>
             {[
+              { label: t('monteCarlo.p0_1'), value: result.percentiles.p0_1 },
               { label: t('monteCarlo.p1'), value: result.percentiles.p1 },
               { label: t('monteCarlo.p5'), value: result.percentiles.p5 },
               { label: t('monteCarlo.p50'), value: result.percentiles.p50 },
               { label: t('monteCarlo.p95'), value: result.percentiles.p95 },
               { label: t('monteCarlo.p99'), value: result.percentiles.p99 },
+              { label: t('monteCarlo.p99_9'), value: result.percentiles.p99_9 },
             ].map(p => (
-              <Col key={p.label} span={4}>
+              <Col key={p.label} span={3}>
                 <Card size="small" style={{ textAlign: 'center' }}>
                   <Typography.Text type="secondary" style={{ fontSize: 11 }}>{p.label}</Typography.Text>
                   <Typography.Text strong style={{ display: 'block' }}>{p.value.toFixed(2)}</Typography.Text>
@@ -306,8 +348,104 @@ export default function MonteCarlo() {
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     {t('monteCarlo.sigmaOverall')}: {result.capability.sigma_overall.toFixed(2)}
                   </Typography.Text>
+                  {result.dpmo != null && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                      {t('monteCarlo.dpmo')}: {result.dpmo.toFixed(0)}
+                    </Typography.Text>
+                  )}
+                  {(result.z_lsl != null || result.z_usl != null) && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                      {result.z_lsl != null && <span>{t('monteCarlo.zLsl')}: {result.z_lsl.toFixed(2)}  </span>}
+                      {result.z_usl != null && <span>{t('monteCarlo.zUsl')}: {result.z_usl.toFixed(2)}</span>}
+                    </Typography.Text>
+                  )}
                 </Col>
               </Row>
+            </Card>
+          )}
+
+          {result && (
+            <Card title={t('monteCarlo.overlayTitle')} size="small">
+              <Space wrap>
+                <Button disabled={!result} onClick={() => setBaselineSnapshot(result)}>
+                  {t('monteCarlo.setBaseline')}
+                </Button>
+                {baselineSnapshot && (
+                  <Button disabled={!result} onClick={() => setBaselineSnapshot(null)}>
+                    {t('monteCarlo.clearBaseline')}
+                  </Button>
+                )}
+                <Button type="primary" loading={compareLoading}
+                        disabled={!baselineSnapshot || !result}
+                        onClick={handleCompare}>
+                  {t('monteCarlo.compareCandidate')}
+                </Button>
+                {baselineSnapshot && !comparison && (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {t('monteCarlo.baselineSet')}
+                  </Typography.Text>
+                )}
+              </Space>
+              {comparison && (
+                <>
+                  <Plot
+                    data={[
+                      {
+                        x: comparison.baseline.histogram.bins.slice(0, -1),
+                        y: comparison.baseline.histogram.counts,
+                        type: 'bar', name: t('monteCarlo.baseline'),
+                        marker: { color: '#1677ff', opacity: 0.6 },
+                      },
+                      {
+                        x: comparison.candidate.histogram.bins.slice(0, -1),
+                        y: comparison.candidate.histogram.counts,
+                        type: 'bar', name: t('monteCarlo.candidate'),
+                        marker: { color: '#52c41a', opacity: 0.6 },
+                      },
+                      {
+                        x: comparison.baseline.cdf_data.x, y: comparison.baseline.cdf_data.y,
+                        type: 'scatter', mode: 'lines', name: `${t('monteCarlo.baseline')} CDF`,
+                        line: { color: '#1677ff', width: 2, dash: 'dot' }, yaxis: 'y2',
+                      },
+                      {
+                        x: comparison.candidate.cdf_data.x, y: comparison.candidate.cdf_data.y,
+                        type: 'scatter', mode: 'lines', name: `${t('monteCarlo.candidate')} CDF`,
+                        line: { color: '#52c41a', width: 2 }, yaxis: 'y2',
+                      },
+                    ]}
+                    layout={{
+                      barmode: 'overlay', height: 380,
+                      xaxis: { title: t('monteCarlo.outputDistribution') },
+                      yaxis: { title: t('monteCarlo.frequency') },
+                      yaxis2: { overlaying: 'y', side: 'right', range: [0, 1], showgrid: false, title: 'CDF' },
+                      legend: { orientation: 'h', y: -0.25 },
+                    }}
+                  />
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Statistic title={t('monteCarlo.meanShift')}
+                                 value={comparison.mean_shift} precision={3}
+                                 valueStyle={{ color: comparison.mean_shift >= 0 ? '#52c41a' : '#ff4d4f' }} />
+                    </Col>
+                    <Col span={8}>
+                      <Statistic title={t('monteCarlo.stdReduction')}
+                                 value={comparison.std_reduction_pct * 100} precision={1}
+                                 suffix="%"
+                                 valueStyle={{ color: comparison.std_reduction_pct >= 0 ? '#52c41a' : '#ff4d4f' }} />
+                    </Col>
+                    <Col span={8}>
+                      {comparison.dpmo_baseline != null && comparison.dpmo_candidate != null && (
+                        <Statistic title={t('monteCarlo.dpmo')}
+                                   value={comparison.dpmo_candidate} precision={0}
+                                   valueStyle={{ color: comparison.dpmo_candidate <= comparison.dpmo_baseline ? '#52c41a' : '#ff4d4f' }} />
+                      )}
+                    </Col>
+                  </Row>
+                  <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
+                    {t('monteCarlo.overlayHint')}
+                  </Typography.Text>
+                </>
+              )}
             </Card>
           )}
 
