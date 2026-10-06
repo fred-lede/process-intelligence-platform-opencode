@@ -280,6 +280,7 @@ export async function buildAnalysisPackage(params: {
 export type ModelType =
   | 'doe_linear'
   | 'doe_quadratic'
+  | 'doe_categorical_factorial'
   | 'random_forest'
   | 'residual_hybrid'
   | 'logistic_regression'

@@ -15,6 +15,7 @@ import { checkModelApplicability, recommendModels, computeInteractions, computeS
 const MODEL_TYPES: { value: ModelType; labelKey: string }[] = [
   { value: 'doe_linear', labelKey: 'modelCenter.modelType.doeLinear' },
   { value: 'doe_quadratic', labelKey: 'modelCenter.modelType.doeQuadratic' },
+  { value: 'doe_categorical_factorial', labelKey: 'modelCenter.modelType.doeCategoricalFactorial' },
   { value: 'random_forest', labelKey: 'modelCenter.modelType.randomForest' },
   { value: 'residual_hybrid', labelKey: 'modelCenter.modelType.residualHybrid' },
   { value: 'logistic_regression', labelKey: 'modelCenter.modelType.logisticRegression' },
@@ -46,6 +47,7 @@ function normalQuantile(p: number): number {
 const MODEL_DESC_KEY: Record<ModelType, string> = {
   doe_linear: 'doeLinear',
   doe_quadratic: 'doeQuadratic',
+  doe_categorical_factorial: 'doeCategoricalFactorial',
   random_forest: 'randomForest',
   residual_hybrid: 'residualHybrid',
   logistic_regression: 'logisticRegression',

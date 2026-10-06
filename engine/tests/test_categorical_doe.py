@@ -1,5 +1,6 @@
 import pandas as pd
 import pytest
+from itertools import product
 
 from process_intelligence_engine.modeling.categorical_doe import (
     build_categorical_factorial_matrix,
@@ -44,3 +45,14 @@ def test_null_factor_level_is_rejected():
 
     with pytest.raises(ValueError, match="missing factor level"):
         build_categorical_factorial_matrix(frame, ["A", "B", "C"])
+
+
+def test_four_and_five_factors_use_the_same_pairwise_expansion():
+    for count, expected_predictors in ((4, 32), (5, 50)):
+        factors = [f"F{i}" for i in range(count)]
+        frame = pd.DataFrame(
+            [dict(zip(factors, values)) for values in product((0, 1, 2), repeat=count)]
+        )
+        result = build_categorical_factorial_matrix(frame, factors)
+        assert result.model_df == expected_predictors
+        assert result.matrix.shape == (3**count, expected_predictors + 1)

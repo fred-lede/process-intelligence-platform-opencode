@@ -710,6 +710,7 @@
       "label": "Tipo de modelo",
       "doeLinear": "DOE Lineal",
       "doeQuadratic": "DOE Cuadrático",
+      "doeCategoricalFactorial": "DOE Categórico de Tres Niveles",
       "randomForest": "Bosque Aleatorio",
       "residualHybrid": "Híbrido de Residuos",
       "logisticRegression": "Regresión Logística",
@@ -719,6 +720,7 @@
       "desc": {
         "doeLinear": "Modelo lineal solo con efectos principales. Objetivo: continuo. Requiere ≥3 entradas.\n\nEscenarios aplicables: Modelo base rápido; experimentos de tamizaje con pocos factores; cuando la interpretabilidad importa más que la precisión; análisis Fase 1 DOE.",
         "doeQuadratic": "Lineal + interacciones + términos cuadrados. Objetivo: continuo. Requiere ≥2 entradas.\n\nEscenarios aplicables: Optimización de superficie de respuesta; capturar curvatura en efectos de factores; cuando se esperan interacciones entre entradas; análisis Fase 2 DOE.",
+        "doeCategoricalFactorial": "Modelo de factores categóricos de tres niveles. Trata cada nivel como una categoría, incluye efectos principales e interacciones de dos factores y excluye por defecto la interacción de tres factores. Úselo para comparar un DOE factorial estilo Minitab.",
         "randomForest": "Conjunto de árboles de decisión (regresión). Objetivo: continuo. Maneja relaciones no lineales.\n\nEscenarios aplicables: Procesos no lineales complejos; muchas características de entrada; cuando se necesita ranking de importancia de características; robusto a valores atípicos y ruido; no requiere supuestos de distribución.",
         "residualHybrid": "DOE lineal + Bosque Aleatorio en residuos. Objetivo: continuo. Combina interpretabilidad y precisión.\n\nEscenarios aplicables: Procesos con tendencias lineales y residuos no lineales complejos; cuando se necesita interpretabilidad (parte DOE) y precisión (residuo RF); lo mejor de ambos mundos.",
         "logisticRegression": "Modelo de clasificación binaria. Objetivo: binario (solo 0/1 o dos categorías). Predice probabilidad de clase.\n\nEscenarios aplicables: Predicción buen/mal; clasificación OK/NG; toma de decisiones de calidad; cuando se necesitan puntuaciones de probabilidad, no solo sí/no; interpretar el impacto de características en probabilidad de defecto.",
