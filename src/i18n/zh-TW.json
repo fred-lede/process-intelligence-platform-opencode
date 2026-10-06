@@ -814,6 +814,7 @@
     "recommendations": "實驗建議",
     "validationError": "無法執行驗證",
     "fullValidationTitle": "完整驗證",
+    "viewEquation": "查看完整方程式",
     "fullValidationGuide": "完整驗證會比較可用模型並產生實驗建議。",
     "fullValidationSteps": "流程：匯入資料 → 配適模型 → 將模型狀態推進至已驗證或已核准 → 回到此頁執行完整驗證。",
     "designBasedTitle": "小樣本設計型 DOE 驗證",

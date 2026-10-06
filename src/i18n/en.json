@@ -814,6 +814,7 @@
     "recommendations": "Recommendations",
     "validationError": "Failed to run validation",
     "fullValidationTitle": "Full Validation",
+    "viewEquation": "View full equation",
     "fullValidationGuide": "Full validation compares eligible models and produces experiment recommendations.",
     "fullValidationSteps": "Flow: import data → fit a model → move it to Validated or Approved → return here and run full validation.",
     "designBasedTitle": "Small designed DOE validation",

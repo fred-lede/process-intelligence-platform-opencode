@@ -158,6 +158,7 @@ export default function ModelCenter() {
     validationFailed: boolean
   } | null>(null)
   const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | null>(null)
+  const [equationPreview, setEquationPreview] = useState<{ modelType: string; equation: string } | null>(null)
   const [selectedModelInfoLoading, setSelectedModelInfoLoading] = useState(false)
   const [timeSeriesExplanation, setTimeSeriesExplanation] = useState<TimeSeriesExplanationResult | null>(null)
   const [timeSeriesExplanationLoading, setTimeSeriesExplanationLoading] = useState(false)
@@ -1043,8 +1044,11 @@ export default function ModelCenter() {
     },
     {
       title: t('modelCenter.column.equation'), dataIndex: 'equation', key: 'equation', width: 260,
-      render: (eq: string) => (
-        <Typography.Text code style={{ fontSize: 11 }}>{eq || '—'}</Typography.Text>
+      render: (eq: string, record) => (
+        <Space size={4}>
+          <Typography.Text code ellipsis={{ tooltip: eq || '—' }} style={{ display: 'inline-block', maxWidth: 185, fontSize: 11 }}>{eq || '—'}</Typography.Text>
+          {eq && <Button type="link" size="small" onClick={(event) => { event.stopPropagation(); setEquationPreview({ modelType: record.model_type, equation: eq }) }}>{t('modelCenter.viewEquation')}</Button>}
+        </Space>
       ),
     },
     { title: 'R²', dataIndex: ['metrics', 'r2'], key: 'r2', width: 90, render: (v: number) => v?.toFixed(4) ?? '—' },
@@ -1514,6 +1518,17 @@ export default function ModelCenter() {
             rowClassName={(r) => (r.model_id === selectedModelId ? 'ant-table-row-selected' : '')}
             onRow={(record) => ({ onClick: () => selectModel(record.model_id) })}
           />
+          <Modal
+            open={equationPreview !== null}
+            title={equationPreview ? `${t('modelCenter.viewEquation')} · ${equationPreview.modelType}` : t('modelCenter.viewEquation')}
+            footer={null}
+            onCancel={() => setEquationPreview(null)}
+            width={900}
+          >
+            <Typography.Paragraph copyable={{ text: equationPreview?.equation || '' }} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'monospace', maxHeight: 500, overflow: 'auto' }}>
+              {equationPreview?.equation || '—'}
+            </Typography.Paragraph>
+          </Modal>
           {selectedModelId && (
             <Card type="inner" size="small" title={t('modelCenter.selectedModel.title')} style={{ marginTop: 12 }} loading={selectedModelInfoLoading}>
               {selectedModelInfo ? (
