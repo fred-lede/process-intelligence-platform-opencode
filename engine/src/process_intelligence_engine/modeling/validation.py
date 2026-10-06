@@ -432,7 +432,7 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
 
     model_type = fit.model_type
 
-    if model_type not in ("doe_linear", "doe_quadratic"):
+    if model_type not in ("doe_linear", "doe_quadratic", "doe_categorical_factorial"):
         return {
             "model_type": model_type,
             "n_obs": 0,
@@ -442,11 +442,16 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             "anova": None,
             "coefficients": [],
             "fit_level": None,
-            "note": "ANOVA and p-values are available only for DOE linear/quadratic models.",
+            "note": "ANOVA and p-values are available only for supported DOE models.",
         }
 
-    degree = 2 if model_type == "doe_quadratic" else 1
-    X = _build_design_matrix(df, fit.inputs, degree=degree)
+    if model_type == "doe_categorical_factorial":
+        from .categorical_doe import build_categorical_factorial_matrix
+        design = build_categorical_factorial_matrix(df, fit.inputs)
+        X = pd.DataFrame(design.matrix, columns=design.term_names)
+    else:
+        degree = 2 if model_type == "doe_quadratic" else 1
+        X = _build_design_matrix(df, fit.inputs, degree=degree)
     y = df[fit.target].to_numpy(dtype=float)
     n = len(y)
     p = X.shape[1]
@@ -454,12 +459,17 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
     # Fit OLS on full data
     model = fit.model
     if model is not None and hasattr(model, "predict"):
-        X_np = X.to_numpy(dtype=float)
-        y_pred = model.predict(X_np)
+        y_pred = model.predict(df) if model_type == "doe_categorical_factorial" else model.predict(X.to_numpy(dtype=float))
     else:
         # Refit on full data
-        model = LinearRegression().fit(X.to_numpy(dtype=float), y)
-        y_pred = model.predict(X.to_numpy(dtype=float))
+        if model_type == "doe_categorical_factorial":
+            from process_intelligence_engine.modeling.categorical_doe import CategoricalFactorialRegressor
+            coefficients = np.linalg.lstsq(X.to_numpy(dtype=float), y, rcond=None)[0]
+            model = CategoricalFactorialRegressor(fit.inputs, design.levels, coefficients)
+            y_pred = model.predict(df)
+        else:
+            model = LinearRegression().fit(X.to_numpy(dtype=float), y)
+            y_pred = model.predict(X.to_numpy(dtype=float))
 
     residuals = y - y_pred
     ss_res = float(np.sum(residuals ** 2))
@@ -497,8 +507,13 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
     se = np.sqrt(np.diag(XtX_inv) * mse)
 
     # Collect coefficients (intercept first, then predictors)
-    coef_vals = model.coef_.tolist() if hasattr(model, "coef_") else [0.0] * (p - 1)
-    intercept_val = float(model.intercept_) if hasattr(model, "intercept_") else 0.0
+    if model_type == "doe_categorical_factorial":
+        all_coefs = np.asarray(model.coefficients, dtype=float).tolist()
+        intercept_val = float(all_coefs[0])
+        coef_vals = all_coefs[1:]
+    else:
+        coef_vals = model.coef_.tolist() if hasattr(model, "coef_") else [0.0] * (p - 1)
+        intercept_val = float(model.intercept_) if hasattr(model, "intercept_") else 0.0
     all_coefs = [intercept_val] + coef_vals
     col_names = X.columns.tolist()
 

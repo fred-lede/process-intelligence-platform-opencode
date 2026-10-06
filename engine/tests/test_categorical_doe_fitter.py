@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 
 from process_intelligence_engine.modeling.fitters import fit_doe_categorical_factorial
+from process_intelligence_engine.modeling.validation import compute_doe_statistics
 
 
 def _frame():
@@ -32,3 +33,13 @@ def test_categorical_factorial_fit_rejects_too_many_factors_for_sample_size():
     frame = _frame().head(19)
     with pytest.raises(ValueError, match="duplicate or missing"):
         fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+
+
+def test_categorical_factorial_statistics_match_minitab_df_shape():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    stats = compute_doe_statistics(fit, frame)
+
+    assert stats["anova"]["df_reg"] == 18
+    assert stats["anova"]["df_res"] == 8
+    assert len(stats["coefficients"]) == 19
