@@ -545,6 +545,7 @@ export interface ValidationResult {
     composite: number
     level: 'production_ready' | 'engineering_reference' | 'exploratory' | 'needs_more_data' | 'not_recommended'
   }
+  design_context?: FullValidationResult['design_context']
 }
 
 export async function analyzeValidation(params: {

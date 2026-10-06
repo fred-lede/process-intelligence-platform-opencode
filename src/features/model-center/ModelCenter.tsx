@@ -2217,6 +2217,14 @@ export default function ModelCenter() {
             </Space>
             {validationResult ? (
               <Space direction="vertical" style={{ width: '100%' }} size="small">
+                {validationResult.design_context?.validation_mode === 'design_based' && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message={t('validationLab.designBasedTitle')}
+                    description={t('validationLab.designBasedDescription')}
+                  />
+                )}
                 <div>
                   <strong>{t('modelCenter.meanMetrics')}:</strong>
                   <span style={{ marginLeft: 8 }}>R²: {validationResult.mean_metrics.mean_r2.toFixed(4)}</span>

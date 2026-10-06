@@ -793,6 +793,30 @@ def _handle_extrapolation_check(params: dict) -> dict:
     return compute_extrapolation_risk(df, prediction_points)
 
 
+def _build_design_context(fit, df):
+    if fit.model_type != "doe_categorical_factorial":
+        return None
+    levels = getattr(fit.model, "levels", {}) or {}
+    n_cells = int(np.prod([len(values) for values in levels.values()])) if levels else 0
+    observed_cells = int(df[fit.inputs].drop_duplicates().shape[0])
+    replicate_counts = df.groupby(fit.inputs, dropna=False).size()
+    max_replicates = int(replicate_counts.max()) if len(replicate_counts) else 0
+    model_df = int(fit.metrics.get("model_df", 0))
+    return {
+        "kind": "categorical_factorial_doe",
+        "validation_mode": "design_based",
+        "n_obs": int(len(df)),
+        "n_cells": n_cells,
+        "observed_cells": observed_cells,
+        "replicate_min": int(replicate_counts.min()) if len(replicate_counts) else 0,
+        "replicate_max": max_replicates,
+        "model_df": model_df,
+        "residual_df": int(len(df) - model_df),
+        "has_replicates": max_replicates > 1,
+        "warning": "Small designed DOE: use ANOVA, residual diagnostics, and confirmation experiments as primary evidence; ordinary random-fold CV is supplementary.",
+    }
+
+
 def _handle_validation_analyze(params: dict) -> dict:
     model_id = params["model_id"]
     dataset_id = params["dataset_id"]
@@ -805,12 +829,14 @@ def _handle_validation_analyze(params: dict) -> dict:
     interactions = {"significant_pairs": []}
     recommendations = recommend_experiments(fit, df, interactions)
     credibility = compute_credibility(fit, df)
+    design_context = _build_design_context(fit, df)
 
     return {
         **cv_result,
         **residual_result,
         "recommendations": recommendations,
         "credibility": credibility,
+        "design_context": design_context,
     }
 
 
@@ -918,28 +944,7 @@ def _handle_validation_full(params: dict) -> dict:
     }
     exp_recommendation = recommend_experiments_full(best_fit, df, interactions, validation_result)
 
-    design_context = None
-    if best_fit.model_type == "doe_categorical_factorial":
-        levels = getattr(best_fit.model, "levels", {}) or {}
-        n_cells = int(np.prod([len(values) for values in levels.values()])) if levels else 0
-        observed_cells = int(df[best_fit.inputs].drop_duplicates().shape[0])
-        replicate_counts = df.groupby(best_fit.inputs, dropna=False).size()
-        min_replicates = int(replicate_counts.min()) if len(replicate_counts) else 0
-        max_replicates = int(replicate_counts.max()) if len(replicate_counts) else 0
-        model_df = int(best_fit.metrics.get("model_df", 0))
-        design_context = {
-            "kind": "categorical_factorial_doe",
-            "validation_mode": "design_based",
-            "n_obs": int(len(df)),
-            "n_cells": n_cells,
-            "observed_cells": observed_cells,
-            "replicate_min": min_replicates,
-            "replicate_max": max_replicates,
-            "model_df": model_df,
-            "residual_df": int(len(df) - model_df),
-            "has_replicates": max_replicates > 1,
-            "warning": "Small designed DOE: use ANOVA, residual diagnostics, and confirmation experiments as primary evidence; ordinary random-fold CV is supplementary.",
-        }
+    design_context = _build_design_context(best_fit, df)
 
     credibility_per_model = {
         mid: compute_credibility(MODEL_REGISTRY._get_unlocked(mid), df)
