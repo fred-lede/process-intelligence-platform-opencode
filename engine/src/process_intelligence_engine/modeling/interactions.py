@@ -1,6 +1,7 @@
 """Two-factor interaction strength computation."""
 from __future__ import annotations
 
+from itertools import product
 from typing import Any
 
 import numpy as np
@@ -42,6 +43,35 @@ def compute_interactions(
     n = len(inputs)
     if n < 2:
         return {"factors": inputs, "matrix": [[0.0]], "significant_pairs": []}
+
+    if fit.model_type == "doe_categorical_factorial" and getattr(fit.model, "levels", None):
+        levels = fit.model.levels
+        matrix = [[0.0] * n for _ in range(n)]
+        significant_pairs = []
+        for i in range(n):
+            for j in range(i + 1, n):
+                left, right = inputs[i], inputs[j]
+                other_inputs = [name for name in inputs if name not in (left, right)]
+                other_level_sets = [levels[name] for name in other_inputs]
+                contrasts = []
+                for other_values in product(*other_level_sets) if other_level_sets else [()]:
+                    base = dict(zip(other_inputs, other_values))
+                    a0, b0 = levels[left][0], levels[right][0]
+                    a1, b1 = levels[left][-1], levels[right][-1]
+                    rows = []
+                    for a, b in ((a0, b0), (a0, b1), (a1, b0), (a1, b1)):
+                        row = base.copy()
+                        row.update({left: a, right: b})
+                        rows.append(row)
+                    values = fit.model.predict(pd.DataFrame(rows))
+                    contrasts.append(float(values[3] - values[2] - values[1] + values[0]))
+                strength = float(np.mean(np.abs(contrasts)))
+                matrix[i][j] = strength
+                matrix[j][i] = strength
+                significant_pairs.append({"i": left, "j": right, "strength": strength,
+                                          "significant": strength >= threshold})
+        significant_pairs.sort(key=lambda item: item["strength"], reverse=True)
+        return {"factors": inputs, "matrix": matrix, "significant_pairs": significant_pairs}
 
     means = {col: df[col].mean() for col in inputs}
 

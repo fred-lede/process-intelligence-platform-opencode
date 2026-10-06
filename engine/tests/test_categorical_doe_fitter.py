@@ -97,6 +97,15 @@ def test_categorical_doe_supports_full_validation_chain():
     assert "composite" in compute_credibility(fit, frame)
 
 
+def test_categorical_interactions_are_nonzero_when_pair_is_nonadditive():
+    frame = _frame()
+    frame["Y"] = frame["Y"] + ((frame["A"] == 80) & (frame["B"] == 9)).astype(float) * 10
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    result = compute_interactions(fit, frame)
+    ab = next(pair for pair in result["significant_pairs"] if {pair["i"], pair["j"]} == {"A", "B"})
+    assert ab["strength"] > 0
+
+
 def test_categorical_doe_supports_monte_carlo_prediction():
     frame = _frame()
     fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
