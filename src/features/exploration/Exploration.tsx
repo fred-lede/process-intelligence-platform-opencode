@@ -270,14 +270,14 @@ export default function Exploration() {
       key: 'name',
       render: (name: string) => <Typography.Text strong>{name}</Typography.Text>,
     },
-    { title: 'AIC', dataIndex: 'aic', key: 'aic', width: 110 },
-    { title: 'BIC', dataIndex: 'bic', key: 'bic', width: 110 },
+    { title: 'AIC', dataIndex: 'aic', key: 'aic', width: 110, render: (v: number | null) => (v == null ? '—' : Number(v).toFixed(1)) },
+    { title: 'BIC', dataIndex: 'bic', key: 'bic', width: 110, render: (v: number | null) => (v == null ? '—' : Number(v).toFixed(1)) },
     {
       title: 'KS p-value',
       dataIndex: 'ks_p_value',
       key: 'ks_p_value',
       width: 120,
-      render: (p: number) => p.toFixed(4),
+      render: (p: number | null) => (p == null ? '—' : Number(p).toFixed(4)),
     },
     {
       title: t('exploration.params'),
@@ -352,7 +352,7 @@ export default function Exploration() {
                   y: fit.pdf.y,
                   type: 'scatter' as const,
                   mode: 'lines',
-                  name: `${fit.name} (AIC ${fit.aic.toFixed(1)})`,
+                  name: `${fit.name} (AIC ${fit.aic == null ? '—' : Number(fit.aic).toFixed(1)})`,
                   line: { width: 2, color: FIT_COLORS[i % FIT_COLORS.length] },
                   yaxis: 'y',
                 })),
@@ -394,11 +394,11 @@ export default function Exploration() {
             showIcon
             message={t('exploration.bestFitSummary', { column, distribution: fits[0].name, n: fits[0].histogram.counts.reduce((a, b) => a + b, 0) })}
             description={t('exploration.bestFitReason', {
-              aic: fits[0].aic.toFixed(2),
-              bic: fits[0].bic.toFixed(2),
-              p: fits[0].ks_p_value.toFixed(4),
+              aic: fits[0].aic == null ? '—' : Number(fits[0].aic).toFixed(2),
+              bic: fits[0].bic == null ? '—' : Number(fits[0].bic).toFixed(2),
+              p: fits[0].ks_p_value == null ? '—' : Number(fits[0].ks_p_value).toFixed(4),
               params: Object.entries(fits[0].params).map(([k, v]) => `${k}=${Number(v).toFixed(4)}`).join(', '),
-              compared: fits.slice(1).map(f => `${f.name} AIC=${f.aic.toFixed(2)}, BIC=${f.bic.toFixed(2)}`).join('; ') || '—',
+              compared: fits.slice(1).map(f => `${f.name} AIC=${f.aic == null ? '—' : Number(f.aic).toFixed(2)}, BIC=${f.bic == null ? '—' : Number(f.bic).toFixed(2)}`).join('; ') || '—',
             })}
           />
         </>

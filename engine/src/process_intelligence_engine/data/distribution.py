@@ -83,6 +83,7 @@ def _fit_continuous(
 ) -> DistributionFit | None:
     """Fit a continuous scipy distribution; returns None if the fit fails."""
     data = series
+    shifted = data  # gamma/lognormal 於含 0/負值時改為平移副本（try 內賦值）
     try:
         if name in {"beta", "gamma", "lognormal"}:
             # These require strictly positive data or are fit on lower bounds.
@@ -113,13 +114,20 @@ def _fit_continuous(
     except Exception:
         return None
 
+    # shifted 預設為原始資料；gamma/lognormal 在含 0/負值時配適於平移副本。
+    fit_data = shifted if name in {"gamma", "lognormal"} else data
     try:
-        loglik = dist.logpdf(data, *params).sum()
+        # loglik/KS 必須在配適所用的資料上算：含 0 的原始資料配 gamma(shape<1)
+        # 時 x=0 的 logpdf=+inf → loglik=+inf → AIC=-inf，汙染 AIC 排名，
+        # 序列化後變 null 曾使前端分佈 tab 渲染失敗（視窗空白）。
+        loglik = dist.logpdf(fit_data, *params).sum()
+        if not math.isfinite(loglik):
+            return None
         k = len(params)
         n = len(data)
         aic = 2 * k - 2 * loglik
         bic = k * math.log(n) - 2 * loglik
-        ks_stat, ks_p = stats.kstest(data, dist.cdf, args=params)
+        ks_stat, ks_p = stats.kstest(fit_data, dist.cdf, args=params)
     except Exception:
         return None
 

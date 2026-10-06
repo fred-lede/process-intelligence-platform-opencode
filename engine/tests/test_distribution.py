@@ -128,3 +128,19 @@ def test_pdf_curve_discrete_matches_pmf_at_point():
     # Find x==4 in the curve and compare.
     curve = dict(zip(fit.pdf["x"], fit.pdf["y"]))
     assert round(curve[4.0], 8) == round(expected, 8)
+
+def test_zero_values_do_not_produce_infinite_aic():
+    """含 0 的離散欄位（如 Demolding speed）：gamma 配適於平移副本，
+    loglik 不得在原始資料上算出 +inf → AIC=-inf 汙染排名並使前端炸。"""
+    vals = [1.0, 0.0, 0.5, 0.5, 0.0, 1.0, 1.0, 0.0, 0.5, 1.0,
+            0.0, 0.5, 1.0, 0.0, 0.5, 1.0, 0.5, 0.0, 1.0, 0.0,
+            0.5, 1.0, 1.0, 0.0, 0.5, 0.0, 1.0, 0.5]
+    results = fit_best_distribution(vals, top_n=5)
+    assert len(results) >= 1
+    for r in results:
+        assert r.aic is not None, f"{r.name}: aic is None (was -inf before serialization)"
+        import math
+        assert math.isfinite(r.aic), f"{r.name}: aic={r.aic} not finite"
+    # 排序依 AIC 升冪且正常比較（-inf 曾使 sorted() 行為異常）
+    aics = [r.aic for r in results]
+    assert aics == sorted(aics)
