@@ -343,6 +343,18 @@ print('GPU OK')
 - **製程流程圖**: SVG 可交互編輯器 + 拓撲排序佈局 + 環狀檢測
 - **製程流程 × 下游分析整合**: 跨節點關聯鍵（`association_keys`）+ 節點「跳到分析」按鈕（SPC / Monte-Carlo / Exploration）+ 依節點行篩選（`filter_column`/`filter_value`，SPC / MC / 分布 / 序列）
 
+### 製程調參 / Six Sigma 對齊（Crystal Ball 缺口盤點）✅
+
+對照 Crystal Ball 的製程調參與品質控制工作流，盤點後補齊 4 圖表 + 2 報告缺口：
+
+- **蒙地卡羅輸入分佈抽樣**：auto 抽樣支援 normal / triangular / uniform / lognormal / weibull / poisson 六種核心分佈（lognormal 右偏膜厚、weibull 壽命、poisson 瑕疵計數）；`applied_distributions` 如實記錄實際套用分佈（fit 失敗 fallback 時記 empirical，不誤報）
+- **Overlay 覆蓋圖（方案驗證）**：蒙地卡羅頁「設為基準 → 重跑 → 比較調參後方案」，疊加分佈 + 雙 CDF，顯示均值轉移 / 標準差縮小 % / DPMO 對比
+- **DPMO / Z-score / 極端百分位**：能力卡顯示 DPMO、Z(LSL)/Z(USL)；百分位列補 P0.1 / P99.9（最惡劣公差組合的極限邊界）
+- **敏感度龍捲風圖**：模型中心敏感度分析新增橫條圖（貢獻百分比，最關鍵因子紅色置頂）——調參與收緊公差的優先標的
+- **OptQuest 式參數尋優（穩健設計）**：預測頁 OptQuest 卡——三種 objective（良率最大化 / DPMO 最小化 / 趨近目標值 + Cpk 約束），Latin Hypercube 搜尋 + 逐點輕量蒙地卡羅評估，回傳最佳參數組合 + best-to-date 收斂軌跡圖，可「套用到輸入」回填 What-if；演算法介面預留未來擴充
+
+**OptQuest 快速使用**：互動預測頁 → OptQuest 卡 → 選目標（良率/DPMO 需先設 LSL/USL；hit target 填目標值 + Cpk 門檻）→「執行 OptQuest 搜尋」→ 看收斂軌跡與最佳參數 →「套用到輸入」複查。搜尋結果為模型內插預測，套用前須實驗驗證。
+
 ### 多語言 ✅
 
 - **English**（預設）
@@ -424,6 +436,17 @@ data/test_dataset.csv
 包含 82 筆資料，4 個輸入變數 (temperature, pressure, time, humidity) + 1 個輸出變數 (yield)，適合測試完整分析流程。
 
 ## 版本紀錄
+
+### v0.10.5（2026-10-05）
+
+**製程調參 / Six Sigma 對齊（Crystal Ball 缺口盤點，三批交付）：**
+
+1. **蒙地卡羅輸入分佈抽樣補齊**：auto 抽樣支援 lognormal / weibull / poisson（原有 normal / triangular / uniform；六種核心分佈全數可用於輸入建模，對齊 Crystal Ball 調參工作流）；weibull 修正 scale 遺漏（原抽樣量級錯 1/scale 倍）；poisson 超大 λ 崩潰 + 整數誤判修護；`applied_distributions` 如實記錄實際套用分佈（fallback 記 empirical）
+2. **Overlay 覆蓋圖 + Six Sigma 補強**：蒙地卡羅頁「設為基準 → 重跑 → 比較調參後方案」（疊加分佈 + 雙 CDF、均值轉移 / 標準差縮小 % / DPMO 對比）；`monte_carlo/compare` IPC；DPMO / Z(LSL) / Z(USL) 顯示；極端百分位 P0.1 / P99.9；敏感度龍捲風圖（模型中心橫條圖，最關鍵因子紅色置頂）
+3. **OptQuest 式參數尋優**：預測頁 OptQuest 卡——三種 objective（良率最大化 / DPMO 最小化 / 趨近目標值 + Cpk 約束），Latin Hypercube 搜尋（純 numpy，預設 200 候選 × 500 樣本）+ 逐點輕量蒙地卡羅評估，回傳最佳參數組合 + best-to-date 收斂軌跡圖，可「套用到輸入」回填 What-if；演算法介面預留未來擴充（遺傳演算法等）；`optimization/optquest/run` IPC；i18n 三語同步
+
+驗證：引擎 693 passed / 13 skipped（唯一失敗為 pre-existing golden case）；tsc EXIT 0；build ✓。
+功能說明詳見 README「製程調參 / Six Sigma 對齊」區塊。
 
 ### v0.10.4（2026-09-30）
 
