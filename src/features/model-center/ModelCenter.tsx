@@ -2315,10 +2315,10 @@ export default function ModelCenter() {
                       <Alert
                         type={doeStats.anova.pure_error.df > 0 ? 'info' : 'warning'}
                         showIcon
-                        message={`Pure error df=${doeStats.anova.pure_error.df}`}
+                        message={`${t('validationLab.pureError')} df=${doeStats.anova.pure_error.df}`}
                         description={doeStats.anova.lack_of_fit?.df && doeStats.anova.lack_of_fit.p_value != null
-                          ? `Lack-of-fit: F=${doeStats.anova.lack_of_fit.f_stat?.toFixed(3)} · p=${doeStats.anova.lack_of_fit.p_value.toFixed(6)}`
-                          : '目前沒有重複實驗，無法估計 pure error 與 lack-of-fit。'}
+                          ? `${t('validationLab.lackOfFit')}: F=${doeStats.anova.lack_of_fit.f_stat?.toFixed(3)} · p=${doeStats.anova.lack_of_fit.p_value.toFixed(6)}`
+                          : t('validationLab.noReplicateError')}
                         style={{ marginTop: 4 }}
                       />
                     )}

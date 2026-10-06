@@ -303,10 +303,10 @@ export default function ValidationLab() {
               <Alert
                 type={fullValidation.confirmation_evidence.count > 0 ? 'info' : 'warning'}
                 showIcon
-                message="確認實驗證據"
+                message={t('validationLab.confirmationEvidence')}
                 description={fullValidation.confirmation_evidence.count > 0
                   ? `已記錄 ${fullValidation.confirmation_evidence.count} 次；合格率 ${(fullValidation.confirmation_evidence.pass_rate! * 100).toFixed(1)}%；平均絕對預測誤差 ${fullValidation.confirmation_evidence.mean_abs_prediction_error!.toFixed(4)}`
-                  : '尚無確認實驗；請執行實體確認實驗後再評估模型可信度。'}
+                  : t('validationLab.noConfirmationEvidence')}
               />
             )}
             <Row gutter={[16, 16]}>
