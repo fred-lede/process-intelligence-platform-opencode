@@ -57,6 +57,8 @@ Run checks with `npx tsc --noEmit`, `npm run build`, `cd engine && .venv/bin/pyt
 
 `doe_categorical_factorial` is a designed-DOE effects model, not a generalized predictor trained on a large stream of natural production data. Its primary uses are estimating main effects, two-factor interactions, ANOVA, and planning confirmation experiments; numeric-looking levels remain categorical. For a 3×3×3 design with one run per cell, in-sample fit, coefficients, and interaction plots are the primary evidence; ordinary random k-fold cross-validation is supplementary, and a negative R² should not by itself reject the DOE. Prefer replication or a confirmation experiment, and use pure-error/lack-of-fit analysis when replicates exist. Do not use the model for production optimization or extrapolation before physical confirmation.
 
+See [docs/designed-doe-validation.md](docs/designed-doe-validation.md) for the evidence hierarchy and confirmation workflow.
+
 ## Project structure
 
 ```text

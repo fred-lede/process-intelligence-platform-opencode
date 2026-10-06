@@ -379,6 +379,8 @@ print('GPU OK')
 
 `doe_categorical_factorial` 是設計型 DOE 效應模型，不是以大量自然生產資料訓練的泛化預測模型。它的主要用途是估計主效應、兩因子交互作用、ANOVA 與規劃確認實驗；水準即使是數字也會按類別處理。對 3×3×3、每個組合只有一次的設計，樣本內 R²、係數與交互作用圖是主要分析證據；一般隨機 k-fold 交叉驗證只作輔助，負 R² 不應單獨否定 DOE。優先增加重複實驗或執行確認實驗，並在有重複時使用 pure error／lack-of-fit 分析。模型不應在未完成實體確認前直接用於生產最佳化或外插。
 
+完整方法與確認實驗流程見 [docs/designed-doe-validation.md](docs/designed-doe-validation.md)。
+
 ## 測試統計
 
 | 項目 | 數值 |
