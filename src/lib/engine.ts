@@ -476,7 +476,8 @@ export async function generateDOEDesign(params: {
 export interface InteractionResult {
   factors: string[]
   matrix: number[][]
-  significant_pairs: { i: string; j: string; strength: number; significant: boolean }[]
+  significant_pairs: { i: string; j: string; strength: number; significant: boolean; min_p_value?: number; significant_contrast_count?: number; contrast_count?: number }[]
+  statistical_method?: string
 }
 
 export async function computeInteractions(params: {

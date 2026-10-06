@@ -2027,7 +2027,7 @@ export default function ModelCenter() {
                 type="info"
                 showIcon
                 message={t('modelCenter.interactionSummary')}
-                description={(() => {
+                description={<Space direction="vertical" size={2}>{(() => {
                   let bestPair = '—'
                   let bestStrength = 0
                   for (let i = 0; i < interactions.factors.length; i += 1) {
@@ -2039,8 +2039,8 @@ export default function ModelCenter() {
                       }
                     }
                   }
-                  return t('modelCenter.interactionAdvice', { pair: bestPair, strength: bestStrength.toFixed(6) })
-                })()}
+                  return <span>{t('modelCenter.interactionAdvice', { pair: bestPair, strength: bestStrength.toFixed(6) })}</span>
+                })()}{interactions.significant_pairs.some((pair) => pair.min_p_value != null) && <span>{interactions.significant_pairs.map((pair) => `${pair.i} × ${pair.j}: p(min)=${pair.min_p_value?.toFixed(6)}`).join(' · ')}</span>}</Space>}
               />
               </>
             ) : (

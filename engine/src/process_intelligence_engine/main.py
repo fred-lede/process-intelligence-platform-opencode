@@ -773,7 +773,19 @@ def _handle_interactions_compute(params: dict) -> dict:
     threshold = params.get("threshold", 0.01)
     fit = MODEL_REGISTRY._get_unlocked(model_id)
     df = REGISTRY.get(dataset_id)
-    return compute_interactions(fit, df, threshold)
+    result = compute_interactions(fit, df, threshold)
+    if fit.model_type == "doe_categorical_factorial":
+        stats_result = compute_doe_statistics(fit, df)
+        grouped = {item["term"]: item for item in stats_result.get("pareto_terms") or []}
+        for pair in result.get("significant_pairs", []):
+            key = f"{pair['i']} × {pair['j']}"
+            summary = grouped.get(key)
+            if summary:
+                pair["min_p_value"] = summary["min_p_value"]
+                pair["significant_contrast_count"] = summary["significant_count"]
+                pair["contrast_count"] = summary["contrast_count"]
+        result["statistical_method"] = "minimum level-contrast p-value within each factor pair"
+    return result
 
 
 def _handle_shap_explain(params: dict) -> dict:
