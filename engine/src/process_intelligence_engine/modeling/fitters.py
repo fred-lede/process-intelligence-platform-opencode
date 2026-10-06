@@ -39,6 +39,11 @@ from .metrics import (
     r2_score,
     adjusted_r2,
 )
+from .categorical_doe import (
+    CategoricalFactorialRegressor,
+    build_categorical_factorial_matrix,
+    validate_categorical_factorial_design,
+)
 
 
 def _lightgbm_device_params() -> dict[str, Any]:
@@ -78,6 +83,7 @@ def _auto_select_features(
 MODEL_TYPES = {
     "doe_linear": "doe_linear",
     "doe_quadratic": "doe_quadratic",
+    "doe_categorical_factorial": "doe_categorical_factorial",
     "random_forest": "random_forest",
     "residual_hybrid": "residual_hybrid",
     "logistic_regression": "logistic_regression",
@@ -208,6 +214,41 @@ def fit_doe_quadratic(
     df: pd.DataFrame, target: str, inputs: list[str], test_size: float = 0.3, random_state: int | None = None
 ) -> ModelFit:
     return _fit_linear_on_matrix(df, target, inputs, degree=2, test_size=test_size, random_state=random_state)
+
+
+def fit_doe_categorical_factorial(
+    df: pd.DataFrame,
+    target: str,
+    inputs: list[str],
+    test_size: float = 0.3,
+    random_state: int | None = None,
+    include_three_factor_interaction: bool = False,
+) -> ModelFit:
+    validation = validate_categorical_factorial_design(df, inputs)
+    if validation["duplicate_combinations"] or validation["missing_combinations"]:
+        raise ValueError("categorical factorial design has duplicate or missing combinations")
+    design = build_categorical_factorial_matrix(
+        df, inputs, include_three_factor_interaction=include_three_factor_interaction
+    )
+    y = df[target].to_numpy(dtype=float)
+    fitted = np.linalg.lstsq(design.matrix, y, rcond=None)[0]
+    estimator = CategoricalFactorialRegressor(inputs, design.levels, fitted)
+    y_pred = estimator.predict(df)
+    metrics = _compute_all_metrics(y, y_pred, design.model_df)
+    coefficients = {name: float(value) for name, value in zip(design.term_names[1:], fitted[1:])}
+    coefficients["_intercept"] = float(fitted[0])
+    return ModelFit(
+        model_type="doe_categorical_factorial",
+        target=target,
+        inputs=list(inputs),
+        metrics=metrics,
+        coefficients=coefficients,
+        equation=" ".join(f"{value:+.6g}*{name}" for name, value in zip(design.term_names, fitted)),
+        n_train=len(df),
+        n_test=0,
+        created_at=_now(),
+        model=estimator,
+    )
 
 
 def fit_random_forest(

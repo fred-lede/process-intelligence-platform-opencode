@@ -20,6 +20,33 @@ class CategoricalDesignMatrix:
     term_factors: dict[str, tuple[str, ...]]
 
 
+class CategoricalFactorialRegressor:
+    def __init__(self, factors: list[str], levels: dict[str, list[Any]], coefficients: np.ndarray):
+        self.factors = list(factors)
+        self.levels = levels
+        self.coefficients = np.asarray(coefficients, dtype=float)
+
+    def predict(self, frame: pd.DataFrame) -> np.ndarray:
+        for factor in self.factors:
+            unseen = set(frame[factor].dropna().tolist()) - set(self.levels[factor])
+            if unseen:
+                raise ValueError(f"unseen factor level for {factor}: {sorted(unseen)!r}")
+        # Reuse fitted level order by constructing the matrix against all fitted levels.
+        columns = [np.ones(len(frame), dtype=float)]
+        encoded = {}
+        for factor in self.factors:
+            encoded[factor] = []
+            for level in self.levels[factor][1:]:
+                values = (frame[factor].to_numpy() == level).astype(float)
+                encoded[factor].append(values)
+                columns.append(values)
+        for left, right in combinations(self.factors, 2):
+            for left_values in encoded[left]:
+                for right_values in encoded[right]:
+                    columns.append(left_values * right_values)
+        return np.column_stack(columns) @ self.coefficients
+
+
 def _levels(df: pd.DataFrame, factors: list[str]) -> dict[str, list[Any]]:
     if not factors:
         raise ValueError("at least one factor is required")

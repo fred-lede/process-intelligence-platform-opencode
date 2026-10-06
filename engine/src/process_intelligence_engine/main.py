@@ -56,6 +56,7 @@ from process_intelligence_engine.modeling.experiment_recommendation import recom
 from process_intelligence_engine.modeling.fitters import (
     fit_doe_linear,
     fit_doe_quadratic,
+    fit_doe_categorical_factorial,
     fit_random_forest,
     fit_residual_hybrid,
     fit_logistic_regression,
@@ -657,6 +658,7 @@ def _handle_analysis_package(params: dict) -> dict:
 MODEL_FITTERS = {
     "doe_linear": fit_doe_linear,
     "doe_quadratic": fit_doe_quadratic,
+    "doe_categorical_factorial": fit_doe_categorical_factorial,
     "random_forest": fit_random_forest,
     "residual_hybrid": fit_residual_hybrid,
     "logistic_regression": fit_logistic_regression,
