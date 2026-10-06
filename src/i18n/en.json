@@ -405,6 +405,10 @@
         "title": "Explicit interactions modeled",
         "description": "The DOE Quadratic model estimates pairwise interaction terms. Review the strongest pairs and confirm them with a targeted experiment."
       },
+      "categorical": {
+        "title": "Three-level categorical interactions modeled",
+        "description": "The three-level categorical-factor model estimates AB, AC, and BC pairwise interactions. Review differences between level lines and confirm them experimentally."
+      },
       "implicit": {
         "title": "Interactions captured implicitly",
         "description": "This tree model can capture interactions without explicit terms. Use SHAP interaction or PDP/ALE to validate important factor combinations."

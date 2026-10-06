@@ -193,6 +193,8 @@ export default function ModelCenter() {
   const interactionModelType = latestModel?.model_type ?? modelType
   const interactionMode = interactionModelType === 'doe_linear'
     ? 'notModeled'
+    : interactionModelType === 'doe_categorical_factorial'
+      ? 'categorical'
     : interactionModelType === 'doe_quadratic'
       ? 'explicit'
       : ['random_forest', 'xgboost', 'lightgbm'].includes(interactionModelType)

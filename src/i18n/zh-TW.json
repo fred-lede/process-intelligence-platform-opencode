@@ -405,6 +405,10 @@
         "title": "已明確估計交互作用",
         "description": "DOE 二次模型會估計成對交互項。請檢視較強的組合，並以針對性實驗確認。"
       },
+      "categorical": {
+        "title": "三水準類別交互作用已建模",
+        "description": "三水準類別因子模型已估計 AB、AC、BC 兩因子交互作用；請檢視各水準線條差異並以實驗確認。"
+      },
       "implicit": {
         "title": "模型隱含捕捉交互作用",
         "description": "樹模型可以不使用顯式項目捕捉交互作用；請用 SHAP interaction 或 PDP／ALE 驗證重要組合。"

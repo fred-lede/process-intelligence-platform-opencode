@@ -407,6 +407,10 @@
         "title": "Interacciones modeladas explícitamente",
         "description": "El modelo DOE cuadrático estima términos de interacción por pares. Revisa los pares más fuertes y confírmalos con un experimento dirigido."
       },
+      "categorical": {
+        "title": "Interacciones categóricas de tres niveles modeladas",
+        "description": "El modelo de factores categóricos de tres niveles estima las interacciones AB, AC y BC. Revise las diferencias entre líneas de nivel y confírmelas experimentalmente."
+      },
       "implicit": {
         "title": "Interacciones capturadas implícitamente",
         "description": "Este modelo de árboles puede capturar interacciones sin términos explícitos. Usa SHAP interaction o PDP/ALE para validar las combinaciones importantes."
