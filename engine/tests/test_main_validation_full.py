@@ -41,6 +41,8 @@ def test_full_validation():
     assert "residual_analysis" in result
     assert "experiment_recommendations" in result
     assert len(result["models"]) == 2
+    assert "fit_metrics" in result["models"][0]
+    assert result["models"][0]["validation_basis"] == "random_fold_cv"
     assert result["residual_analysis"]["durbin_watson"]["statistic"] > 0
     assert result["design_context"] is None
 

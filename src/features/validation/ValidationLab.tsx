@@ -343,6 +343,11 @@ export default function ValidationLab() {
                   render: (v: number) => v?.toFixed(4),
                 },
                 {
+                  title: t('validationLab.inSampleR2'),
+                  key: 'fit_r2',
+                  render: (_: unknown, record: any) => record.fit_metrics?.r2?.toFixed(4) ?? '—',
+                },
+                {
                   title: 'RMSE',
                   dataIndex: ['cv_metrics', 'mean_rmse'],
                   key: 'rmse',
@@ -363,6 +368,11 @@ export default function ValidationLab() {
                   dataIndex: 'score',
                   key: 'score',
                   render: (v: number) => v?.toFixed(4),
+                },
+                {
+                  title: t('validationLab.validationBasis'),
+                  key: 'validation_basis',
+                  render: (_: unknown, record: any) => record.validation_basis === 'design_based' ? t('validationLab.designBased') : t('validationLab.randomFoldCV'),
                 },
                 {
                   title: t('credibility.level'),

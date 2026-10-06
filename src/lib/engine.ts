@@ -571,6 +571,8 @@ export interface FullValidationResult {
     model_id: string
     model_type: string
     cv_metrics: { mean_r2: number; mean_rmse: number }
+    fit_metrics?: { r2: number; rmse: number }
+    validation_basis?: 'design_based' | 'random_fold_cv'
     residual_normal: boolean
     score: number
   }>

@@ -37,6 +37,11 @@ def compare_models(
                 "model_id": fit.model_id,
                 "model_type": fit.model_type,
                 "cv_metrics": {"mean_r2": float(mean_r2), "mean_rmse": float(mean_rmse)},
+                "fit_metrics": {
+                    "r2": float(fit.metrics.get("r2", 0.0)),
+                    "rmse": float(fit.metrics.get("rmse", 0.0)),
+                },
+                "validation_basis": "design_based" if fit.model_type == "doe_categorical_factorial" else "random_fold_cv",
                 "residual_normal": residual_normal,
                 "score": score,
             })
