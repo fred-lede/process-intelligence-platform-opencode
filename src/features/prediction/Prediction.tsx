@@ -5,8 +5,9 @@ import { Card, Select, Space, Button, Alert, Typography, Tag, InputNumber, Stati
 import { PlusOutlined, MinusOutlined, SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, recommendProfilerSettings, type ModelInfo, type PredictionScenario } from '../../lib/engine'
+import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, recommendProfilerSettings, runOptQuest, type ModelInfo, type PredictionScenario, type OptQuestResult } from '../../lib/engine'
 import { buildPredictionContext } from '../../lib/assistantData'
+import Plot from '../../components/PlotChart'
 
 function DraggableSlider({ min, max, value, onChange, style }: {
   min: number
@@ -102,6 +103,16 @@ export default function Prediction() {
   const [scenarioName, setScenarioName] = useState('')
   const [scenarioNotes, setScenarioNotes] = useState('')
   const [messageApi, contextHolder] = message.useMessage()
+  // OptQuest 卡 state
+  const [optObjective, setOptObjective] = useState<'maximize_yield' | 'minimize_dpmo' | 'hit_target'>('maximize_yield')
+  const [optTarget, setOptTarget] = useState<number | undefined>(undefined)
+  const [optCpkMin, setOptCpkMin] = useState<number>(1.33)
+  const [optCandidates, setOptCandidates] = useState<number>(200)
+  const [optEvalSamples, setOptEvalSamples] = useState<number>(500)
+  const [optSeed, setOptSeed] = useState<number>(42)
+  const [optAdvanced, setOptAdvanced] = useState<boolean>(false)
+  const [optResult, setOptResult] = useState<OptQuestResult | null>(null)
+  const [optLoading, setOptLoading] = useState(false)
 
   useEffect(() => {
     setContext('prediction', buildPredictionContext({ modelInfo, inputValues, predicted }))
@@ -162,6 +173,40 @@ export default function Prediction() {
       defaults[inp] = stats?.mean ?? 0
     }
     setInputValues(defaults)
+  }
+
+  const handleOptQuest = async () => {
+    if (!selectedModel || !importResult) return
+    setOptLoading(true)
+    setOptResult(null)
+    try {
+      const res = await runOptQuest({
+        model_id: selectedModel,
+        dataset_id: importResult.dataset_id,
+        objective: optObjective,
+        lsl: spec?.lsl ?? undefined,
+        usl: spec?.usl ?? undefined,
+        target_value: optObjective === 'hit_target' ? (optTarget ?? spec?.target ?? undefined) : undefined,
+        cpk_min: optCpkMin,
+        n_candidates: optCandidates,
+        n_eval_samples: optEvalSamples,
+        seed: optSeed,
+      })
+      if (!res.success || !res.result) {
+        messageApi.error(res.error?.message ?? res.error?.code ?? t('prediction.optquestError'))
+        return
+      }
+      setOptResult(res.result)
+    } catch (e) {
+      messageApi.error(e instanceof Error ? e.message : String(e))
+    } finally {
+      setOptLoading(false)
+    }
+  }
+
+  const handleApplyBestPoint = () => {
+    if (!optResult) return
+    setInputValues(prev => ({ ...prev, ...optResult.best_point }))
   }
 
   const loadScenarios = async (modelId: string) => {
@@ -459,6 +504,112 @@ export default function Prediction() {
       )}
       {!importResult && (
         <Alert type="warning" message={t('prediction.noData')} showIcon />
+      )}
+
+      {modelInfo && importResult && (
+        <Card title={t('prediction.optquestTitle')} size="small">
+          <Alert type="info" showIcon message={t('prediction.optquestDesc')} style={{ marginBottom: 12 }} />
+          <Space wrap style={{ marginBottom: 12 }}>
+            <Select value={optObjective} onChange={setOptObjective} style={{ width: 260 }} options={[
+              { value: 'maximize_yield', label: t('prediction.optquestMaxYield') },
+              { value: 'minimize_dpmo', label: t('prediction.optquestMinDpmo') },
+              { value: 'hit_target', label: t('prediction.optquestHitTarget') },
+            ]} />
+            {optObjective === 'hit_target' && (
+              <InputNumber placeholder={t('prediction.optquestTarget')} value={optTarget}
+                           onChange={v => setOptTarget(v ?? undefined)} style={{ width: 140 }} />
+            )}
+            {optObjective === 'hit_target' && (
+              <InputNumber min={0.5} max={2.5} step={0.01} value={optCpkMin}
+                           onChange={v => setOptCpkMin(v ?? 1.33)} style={{ width: 120 }}
+                           addonBefore={t('prediction.optquestCpkMin')} />
+            )}
+            <Button type="primary" loading={optLoading}
+                    disabled={!selectedModel || !importResult}
+                    onClick={handleOptQuest}>
+              {t('prediction.optquestRun')}
+            </Button>
+            <Button type="link" onClick={() => setOptAdvanced(!optAdvanced)}>
+              {optAdvanced ? t('prediction.optquestAdvancedHide') : t('prediction.optquestAdvanced')}
+            </Button>
+          </Space>
+          {optAdvanced && (
+            <Space wrap style={{ marginBottom: 12 }}>
+              <InputNumber min={20} max={2000} step={20} value={optCandidates}
+                           onChange={v => setOptCandidates(v ?? 200)}
+                           addonBefore={t('prediction.optquestCandidates')} style={{ width: 180 }} />
+              <InputNumber min={50} max={5000} step={50} value={optEvalSamples}
+                           onChange={v => setOptEvalSamples(v ?? 500)}
+                           addonBefore={t('prediction.optquestEvalSamples')} style={{ width: 180 }} />
+              <InputNumber min={0} value={optSeed} onChange={v => setOptSeed(v ?? 42)}
+                           addonBefore={t('prediction.optquestSeed')} style={{ width: 140 }} />
+            </Space>
+          )}
+          {optResult && (
+            <>
+              <Space wrap style={{ marginBottom: 8 }} align="center">
+                <Tag color={optResult.feasible ? 'green' : 'red'}>
+                  {optResult.feasible ? t('prediction.optquestFeasible') : t('prediction.optquestInfeasible')}
+                </Tag>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {t('prediction.optquestCandidates')}: {optResult.n_candidates} · {t('prediction.optquestEvalSamples')}: {optResult.n_eval_samples} · seed {optResult.seed}
+                </Typography.Text>
+              </Space>
+              <Row gutter={16} style={{ marginBottom: 8 }}>
+                <Col span={12}>
+                  <Card size="small" title={t('prediction.optquestBaseline')}>
+                    {optResult.baseline && (
+                      <Statistic value={optResult.baseline.predicted_mean} precision={3}
+                                 title={t('prediction.optquestPredictedMean')} />
+                    )}
+                    {optResult.baseline?.yield != null && (
+                      <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                        {t('prediction.optquestYield')}: {(optResult.baseline.yield * 100).toFixed(2)}% · DPMO: {optResult.baseline.dpmo?.toFixed(0)}
+                      </Typography.Text>
+                    )}
+                  </Card>
+                </Col>
+                <Col span={12}>
+                  <Card size="small" title={t('prediction.optquestBest')}>
+                    <Statistic value={optResult.best.predicted_mean} precision={3}
+                               title={t('prediction.optquestPredictedMean')} />
+                    {optResult.best.yield != null && (
+                      <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                        {t('prediction.optquestYield')}: {(optResult.best.yield * 100).toFixed(2)}% · DPMO: {optResult.best.dpmo?.toFixed(0)}
+                      </Typography.Text>
+                    )}
+                  </Card>
+                </Col>
+              </Row>
+              <Card size="small" title={t('prediction.optquestBestPoint')} style={{ marginBottom: 8 }}>
+                <Space wrap>
+                  {Object.entries(optResult.best_point).map(([k, v]) => (
+                    <Tag key={k} color="blue">{k}: {v.toFixed(3)}</Tag>
+                  ))}
+                  <Button size="small" type="primary" onClick={handleApplyBestPoint}>
+                    {t('prediction.optquestApply')}
+                  </Button>
+                </Space>
+              </Card>
+              <Card size="small" title={t('prediction.optquestTrajectory')}>
+                <Plot
+                  data={[{
+                    x: optResult.trajectory.map(s => s.step),
+                    y: optResult.trajectory.map(s => s.best_so_far),
+                    type: 'scatter', mode: 'lines',
+                    line: { color: '#722ed1', width: 2 },
+                  }]}
+                  layout={{
+                    height: 260, margin: { l: 50, r: 20, t: 10, b: 40 },
+                    xaxis: { title: t('prediction.optquestCandidateStep') },
+                    yaxis: { title: t('prediction.optquestBestSoFar') },
+                  }}
+                />
+              </Card>
+              <Alert type="warning" showIcon message={optResult.note} style={{ marginTop: 8 }} />
+            </>
+          )}
+        </Card>
       )}
 
       <Modal

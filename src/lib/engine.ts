@@ -1183,6 +1183,58 @@ export async function analyzeMonteCarlo(params: MonteCarloParams): Promise<Monte
   return engineCall<MonteCarloAnalysisResult>('monte_carlo/run', params as unknown as Record<string, unknown>)
 }
 
+// --- OptQuest-style parameter search -------------------------------------------
+
+export interface OptQuestTrajectoryStep {
+  step: number
+  best_so_far: number | null
+  point: Record<string, number>
+  feasible: boolean
+}
+
+export interface OptQuestMetrics {
+  yield: number | null
+  dpmo: number | null
+  predicted_mean: number
+  cpk: number | null
+}
+
+export interface OptQuestResult {
+  objective: string
+  constraints: { cpk_min: number }
+  best_point: Record<string, number>
+  best: OptQuestMetrics
+  feasible: boolean
+  baseline: ({ point: Record<string, number> } & OptQuestMetrics) | null
+  trajectory: OptQuestTrajectoryStep[]
+  top_candidates: ({ point: Record<string, number> } & OptQuestMetrics)[]
+  n_candidates: number
+  n_eval_samples: number
+  seed: number
+  note: string
+}
+
+export interface OptQuestRunResult {
+  success: boolean
+  result?: OptQuestResult
+  error?: { code: string; message: string }
+}
+
+export async function runOptQuest(params: {
+  model_id: string
+  dataset_id: string
+  objective: string
+  lsl?: number
+  usl?: number
+  target_value?: number
+  cpk_min?: number
+  n_candidates?: number
+  n_eval_samples?: number
+  seed?: number
+}): Promise<OptQuestRunResult> {
+  return engineCall<OptQuestRunResult>('optimization/optquest/run', params as unknown as Record<string, unknown>)
+}
+
 export async function compareMonteCarlo(params: { baseline: MonteCarloParams; candidate: MonteCarloParams }): Promise<MonteCarloCompareResult> {
   return engineCall<MonteCarloCompareResult>('monte_carlo/compare', params as unknown as Record<string, unknown>)
 }
