@@ -390,6 +390,11 @@ export default function ValidationLab() {
                   render: (_: unknown, record: any) => record.design_metrics?.r2?.toFixed(4) ?? '—',
                 },
                 {
+                  title: 'DOE cell-out RMSE',
+                  key: 'design_rmse',
+                  render: (_: unknown, record: any) => record.design_metrics?.rmse?.toFixed(4) ?? '—',
+                },
+                {
                   title: t('credibility.level'),
                   key: 'credibility_level',
                   width: 120,
