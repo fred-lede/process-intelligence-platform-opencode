@@ -491,6 +491,7 @@ export interface SHAPResult {
   expected_value: number
   feature_importance: { name: string; importance: number }[]
   shap_values: number[][]
+  level_effects?: Record<string, Array<{ level: string | number; mean_shap: number }>>
 }
 
 export async function computeSHAP(params: {

@@ -77,6 +77,8 @@ def test_categorical_doe_supports_original_factor_shap_explanations():
 
     assert {item["name"] for item in result["feature_importance"]} == {"A", "B", "C"}
     assert len(result["shap_values"]) == len(frame)
+    assert set(result["level_effects"]) == {"A", "B", "C"}
+    assert len(result["level_effects"]["A"]) == 3
 
 
 def test_categorical_doe_can_run_validation_re_fits():

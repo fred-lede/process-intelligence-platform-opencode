@@ -59,6 +59,14 @@ def _compute_shap_categorical(fit: ModelFit, df: pd.DataFrame, max_explain: int)
         baseline[factor] = reference[factor]
         contributions.append(full - fit.model.predict(baseline))
     values = np.column_stack(contributions) if contributions else np.empty((len(explain), 0))
+    level_effects = {
+        factor: [
+            {"level": level, "mean_shap": float(values[explain[factor].to_numpy() == level, index].mean())}
+            for level in fit.model.levels[factor]
+            if np.any(explain[factor].to_numpy() == level)
+        ]
+        for index, factor in enumerate(fit.inputs)
+    }
     return {
         "expected_value": float(np.mean(fit.model.predict(pd.DataFrame([reference])))),
         "feature_importance": sorted(
@@ -66,6 +74,7 @@ def _compute_shap_categorical(fit: ModelFit, df: pd.DataFrame, max_explain: int)
             key=lambda item: item["importance"], reverse=True,
         ),
         "shap_values": values.tolist(),
+        "level_effects": level_effects,
     }
 
 

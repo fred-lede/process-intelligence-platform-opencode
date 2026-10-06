@@ -2097,6 +2097,19 @@ export default function ModelCenter() {
                   useResizeHandler
                   style={{ width: '100%', height: 300 }}
                 />
+                {shapResult.level_effects && (
+                  <Table
+                    size="small"
+                    pagination={false}
+                    rowKey={(row) => `${row.factor}-${String(row.level)}`}
+                    dataSource={Object.entries(shapResult.level_effects).flatMap(([factor, levels]) => levels.map((item) => ({ factor, ...item })))}
+                    columns={[
+                      { title: 'Factor', dataIndex: 'factor', key: 'factor' },
+                      { title: 'Level', dataIndex: 'level', key: 'level', render: (value: string | number) => String(value) },
+                      { title: 'Mean SHAP', dataIndex: 'mean_shap', key: 'mean_shap', render: (value: number) => value.toFixed(6) },
+                    ]}
+                  />
+                )}
                 <Alert type="info" showIcon message={t('modelCenter.shapSummary')} description={t('modelCenter.shapAdvice')} />
               </Space>
             ) : (
