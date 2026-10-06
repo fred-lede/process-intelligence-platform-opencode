@@ -592,6 +592,7 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             {
                 "term": key,
                 "max_abs_t": max(abs(item["t_stat"]) for item in rows),
+                "min_p_value": min(item["p_value"] for item in rows),
                 "significant_count": sum(1 for item in rows if item["significant"]),
                 "contrast_count": len(rows),
             }

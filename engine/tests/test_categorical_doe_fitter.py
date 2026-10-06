@@ -53,6 +53,7 @@ def test_categorical_factorial_statistics_match_minitab_df_shape():
     assert [item["term"] for item in stats["pareto_terms"]] == ["A", "B", "C", "A × B", "A × C", "B × C"] or {item["term"] for item in stats["pareto_terms"]} == {"A", "B", "C", "A × B", "A × C", "B × C"}
     assert stats["anova"]["pure_error"]["df"] == 0
     assert stats["anova"]["lack_of_fit"]["p_value"] is None
+    assert all("min_p_value" in item for item in stats["pareto_terms"])
 
 
 def test_categorical_doe_reports_pure_error_with_replicates():
