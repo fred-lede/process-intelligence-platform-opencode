@@ -385,6 +385,11 @@ export default function ValidationLab() {
                   render: (_: unknown, record: any) => record.validation_basis === 'design_based' ? t('validationLab.designBased') : t('validationLab.randomFoldCV'),
                 },
                 {
+                  title: 'DOE cell-out R²',
+                  key: 'design_r2',
+                  render: (_: unknown, record: any) => record.design_metrics?.r2?.toFixed(4) ?? '—',
+                },
+                {
                   title: t('credibility.level'),
                   key: 'credibility_level',
                   width: 120,

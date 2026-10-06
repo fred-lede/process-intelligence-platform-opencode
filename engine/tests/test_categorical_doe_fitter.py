@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from process_intelligence_engine.modeling.fitters import fit_doe_categorical_factorial
-from process_intelligence_engine.modeling.validation import compute_doe_statistics, cross_validate
+from process_intelligence_engine.modeling.validation import compute_doe_statistics, cross_validate, design_validate
 from process_intelligence_engine.prediction import predict_single
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.model_selection import compare_models
@@ -99,6 +99,9 @@ def test_categorical_doe_can_run_validation_re_fits():
     result = cross_validate(fit, frame, k=3)
 
     assert len(result["cv_results"]) == 3
+    design_result = design_validate(fit, frame)
+    assert design_result["method"] == "leave_one_cell_out"
+    assert design_result["n_cells"] == 27
 
 
 def test_categorical_doe_supports_full_validation_chain():

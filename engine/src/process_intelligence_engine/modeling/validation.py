@@ -147,6 +147,29 @@ def cross_validate(fit, df: pd.DataFrame, k: int = 5) -> dict[str, Any]:
     }
 
 
+def design_validate(fit, df: pd.DataFrame) -> dict[str, Any]:
+    """Leave-one-cell-out validation for a complete categorical factorial DOE."""
+    if fit.model_type != "doe_categorical_factorial":
+        raise ValueError("design validation requires a categorical factorial model")
+    if df[fit.inputs].duplicated().any():
+        raise ValueError("design validation requires one observation per design cell")
+    predictions = []
+    actuals = []
+    rows = df.reset_index(drop=True)
+    for index in range(len(rows)):
+        train_df = rows.drop(index=index)
+        test_df = rows.iloc[[index]]
+        fit_obj = _refit_from_fit(fit, train_df)
+        predictions.append(float(_predict_from_fit(fit_obj, test_df)[0]))
+        actuals.append(float(test_df[fit.target].iloc[0]))
+    residuals = np.asarray(actuals) - np.asarray(predictions)
+    ss_tot = float(np.sum((np.asarray(actuals) - np.mean(actuals)) ** 2))
+    ss_res = float(np.sum(residuals ** 2))
+    r2 = float(1.0 - ss_res / ss_tot) if ss_tot > 0 else 0.0
+    rmse = float(np.sqrt(np.mean(residuals ** 2)))
+    return {"method": "leave_one_cell_out", "n_cells": len(rows), "r2": r2, "rmse": rmse}
+
+
 def compute_sensitivity_effect_sizes(
     fit, df: pd.DataFrame, n_repeats: int = 8
 ) -> dict[str, Any]:

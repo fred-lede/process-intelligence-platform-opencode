@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from .fitters import ModelFit
-from .validation import cross_validate, analyze_residuals
+from .validation import cross_validate, design_validate, analyze_residuals
 
 
 def compare_models(
@@ -45,6 +45,8 @@ def compare_models(
                 "residual_normal": residual_normal,
                 "score": score,
             })
+            if fit.model_type == "doe_categorical_factorial":
+                models[-1]["design_metrics"] = design_validate(fit, df)
         except (ValueError, TypeError, KeyError) as exc:
             skipped.append({"model_id": fit.model_id, "reason": str(exc)})
 
