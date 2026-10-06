@@ -2,6 +2,19 @@
 
 ## Completed
 
+### OptQuest 式參數尋優（穩健設計自動搜尋）
+- **Status**: DONE
+- **背景**：Crystal Ball 對照缺口盤點的第三個大項（前兩項：輸入分佈抽樣補齊、Overlay 覆蓋圖 + Six Sigma 補強，均已交付）。Spec：`docs/superpowers/specs/2026-10-05-optquest-optimization-design.md`（ce41f88，使用者直接確認）。
+- **設計決策（使用者選擇）**：三種 objective 全可選（maximize_yield / minimize_dpmo / hit_target+Cpk 約束）；輕量 LHS 搜尋（純 numpy，演算法介面預留未來擴充遺傳演算法）；UI 在 Prediction（What-if）頁新增 OptQuest 卡。
+- **實作**：
+  - 引擎 `optimization.py`（新模組）：`_lhs_samples`（每維 n 分層各一樣本）、`_evaluate_points`（該點為 μ、歷史 σ 為波動的輕量蒙地卡羅 → yield/dpmo/predicted_mean/Cpk；特徵順序沿用 fitted 慣例）、`run_optquest`（bounds 驗證顛倒、yield objective 需 LSL/USL、best-to-date 軌跡單調遞增（負分數語意）、target 不可達回 feasible=false + 最接近點、top 10 候選表）
+  - 引擎 `main.py`：`_handle_optquest_run`（KeyError/ValueError 攔下轉 `OPTQUEST_INVALID_PARAMS` 結構化錯誤；baseline 以現況各欄 median 評估同結構指標）+ dispatch `optimization/optquest/run`；`policy.py` reader 清單加該 method
+  - 前端 `engine.ts`：`OptQuestResult`/`OptQuestMetrics`/`OptQuestTrajectoryStep`/`OptQuestRunResult` 型別 + `runOptQuest()`
+  - 前端 `Prediction.tsx`：OptQuest 卡——objective 下拉（三選一）、hit_target 時 target/Cpk 門檻輸入、進階摺疊（候選數/評估樣本數/seed）、feasible 徽章、baseline vs best 對比卡、best point Tags + 「套用到輸入」回填 What-if、收斂軌跡 Plotly line、免責 Alert（模型內插預測，套用前須實驗驗證）
+  - i18n 三語 27 鍵同步（en/zh-TW/es-MX）
+- **驗證**：`test_optimization.py` 10/10、`test_main_optimization.py` 3/3；全引擎 **693 passed, 13 skipped**（唯一失敗 test_v040_workflow golden case 為 pre-existing，Windows 缺 Tesseract）；`tsc --noEmit` EXIT 0；`npm run build` ✓ 1.09s
+- **Commits** — `697ace2`（optimization.py）、`61c5b99`（IPC handler）、`45ea359`（前端卡）
+
 ### Overlay 覆蓋圖 + Six Sigma 補強（Crystal Ball 對照缺口盤點）
 - **Status**: DONE
 - **背景**：使用者提供 Crystal Ball 4 圖表 + 2 報告材料（調參/DFSS 脈絡）要求盤點缺口。證據先行盤點結果：敏感度（資料層）、預測圖（histogram/CDF/capability）、統計報告（percentiles/skew/kurtosis）已涵蓋；缺 Overlay 覆蓋圖、DPMO/Z 顯示、極端百分位、龍捲風圖渲染。
