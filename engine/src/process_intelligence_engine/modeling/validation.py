@@ -559,8 +559,30 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
     sig_count = sum(1 for c in coeff_rows[1:] if c["significant"])
 
     categorical_effects = None
+    pareto_terms = None
     if model_type == "doe_categorical_factorial":
         categorical_effects = {"main": [], "interactions": []}
+        grouped: dict[str, list[dict[str, Any]]] = {factor: [] for factor in fit.inputs}
+        for row in coeff_rows[1:]:
+            name = row["name"]
+            matched = [factor for factor in fit.inputs if factor in name]
+            if len(matched) >= 2:
+                key = " × ".join(matched[:2])
+            elif matched:
+                key = matched[0]
+            else:
+                continue
+            grouped.setdefault(key, []).append(row)
+        pareto_terms = [
+            {
+                "term": key,
+                "max_abs_t": max(abs(item["t_stat"]) for item in rows),
+                "significant_count": sum(1 for item in rows if item["significant"]),
+                "contrast_count": len(rows),
+            }
+            for key, rows in grouped.items() if rows
+        ]
+        pareto_terms.sort(key=lambda item: item["max_abs_t"], reverse=True)
         levels = design.levels
         for factor, factor_levels in levels.items():
             points = []
@@ -632,4 +654,5 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         "fitted_values": [float(v) for v in y_pred],
         "residuals": [float(v) for v in residuals],
         "categorical_effects": categorical_effects,
+        "pareto_terms": pareto_terms,
     }

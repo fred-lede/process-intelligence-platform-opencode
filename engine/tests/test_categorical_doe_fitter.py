@@ -50,6 +50,7 @@ def test_categorical_factorial_statistics_match_minitab_df_shape():
     assert stats["anova"]["df_reg"] == 18
     assert stats["anova"]["df_res"] == 8
     assert len(stats["coefficients"]) == 19
+    assert [item["term"] for item in stats["pareto_terms"]] == ["A", "B", "C", "A × B", "A × C", "B × C"] or {item["term"] for item in stats["pareto_terms"]} == {"A", "B", "C", "A × B", "A × C", "B × C"}
 
 
 def test_categorical_effects_are_marginal_means_over_other_factors():
