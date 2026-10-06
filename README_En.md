@@ -46,6 +46,7 @@ Run checks with `npx tsc --noEmit`, `npm run build`, `cd engine && .venv/bin/pyt
 |---|---|
 | `doe_linear` | Main effects |
 | `doe_quadratic` | Curvature and interactions |
+| `doe_categorical_factorial` | Three-level categorical-factor DOE with main and pairwise interaction effects |
 | `random_forest` | Nonlinear regression |
 | `xgboost` / `lightgbm` | Boosted nonlinear prediction |
 | `residual_hybrid` | DOE trend plus RF residual |

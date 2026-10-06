@@ -367,6 +367,7 @@ print('GPU OK')
 |---|---|---|
 | `doe_linear` | 線性 DOE | 主要效應分析 |
 | `doe_quadratic` | 二次 DOE | 曲率 + 交互作用 |
+| `doe_categorical_factorial` | 三水準類別因子 DOE | 主效應 + 兩因子交互作用；數值外觀的水準仍按類別處理 |
 | `random_forest` | 隨機森林回歸 | 非線性殘差補償 + 自動特徵選取 |
 | `xgboost` | XGBoost 回歸 | 高維非線性預測 |
 | `lightgbm` | LightGBM 回歸 | 高效大資料訓練 |
