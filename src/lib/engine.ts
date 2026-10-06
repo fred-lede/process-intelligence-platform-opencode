@@ -1177,6 +1177,7 @@ export interface MonteCarloParams {
   usl?: number
   filter_column?: string
   filter_value?: string
+  input_distributions?: Record<string, { name: string; params?: (string | number)[] }>
 }
 
 export async function analyzeMonteCarlo(params: MonteCarloParams): Promise<MonteCarloAnalysisResult> {

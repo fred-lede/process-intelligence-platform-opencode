@@ -1990,7 +1990,7 @@ def _handle_monte_carlo_run(params: dict) -> dict:
         usl=usl,
         model=fit.model,
         sampling_method=params.get("sampling_method", "auto"),
-        input_distributions={
+        input_distributions=params.get("input_distributions") or {
             col: {
                 "name": (fit_best_distribution(df[col].dropna().tolist(), top_n=1)[0].name
                          if fit_best_distribution(df[col].dropna().tolist(), top_n=1) else "empirical")

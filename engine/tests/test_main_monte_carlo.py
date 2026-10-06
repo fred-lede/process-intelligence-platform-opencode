@@ -306,3 +306,43 @@ def test_monte_carlo_compare_reports_failed_baseline(tmp_path):
     result = handle_request("monte_carlo/compare", {"baseline": base, "candidate": cand})
     assert result["success"] is False
     assert result["error"]["code"] == "MONTE_CARLO_COMPARE_FAILED"
+
+
+def test_monte_carlo_run_input_distributions_override(tmp_path):
+    """前端手動選擇的分佈須優先於 AIC 自動配適。"""
+    did = _import_csv_for_mc(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+
+    result = handle_request("monte_carlo/run", {
+        "dataset_id": did,
+        "model_id": model_id,
+        "n_simulations": 500,
+        "seed": 42,
+        "input_distributions": {"x1": {"name": "poisson"}, "x2": {"name": "lognormal"}},
+    })
+    assert result["success"]
+    applied = result["result"]["input_distributions"]
+    # 手動選擇的分佈應被記錄（poisson 需整數資料、lognormal 需正均值；
+    # x1/x2 為常態資料 → poisson 整數檢查不通過會 fallback empirical，
+    # lognormal 正均值通過 → 記錄 lognormal。記錄的是「實際套用」而非「要求」。）
+    assert "x1" in applied and "x2" in applied
+    assert applied["x2"]["name"] == "lognormal"
+    # 常態資料的 x1：poisson 要求整數計數 → 不通過 → empirical（truthful 記錄）
+    assert applied["x1"]["name"] in ("poisson", "empirical")
+
+
+def test_monte_carlo_run_invalid_distribution_falls_back(tmp_path):
+    did = _import_csv_for_mc(tmp_path)
+    fit = _fit_model(tmp_path, did)
+    model_id = fit["model_id"]
+
+    result = handle_request("monte_carlo/run", {
+        "dataset_id": did,
+        "model_id": model_id,
+        "n_simulations": 500,
+        "seed": 42,
+        "input_distributions": {"x1": {"name": "not_a_distribution"}},
+    })
+    assert result["success"]
+    assert result["result"]["input_distributions"]["x1"]["name"] == "empirical"

@@ -13,6 +13,14 @@ import {
 } from '../../lib/processFlowContext'
 import { buildMonteCarloContext } from '../../lib/assistantData'
 
+function distOverridesToParams(overrides: Record<string, string>) {
+  const out: Record<string, { name: string; params?: (string | number)[] }> = {}
+  for (const [col, name] of Object.entries(overrides)) {
+    out[col] = { name }
+  }
+  return out
+}
+
 export default function MonteCarlo() {
   const { t } = useTranslation()
   const { importResult, spec } = useDataPipelineStore()
@@ -55,7 +63,7 @@ export default function MonteCarlo() {
     }
   }, [importResult?.dataset_id])
 
-  const [models, setModels] = useState<Array<{ model_id: string; model_type: string; equation: string }>>([])
+  const [models, setModels] = useState<Array<{ model_id: string; model_type: string; equation: string; inputs: string[] }>>([])
   const [selectedModel, setSelectedModel] = useState<string | undefined>()
   const [nSimulations, setNSimulations] = useState<number>(10000)
   const [seed, setSeed] = useState<number>(42)
@@ -63,6 +71,7 @@ export default function MonteCarlo() {
   const [samplingMethod, setSamplingMethod] = useState<'auto' | 'bootstrap' | 'normal'>('auto')
   const [result, setResult] = useState<MonteCarloResult | null>(null)
   const [baselineSnapshot, setBaselineSnapshot] = useState<MonteCarloResult | null>(null)
+  const [inputDistOverrides, setInputDistOverrides] = useState<Record<string, string>>({})
   const [comparison, setComparison] = useState<MonteCarloComparison | null>(null)
   const [compareLoading, setCompareLoading] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -72,7 +81,7 @@ export default function MonteCarlo() {
   useEffect(() => {
     listModels(importResult?.dataset_id).then(r => {
       if (r.models) {
-        setModels(r.models.map(m => ({ model_id: m.model_id, model_type: m.model_type, equation: m.equation })))
+        setModels(r.models.map(m => ({ model_id: m.model_id, model_type: m.model_type, equation: m.equation, inputs: m.inputs ?? [] })))
       }
     }).catch(() => {})
   }, [])
@@ -103,6 +112,9 @@ export default function MonteCarlo() {
         usl: spec?.usl ?? undefined,
         ...(nodeFilterColumn && nodeFilterValue
           ? { filter_column: nodeFilterColumn, filter_value: nodeFilterValue }
+          : {}),
+        ...(samplingMethod === 'auto' && Object.keys(inputDistOverrides).length > 0
+          ? { input_distributions: distOverridesToParams(inputDistOverrides) }
           : {}),
       })
       if (!res.success || !res.result) {
@@ -142,6 +154,9 @@ export default function MonteCarlo() {
     usl: spec?.usl ?? undefined,
     ...(nodeFilterColumn && nodeFilterValue
       ? { filter_column: nodeFilterColumn, filter_value: nodeFilterValue }
+      : {}),
+    ...(samplingMethod === 'auto' && Object.keys(inputDistOverrides).length > 0
+      ? { input_distributions: distOverridesToParams(inputDistOverrides) }
       : {}),
   })
 
@@ -250,6 +265,29 @@ export default function MonteCarlo() {
               style={{ width: 170 }}
             />
           </Form.Item>
+          {selectedModel && samplingMethod === 'auto' && (models.find(m => m.model_id === selectedModel)?.inputs ?? []).map(col => (
+            <Form.Item key={col} label={`${col} ${t('monteCarlo.inputDistribution')}`} style={{ margin: 0 }}>
+              <Select
+                value={inputDistOverrides[col] ?? 'auto'}
+                onChange={v => setInputDistOverrides(prev => {
+                  const next = { ...prev }
+                  if (v === 'auto') delete next[col]
+                  else next[col] = v
+                  return next
+                })}
+                options={[
+                  { value: 'auto', label: t('monteCarlo.inputDistributionAuto') },
+                  { value: 'normal', label: 'Normal' },
+                  { value: 'lognormal', label: 'Lognormal' },
+                  { value: 'triangular', label: 'Triangular' },
+                  { value: 'uniform', label: 'Uniform' },
+                  { value: 'weibull', label: 'Weibull' },
+                  { value: 'poisson', label: 'Poisson' },
+                ]}
+                style={{ width: 150 }}
+              />
+            </Form.Item>
+          ))}
           <Form.Item label={t('monteCarlo.enableAnomalies')} style={{ margin: 0 }}>
             <Switch checked={enableAnomalies} onChange={setEnableAnomalies} />
           </Form.Item>

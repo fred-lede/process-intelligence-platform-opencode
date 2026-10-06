@@ -1066,6 +1066,8 @@
     "dpmo": "DPMO",
     "zLsl": "Z (LSL)",
     "zUsl": "Z (USL)",
+    "inputDistribution": "輸入分佈",
+    "inputDistributionAuto": "自動（最佳配適）",
     "anomalyRankings": "異常風險排名",
     "noAnomalies": "尚未配置異常場景",
     "mean": "平均",

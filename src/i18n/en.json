@@ -1066,6 +1066,8 @@
     "dpmo": "DPMO",
     "zLsl": "Z (LSL)",
     "zUsl": "Z (USL)",
+    "inputDistribution": "input distribution",
+    "inputDistributionAuto": "Auto (best fit)",
     "anomalyRankings": "Anomaly Risk Rankings",
     "noAnomalies": "No anomaly scenarios configured",
     "mean": "Mean",

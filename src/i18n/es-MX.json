@@ -1071,6 +1071,8 @@
     "dpmo": "DPMO",
     "zLsl": "Z (LSL)",
     "zUsl": "Z (USL)",
+    "inputDistribution": "distribución de entrada",
+    "inputDistributionAuto": "Automática (mejor ajuste)",
     "anomalyRankings": "Rankings de riesgo de anomalías",
     "ngProbability": "Probabilidad NG",
     "noModels": "Aún no hay modelos entrenados. Vaya al Centro de Modelos para entrenar uno primero.",
