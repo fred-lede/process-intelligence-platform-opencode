@@ -9,6 +9,7 @@ from process_intelligence_engine.modeling.model_selection import compare_models
 from process_intelligence_engine.modeling.validation import analyze_residuals, compute_credibility
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.monte_carlo import predict_output
+from process_intelligence_engine.optimization import run_optquest
 
 
 def _frame():
@@ -101,3 +102,14 @@ def test_categorical_doe_supports_monte_carlo_prediction():
     fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
     value = predict_output("doe_categorical_factorial", fit.coefficients or {}, {"A": 40, "B": 5, "C": 0.0}, model=fit.model, feature_names=fit.inputs)
     assert value == pytest.approx(frame.iloc[0]["Y"])
+
+
+def test_categorical_doe_supports_optquest_discrete_levels():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    result = run_optquest(fit, frame, objective="hit_target", lsl=None, usl=None,
+                          target_value=1.0, n_candidates=6, n_eval_samples=5, seed=7)
+
+    assert result["best_point"]["A"] in (40, 60, 80)
+    assert result["best_point"]["B"] in (5, 7, 9)
+    assert result["best_point"]["C"] in (0.0, 0.5, 1.0)

@@ -32,9 +32,14 @@ def _evaluate_points(fit, df, points, lsl, usl, n_eval_samples, seed):
     sigmas = {c: (float(df[c].std(ddof=1)) if len(df) > 1 and df[c].std(ddof=1) > 0 else 1.0)
               for c in input_cols}
     feature_names = fit.selected_inputs or fit.inputs
+    categorical_levels = getattr(fit.model, "levels", {}) if fit.model_type == "doe_categorical_factorial" else {}
     results = []
     for pt in points:
-        samples = {c: rng.normal(pt[c], sigmas[c], n_eval_samples) for c in input_cols}
+        samples = {
+            c: np.full(n_eval_samples, pt[c]) if c in categorical_levels
+            else rng.normal(pt[c], sigmas[c], n_eval_samples)
+            for c in input_cols
+        }
         outputs = np.array([
             predict_output(fit.model_type, fit.coefficients or {},
                            {c: samples[c][i] for c in input_cols},
@@ -85,10 +90,16 @@ def run_optquest(fit, df, objective, lsl, usl, target_value=None, cpk_min=1.33,
         if lo > hi:
             raise ValueError(f"bounds for {c!r} inverted (min>max)")
 
-    points_raw = _lhs_samples(bounds, n_candidates, seed)
-    points = [{c: (float(bounds[c][0]) if bounds[c][1] == bounds[c][0] else float(points_raw[c][i]))
-               for c in fit.inputs}
-              for i in range(n_candidates)]
+    if fit.model_type == "doe_categorical_factorial" and getattr(fit.model, "levels", None):
+        rng = np.random.default_rng(seed)
+        levels = fit.model.levels
+        points = [{c: levels[c][int(rng.integers(0, len(levels[c])))] for c in fit.inputs}
+                  for _ in range(n_candidates)]
+    else:
+        points_raw = _lhs_samples(bounds, n_candidates, seed)
+        points = [{c: (float(bounds[c][0]) if bounds[c][1] == bounds[c][0] else float(points_raw[c][i]))
+                   for c in fit.inputs}
+                  for i in range(n_candidates)]
 
     metrics = _evaluate_points(fit, df, points, lsl, usl, n_eval_samples, seed)
 
