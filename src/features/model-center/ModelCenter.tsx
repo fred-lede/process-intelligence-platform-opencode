@@ -2224,8 +2224,8 @@ export default function ModelCenter() {
                   <Alert
                     type="warning"
                     showIcon
-                    message={t('validationLab.designBasedTitle')}
-                    description={t('validationLab.designBasedDescription')}
+                    message={t('modelCenter.designBasedTitle')}
+                    description={t('modelCenter.designBasedDescription')}
                   />
                 )}
                 {validationResult.design_metrics && (
@@ -2325,10 +2325,10 @@ export default function ModelCenter() {
                       <Alert
                         type={doeStats.anova.pure_error.df > 0 ? 'info' : 'warning'}
                         showIcon
-                        message={`${t('validationLab.pureError')} df=${doeStats.anova.pure_error.df}`}
+                        message={`${t('modelCenter.pureError')} df=${doeStats.anova.pure_error.df}`}
                         description={doeStats.anova.lack_of_fit?.df && doeStats.anova.lack_of_fit.p_value != null
-                          ? `${t('validationLab.lackOfFit')}: F=${doeStats.anova.lack_of_fit.f_stat?.toFixed(3)} · p=${doeStats.anova.lack_of_fit.p_value.toFixed(6)}`
-                          : t('validationLab.noReplicateError')}
+                          ? `${t('modelCenter.lackOfFit')}: F=${doeStats.anova.lack_of_fit.f_stat?.toFixed(3)} · p=${doeStats.anova.lack_of_fit.p_value.toFixed(6)}`
+                          : t('modelCenter.noReplicateError')}
                         style={{ marginTop: 4 }}
                       />
                     )}
