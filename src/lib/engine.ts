@@ -1264,6 +1264,7 @@ export interface ModelInfo {
   equation: string
   n_train: number
   target: string
+  levels?: Record<string, Array<string | number>> | null
 }
 
 export interface InputRange {
@@ -1275,7 +1276,7 @@ export interface InputRange {
 
 export async function predictOutput(params: {
   model_id: string
-  input_values: Record<string, number>
+  input_values: Record<string, string | number>
 }): Promise<PredictionResult> {
   return engineCall<PredictionResult>('prediction/predict', params)
 }
@@ -1291,8 +1292,8 @@ export async function getModelInfo(params: {
 export interface ExperimentRecord {
   experiment_id: string
   model_id: string
-  planned_inputs: Record<string, number>
-  actual_inputs: Record<string, number>
+  planned_inputs: Record<string, string | number>
+  actual_inputs: Record<string, string | number>
   predicted_output: number
   actual_output: number
   prediction_error: number
@@ -1304,8 +1305,8 @@ export interface ExperimentRecord {
 
 export interface RecordExperimentParams {
   model_id: string
-  planned_inputs: Record<string, number>
-  actual_inputs: Record<string, number>
+  planned_inputs: Record<string, string | number>
+  actual_inputs: Record<string, string | number>
   predicted_output: number
   actual_output: number
   result: 'pass' | 'fail' | 'inconclusive' | 'unknown'
@@ -2531,9 +2532,9 @@ export interface NextExperimentSuggestion {
 export async function recordExperimentWithVerdict(params: {
   experiment_id?: string
   model_id: string
-  planned_inputs: Record<string, number>
-  actual_inputs: Record<string, number>
-  predicted_output: number
+  planned_inputs: Record<string, string | number>
+  actual_inputs: Record<string, string | number>
+  predicted_output?: number
   actual_output: number
   tolerance?: number
   spec_range?: number

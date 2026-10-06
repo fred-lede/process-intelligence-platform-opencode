@@ -341,16 +341,26 @@ def _handle_experiment_record(params: dict) -> dict:
 
 def _handle_experiment_record_with_verdict(params: dict) -> dict:
     """Record experiment with automatic verdict computation."""
-    predicted = float(params.get("predicted_output", 0))
-    actual = float(params.get("actual_output", 0))
     fit = MODEL_REGISTRY.get(params["model_id"])
+    if params.get("predicted_output") is None:
+        actual_inputs = params.get("actual_inputs", {})
+        predicted = predict_single(
+            fit.model_type,
+            fit.coefficients or {},
+            actual_inputs,
+            model=fit.model,
+            feature_names=fit.selected_inputs or fit.inputs,
+        )
+    else:
+        predicted = float(params["predicted_output"])
+    actual = float(params.get("actual_output", 0))
     tolerance = params.get("tolerance")
     rmse = params.get("rmse", fit.metrics.get("rmse"))
     binary = fit.model_type == "logistic_regression"
     verdict = compute_experiment_verdict(predicted, actual, tolerance,
         spec_range=params.get("spec_range"), rmse=rmse, is_classification=binary,
         accuracy=params.get("accuracy"), recall=params.get("recall"))
-    exp_result = _handle_experiment_record({**params, "result": verdict})
+    exp_result = _handle_experiment_record({**params, "predicted_output": predicted, "result": verdict})
     model_entities = [e for e in _VERSION_CHAIN.get_chain_summary() if e["entity_type"] == "model"
                       and _VERSION_CHAIN.get_entity(e["entity_id"]).metadata.get("model_id") == fit.model_id]
     if model_entities:
@@ -2120,6 +2130,7 @@ def _handle_prediction_model_info(params: dict) -> dict:
         "equation": fit.equation,
         "n_train": fit.n_train,
         "target": fit.target,
+        "levels": getattr(fit.model, "levels", None),
     }
 
 

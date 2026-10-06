@@ -940,6 +940,31 @@ def test_experiment_record_with_verdict(tmp_path):
     assert result["verdict"] in ("supports", "partially_supports", "does_not_support", "needs_remodel")
 
 
+def test_categorical_experiment_record_computes_prediction_from_actual_inputs(tmp_path):
+    rows = ["A,B,C,Y"]
+    for a in (40, 60, 80):
+        for b in (5, 7, 9):
+            for c in (0, 0.5, 1):
+                rows.append(f"{a},{b},{c},{a + b + c}")
+    csv = tmp_path / "categorical.csv"
+    csv.write_text("\n".join(rows))
+    dataset_id = handle_request("data/import", {"file_path": str(csv)})["dataset_id"]
+    fit_result = handle_request("modeling/fit", {
+        "dataset_id": dataset_id,
+        "model_type": "doe_categorical_factorial",
+        "target": "Y",
+        "inputs": ["A", "B", "C"],
+    })
+    result = handle_request("experiment/record_with_verdict", {
+        "model_id": fit_result["model_id"],
+        "planned_inputs": {"A": 40, "B": 5, "C": 0.0},
+        "actual_inputs": {"A": 40, "B": 5, "C": 0.0},
+        "actual_output": 45.0,
+        "operator": "fred",
+    })
+    assert result["prediction_error"] == pytest.approx(0.0)
+
+
 def test_experiment_suggest_next(tmp_path):
     csv = tmp_path / "test.csv"
     csv.write_text("x,y\n1,2\n3,4\n5,6\n7,8\n9,10\n")

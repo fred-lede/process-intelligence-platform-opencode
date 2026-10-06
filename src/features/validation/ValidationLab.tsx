@@ -20,6 +20,7 @@ import {
   suggestNextExperiment,
   listExperiments,
   getModelInfo,
+  predictOutput,
   type ExperimentRecord,
   type FullValidationResult,
 } from '../../lib/engine'
@@ -50,11 +51,11 @@ export default function ValidationLab() {
   }, [fullValidation, experiments, setContext])
   const [experimentsLoading, setExperimentsLoading] = useState(false)
   const [selectedModelId, setSelectedModelId] = useState<string | undefined>()
-  const [modelInfo, setModelInfo] = useState<{ equation: string; inputs: string[]; model_type: string } | null>(null)
+  const [modelInfo, setModelInfo] = useState<{ equation: string; inputs: string[]; model_type: string; levels?: Record<string, Array<string | number>> | null } | null>(null)
 
   const [form] = Form.useForm()
   const [submitting, setSubmitting] = useState(false)
-  const [nextConditions, setNextConditions] = useState<Array<{ condition: Record<string, number>; rationale: string }>>([])
+  const [nextConditions, setNextConditions] = useState<Array<{ condition: Record<string, string | number>; rationale: string }>>([])
 
   const datasetId = importResult?.dataset_id
   const eligibleModels = models.filter((m) => m.status === 'validated' || m.status === 'approved')
@@ -92,7 +93,7 @@ export default function ValidationLab() {
     try {
       const info = await getModelInfo({ model_id: modelId })
       if (info.success) {
-        setModelInfo({ equation: info.equation, inputs: info.inputs, model_type: info.model_type })
+        setModelInfo({ equation: info.equation, inputs: info.inputs, model_type: info.model_type, levels: info.levels })
       }
     } catch {
       // ignore
@@ -120,9 +121,9 @@ export default function ValidationLab() {
   }
 
   const handleSubmitExperiment = async (values: {
-    planned_inputs: Record<string, number>
-    actual_inputs: Record<string, number>
-    predicted_output: number
+    planned_inputs: Record<string, string | number>
+    actual_inputs: Record<string, string | number>
+    predicted_output?: number
     actual_output: number
     result: 'pass' | 'fail' | 'inconclusive' | 'unknown'
     operator: string
@@ -131,11 +132,12 @@ export default function ValidationLab() {
     if (!selectedModelId) return
     setSubmitting(true)
     try {
+      const prediction = await predictOutput({ model_id: selectedModelId, input_values: values.actual_inputs })
       const result = await recordExperimentWithVerdict({
         model_id: selectedModelId,
         planned_inputs: values.planned_inputs,
         actual_inputs: values.actual_inputs,
-        predicted_output: values.predicted_output,
+        predicted_output: prediction.predicted,
         actual_output: values.actual_output,
         dataset_id: datasetId,
         spec_range: spec?.lsl != null && spec?.usl != null ? spec.usl - spec.lsl : undefined,
@@ -485,7 +487,9 @@ export default function ValidationLab() {
                     label={`${inputName} (planned)`}
                     rules={[{ required: true, message: t('validationLab.required') }]}
                   >
-                    <InputNumber style={{ width: '100%' }} precision={4} placeholder="Planned value" />
+                    {modelInfo?.levels?.[inputName] ? (
+                      <Select options={modelInfo.levels[inputName].map((level) => ({ value: level, label: String(level) }))} />
+                    ) : <InputNumber style={{ width: '100%' }} precision={4} placeholder="Planned value" />}
                   </Form.Item>
                 </Col>
                 <Col span={12} key={`actual_${inputName}`}>
@@ -494,7 +498,9 @@ export default function ValidationLab() {
                     label={`${inputName} (actual)`}
                     rules={[{ required: true, message: t('validationLab.required') }]}
                   >
-                    <InputNumber style={{ width: '100%' }} precision={4} placeholder="Actual value" />
+                    {modelInfo?.levels?.[inputName] ? (
+                      <Select options={modelInfo.levels[inputName].map((level) => ({ value: level, label: String(level) }))} />
+                    ) : <InputNumber style={{ width: '100%' }} precision={4} placeholder="Actual value" />}
                   </Form.Item>
                 </Col>
               </>
@@ -505,9 +511,9 @@ export default function ValidationLab() {
               <Form.Item
                 name="predicted_output"
                 label={t('validationLab.predictedOutput')}
-                rules={[{ required: true, message: t('validationLab.required') }]}
+                extra={modelInfo?.model_type === 'doe_categorical_factorial' ? '由模型依實際輸入自動計算' : undefined}
               >
-                <InputNumber style={{ width: '100%' }} precision={4} placeholder="Model prediction" />
+                <InputNumber style={{ width: '100%' }} precision={4} placeholder="送出時自動計算" readOnly />
               </Form.Item>
             </Col>
             <Col span={12}>

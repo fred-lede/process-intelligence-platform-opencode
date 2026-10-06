@@ -75,3 +75,28 @@ def test_prediction_model_info_unknown_model_raises():
         handle_request("prediction/model_info", {
             "model_id": "nonexistent",
         })
+
+
+def test_categorical_model_info_exposes_levels_and_prediction_handler(tmp_path):
+    rows = ["A,B,C,Y"]
+    for a in (40, 60, 80):
+        for b in (5, 7, 9):
+            for c in (0, 0.5, 1):
+                rows.append(f"{a},{b},{c},{a + b + c}")
+    path = tmp_path / "categorical.csv"
+    path.write_text("\n".join(rows), encoding="utf-8")
+    did = handle_request("data/import", {"file_path": str(path)})["dataset_id"]
+    fit = handle_request("modeling/fit", {
+        "dataset_id": did,
+        "model_type": "doe_categorical_factorial",
+        "target": "Y",
+        "inputs": ["A", "B", "C"],
+    })
+    info = handle_request("prediction/model_info", {"model_id": fit["model_id"]})
+    assert info["levels"] == {"A": [40, 60, 80], "B": [5, 7, 9], "C": [0.0, 0.5, 1.0]}
+    prediction = handle_request("prediction/predict", {
+        "model_id": fit["model_id"],
+        "input_values": {"A": 40, "B": 5, "C": 0.0},
+    })
+    assert prediction["success"]
+    assert prediction["predicted"] == pytest.approx(45.0)
