@@ -395,7 +395,7 @@
   },
   "modelCenter": {
     "interactionSummary": "Interaction summary",
-    "interactionAdvice": "Larger absolute values indicate stronger joint effects; prioritize high-value pairs for experimental confirmation. Values are shown to six decimal places so small effects are not hidden by rounding.",
+    "interactionAdvice": "The values in the interaction matrix are effect strengths; larger absolute values indicate a stronger joint-effect magnitude (currently highest: {{pair}} = {{strength}}). The p(min) values listed below are the smallest p-values across the level contrasts for each pair; they serve a different purpose and should not be compared directly with effect strength. Prioritize pairs with large effects or small p-values, then confirm them experimentally. Values are shown to six decimal places so small effects are not hidden by rounding.",
     "interactionMode": {
       "notModeled": {
         "title": "Interactions not modeled",

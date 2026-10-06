@@ -395,7 +395,7 @@
   },
   "modelCenter": {
     "interactionSummary": "交互作用摘要",
-    "interactionAdvice": "絕對值越大表示聯合作用越強，建議優先檢視高值組合並以實驗確認。數值顯示至小數點後六位，避免小幅效果被四捨五入成 0。",
+    "interactionAdvice": "交互作用圖中的數值是效果強度；絕對值越大表示聯合作用幅度越強（目前最高為 {{pair}} = {{strength}}）。下方列出的 p(min) 是各因子組合層級對比中的最小 p-value，兩者用途不同，不應直接比較。建議優先檢視高效果強度或低 p-value 組合，並以實驗確認。數值顯示至小數點後六位，避免小幅效果被四捨五入成 0。",
     "interactionMode": {
       "notModeled": {
         "title": "交互作用未建模",
