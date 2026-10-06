@@ -945,6 +945,13 @@ def _handle_validation_full(params: dict) -> dict:
     exp_recommendation = recommend_experiments_full(best_fit, df, interactions, validation_result)
 
     design_context = _build_design_context(best_fit, df)
+    confirmation_records = EXPERIMENT_REGISTRY.list_by_model(best_fit.model_id)
+    confirmation_evidence = {
+        "count": len(confirmation_records),
+        "pass_count": sum(1 for item in confirmation_records if item["result"] == "pass"),
+        "pass_rate": (sum(1 for item in confirmation_records if item["result"] == "pass") / len(confirmation_records)) if confirmation_records else None,
+        "mean_abs_prediction_error": (float(np.mean([abs(item["prediction_error"]) for item in confirmation_records])) if confirmation_records else None),
+    }
 
     credibility_per_model = {
         mid: compute_credibility(MODEL_REGISTRY._get_unlocked(mid), df)
@@ -958,6 +965,7 @@ def _handle_validation_full(params: dict) -> dict:
         "experiment_recommendations": exp_recommendation,
         "credibility": credibility_per_model,
         "design_context": design_context,
+        "confirmation_evidence": confirmation_evidence,
     }
 
 

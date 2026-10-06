@@ -45,6 +45,7 @@ def test_full_validation():
     assert result["models"][0]["validation_basis"] == "random_fold_cv"
     assert result["residual_analysis"]["durbin_watson"]["statistic"] > 0
     assert result["design_context"] is None
+    assert result["confirmation_evidence"]["count"] == 0
 
 
 def test_full_validation_marks_categorical_doe_as_design_based():

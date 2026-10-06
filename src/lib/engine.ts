@@ -610,6 +610,12 @@ export interface FullValidationResult {
     has_replicates: boolean
     warning: string
   } | null
+  confirmation_evidence?: {
+    count: number
+    pass_count: number
+    pass_rate: number | null
+    mean_abs_prediction_error: number | null
+  }
   credibility: Record<string, {
     data_coverage: number
     predictive_acc: number
