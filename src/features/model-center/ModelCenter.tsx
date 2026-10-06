@@ -1989,7 +1989,7 @@ export default function ModelCenter() {
                     title: '',
                     dataIndex: 'factor',
                     key: 'factor',
-                    width: 120,
+                    width: 220,
                     render: (v: string) => <strong>{v}</strong>,
                   },
                   ...interactions.factors.map((_, ci) => ({
@@ -2023,7 +2023,25 @@ export default function ModelCenter() {
                 ]}
                 rowKey="factor"
               />
-              <Alert type="info" showIcon message={t('modelCenter.interactionSummary')} description={t('modelCenter.interactionAdvice', { pair: '—', strength: '0.000000' })} />
+              <Alert
+                type="info"
+                showIcon
+                message={t('modelCenter.interactionSummary')}
+                description={(() => {
+                  let bestPair = '—'
+                  let bestStrength = 0
+                  for (let i = 0; i < interactions.factors.length; i += 1) {
+                    for (let j = i + 1; j < interactions.factors.length; j += 1) {
+                      const strength = interactions.matrix[i]?.[j] ?? 0
+                      if (strength > bestStrength) {
+                        bestStrength = strength
+                        bestPair = `${interactions.factors[i]} × ${interactions.factors[j]}`
+                      }
+                    }
+                  }
+                  return t('modelCenter.interactionAdvice', { pair: bestPair, strength: bestStrength.toFixed(6) })
+                })()}
+              />
               </>
             ) : (
               <Alert type="info" showIcon message={timeSeriesActive ? t('modelCenter.timeSeries.notApplicable') : t('modelCenter.noInteraction')} />
