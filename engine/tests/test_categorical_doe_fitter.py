@@ -8,6 +8,7 @@ from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.model_selection import compare_models
 from process_intelligence_engine.modeling.validation import analyze_residuals, compute_credibility
 from process_intelligence_engine.modeling.interactions import compute_interactions
+from process_intelligence_engine.monte_carlo import predict_output
 
 
 def _frame():
@@ -93,3 +94,10 @@ def test_categorical_doe_supports_full_validation_chain():
     assert analyze_residuals(fit, frame)["residuals"]
     assert compute_interactions(fit, frame)["factors"] == ["A", "B", "C"]
     assert "composite" in compute_credibility(fit, frame)
+
+
+def test_categorical_doe_supports_monte_carlo_prediction():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    value = predict_output("doe_categorical_factorial", fit.coefficients or {}, {"A": 40, "B": 5, "C": 0.0}, model=fit.model, feature_names=fit.inputs)
+    assert value == pytest.approx(frame.iloc[0]["Y"])

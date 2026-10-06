@@ -214,7 +214,7 @@ def predict_output(
 ) -> float:
     """Predict output using model coefficients or trained model object.
 
-    Supports all model types: doe_linear, doe_quadratic, logistic_regression,
+    Supports all model types: doe_linear, doe_quadratic, doe_categorical_factorial, logistic_regression,
     weibull_regression, random_forest, xgboost, lightgbm, residual_hybrid.
 
     ``feature_names`` must be the fitted input order: deriving it from the dict
@@ -224,6 +224,10 @@ def predict_output(
     # Use trained model object when available (tree models)
     if model is not None:
         try:
+            if model_type == "doe_categorical_factorial":
+                order = list(feature_names) if feature_names else list(inputs.keys())
+                frame = pd.DataFrame([{col: inputs[col] for col in order}])
+                return float(model.predict(frame)[0])
             if model_type in ("doe_linear", "doe_quadratic"):
                 input_names = list(inputs.keys())
                 values = [float(inputs.get(col, 0.0)) for col in input_names]
@@ -279,6 +283,9 @@ def predict_output(
                         result += coefficients[key] * xi_val * xj_val
                         break
         return result
+
+    if model_type == "doe_categorical_factorial":
+        raise ValueError("categorical DOE Monte Carlo requires the fitted model artifact")
 
     if model_type == "logistic_regression":
         logit = float(coefficients.get("_intercept", 0.0))
