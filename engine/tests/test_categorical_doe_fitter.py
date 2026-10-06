@@ -26,3 +26,9 @@ def test_categorical_factorial_fit_rejects_incomplete_design():
     frame = _frame().drop(index=0)
     with pytest.raises(ValueError, match="duplicate or missing"):
         fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+
+
+def test_categorical_factorial_fit_rejects_too_many_factors_for_sample_size():
+    frame = _frame().head(19)
+    with pytest.raises(ValueError, match="duplicate or missing"):
+        fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])

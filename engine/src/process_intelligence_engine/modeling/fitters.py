@@ -230,6 +230,12 @@ def fit_doe_categorical_factorial(
     design = build_categorical_factorial_matrix(
         df, inputs, include_three_factor_interaction=include_three_factor_interaction
     )
+    rank = int(np.linalg.matrix_rank(design.matrix))
+    if rank < design.matrix.shape[1] or design.residual_df <= 0:
+        raise ValueError(
+            f"categorical factorial design is not estimable: rows={len(df)}, "
+            f"terms={design.matrix.shape[1]}, rank={rank}"
+        )
     y = df[target].to_numpy(dtype=float)
     fitted = np.linalg.lstsq(design.matrix, y, rcond=None)[0]
     estimator = CategoricalFactorialRegressor(inputs, design.levels, fitted)
