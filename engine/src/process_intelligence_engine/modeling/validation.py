@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from itertools import combinations
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -541,6 +542,30 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
     sig_count = sum(1 for c in coeff_rows[1:] if c["significant"])  # exclude intercept
     sig_count = sum(1 for c in coeff_rows[1:] if c["significant"])
 
+    categorical_effects = None
+    if model_type == "doe_categorical_factorial":
+        categorical_effects = {"main": [], "interactions": []}
+        levels = design.levels
+        base = {factor: values[0] for factor, values in levels.items()}
+        for factor, factor_levels in levels.items():
+            points = []
+            for level in factor_levels:
+                row = dict(base)
+                row[factor] = level
+                points.append({"level": level, "mean": float(model.predict(pd.DataFrame([row]))[0])})
+            categorical_effects["main"].append({"factor": factor, "points": points})
+        for left, right in combinations(fit.inputs, 2):
+            lines = []
+            for right_level in levels[right]:
+                points = []
+                for left_level in levels[left]:
+                    row = dict(base)
+                    row[left] = left_level
+                    row[right] = right_level
+                    points.append({"level": left_level, "mean": float(model.predict(pd.DataFrame([row]))[0])})
+                lines.append({"series": right_level, "points": points})
+            categorical_effects["interactions"].append({"factors": [left, right], "lines": lines})
+
     if f_p_value < 0.001:
         model_sig_label = "highly_significant"
     elif f_p_value < 0.01:
@@ -584,4 +609,5 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         "fit_level": fit_level,
         "fitted_values": [float(v) for v in y_pred],
         "residuals": [float(v) for v in residuals],
+        "categorical_effects": categorical_effects,
     }
