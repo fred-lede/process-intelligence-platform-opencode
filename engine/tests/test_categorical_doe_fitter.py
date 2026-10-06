@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 
 from process_intelligence_engine.modeling.fitters import fit_doe_categorical_factorial
-from process_intelligence_engine.modeling.validation import compute_doe_statistics
+from process_intelligence_engine.modeling.validation import compute_doe_statistics, cross_validate
 from process_intelligence_engine.prediction import predict_single
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 
@@ -71,3 +71,11 @@ def test_categorical_doe_supports_original_factor_shap_explanations():
 
     assert {item["name"] for item in result["feature_importance"]} == {"A", "B", "C"}
     assert len(result["shap_values"]) == len(frame)
+
+
+def test_categorical_doe_can_run_validation_re_fits():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    result = cross_validate(fit, frame, k=3)
+
+    assert len(result["cv_results"]) == 3

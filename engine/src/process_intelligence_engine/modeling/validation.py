@@ -67,6 +67,18 @@ def _refit_from_fit(fit, df: pd.DataFrame) -> Any:
             model_type="doe_quadratic", target=fit.target, inputs=fit.inputs, model=model
         )
         return fit_obj
+    elif fit.model_type == "doe_categorical_factorial":
+        from .categorical_doe import CategoricalFactorialRegressor, build_categorical_factorial_matrix
+        levels = getattr(fit.model, "levels", None)
+        if not levels:
+            raise ValueError("categorical DOE level metadata is unavailable")
+        design = build_categorical_factorial_matrix(df, fit.inputs, level_order=levels)
+        y = df[fit.target].to_numpy(dtype=float)
+        coefficients = np.linalg.lstsq(design.matrix, y, rcond=None)[0]
+        return ModelFit(
+            model_type="doe_categorical_factorial", target=fit.target,
+            inputs=fit.inputs, model=CategoricalFactorialRegressor(fit.inputs, levels, coefficients),
+        )
     elif fit.model_type == "random_forest":
         X = df[fit.inputs].to_numpy(dtype=float)
         y = df[fit.target].to_numpy(dtype=float)

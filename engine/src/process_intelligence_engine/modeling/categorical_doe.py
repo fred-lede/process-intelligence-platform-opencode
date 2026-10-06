@@ -47,7 +47,7 @@ class CategoricalFactorialRegressor:
         return np.column_stack(columns) @ self.coefficients
 
 
-def _levels(df: pd.DataFrame, factors: list[str]) -> dict[str, list[Any]]:
+def _levels(df: pd.DataFrame, factors: list[str], level_order: dict[str, list[Any]] | None = None) -> dict[str, list[Any]]:
     if not factors:
         raise ValueError("at least one factor is required")
     missing = [factor for factor in factors if factor not in df.columns]
@@ -57,7 +57,7 @@ def _levels(df: pd.DataFrame, factors: list[str]) -> dict[str, list[Any]]:
     for factor in factors:
         if df[factor].isna().any():
             raise ValueError(f"missing factor level: {factor}")
-        values = sorted(df[factor].unique().tolist())
+        values = list(level_order[factor]) if level_order and factor in level_order else sorted(df[factor].unique().tolist())
         if len(values) < 2:
             raise ValueError(f"factor must have at least two levels: {factor}")
         result[factor] = values
@@ -89,8 +89,9 @@ def build_categorical_factorial_matrix(
     factors: list[str],
     include_two_factor_interactions: bool = True,
     include_three_factor_interaction: bool = False,
+    level_order: dict[str, list[Any]] | None = None,
 ) -> CategoricalDesignMatrix:
-    levels = _levels(df, factors)
+    levels = _levels(df, factors, level_order)
     columns = [np.ones(len(df), dtype=float)]
     terms = ["1"]
     term_factors: dict[str, tuple[str, ...]] = {"1": ()}
