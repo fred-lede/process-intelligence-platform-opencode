@@ -397,3 +397,73 @@ def test_predict_tree_model_uses_fitted_feature_order():
     # Without the fitted order the columns are swapped, giving a different value.
     without_order = predict_output("random_forest", {}, point, model=fit.model)
     assert abs(without_order - with_order) > 1.0
+
+
+def test_monte_carlo_input_means_shifts_normal():
+    """input_means：保留資料變異度，把均值平移到指定點（DOE 最佳點語意）。"""
+    rng = np.random.default_rng(3)
+    df = _make_simple_dataset(rng)
+    x1_mean, x2_mean = float(df["x1"].mean()), float(df["x2"].mean())
+    result = run_monte_carlo(
+        df=df, model_type="doe_linear",
+        coefficients={"_intercept": 10.0, "x1": 2.0, "x2": -1.5},
+        input_columns=["x1", "x2"], output_column="y",
+        n_simulations=4000, seed=42, sampling_method="auto",
+        input_distributions={"x1": {"name": "normal"}, "x2": {"name": "normal"}},
+        input_means={"x1": x1_mean + 30.0, "x2": x2_mean - 20.0},
+    )
+    applied = result["input_distributions"]
+    assert applied["x1"]["mean"] == pytest.approx(x1_mean + 30.0, abs=0.5)
+    assert applied["x1"]["mean_override"] == pytest.approx(x1_mean + 30.0)
+    assert applied["x2"]["mean_override"] == pytest.approx(x2_mean - 20.0)
+    # y = 10 + 2*x1 - 1.5*x2；x1 移 +30 → +60，x2 移 -20 → +30，合計 +90
+    expected_shift = 2 * 30.0 + 1.5 * 20.0
+    base = run_monte_carlo(
+        df=df, model_type="doe_linear",
+        coefficients={"_intercept": 10.0, "x1": 2.0, "x2": -1.5},
+        input_columns=["x1", "x2"], output_column="y",
+        n_simulations=4000, seed=42, sampling_method="auto",
+        input_distributions={"x1": {"name": "normal"}, "x2": {"name": "normal"}},
+    )
+    assert result["output_mean"] - base["output_mean"] == pytest.approx(expected_shift, abs=2.0)
+
+
+def test_monte_carlo_input_means_poisson_lambda_override():
+    rng = np.random.default_rng(11)
+    defects = rng.poisson(3, 150).astype(float)
+    x2 = rng.normal(50, 3, 150)
+    y = 10 + 0.5 * defects - 1.0 * x2 + rng.normal(0, 0.3, 150)
+    df = __import__("pandas").DataFrame({"defects": defects, "x2": x2, "y": y})
+    result = run_monte_carlo(
+        df=df, model_type="doe_linear",
+        coefficients={"_intercept": float(y.mean()), "defects": 0.5, "x2": -1.0},
+        input_columns=["defects", "x2"], output_column="y",
+        n_simulations=2000, seed=42, sampling_method="auto",
+        input_distributions={"defects": {"name": "poisson"}},
+        input_means={"defects": 7.0},
+    )
+    applied = result["input_distributions"]
+    assert applied["defects"]["name"] == "poisson"
+    assert applied["defects"].get("mean_override") == pytest.approx(7.0)
+
+
+def test_monte_carlo_input_means_absent_keeps_old_behavior():
+    rng = np.random.default_rng(3)
+    df = _make_simple_dataset(rng)
+    r1 = run_monte_carlo(
+        df=df, model_type="doe_linear",
+        coefficients={"_intercept": 10.0, "x1": 2.0, "x2": -1.5},
+        input_columns=["x1", "x2"], output_column="y",
+        n_simulations=800, seed=42, sampling_method="auto",
+        input_distributions={"x1": {"name": "normal"}, "x2": {"name": "normal"}},
+    )
+    r2 = run_monte_carlo(
+        df=df, model_type="doe_linear",
+        coefficients={"_intercept": 10.0, "x1": 2.0, "x2": -1.5},
+        input_columns=["x1", "x2"], output_column="y",
+        n_simulations=800, seed=42, sampling_method="auto",
+        input_distributions={"x1": {"name": "normal"}, "x2": {"name": "normal"}},
+        input_means=None,
+    )
+    assert r1["output_values"] == r2["output_values"]
+    assert "mean_override" not in r1["input_distributions"]["x1"]

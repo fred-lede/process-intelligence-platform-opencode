@@ -1998,6 +1998,7 @@ def _handle_monte_carlo_run(params: dict) -> dict:
             for col in fit.inputs
             if col in df.columns and len(df[col].dropna()) >= 5
         },
+        input_means=params.get("input_means"),
     )
     sim_chain_id = _VERSION_CHAIN.register_entity(
         entity_type="simulation",

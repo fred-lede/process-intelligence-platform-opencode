@@ -1178,6 +1178,7 @@ export interface MonteCarloParams {
   filter_column?: string
   filter_value?: string
   input_distributions?: Record<string, { name: string; params?: (string | number)[] }>
+  input_means?: Record<string, number>
 }
 
 export async function analyzeMonteCarlo(params: MonteCarloParams): Promise<MonteCarloAnalysisResult> {

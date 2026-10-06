@@ -19,6 +19,7 @@ def sample_with_name(
     n: int = 1000,
     seed: int | None = None,
     params: dict[str, Any] | None = None,
+    mean_override: float | None = None,
 ) -> tuple[list[float], str]:
     """Sample from a statistical distribution; return (samples, applied_name).
 
@@ -26,13 +27,18 @@ def sample_with_name(
     Failed fits and unknown names fall back to empirical resampling, and
     the applied name reflects what was actually used so callers record
     truthful sampling metadata.
+
+    mean_override: shift the location (mean) to the given value while
+    keeping the data's spread (sigma/range width). This is the "mu = DOE
+    best point, sigma = machine precision" process-tuning semantics.
     """
     rng = np.random.default_rng(seed)
     arr = np.array(values, dtype=float)
     params = params or {}
 
     if dist_name == "normal" and len(arr) >= 2:
-        mu, sigma = float(arr.mean()), float(arr.std(ddof=1))
+        mu = float(mean_override) if mean_override is not None else float(arr.mean())
+        sigma = float(arr.std(ddof=1))
         if sigma <= 0:
             sigma = 1.0
         return rng.normal(mu, sigma, n).tolist(), "normal"
@@ -46,7 +52,8 @@ def sample_with_name(
         return rng.gamma(k, theta, n).tolist(), "gamma"
 
     if dist_name == "lognormal" and len(arr) >= 2:
-        mu, sigma = float(arr.mean()), float(arr.std(ddof=1))
+        mu = float(mean_override) if mean_override is not None else float(arr.mean())
+        sigma = float(arr.std(ddof=1))
         if mu > 0 and sigma > 0:
             log_mu = math.log(mu / math.sqrt(1.0 + (sigma / mu) ** 2))
             log_sigma = math.sqrt(math.log(1.0 + (sigma / mu) ** 2))
@@ -56,6 +63,10 @@ def sample_with_name(
     if dist_name == "uniform" and len(arr) >= 2:
         lo, hi = float(arr.min()), float(arr.max())
         if hi > lo:
+            if mean_override is not None:
+                # 保留範圍寬度，以 mean_override 為中心平移
+                half = (hi - lo) / 2.0
+                lo, hi = mean_override - half, mean_override + half
             return rng.uniform(lo, hi, n).tolist(), "uniform"
 
     if dist_name == "triangular" and len(arr) >= 2:
@@ -69,6 +80,12 @@ def sample_with_name(
             if mode is None:
                 mode = (lo + hi) / 2
             mode = min(max(float(mode), lo), hi)  # clamp 進 [lo, hi]
+            if mean_override is not None:
+                # 保留形狀：mode 的相對位置不變，整體平移至 mean_override
+                width = hi - lo
+                rel = (mode - lo) / width
+                lo, hi = mean_override - width / 2.0, mean_override + width / 2.0
+                mode = lo + rel * width
             return rng.triangular(lo, mode, hi, n).tolist(), "triangular"
 
     if dist_name == "weibull" and len(arr) >= 2:
@@ -80,14 +97,21 @@ def sample_with_name(
             shape, loc, scale = weibull_min.fit(positive, floc=0)
             # rng.weibull 回傳標準 Weibull（scale=1）；須乘回擬合的 scale，
             # 否則抽樣值量級錯誤（差 1/scale 倍）。
+            if mean_override is not None:
+                # 保留 shape，調整 scale 使 E[X] = mean_override
+                from scipy.special import gamma as _gamma
+                expected_unit = _gamma(1.0 + 1.0 / shape)
+                scale = float(mean_override) / expected_unit
+                if scale <= 0:
+                    raise ValueError("weibull mean_override must be positive")
             return (scale * rng.weibull(shape, n)).tolist(), "weibull"
         except Exception:
             pass  # fall through to empirical fallback
 
     if dist_name == "poisson" and len(arr) >= 2:
-        lam = float(arr.mean())
+        lam = float(mean_override) if mean_override is not None else float(arr.mean())
         integerish = bool(np.all(arr == np.round(arr))) if bool(np.isfinite(arr).all()) else False
-        if lam > 0 and lam < 9e18 and integerish:
+        if lam > 0 and lam < 9e18 and (integerish or mean_override is not None):
             try:
                 return rng.poisson(lam, n).astype(float).tolist(), "poisson"
             except (ValueError, OverflowError):
@@ -321,6 +345,7 @@ def run_monte_carlo(
     model: Any = None,
     sampling_method: str = "bootstrap",
     input_distributions: dict[str, dict[str, Any]] | None = None,
+    input_means: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     """Run a full Monte Carlo simulation.
 
@@ -379,6 +404,7 @@ def run_monte_carlo(
                 # 呼叫 sample_with_name 取得 (samples, applied_name)；
                 # applied_name 反映實際套用（fit 失敗 fallback 時為 empirical），
                 # 統計報告不再宣稱未真正使用的分佈。
+                mean_override = (input_means or {}).get(col)
                 seed_i = int(rng.integers(1 << 31))
                 tri_params: dict[str, Any] | None = None
                 if normed == "triangular" and spec.get("params"):
@@ -387,11 +413,14 @@ def run_monte_carlo(
                         tri_params = {"mode": float(p[1])}
                 samples, applied_name = sample_with_name(
                     values.tolist(), dist_name=normed,
-                    n=n_simulations, seed=seed_i, params=tri_params)
+                    n=n_simulations, seed=seed_i, params=tri_params,
+                    mean_override=mean_override)
                 sampled_inputs[col] = np.asarray(samples, dtype=float)
                 entry: dict[str, Any] = {"name": applied_name}
+                if mean_override is not None:
+                    entry["mean_override"] = float(mean_override)
                 if applied_name == "normal":
-                    entry.update(mean=float(np.mean(values)),
+                    entry.update(mean=mean_override if mean_override is not None else float(np.mean(values)),
                                  std=float(np.std(values, ddof=1)))
                 elif applied_name == "uniform":
                     entry.update(min=float(np.min(values)), max=float(np.max(values)))

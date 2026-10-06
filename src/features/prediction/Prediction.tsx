@@ -5,7 +5,7 @@ import { Card, Select, Space, Button, Alert, Typography, Tag, InputNumber, Stati
 import { PlusOutlined, MinusOutlined, SaveOutlined, HistoryOutlined } from '@ant-design/icons'
 import { useDataPipelineStore } from '../../stores/dataPipelineStore'
 import { useAssistantContextStore } from '../../stores/assistantContextStore'
-import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, recommendProfilerSettings, runOptQuest, type ModelInfo, type PredictionScenario, type OptQuestResult } from '../../lib/engine'
+import { predictOutput, getModelInfo, listModels, saveScenario, listScenarios, recommendProfilerSettings, runOptQuest, compareMonteCarlo, type ModelInfo, type PredictionScenario, type OptQuestResult, type MonteCarloComparison } from '../../lib/engine'
 import { buildPredictionContext } from '../../lib/assistantData'
 import Plot from '../../components/PlotChart'
 
@@ -113,6 +113,8 @@ export default function Prediction() {
   const [optAdvanced, setOptAdvanced] = useState<boolean>(false)
   const [optResult, setOptResult] = useState<OptQuestResult | null>(null)
   const [optLoading, setOptLoading] = useState(false)
+  const [optMcComparison, setOptMcComparison] = useState<MonteCarloComparison | null>(null)
+  const [optMcLoading, setOptMcLoading] = useState(false)
 
   useEffect(() => {
     setContext('prediction', buildPredictionContext({ modelInfo, inputValues, predicted }))
@@ -207,6 +209,36 @@ export default function Prediction() {
   const handleApplyBestPoint = () => {
     if (!optResult) return
     setInputValues(prev => ({ ...prev, ...optResult.best_point }))
+  }
+
+  const handleOptQuestMcCompare = async () => {
+    if (!selectedModel || !importResult || !optResult) return
+    setOptMcLoading(true)
+    setOptMcComparison(null)
+    try {
+      const baseParams = {
+        dataset_id: importResult.dataset_id,
+        model_id: selectedModel,
+        n_simulations: 2000,
+        seed: 42,
+        sampling_method: 'auto' as const,
+        lsl: spec?.lsl ?? undefined,
+        usl: spec?.usl ?? undefined,
+      }
+      const res = await compareMonteCarlo({
+        baseline: baseParams,
+        candidate: { ...baseParams, input_means: optResult.best_point },
+      })
+      if (!res.success || !res.comparison) {
+        messageApi.error(res.error?.message ?? res.error?.code ?? t('prediction.optquestError'))
+        return
+      }
+      setOptMcComparison(res.comparison)
+    } catch (e) {
+      messageApi.error(e instanceof Error ? e.message : String(e))
+    } finally {
+      setOptMcLoading(false)
+    }
   }
 
   const loadScenarios = async (modelId: string) => {
@@ -589,8 +621,60 @@ export default function Prediction() {
                   <Button size="small" type="primary" onClick={handleApplyBestPoint}>
                     {t('prediction.optquestApply')}
                   </Button>
+                  <Button size="small" loading={optMcLoading} onClick={handleOptQuestMcCompare}>
+                    {t('prediction.optquestMcCompare')}
+                  </Button>
                 </Space>
               </Card>
+              {optMcComparison && (
+                <Card size="small" title={t('prediction.optquestMcComparison')} style={{ marginBottom: 8 }}>
+                  <Plot
+                    data={[
+                      {
+                        x: optMcComparison.baseline.histogram.bins.slice(0, -1),
+                        y: optMcComparison.baseline.histogram.counts,
+                        type: 'bar', name: t('monteCarlo.baseline'),
+                        marker: { color: '#1677ff', opacity: 0.6 },
+                      },
+                      {
+                        x: optMcComparison.candidate.histogram.bins.slice(0, -1),
+                        y: optMcComparison.candidate.histogram.counts,
+                        type: 'bar', name: t('prediction.optquestMcCandidate'),
+                        marker: { color: '#52c41a', opacity: 0.6 },
+                      },
+                    ]}
+                    layout={{
+                      barmode: 'overlay', height: 320,
+                      xaxis: { title: t('monteCarlo.outputDistribution') },
+                      yaxis: { title: t('monteCarlo.frequency') },
+                      legend: { orientation: 'h', y: -0.25 },
+                    }}
+                  />
+                  <Row gutter={16}>
+                    <Col span={8}>
+                      <Statistic title={t('monteCarlo.meanShift')}
+                                 value={optMcComparison.mean_shift} precision={3}
+                                 valueStyle={{ color: optMcComparison.mean_shift >= 0 ? '#52c41a' : '#ff4d4f' }} />
+                    </Col>
+                    <Col span={8}>
+                      <Statistic title={t('monteCarlo.stdReduction')}
+                                 value={optMcComparison.std_reduction_pct * 100} precision={1}
+                                 suffix="%"
+                                 valueStyle={{ color: optMcComparison.std_reduction_pct >= 0 ? '#52c41a' : '#ff4d4f' }} />
+                    </Col>
+                    <Col span={8}>
+                      {optMcComparison.dpmo_baseline != null && optMcComparison.dpmo_candidate != null && (
+                        <Statistic title={t('monteCarlo.dpmo')}
+                                   value={optMcComparison.dpmo_candidate} precision={0}
+                                   valueStyle={{ color: optMcComparison.dpmo_candidate <= optMcComparison.dpmo_baseline ? '#52c41a' : '#ff4d4f' }} />
+                      )}
+                    </Col>
+                  </Row>
+                  <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 8 }}>
+                    {t('monteCarlo.overlayHint')}
+                  </Typography.Text>
+                </Card>
+              )}
               <Card size="small" title={t('prediction.optquestTrajectory')}>
                 <Plot
                   data={[{
