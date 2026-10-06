@@ -84,8 +84,9 @@ def recommend_experiments(
             "key": "recReplicate",
         })
 
-    # 5. Suggest new factor exploration if needed
-    if len(recommendations) < n_recommendations:
+    # 5. For designed categorical DOE, replication/confirmation is more
+    # defensible than inferring a missing factor from unstable random-fold CV.
+    if len(recommendations) < n_recommendations and fit.model_type != "doe_categorical_factorial":
         recommendations.append({
             "type": "new_factor",
             "priority": "low",

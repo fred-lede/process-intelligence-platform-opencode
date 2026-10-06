@@ -2,7 +2,7 @@
 import pytest
 
 from process_intelligence_engine.main import handle_request
-from process_intelligence_engine.modeling.fitters import fit_doe_linear, fit_doe_quadratic
+from process_intelligence_engine.modeling.fitters import fit_doe_linear, fit_doe_quadratic, fit_doe_categorical_factorial
 from process_intelligence_engine.modeling.registry import ModelRegistry
 from process_intelligence_engine.main import REGISTRY, MODEL_REGISTRY
 import pandas as pd
@@ -42,3 +42,30 @@ def test_full_validation():
     assert "experiment_recommendations" in result
     assert len(result["models"]) == 2
     assert result["residual_analysis"]["durbin_watson"]["statistic"] > 0
+    assert result["design_context"] is None
+
+
+def test_full_validation_marks_categorical_doe_as_design_based():
+    rows = []
+    for a in (40, 60, 80):
+        for b in (5, 7, 9):
+            for c in (0.0, 0.5, 1.0):
+                rows.append({"A": a, "B": b, "C": c, "Y": a / 100 + b / 100 + c})
+    df = pd.DataFrame(rows)
+    dataset_id = REGISTRY.register(df, {"source": "categorical-test"})
+    fit = fit_doe_categorical_factorial(df, target="Y", inputs=["A", "B", "C"])
+    MODEL_REGISTRY.register(fit)
+
+    result = handle_request("modeling/validation/full", {
+        "dataset_id": dataset_id,
+        "model_ids": [fit.model_id],
+    })
+
+    context = result["design_context"]
+    assert context["validation_mode"] == "design_based"
+    assert context["n_obs"] == 27
+    assert context["n_cells"] == 27
+    assert context["observed_cells"] == 27
+    assert context["has_replicates"] is False
+    assert context["residual_df"] == 8
+    assert all(item["type"] != "new_factor" for item in result["experiment_recommendations"]["recommendations"])

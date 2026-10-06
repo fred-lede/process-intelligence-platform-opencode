@@ -281,6 +281,24 @@ export default function ValidationLab() {
         {datasetId && eligibleModels.length === 0 && <Alert type="warning" showIcon message={t('validationLab.noEligibleModels')} style={{ marginBottom: 12 }} />}
         {fullValidation ? (
           <Space direction="vertical" style={{ width: '100%' }} size={8}>
+            {fullValidation.design_context?.validation_mode === 'design_based' && (
+              <Alert
+                type="warning"
+                showIcon
+                message={t('validationLab.designBasedTitle')}
+                description={
+                  <div>
+                    <div>{t('validationLab.designBasedDescription')}</div>
+                    <div style={{ marginTop: 4 }}>
+                      {fullValidation.design_context.n_obs} runs · {fullValidation.design_context.observed_cells}/{fullValidation.design_context.n_cells} cells ·
+                      {' '}{fullValidation.design_context.model_df} model df · {fullValidation.design_context.residual_df} residual df ·
+                      {fullValidation.design_context.has_replicates ? t('validationLab.hasReplicates') : t('validationLab.noReplicates')}
+                    </div>
+                  </div>
+                }
+                style={{ marginBottom: 4 }}
+              />
+            )}
             <Row gutter={[16, 16]}>
               <Col span={6}>
                 <Statistic

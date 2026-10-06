@@ -590,6 +590,19 @@ export interface FullValidationResult {
     summary: string
     summary_key?: string | null
   }
+  design_context?: {
+    kind: string
+    validation_mode: string
+    n_obs: number
+    n_cells: number
+    observed_cells: number
+    replicate_min: number
+    replicate_max: number
+    model_df: number
+    residual_df: number
+    has_replicates: boolean
+    warning: string
+  } | null
   credibility: Record<string, {
     data_coverage: number
     predictive_acc: number
