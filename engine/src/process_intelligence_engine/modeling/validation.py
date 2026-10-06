@@ -31,6 +31,10 @@ def _build_design_matrix(df: pd.DataFrame, inputs: list[str], degree: int) -> pd
 
 def _predict_from_fit(fit, df: pd.DataFrame) -> np.ndarray:
     """Predict using fit.model, handling DOE design matrices."""
+    if fit.model_type == "doe_categorical_factorial":
+        if fit.model is None:
+            raise ValueError("categorical DOE model artifact is unavailable")
+        return fit.model.predict(df[fit.inputs])
     if fit.model_type in ("doe_linear", "doe_quadratic"):
         degree = 2 if fit.model_type == "doe_quadratic" else 1
         X = _build_design_matrix(df, fit.inputs, degree).to_numpy(dtype=float)

@@ -3,6 +3,7 @@ import pytest
 
 from process_intelligence_engine.modeling.fitters import fit_doe_categorical_factorial
 from process_intelligence_engine.modeling.validation import compute_doe_statistics
+from process_intelligence_engine.prediction import predict_single
 
 
 def _frame():
@@ -53,3 +54,10 @@ def test_categorical_effects_are_marginal_means_over_other_factors():
 
     expected = frame.groupby("A", sort=True)["Y"].mean().tolist()
     assert [point["mean"] for point in main_a["points"]] == pytest.approx(expected)
+
+
+def test_categorical_prediction_accepts_named_input_mapping():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    value = predict_single("doe_categorical_factorial", fit.coefficients or {}, {"A": 40, "B": 5, "C": 0.0}, model=fit.model, feature_names=fit.inputs)
+    assert value == pytest.approx(frame.iloc[0]["Y"])

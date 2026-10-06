@@ -36,6 +36,8 @@ def prediction_check(fit, df):
     if fit.model_type == "logistic_regression":
         return fit.model.predict_proba(df[inputs].to_numpy())[:, 1].tolist()
     if fit.model is not None:
+        if fit.model_type == "doe_categorical_factorial":
+            return fit.model.predict(df[inputs]).tolist()
         if fit.model_type in ("doe_linear", "doe_quadratic"):
             from process_intelligence_engine.modeling.validation import _build_design_matrix
             degree = 2 if fit.model_type == "doe_quadratic" else 1

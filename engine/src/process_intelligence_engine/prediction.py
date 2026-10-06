@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 SUPPORTED_MODELS = {
-    "doe_linear", "doe_quadratic",
+    "doe_linear", "doe_quadratic", "doe_categorical_factorial",
     "logistic_regression", "weibull_regression",
     "random_forest", "xgboost", "lightgbm",
     "residual_hybrid",
@@ -68,8 +68,12 @@ def predict_single(
             )
         try:
             import numpy as np
-            input_array = np.array([[float(inputs[name]) for name in order]])
-            pred = model.predict(input_array)
+            if model_type == "doe_categorical_factorial":
+                import pandas as pd
+                pred = model.predict(pd.DataFrame([{name: inputs[name] for name in order}]))
+            else:
+                input_array = np.array([[float(inputs[name]) for name in order]])
+                pred = model.predict(input_array)
             return float(pred[0])
         except Exception:
             pass  # fall back to coefficient-based prediction
