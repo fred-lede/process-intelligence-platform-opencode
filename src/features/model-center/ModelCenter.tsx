@@ -823,12 +823,23 @@ export default function ModelCenter() {
       approvalReason = reason.trim()
     }
     await transition(modelId, newStatus, approvalReason)
-    messageApi.success(t('modelCenter.transitionSuccess', { status: newStatus }))
+    // store 的 transition 會把 engine 錯誤寫進 error 並 swallow；依 error 決定訊息
+    const err = useModelStore.getState().error
+    if (err) {
+      messageApi.error(`${t('modelCenter.transitionModelError')}: ${err}`)
+    } else {
+      messageApi.success(t('modelCenter.transitionSuccess', { status: newStatus }))
+    }
   }
 
   const handleDeleteModel = async (modelId: string) => {
     await deleteModelFn(modelId)
-    messageApi.success(t('modelCenter.deleteModelSuccess'))
+    const err = useModelStore.getState().error
+    if (err) {
+      messageApi.error(`${t('modelCenter.deleteModelError')}: ${err}`)
+    } else {
+      messageApi.success(t('modelCenter.deleteModelSuccess'))
+    }
   }
 
   const handleComputeInteractions = async () => {
