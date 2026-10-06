@@ -321,6 +321,8 @@ export interface DoeAnovaResult {
   df_reg: number
   df_res: number
   label: 'highly_significant' | 'significant' | 'marginally_significant' | 'not_significant'
+  pure_error?: { ss: number | null; df: number; ms: number | null }
+  lack_of_fit?: { ss: number | null; df: number | null; ms: number | null; f_stat: number | null; p_value: number | null }
 }
 
 export interface DoeStatisticsResult {

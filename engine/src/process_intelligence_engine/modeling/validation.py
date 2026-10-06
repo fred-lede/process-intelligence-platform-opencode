@@ -509,6 +509,21 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             "note": f"n={n}, p={p} — need n > p for coefficient inference.",
         }
 
+    pure_error = {"ss": None, "df": 0, "ms": None}
+    lack_of_fit = {"ss": None, "df": None, "ms": None, "f_stat": None, "p_value": None}
+    if model_type in ("doe_categorical_factorial", "doe_linear", "doe_quadratic"):
+        groups = df.groupby(fit.inputs, dropna=False, sort=False)[fit.target]
+        group_count = int(groups.ngroups)
+        pure_df = int(n - group_count)
+        pure_ss = float(sum(np.sum((group.to_numpy(dtype=float) - group.mean()) ** 2) for _, group in groups))
+        pure_error = {"ss": pure_ss, "df": pure_df, "ms": pure_ss / pure_df if pure_df > 0 else None}
+        lof_df = int(df_res - pure_df)
+        lof_ss = float(max(ss_res - pure_ss, 0.0))
+        lof_ms = lof_ss / lof_df if lof_df > 0 else None
+        lof_f = float(lof_ms / pure_error["ms"]) if lof_ms is not None and pure_error["ms"] and pure_error["ms"] > 0 else None
+        lof_p = float(1.0 - stats.f.cdf(lof_f, lof_df, pure_df)) if lof_f is not None else None
+        lack_of_fit = {"ss": lof_ss, "df": lof_df, "ms": lof_ms, "f_stat": lof_f, "p_value": lof_p}
+
     mse = ss_res / df_res
     ms_reg = ss_reg / df_reg
     f_stat = float(ms_reg / mse) if mse > 0 else 0.0
@@ -646,6 +661,8 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             "df_reg": df_reg,
             "df_res": df_res,
             "label": model_sig_label,
+            "pure_error": pure_error,
+            "lack_of_fit": lack_of_fit,
         },
         "coefficients": coeff_rows,
         "sig_count": sig_count,

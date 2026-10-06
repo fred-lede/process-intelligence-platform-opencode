@@ -51,6 +51,17 @@ def test_categorical_factorial_statistics_match_minitab_df_shape():
     assert stats["anova"]["df_res"] == 8
     assert len(stats["coefficients"]) == 19
     assert [item["term"] for item in stats["pareto_terms"]] == ["A", "B", "C", "A × B", "A × C", "B × C"] or {item["term"] for item in stats["pareto_terms"]} == {"A", "B", "C", "A × B", "A × C", "B × C"}
+    assert stats["anova"]["pure_error"]["df"] == 0
+    assert stats["anova"]["lack_of_fit"]["p_value"] is None
+
+
+def test_categorical_doe_reports_pure_error_with_replicates():
+    frame = _frame()
+    replicated = pd.concat([frame, frame.assign(Y=frame["Y"] + 0.01)], ignore_index=True)
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    stats = compute_doe_statistics(fit, replicated)
+    assert stats["anova"]["pure_error"]["df"] == 27
+    assert stats["anova"]["lack_of_fit"]["df"] == 0
 
 
 def test_categorical_effects_are_marginal_means_over_other_factors():

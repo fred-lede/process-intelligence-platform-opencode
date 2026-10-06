@@ -2303,6 +2303,17 @@ export default function ModelCenter() {
                           : `${t('modelCenter.doeNotSignificant')} (p≥0.05)`}
                       </Tag>
                     </div>
+                    {doeStats.anova.pure_error && (
+                      <Alert
+                        type={doeStats.anova.pure_error.df > 0 ? 'info' : 'warning'}
+                        showIcon
+                        message={`Pure error df=${doeStats.anova.pure_error.df}`}
+                        description={doeStats.anova.lack_of_fit?.df && doeStats.anova.lack_of_fit.p_value != null
+                          ? `Lack-of-fit: F=${doeStats.anova.lack_of_fit.f_stat?.toFixed(3)} · p=${doeStats.anova.lack_of_fit.p_value.toFixed(6)}`
+                          : '目前沒有重複實驗，無法估計 pure error 與 lack-of-fit。'}
+                        style={{ marginTop: 4 }}
+                      />
+                    )}
                     <div>
                       <strong>{t('modelCenter.doeSigTerms')}:</strong>
                       <span style={{ marginLeft: 8 }}>{doeStats.sig_count}/{doeStats.total_terms} {t('modelCenter.doeTermsSignificant')}</span>
