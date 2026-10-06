@@ -1132,6 +1132,8 @@
     "profilerTitle": "Prediction Profiler",
     "profilerLimit": "Adjust values only within the defined operating range. Outside-range values are model extrapolations and are not automatically safe to run.",
     "optquestTitle": "OptQuest: Parameter Search (Robust Design)",
+    "exploratoryResult": "Exploratory result",
+    "exploratoryWarning": "No physical confirmation experiments are recorded; this designed-DOE optimization is exploratory and requires a confirmation experiment before production use.",
     "optquestDesc": "Searches the input ranges for the parameter combination that satisfies quality constraints (Cpk ≥ threshold / DPMO ≤ limit) while maximizing yield, minimizing DPMO, or hitting a target value. The trajectory chart shows the best-to-date convergence of the search algorithm.",
     "optquestMaxYield": "Objective: maximize yield",
     "optquestMinDpmo": "Objective: minimize DPMO",

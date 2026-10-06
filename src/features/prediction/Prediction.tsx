@@ -579,7 +579,7 @@ export default function Prediction() {
           )}
           {optResult && (
             <>
-              {optResult.exploratory_warning && <Alert type="warning" showIcon message={t('validationLab.exploratoryResult')} description={optResult.exploratory_warning} style={{ marginBottom: 8 }} />}
+              {optResult.exploratory_warning && <Alert type="warning" showIcon message={t('prediction.exploratoryResult')} description={t('prediction.exploratoryWarning', { defaultValue: optResult.exploratory_warning })} style={{ marginBottom: 8 }} />}
               <Space wrap style={{ marginBottom: 8 }} align="center">
                 <Tag color={optResult.feasible ? 'green' : 'red'}>
                   {optResult.feasible ? t('prediction.optquestFeasible') : t('prediction.optquestInfeasible')}

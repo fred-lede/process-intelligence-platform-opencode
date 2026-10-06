@@ -1132,6 +1132,8 @@
     "profilerTitle": "預測剖面",
     "profilerLimit": "僅能在已定義的操作範圍內調整；超出範圍屬於模型外推，不代表可安全執行。",
     "optquestTitle": "OptQuest：參數搜尋（穩健設計）",
+    "exploratoryResult": "探索性結果",
+    "exploratoryWarning": "尚未記錄實體確認實驗；此設計型 DOE 最佳化結果僅供探索，正式投入生產前需要確認實驗。",
     "optquestDesc": "在輸入範圍內自動搜尋滿足品質約束（Cpk ≥ 門檻／DPMO ≤ 上限）的最佳參數組合——良率最大化、DPMO 最小化或趨近目標值。軌跡圖展現尋優演算法的 best-to-date 收斂過程。",
     "optquestMaxYield": "目標：良率最大化",
     "optquestMinDpmo": "目標：DPMO 最小化",
