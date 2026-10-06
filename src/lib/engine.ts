@@ -1159,6 +1159,7 @@ export interface MonteCarloResult {
   anomaly_rankings: MonteCarloAnomalyRanking[]
   multi_anomaly_ng: number
   capability?: SPCCapability | null
+  exploratory_warning?: string
 }
 
 export interface MonteCarloComparison {
@@ -1245,6 +1246,7 @@ export interface OptQuestResult {
   n_eval_samples: number
   seed: number
   note: string
+  exploratory_warning?: string
 }
 
 export interface OptQuestRunResult {

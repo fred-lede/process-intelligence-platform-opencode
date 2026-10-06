@@ -308,6 +308,7 @@ export default function MonteCarlo() {
 
       {result && (
         <>
+          {result.exploratory_warning && <Alert type="warning" showIcon message="探索性結果" description={result.exploratory_warning} style={{ marginBottom: 12 }} />}
           <Row gutter={16}>
             <Col span={6}>
               <Card size="small" style={{ textAlign: 'center' }}>

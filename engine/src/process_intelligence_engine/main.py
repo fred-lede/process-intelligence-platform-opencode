@@ -2062,6 +2062,8 @@ def _handle_monte_carlo_run(params: dict) -> dict:
     )
     result["chain_entity_id"] = sim_chain_id
     result["grain"] = {"filter_column": params.get("filter_column"), "filter_value": params.get("filter_value"), "source_row_count": source_row_count, "analyzed_row_count": len(df)}
+    if fit.model_type == "doe_categorical_factorial" and not EXPERIMENT_REGISTRY.list_by_model(model_id):
+        result["exploratory_warning"] = "No physical confirmation experiments are recorded for this designed DOE; simulation is exploratory and must not be treated as production evidence."
     GATE_MANAGER.reset("monte_carlo", "Simulation changed")
     return {"success": True, "result": result}
 
@@ -2133,6 +2135,8 @@ def _handle_optquest_run(params: dict) -> dict:
     result["baseline"] = {"point": base_pt, "yield": baseline["yield"],
                           "dpmo": baseline["dpmo"], "predicted_mean": baseline["predicted_mean"],
                           "cpk": baseline["cpk"]}
+    if fit.model_type == "doe_categorical_factorial" and not EXPERIMENT_REGISTRY.list_by_model(fit.model_id):
+        result["exploratory_warning"] = "No physical confirmation experiments are recorded for this designed DOE; optimization is exploratory and requires confirmation before production use."
     return {"success": True, "result": result}
 
 
