@@ -43,3 +43,13 @@ def test_categorical_factorial_statistics_match_minitab_df_shape():
     assert stats["anova"]["df_reg"] == 18
     assert stats["anova"]["df_res"] == 8
     assert len(stats["coefficients"]) == 19
+
+
+def test_categorical_effects_are_marginal_means_over_other_factors():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    stats = compute_doe_statistics(fit, frame)
+    main_a = next(item for item in stats["categorical_effects"]["main"] if item["factor"] == "A")
+
+    expected = frame.groupby("A", sort=True)["Y"].mean().tolist()
+    assert [point["mean"] for point in main_a["points"]] == pytest.approx(expected)

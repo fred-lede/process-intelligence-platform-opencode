@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import math
-from itertools import combinations
+from itertools import combinations, product
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -546,23 +546,29 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
     if model_type == "doe_categorical_factorial":
         categorical_effects = {"main": [], "interactions": []}
         levels = design.levels
-        base = {factor: values[0] for factor, values in levels.items()}
         for factor, factor_levels in levels.items():
             points = []
             for level in factor_levels:
-                row = dict(base)
-                row[factor] = level
-                points.append({"level": level, "mean": float(model.predict(pd.DataFrame([row]))[0])})
+                other_factors = [name for name in fit.inputs if name != factor]
+                rows = []
+                for other_levels in product(*(levels[name] for name in other_factors)):
+                    row = {factor: level}
+                    row.update(dict(zip(other_factors, other_levels)))
+                    rows.append(row)
+                points.append({"level": level, "mean": float(np.mean(model.predict(pd.DataFrame(rows))))})
             categorical_effects["main"].append({"factor": factor, "points": points})
         for left, right in combinations(fit.inputs, 2):
             lines = []
             for right_level in levels[right]:
                 points = []
                 for left_level in levels[left]:
-                    row = dict(base)
-                    row[left] = left_level
-                    row[right] = right_level
-                    points.append({"level": left_level, "mean": float(model.predict(pd.DataFrame([row]))[0])})
+                    other_factors = [name for name in fit.inputs if name not in (left, right)]
+                    rows = []
+                    for other_levels in product(*(levels[name] for name in other_factors)):
+                        row = {left: left_level, right: right_level}
+                        row.update(dict(zip(other_factors, other_levels)))
+                        rows.append(row)
+                    points.append({"level": left_level, "mean": float(np.mean(model.predict(pd.DataFrame(rows))))})
                 lines.append({"series": right_level, "points": points})
             categorical_effects["interactions"].append({"factors": [left, right], "lines": lines})
 
