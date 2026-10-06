@@ -1147,6 +1147,7 @@ export interface MonteCarloPercentiles {
 export interface MonteCarloResult {
   n_simulations: number
   seed: number
+  sampling_method?: string
   ng_count: number
   ng_probability: number
   output_mean: number

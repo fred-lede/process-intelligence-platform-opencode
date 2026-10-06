@@ -77,6 +77,8 @@ export default function MonteCarlo() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const hasTimeSeriesModels = models.some(model => model.model_type.startsWith('time_series_'))
+  const selectedModelType = models.find(model => model.model_id === selectedModel)?.model_type
+  const isCategoricalDOE = selectedModelType === 'doe_categorical_factorial'
 
   useEffect(() => {
     listModels(importResult?.dataset_id).then(r => {
@@ -141,6 +143,10 @@ export default function MonteCarlo() {
     setError(null)
     // 基準屬於該模型的模擬；切換模型後舊基準不得誤用於 Overlay。
     setBaselineSnapshot(null)
+    if (models.find(model => model.model_id === modelId)?.model_type === 'doe_categorical_factorial') {
+      setSamplingMethod('auto')
+      setInputDistOverrides({})
+    }
   }
 
   const buildParams = (): MonteCarloParams => ({
@@ -257,14 +263,19 @@ export default function MonteCarlo() {
             <Select
               value={samplingMethod}
               onChange={setSamplingMethod}
-              options={[
-                { value: 'auto', label: t('monteCarlo.autoDistribution', { defaultValue: '依最佳分布自動抽樣' }) },
-                { value: 'bootstrap', label: t('monteCarlo.bootstrap', { defaultValue: '歷史資料 Bootstrap' }) },
-                { value: 'normal', label: t('monteCarlo.normalSampling', { defaultValue: '各欄位常態分佈' }) },
-              ]}
+              options={isCategoricalDOE
+                ? [{ value: 'auto', label: t('monteCarlo.categoricalSampling', { defaultValue: 'DOE cell 經驗抽樣' }) }]
+                : [
+                    { value: 'auto', label: t('monteCarlo.autoDistribution', { defaultValue: '依最佳分布自動抽樣' }) },
+                    { value: 'bootstrap', label: t('monteCarlo.bootstrap', { defaultValue: '歷史資料 Bootstrap' }) },
+                    { value: 'normal', label: t('monteCarlo.normalSampling', { defaultValue: '各欄位常態分佈' }) },
+                  ]}
               style={{ width: 170 }}
             />
           </Form.Item>
+          {isCategoricalDOE && <Typography.Text type="secondary" style={{ maxWidth: 360 }}>
+            {t('monteCarlo.categoricalSamplingNote', { defaultValue: '類別 DOE 只從合法 DOE cell 抽樣；不使用連續常態分布，避免產生不存在的因子水準。' })}
+          </Typography.Text>}
           {selectedModel && samplingMethod === 'auto' && (models.find(m => m.model_id === selectedModel)?.inputs ?? []).map(col => (
             <Form.Item key={col} label={`${col} ${t('monteCarlo.inputDistribution')}`} style={{ margin: 0 }}>
               <Select
@@ -308,7 +319,10 @@ export default function MonteCarlo() {
 
       {result && (
         <>
-          {result.exploratory_warning && <Alert type="warning" showIcon message={t('validationLab.exploratoryResult')} description={result.exploratory_warning} style={{ marginBottom: 12 }} />}
+          {result.exploratory_warning && <Alert type="warning" showIcon message={t('monteCarlo.exploratoryResult')} description={t('monteCarlo.exploratoryWarning', { defaultValue: result.exploratory_warning })} style={{ marginBottom: 12 }} />}
+          <Tag color="blue" style={{ marginBottom: 12 }}>
+            {t('monteCarlo.appliedSamplingMethod', { defaultValue: '實際抽樣方式' })}: {result.sampling_method ?? samplingMethod}
+          </Tag>
           <Row gutter={16}>
             <Col span={6}>
               <Card size="small" style={{ textAlign: 'center' }}>
