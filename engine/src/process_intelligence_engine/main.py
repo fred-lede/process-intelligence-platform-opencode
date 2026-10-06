@@ -2054,6 +2054,38 @@ def _handle_monte_carlo_compare(params: dict) -> dict:
     }}
 
 
+def _handle_optquest_run(params: dict) -> dict:
+    """OptQuest 式參數尋優：LHS 搜尋 + 蒙地卡羅評估 + baseline 對比。"""
+    from process_intelligence_engine.optimization import run_optquest, _evaluate_points
+    try:
+        fit = MODEL_REGISTRY.get(params["model_id"])
+        df = REGISTRY.get(params["dataset_id"])
+    except KeyError as exc:
+        return {"success": False, "error": {"code": "OPTQUEST_INVALID_PARAMS",
+                                            "message": f"Unknown dataset or model: {exc}"}}
+    try:
+        result = run_optquest(
+            fit, df,
+            objective=params.get("objective", "hit_target"),
+            lsl=params.get("lsl"), usl=params.get("usl"),
+            target_value=params.get("target_value"),
+            cpk_min=params.get("cpk_min", 1.33),
+            n_candidates=params.get("n_candidates", 200),
+            n_eval_samples=params.get("n_eval_samples", 500),
+            seed=params.get("seed", 42),
+        )
+    except ValueError as exc:
+        return {"success": False, "error": {"code": "OPTQUEST_INVALID_PARAMS", "message": str(exc)}}
+    # baseline：以資料現況（各欄 median）為起點評估同結構指標
+    base_pt = {c: float(df[c].median()) for c in fit.inputs}
+    baseline = _evaluate_points(fit, df, [base_pt], params.get("lsl"), params.get("usl"),
+                                params.get("n_eval_samples", 500), params.get("seed", 42))[0]
+    result["baseline"] = {"point": base_pt, "yield": baseline["yield"],
+                          "dpmo": baseline["dpmo"], "predicted_mean": baseline["predicted_mean"],
+                          "cpk": baseline["cpk"]}
+    return {"success": True, "result": result}
+
+
 def _handle_prediction_predict(params: dict) -> dict:
     """Predict output for given input values."""
     model_id = params["model_id"]
@@ -2454,6 +2486,8 @@ def handle_request(method: str, params: dict) -> dict:
         return _handle_monte_carlo_run(params)
     if method == "monte_carlo/compare":
         return _handle_monte_carlo_compare(params)
+    if method == "optimization/optquest/run":
+        return _handle_optquest_run(params)
 
     if method == "prediction/predict":
         return _handle_prediction_predict(params)
