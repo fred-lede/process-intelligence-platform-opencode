@@ -131,6 +131,27 @@ def test_categorical_doe_supports_monte_carlo_prediction():
     assert value == pytest.approx(frame.iloc[0]["Y"])
 
 
+def test_categorical_doe_monte_carlo_samples_valid_design_cells():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    from process_intelligence_engine.monte_carlo import run_monte_carlo
+
+    result = run_monte_carlo(
+        df=frame,
+        model_type=fit.model_type,
+        coefficients=fit.coefficients or {},
+        input_columns=fit.inputs,
+        output_column="Y",
+        n_simulations=100,
+        seed=7,
+        sampling_method="normal",
+        model=fit.model,
+    )
+
+    assert result["n_simulations"] == 100
+    assert all(item["name"] == "categorical_empirical" for item in result["input_distributions"].values())
+
+
 def test_categorical_doe_supports_optquest_discrete_levels():
     frame = _frame()
     fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])

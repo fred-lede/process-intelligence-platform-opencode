@@ -394,7 +394,24 @@ def run_monte_carlo(
     # quadratic/interacting DOE models and extreme artificial outputs.
     sampled_inputs: dict[str, np.ndarray] = {}
     applied_distributions: dict[str, dict[str, Any]] = {}
-    if sampling_method == "auto" and input_distributions:
+    if model_type == "doe_categorical_factorial":
+        # Categorical DOE factors must stay on the fitted design grid.  A
+        # normal/uniform draw over numeric-looking levels (40/60/80, 5/7/9,
+        # ...) creates values that the categorical estimator cannot predict.
+        # Sample complete observed cells so pairwise/triple-wise combinations
+        # remain valid and preserve the designed experiment's joint structure.
+        row_indices = rng.integers(0, len(df), size=n_simulations)
+        for col in input_columns:
+            sampled_inputs[col] = df[col].to_numpy()[row_indices]
+            levels = list(getattr(model, "levels", {}).get(col, [])) if model is not None else []
+            if not levels:
+                levels = list(pd.unique(df[col].dropna()))
+            applied_distributions[col] = {
+                "name": "categorical_empirical",
+                "levels": levels,
+            }
+        sampling_method = "categorical_empirical"
+    elif sampling_method == "auto" and input_distributions:
         for col in input_columns:
             values = df[col].to_numpy(dtype=float)
             spec = input_distributions.get(col, {})
