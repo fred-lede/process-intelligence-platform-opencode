@@ -5,6 +5,9 @@ from process_intelligence_engine.modeling.fitters import fit_doe_categorical_fac
 from process_intelligence_engine.modeling.validation import compute_doe_statistics, cross_validate
 from process_intelligence_engine.prediction import predict_single
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
+from process_intelligence_engine.modeling.model_selection import compare_models
+from process_intelligence_engine.modeling.validation import analyze_residuals, compute_credibility
+from process_intelligence_engine.modeling.interactions import compute_interactions
 
 
 def _frame():
@@ -79,3 +82,14 @@ def test_categorical_doe_can_run_validation_re_fits():
     result = cross_validate(fit, frame, k=3)
 
     assert len(result["cv_results"]) == 3
+
+
+def test_categorical_doe_supports_full_validation_chain():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    comparison = compare_models([fit], frame, k=3)
+
+    assert comparison["models"]
+    assert analyze_residuals(fit, frame)["residuals"]
+    assert compute_interactions(fit, frame)["factors"] == ["A", "B", "C"]
+    assert "composite" in compute_credibility(fit, frame)
