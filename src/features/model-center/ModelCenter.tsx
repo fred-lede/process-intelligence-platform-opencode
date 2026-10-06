@@ -41,7 +41,10 @@ function normalQuantile(p: number): number {
   const numerator = ((((c[0] * s + c[1]) * s + c[2]) * s + c[3]) * s + c[4]) * s + c[5]
   const denominator = (((d[0] * s + d[1]) * s + d[2]) * s + d[3]) * s + 1
   const value = numerator / denominator
-  return q < 0 ? -value : value
+  // The tail approximation returns a positive magnitude.  Restore the
+  // quantile sign: low probabilities are negative and high probabilities
+  // are positive.  Reversing this sign flips the normal reference line.
+  return q < 0 ? value : -value
 }
 
 const MODEL_DESC_KEY: Record<ModelType, string> = {
