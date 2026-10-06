@@ -111,6 +111,7 @@ export default function ModelCenter() {
   const [fullValidationLoading, setFullValidationLoading] = useState(false)
   const [doeStats, setDoeStats] = useState<DoeStatisticsResult | null>(null)
   const [doeStatsLoading, setDoeStatsLoading] = useState(false)
+  const [interactionPairIndex, setInteractionPairIndex] = useState(0)
   const [doeContour, setDoeContour] = useState<DOEContourResult | null>(null)
   const [doeContourLoading, setDoeContourLoading] = useState(false)
   const [contourFactors, setContourFactors] = useState<[string, string]>(['', ''])
@@ -2053,7 +2054,8 @@ export default function ModelCenter() {
                   layout={{
                     title: { text: t('modelCenter.shapImportanceTitle') },
                     xaxis: { title: { text: t('modelCenter.shapImportance') } },
-                    margin: { l: 100 }
+                    margin: { l: 190, r: 30, t: 45, b: 55 },
+                    yaxis: { automargin: true }
                   }}
                   useResizeHandler
                   style={{ width: '100%', height: 200 }}
@@ -2072,7 +2074,7 @@ export default function ModelCenter() {
                     title: { text: t('modelCenter.shapSummaryTitle') },
                     yaxis: { automargin: true },
                     xaxis: { title: { text: 'SHAP value' } },
-                    margin: { l: 60 }
+                    margin: { l: 190, r: 30, t: 45, b: 55 }
                   }}
                   useResizeHandler
                   style={{ width: '100%', height: 300 }}
@@ -2335,7 +2337,16 @@ export default function ModelCenter() {
                         <Plot data={[{ x: doeStats.residuals ?? [], type: 'histogram', marker: { color: '#6699cc' }, name: t('modelCenter.doeResiduals') }]} layout={{ height: 340, margin: { l: 50, r: 15, t: 10, b: 55 }, xaxis: { title: 'Residual' }, yaxis: { title: t('modelCenter.doeFrequency') }, bargap: 0.05, showlegend: false }} />
                       </Card>
                       <Card size="small" title={t('modelCenter.doeInteractionPlot')}>
-                        <Plot data={doeStats.model_type === 'doe_categorical_factorial' && doeStats.categorical_effects ? doeStats.categorical_effects.interactions.slice(0, 6).flatMap(interaction => interaction.lines.map(line => ({ x: line.points.map(point => String(point.level)), y: line.points.map(point => point.mean), mode: 'lines+markers', name: `${interaction.factors.join(' × ')} · ${String(line.series)}` }))) : doeStats.coefficients.filter(c => /[:*]/.test(c.name)).sort((a, b) => Math.abs(b.t_stat) - Math.abs(a.t_stat)).slice(0, 6).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 80 }, xaxis: { title: doeStats.model_type === 'doe_categorical_factorial' ? 'Factor level' : '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: true, legend: { orientation: 'h', y: -0.25 } }} />
+                        {doeStats.model_type === 'doe_categorical_factorial' && doeStats.categorical_effects && (
+                          <Select
+                            size="small"
+                            value={interactionPairIndex}
+                            onChange={setInteractionPairIndex}
+                            options={doeStats.categorical_effects.interactions.map((interaction, index) => ({ value: index, label: interaction.factors.join(' × ') }))}
+                            style={{ width: 240, marginBottom: 8 }}
+                          />
+                        )}
+                        <Plot data={doeStats.model_type === 'doe_categorical_factorial' && doeStats.categorical_effects ? (() => { const interaction = doeStats.categorical_effects.interactions[Math.min(interactionPairIndex, doeStats.categorical_effects.interactions.length - 1)] ?? doeStats.categorical_effects.interactions[0]; return interaction ? interaction.lines.map(line => ({ x: line.points.map(point => String(point.level)), y: line.points.map(point => point.mean), mode: 'lines+markers', name: String(line.series) })) : []; })() : doeStats.coefficients.filter(c => /[:*]/.test(c.name)).sort((a, b) => Math.abs(b.t_stat) - Math.abs(a.t_stat)).slice(0, 6).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 60, r: 15, t: 10, b: 80 }, xaxis: { title: doeStats.model_type === 'doe_categorical_factorial' ? 'Factor level' : '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect'), automargin: true }, showlegend: true, legend: { orientation: 'h', y: -0.25 } }} />
                       </Card>
                       <Card size="small" title={t('modelCenter.doeNormalEffects')}>
                         <Plot data={(() => { const rows = doeStats.coefficients.filter(c => c.name !== '1').sort((a, b) => a.t_stat - b.t_stat); const n = rows.length; const points = rows.map((c, i) => ({ x: c.t_stat, y: normalQuantile((i + 0.5) / Math.max(n, 1)), name: c.name })); const xs = points.map(p => p.x); const ys = points.map(p => p.y); const meanX = xs.reduce((s, x) => s + x, 0) / Math.max(xs.length, 1); const meanY = ys.reduce((s, y) => s + y, 0) / Math.max(ys.length, 1); const denom = xs.reduce((s, x) => s + (x - meanX) ** 2, 0); const slope = denom ? xs.reduce((s, x, i) => s + (x - meanX) * (ys[i] - meanY), 0) / denom : 0; const intercept = meanY - slope * meanX; const line = [{ x: [Math.min(...xs), Math.max(...xs)], y: [intercept + slope * Math.min(...xs), intercept + slope * Math.max(...xs)], mode: 'lines', name: t('modelCenter.doeNormalReference'), line: { dash: 'dot', color: '#999' }, hoverinfo: 'skip', type: 'scatter' }]; return [...line, { x: xs, y: ys, mode: 'markers', name: t('modelCenter.doeNormalPoints'), text: points.map(p => p.name), hovertemplate: '%{text}<br>t=%{x:.3f}<br>normal quantile=%{y:.3f}<extra></extra>', type: 'scatter' }]; })()} layout={{ height: 340, margin: { l: 55, r: 15, t: 10, b: 55 }, xaxis: { title: 'Standardized effect (t)' }, yaxis: { title: 'Theoretical normal quantile' }, showlegend: true }} />
