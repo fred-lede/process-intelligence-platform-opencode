@@ -33,12 +33,40 @@ def compute_shap(
             "shap_values": list[list[float]]
         }
     """
+    if fit.model_type == "doe_categorical_factorial":
+        return _compute_shap_categorical(fit, df, max_explain)
     if fit.model_type == "doe_linear" or fit.model_type == "doe_quadratic":
         return _compute_shap_linear(fit, df, nsamples, max_explain)
     elif fit.model_type in ("random_forest", "xgboost", "lightgbm"):
         return _compute_shap_tree(fit, df, nsamples, max_explain)
     else:
         raise ValueError(f"Unsupported model type for SHAP: {fit.model_type}")
+
+
+def _compute_shap_categorical(fit: ModelFit, df: pd.DataFrame, max_explain: int) -> dict:
+    """Explain categorical DOE effects at the original factor level.
+
+    Each contribution is the prediction difference after replacing one factor
+    with its fitted reference level. This keeps SHAP output aligned to the
+    original factors instead of exposing dummy-coded matrix columns.
+    """
+    explain = df[fit.inputs].head(max_explain).copy()
+    full = fit.model.predict(explain)
+    reference = {factor: fit.model.levels[factor][0] for factor in fit.inputs}
+    contributions = []
+    for factor in fit.inputs:
+        baseline = explain.copy()
+        baseline[factor] = reference[factor]
+        contributions.append(full - fit.model.predict(baseline))
+    values = np.column_stack(contributions) if contributions else np.empty((len(explain), 0))
+    return {
+        "expected_value": float(np.mean(fit.model.predict(pd.DataFrame([reference])))),
+        "feature_importance": sorted(
+            [{"name": name, "importance": float(np.abs(values[:, i]).mean())} for i, name in enumerate(fit.inputs)],
+            key=lambda item: item["importance"], reverse=True,
+        ),
+        "shap_values": values.tolist(),
+    }
 
 
 def _explain_sample(

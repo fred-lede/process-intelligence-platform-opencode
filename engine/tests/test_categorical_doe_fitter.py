@@ -4,6 +4,7 @@ import pytest
 from process_intelligence_engine.modeling.fitters import fit_doe_categorical_factorial
 from process_intelligence_engine.modeling.validation import compute_doe_statistics
 from process_intelligence_engine.prediction import predict_single
+from process_intelligence_engine.modeling.shap_explainer import compute_shap
 
 
 def _frame():
@@ -61,3 +62,12 @@ def test_categorical_prediction_accepts_named_input_mapping():
     fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
     value = predict_single("doe_categorical_factorial", fit.coefficients or {}, {"A": 40, "B": 5, "C": 0.0}, model=fit.model, feature_names=fit.inputs)
     assert value == pytest.approx(frame.iloc[0]["Y"])
+
+
+def test_categorical_doe_supports_original_factor_shap_explanations():
+    frame = _frame()
+    fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
+    result = compute_shap(fit, frame)
+
+    assert {item["name"] for item in result["feature_importance"]} == {"A", "B", "C"}
+    assert len(result["shap_values"]) == len(frame)
