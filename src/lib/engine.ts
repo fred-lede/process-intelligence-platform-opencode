@@ -547,6 +547,7 @@ export interface ValidationResult {
     level: 'production_ready' | 'engineering_reference' | 'exploratory' | 'needs_more_data' | 'not_recommended'
   }
   design_context?: FullValidationResult['design_context']
+  design_metrics?: { method: string; n_cells: number; r2: number; rmse: number } | null
 }
 
 export async function analyzeValidation(params: {

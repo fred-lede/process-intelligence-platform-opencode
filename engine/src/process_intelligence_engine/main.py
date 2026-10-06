@@ -50,7 +50,7 @@ from process_intelligence_engine.project.manifest import ProjectEngine, _PROCESS
 from process_intelligence_engine.modeling.interactions import compute_interactions
 from process_intelligence_engine.modeling.shap_explainer import compute_shap
 from process_intelligence_engine.modeling.extrapolation import compute_extrapolation_risk
-from process_intelligence_engine.modeling.validation import cross_validate, analyze_residuals, recommend_experiments, compute_credibility, compute_doe_statistics, compute_sensitivity_effect_sizes
+from process_intelligence_engine.modeling.validation import cross_validate, design_validate, analyze_residuals, recommend_experiments, compute_credibility, compute_doe_statistics, compute_sensitivity_effect_sizes
 from process_intelligence_engine.modeling.model_selection import compare_models
 from process_intelligence_engine.modeling.experiment_recommendation import recommend_experiments as recommend_experiments_full
 from process_intelligence_engine.modeling.fitters import (
@@ -842,6 +842,9 @@ def _handle_validation_analyze(params: dict) -> dict:
     recommendations = recommend_experiments(fit, df, interactions)
     credibility = compute_credibility(fit, df)
     design_context = _build_design_context(fit, df)
+    design_metrics = None
+    if design_context is not None and design_context["observed_cells"] == design_context["n_cells"] and not df[fit.inputs].duplicated().any():
+        design_metrics = design_validate(fit, df)
 
     return {
         **cv_result,
@@ -849,6 +852,7 @@ def _handle_validation_analyze(params: dict) -> dict:
         "recommendations": recommendations,
         "credibility": credibility,
         "design_context": design_context,
+        "design_metrics": design_metrics,
     }
 
 

@@ -2225,6 +2225,13 @@ export default function ModelCenter() {
                     description={t('validationLab.designBasedDescription')}
                   />
                 )}
+                {validationResult.design_metrics && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message={`DOE cell-out · R²=${validationResult.design_metrics.r2.toFixed(4)} · RMSE=${validationResult.design_metrics.rmse.toFixed(4)}`}
+                  />
+                )}
                 <div>
                   <strong>{t('modelCenter.meanMetrics')}:</strong>
                   <span style={{ marginLeft: 8 }}>R²: {validationResult.mean_metrics.mean_r2.toFixed(4)}</span>
