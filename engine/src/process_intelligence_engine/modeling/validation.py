@@ -138,22 +138,6 @@ def cross_validate(fit, df: pd.DataFrame, k: int = 5) -> dict[str, Any]:
     mean_r2 = np.mean([r["r2"] for r in cv_results])
     mean_rmse = np.mean([r["rmse"] for r in cv_results])
 
-    order_aliases = {
-        "run_order", "runorder", "run_sequence", "runsequence", "run_number",
-        "運行序", "运行序", "運行次序", "运行次序", "執行序", "执行序",
-    }
-    order_column = next(
-        (column for column in df.columns
-         if str(column).strip().lower().replace(" ", "_") in order_aliases),
-        None,
-    )
-    if order_column is not None:
-        parsed_order = pd.to_numeric(df[order_column], errors="coerce")
-        valid_order = bool(parsed_order.notna().all() and parsed_order.is_unique)
-    else:
-        parsed_order = None
-        valid_order = False
-
     return {
         "cv_results": cv_results,
         "mean_metrics": {
@@ -687,6 +671,22 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         fit_level = "poor"
     else:
         fit_level = "marginal"
+
+    order_aliases = {
+        "run_order", "runorder", "run_sequence", "runsequence", "run_number",
+        "運行序", "运行序", "運行次序", "运行次序", "執行序", "执行序",
+    }
+    order_column = next(
+        (column for column in df.columns
+         if str(column).strip().lower().replace(" ", "_") in order_aliases),
+        None,
+    )
+    if order_column is not None:
+        parsed_order = pd.to_numeric(df[order_column], errors="coerce")
+        valid_order = bool(parsed_order.notna().all() and parsed_order.is_unique)
+    else:
+        parsed_order = None
+        valid_order = False
 
     return {
         "model_type": model_type,
