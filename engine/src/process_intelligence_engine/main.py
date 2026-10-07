@@ -814,6 +814,8 @@ def _build_design_context(fit, df):
     replicate_counts = df.groupby(fit.inputs, dropna=False).size()
     max_replicates = int(replicate_counts.max()) if len(replicate_counts) else 0
     model_df = int(fit.metrics.get("model_df", 0))
+    if model_df <= 0 and fit.model_type == "doe_categorical_factorial":
+        model_df = max(len(fit.coefficients) - 1, 0)
     return {
         "kind": "categorical_factorial_doe",
         "validation_mode": "design_based",
@@ -823,7 +825,7 @@ def _build_design_context(fit, df):
         "replicate_min": int(replicate_counts.min()) if len(replicate_counts) else 0,
         "replicate_max": max_replicates,
         "model_df": model_df,
-        "residual_df": int(len(df) - model_df),
+        "residual_df": int(len(df) - model_df - 1),
         "has_replicates": max_replicates > 1,
         "warning": "Small designed DOE: use ANOVA, residual diagnostics, and confirmation experiments as primary evidence; ordinary random-fold CV is supplementary.",
     }
