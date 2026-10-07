@@ -103,3 +103,23 @@ def test_multiple_columns_preserve_order():
     )
     assert [f.name for f in fields] == ["barcode", "temperature"]
     assert isinstance(fields[0], DetectedField)
+
+
+def test_doe_design_columns_are_identifiers_not_model_fields():
+    fields = detect_fields(
+        [
+            {"name": "Standard Order", "values": [6, 16, 17, 11]},
+            {"name": "Run Order", "values": [1, 2, 3, 4]},
+            {"name": "Point Type", "values": [1, 1, 1, 1]},
+            {"name": "Block", "values": [1, 1, 1, 1]},
+            {"name": "PCBA SN", "values": ["A001", "A002", "A003", "A004"]},
+            {"name": "input-printing speed", "values": [40, 60, 80, 40]},
+            {"name": "output-thickness-CPK", "values": [1.6, 1.7, 1.65, 1.8]},
+        ]
+    )
+    roles = {field.name: field.role for field in fields}
+    assert roles["Standard Order"] == FieldRole.IDENTIFIER
+    assert roles["Run Order"] == FieldRole.IDENTIFIER
+    assert roles["Point Type"] == FieldRole.IDENTIFIER
+    assert roles["Block"] == FieldRole.IDENTIFIER
+    assert roles["PCBA SN"] == FieldRole.IDENTIFIER

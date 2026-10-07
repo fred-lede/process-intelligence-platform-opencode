@@ -81,6 +81,28 @@ OUTPUT_NAME_HINTS = [
     r"\b(rate|score|index|level|amount|volume|count|数量|比率|分數|指數|水位|數量)\b",
 ]
 
+# DOE exports often use numeric design metadata without an ``input-`` or
+# ``output-`` prefix.  These names are intentional role signals and must be
+# evaluated before the generic numeric-column fallback below.
+DOE_INPUT_PATTERNS = [
+    r"\bstandard order\b",
+    r"\brun order\b",
+    r"\b標準序\b",
+    r"\b标准序\b",
+    r"\b運行序\b",
+    r"\b运行序\b",
+]
+
+DOE_IDENTIFIER_PATTERNS = [
+    *DOE_INPUT_PATTERNS,
+    r"\bpoint type\b",
+    r"\bblock\b",
+    r"\b點類型\b",
+    r"\b点类型\b",
+    r"\b區組\b",
+    r"\b区组\b",
+]
+
 
 def _normalize(name: str) -> str:
     return re.sub(r"\s+", " ", name.lower().strip().replace("_", " ").replace("-", " "))
@@ -165,7 +187,22 @@ def detect_fields(columns: list[dict]) -> list[DetectedField]:
 
         # --- Role decision (priority order) ---
 
-        # 1. Quality label: OK/NG/1-0 binary outcome columns
+        # 1. DOE design columns.  These are experiment identifiers/metadata,
+        # not model inputs or quality results.  They must take precedence over
+        # generic numeric and binary-label inference.
+        if _match_any(normalized, DOE_IDENTIFIER_PATTERNS):
+            results.append(
+                DetectedField(
+                    name=name,
+                    role=FieldRole.IDENTIFIER,
+                    data_type="continuous" if numeric else "categorical",
+                    confidence=0.95,
+                    reason=["DOE column name identifies experiment order/design metadata"],
+                )
+            )
+            continue
+
+        # 2. Quality label: OK/NG/1-0 binary outcome columns
         upper = stats["upper_set"]
         if upper.issubset({"OK", "NG", "PASS", "FAIL", "1", "0", "TRUE", "FALSE"}) and len(upper) <= 2 and stats["non_null"] > 0:
             results.append(
@@ -179,7 +216,7 @@ def detect_fields(columns: list[dict]) -> list[DetectedField]:
             )
             continue
 
-        # 2. Timestamp by name + parseable values
+        # 3. Timestamp by name + parseable values
         if datetimeish and _match_any(normalized, TIMESTAMP_PATTERNS):
             results.append(
                 DetectedField(
@@ -192,7 +229,7 @@ def detect_fields(columns: list[dict]) -> list[DetectedField]:
             )
             continue
 
-        # 3. Identifier: high cardinality + name pattern
+        # 4. Identifier: high cardinality + name pattern
         if unique_fraction >= 0.9 and _match_any(normalized, IDENTIFIER_PATTERNS):
             results.append(
                 DetectedField(
