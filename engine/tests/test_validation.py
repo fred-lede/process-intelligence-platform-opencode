@@ -7,6 +7,7 @@ import pytest
 from process_intelligence_engine.modeling.validation import (
     cross_validate,
     analyze_residuals,
+    compute_doe_statistics,
     recommend_experiments,
 )
 from process_intelligence_engine.modeling.fitters import fit_doe_linear, fit_doe_quadratic
@@ -65,6 +66,16 @@ def test_analyze_residuals_returns_structure():
     assert result["stats"]["mean"] == pytest.approx(float(np.mean(result["residuals"])))
     assert result["stats"]["std"] > 0
     assert 0 <= result["normality_test"]["p_value"] <= 1
+
+
+def test_doe_statistics_returns_residual_histogram():
+    df = _make_df()
+    fit = fit_doe_linear(df, target="Y", inputs=["A", "B", "C"])
+    result = compute_doe_statistics(fit, df)
+    histogram = result["residual_histogram"]
+    assert histogram["bin_count"] == len(histogram["counts"])
+    assert len(histogram["edges"]) == histogram["bin_count"] + 1
+    assert sum(histogram["counts"]) == len(result["residuals"])
 
 
 def test_recommend_experiments_returns_list():

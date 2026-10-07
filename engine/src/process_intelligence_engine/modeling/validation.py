@@ -207,6 +207,25 @@ def compute_sensitivity_effect_sizes(
     return {"method": "permutation_rmse", "baseline_rmse": baseline_rmse, "items": rows}
 
 
+def _residual_histogram(residuals: np.ndarray) -> dict[str, Any]:
+    """Return deterministic residual histogram bins for API consumers."""
+    histogram_bins = max(1, min(10, int(np.ceil(np.log2(max(len(residuals), 1)) + 1))))
+    if len(residuals) >= 2:
+        q1, q3 = np.percentile(residuals, [25, 75])
+        iqr = float(q3 - q1)
+        span = float(np.max(residuals) - np.min(residuals))
+        width = 2.0 * iqr / (len(residuals) ** (1.0 / 3.0)) if iqr > 0 else 0.0
+        if width > 0 and span > 0:
+            histogram_bins = max(5, min(10, int(np.ceil(span / width))))
+    histogram_counts, histogram_edges = np.histogram(residuals, bins=histogram_bins)
+    return {
+        "counts": histogram_counts.astype(int).tolist(),
+        "edges": histogram_edges.astype(float).tolist(),
+        "bin_count": int(histogram_bins),
+        "method": "freedman_diaconis_clamped_5_10",
+    }
+
+
 def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
     """Analyze residuals for normality and patterns.
 
@@ -222,17 +241,7 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
 
     residuals = (y - y_pred).values
 
-    # Keep histogram boundaries deterministic and data-driven.  Freedman-
-    # Diaconis is used when the IQR is non-zero; Sturges is the fallback.
-    histogram_bins = max(1, min(10, int(np.ceil(np.log2(max(len(residuals), 1)) + 1))))
-    if len(residuals) >= 2:
-        q1, q3 = np.percentile(residuals, [25, 75])
-        iqr = float(q3 - q1)
-        span = float(np.max(residuals) - np.min(residuals))
-        width = 2.0 * iqr / (len(residuals) ** (1.0 / 3.0)) if iqr > 0 else 0.0
-        if width > 0 and span > 0:
-            histogram_bins = max(5, min(10, int(np.ceil(span / width))))
-    histogram_counts, histogram_edges = np.histogram(residuals, bins=histogram_bins)
+    histogram = _residual_histogram(residuals)
 
     mean = float(np.mean(residuals))
     std = float(np.std(residuals, ddof=1))
@@ -276,12 +285,7 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
 
     return {
         "residuals": [float(r) for r in residuals],
-        "residual_histogram": {
-            "counts": histogram_counts.astype(int).tolist(),
-            "edges": histogram_edges.astype(float).tolist(),
-            "bin_count": int(histogram_bins),
-            "method": "freedman_diaconis_clamped_5_10",
-        },
+        "residual_histogram": histogram,
         "stats": {
             "mean": mean,
             "std": std,
@@ -530,6 +534,7 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             y_pred = model.predict(X.to_numpy(dtype=float))
 
     residuals = y - y_pred
+    residual_histogram = _residual_histogram(residuals)
     ss_res = float(np.sum(residuals ** 2))
     ss_tot = float(np.sum((y - np.mean(y)) ** 2))
     ss_reg = ss_tot - ss_res
@@ -739,6 +744,7 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         "fit_level": fit_level,
         "fitted_values": [float(v) for v in y_pred],
         "residuals": [float(v) for v in residuals],
+        "residual_histogram": residual_histogram,
         "observation_order": parsed_order.tolist() if valid_order and parsed_order is not None else list(range(1, n + 1)),
         "order_basis": str(order_column) if valid_order and order_column is not None else "row_order",
         "residual_observations": [
