@@ -62,7 +62,10 @@ def test_categorical_doe_reports_pure_error_with_replicates():
     fit = fit_doe_categorical_factorial(frame, "Y", ["A", "B", "C"])
     stats = compute_doe_statistics(fit, replicated)
     assert stats["anova"]["pure_error"]["df"] == 27
-    assert stats["anova"]["lack_of_fit"]["df"] == 0
+    # The current model includes main effects and two-factor interactions but
+    # omits ABC, so replicated data leaves 8 lack-of-fit df for that omitted
+    # three-factor interaction.
+    assert stats["anova"]["lack_of_fit"]["df"] == 8
 
 
 def test_categorical_effects_are_marginal_means_over_other_factors():
