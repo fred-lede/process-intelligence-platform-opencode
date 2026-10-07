@@ -331,7 +331,7 @@ export interface DoeStatisticsResult {
   n_predictors: number
   r2: number | null
   adj_r2: number | null
-  anova: DoeAnovaResult | null
+  anova: (DoeAnovaResult & { rows?: Array<{ source: string; df: number; adj_ss: number; adj_ms: number | null; f_stat: number | null; p_value: number | null }> }) | null
   coefficients: DoeCoefficientStat[]
   sig_count: number
   total_terms: number

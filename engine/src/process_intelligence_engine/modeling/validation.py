@@ -575,6 +575,42 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
     f_stat = float(ms_reg / mse) if mse > 0 else 0.0
     f_p_value = float(1.0 - stats.f.cdf(f_stat, df_reg, df_res))
 
+    anova_rows: list[dict[str, Any]] = []
+    if model_type == "doe_categorical_factorial":
+        # For the balanced factorial design, adjusted SS is obtained by
+        # comparing the full model SSE with the SSE after removing a term.
+        term_groups: dict[tuple[str, ...], list[int]] = {}
+        for index, term in enumerate(design.term_names[1:], start=1):
+            term_groups.setdefault(design.term_factors[term], []).append(index)
+
+        def _adjusted_ss(indices: list[int]) -> float:
+            keep = [index for index in range(p) if index not in indices]
+            reduced = np.linalg.lstsq(X.to_numpy(dtype=float)[:, keep], y, rcond=None)[0]
+            reduced_residuals = y - X.to_numpy(dtype=float)[:, keep] @ reduced
+            return float(max(np.sum(reduced_residuals ** 2) - ss_res, 0.0))
+
+        def _anova_row(source: str, indices: list[int], ss: float | None = None) -> dict[str, Any]:
+            row_df = len(indices)
+            row_ss = _adjusted_ss(indices) if ss is None else float(ss)
+            row_ms = row_ss / row_df if row_df else None
+            row_f = row_ms / mse if row_ms is not None and mse > 0 else None
+            row_p = float(1.0 - stats.f.cdf(row_f, row_df, df_res)) if row_f is not None else None
+            return {"source": source, "df": row_df, "adj_ss": row_ss, "adj_ms": row_ms, "f_stat": row_f, "p_value": row_p}
+
+        main_groups = {f: indices for f, indices in term_groups.items() if len(f) == 1}
+        interaction_groups = {f: indices for f, indices in term_groups.items() if len(f) == 2}
+        main_indices = [index for indices in main_groups.values() for index in indices]
+        interaction_indices = [index for indices in interaction_groups.values() for index in indices]
+        anova_rows.append(_anova_row("模型", list(range(1, p)), ss=ss_reg))
+        anova_rows.append(_anova_row("線性", main_indices))
+        for factors, indices in main_groups.items():
+            anova_rows.append(_anova_row(" × ".join(factors), indices))
+        anova_rows.append(_anova_row("2 因子交互作用", interaction_indices))
+        for factors, indices in interaction_groups.items():
+            anova_rows.append(_anova_row(" × ".join(factors), indices))
+        anova_rows.append({"source": "誤差", "df": df_res, "adj_ss": ss_res, "adj_ms": mse, "f_stat": None, "p_value": None})
+        anova_rows.append({"source": "合計", "df": n - 1, "adj_ss": ss_tot, "adj_ms": None, "f_stat": None, "p_value": None})
+
     # Standard errors via (X'X)^{-1} * MSE
     XtX = X.T @ X
     try:
@@ -737,6 +773,7 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             "label": model_sig_label,
             "pure_error": pure_error,
             "lack_of_fit": lack_of_fit,
+            "rows": anova_rows,
         },
         "coefficients": coeff_rows,
         "sig_count": sig_count,

@@ -2321,6 +2321,20 @@ export default function ModelCenter() {
                           : `${t('modelCenter.doeNotSignificant')} (p≥0.05)`}
                       </Tag>
                     </div>
+                    {doeStats.anova.rows?.length ? <Table
+                      size="small"
+                      pagination={false}
+                      scroll={{ x: 760 }}
+                      dataSource={doeStats.anova.rows.map((row, index) => ({ ...row, key: `${row.source}-${index}` }))}
+                      columns={[
+                        { title: '來源', dataIndex: 'source', key: 'source' },
+                        { title: '自由度', dataIndex: 'df', key: 'df' },
+                        { title: 'Adj SS', dataIndex: 'adj_ss', key: 'adj_ss', render: (value: number) => value?.toFixed(5) ?? '—' },
+                        { title: 'Adj MS', dataIndex: 'adj_ms', key: 'adj_ms', render: (value: number | null) => value == null ? '—' : value.toFixed(6) },
+                        { title: 'F 值', dataIndex: 'f_stat', key: 'f_stat', render: (value: number | null) => value == null ? '—' : value.toFixed(2) },
+                        { title: 'P 值', dataIndex: 'p_value', key: 'p_value', render: (value: number | null) => value == null ? '—' : value.toFixed(6) },
+                      ]}
+                    /> : null}
                     {doeStats.anova.pure_error && (
                       <Alert
                         type={doeStats.anova.pure_error.df > 0 ? 'info' : 'warning'}
