@@ -339,6 +339,7 @@ export interface DoeStatisticsResult {
   note?: string
   fitted_values?: number[]
   residuals?: number[]
+  residual_histogram?: { counts: number[]; edges: number[]; bin_count: number; method: string }
   observation_order?: number[]
   order_basis?: string
   residual_observations?: Array<{ run_order: number; standard_order?: number | null; actual: number; fitted: number; residual: number }>

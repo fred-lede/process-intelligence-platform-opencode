@@ -57,6 +57,9 @@ def test_analyze_residuals_returns_structure():
     assert "residuals" in result
     assert "stats" in result
     assert "normality_test" in result
+    assert result["residual_histogram"]["bin_count"] == len(result["residual_histogram"]["counts"])
+    assert len(result["residual_histogram"]["edges"]) == result["residual_histogram"]["bin_count"] + 1
+    assert sum(result["residual_histogram"]["counts"]) == len(result["residuals"])
     assert len(result["residuals"]) == len(df)
     assert math.isfinite(result["stats"]["mean"])
     assert result["stats"]["mean"] == pytest.approx(float(np.mean(result["residuals"])))

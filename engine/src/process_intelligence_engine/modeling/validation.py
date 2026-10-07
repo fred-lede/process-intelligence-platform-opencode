@@ -222,6 +222,18 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
 
     residuals = (y - y_pred).values
 
+    # Keep histogram boundaries deterministic and data-driven.  Freedman-
+    # Diaconis is used when the IQR is non-zero; Sturges is the fallback.
+    histogram_bins = max(1, min(10, int(np.ceil(np.log2(max(len(residuals), 1)) + 1))))
+    if len(residuals) >= 2:
+        q1, q3 = np.percentile(residuals, [25, 75])
+        iqr = float(q3 - q1)
+        span = float(np.max(residuals) - np.min(residuals))
+        width = 2.0 * iqr / (len(residuals) ** (1.0 / 3.0)) if iqr > 0 else 0.0
+        if width > 0 and span > 0:
+            histogram_bins = max(5, min(10, int(np.ceil(span / width))))
+    histogram_counts, histogram_edges = np.histogram(residuals, bins=histogram_bins)
+
     mean = float(np.mean(residuals))
     std = float(np.std(residuals, ddof=1))
 
@@ -264,6 +276,12 @@ def analyze_residuals(fit, df: pd.DataFrame) -> dict[str, Any]:
 
     return {
         "residuals": [float(r) for r in residuals],
+        "residual_histogram": {
+            "counts": histogram_counts.astype(int).tolist(),
+            "edges": histogram_edges.astype(float).tolist(),
+            "bin_count": int(histogram_bins),
+            "method": "freedman_diaconis_clamped_5_10",
+        },
         "stats": {
             "mean": mean,
             "std": std,
