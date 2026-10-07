@@ -138,6 +138,22 @@ def cross_validate(fit, df: pd.DataFrame, k: int = 5) -> dict[str, Any]:
     mean_r2 = np.mean([r["r2"] for r in cv_results])
     mean_rmse = np.mean([r["rmse"] for r in cv_results])
 
+    order_aliases = {
+        "run_order", "runorder", "run_sequence", "runsequence", "run_number",
+        "運行序", "运行序", "運行次序", "运行次序", "執行序", "执行序",
+    }
+    order_column = next(
+        (column for column in df.columns
+         if str(column).strip().lower().replace(" ", "_") in order_aliases),
+        None,
+    )
+    if order_column is not None:
+        parsed_order = pd.to_numeric(df[order_column], errors="coerce")
+        valid_order = bool(parsed_order.notna().all() and parsed_order.is_unique)
+    else:
+        parsed_order = None
+        valid_order = False
+
     return {
         "cv_results": cv_results,
         "mean_metrics": {
@@ -694,6 +710,8 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         "fit_level": fit_level,
         "fitted_values": [float(v) for v in y_pred],
         "residuals": [float(v) for v in residuals],
+        "observation_order": parsed_order.tolist() if valid_order and parsed_order is not None else list(range(1, n + 1)),
+        "order_basis": str(order_column) if valid_order and order_column is not None else "row_order",
         "categorical_effects": categorical_effects,
         "pareto_terms": pareto_terms,
     }

@@ -339,6 +339,8 @@ export interface DoeStatisticsResult {
   note?: string
   fitted_values?: number[]
   residuals?: number[]
+  observation_order?: number[]
+  order_basis?: string
   categorical_effects?: {
     main: Array<{ factor: string; points: Array<{ level: string | number; mean: number }> }>
     interactions: Array<{ factors: [string, string]; lines: Array<{ series: string | number; points: Array<{ level: string | number; mean: number }> }> }>

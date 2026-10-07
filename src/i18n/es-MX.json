@@ -789,6 +789,7 @@
     "viewEquation": "Ver ecuación completa",
     "designBasedTitle": "Validación de DOE diseñado pequeño",
     "designBasedDescription": "Este modelo está pensado para efectos principales, interacciones y experimentos de confirmación. La validación cruzada ordinaria de pliegues aleatorios es complementaria y no debe por sí sola rechazar un DOE ortogonal/estilo Taguchi. Prefiera réplicas o un experimento de confirmación antes de añadir factores de entrada por un R² negativo.",
+    "runOrder": "Orden de ejecución",
     "hasReplicates": "Hay réplicas",
     "noReplicates": "Sin réplicas; añada réplicas o realice un experimento de confirmación",
     "isNormal": "Los residuos son normalmente distribuidos",
