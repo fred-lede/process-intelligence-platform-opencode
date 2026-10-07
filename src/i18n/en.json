@@ -830,6 +830,7 @@
     "designBasedTitle": "Small designed DOE validation",
     "designBasedDescription": "This model is intended for main effects, interactions, and confirmation experiments. Ordinary random-fold cross-validation is supplementary and should not by itself reject an orthogonal/Taguchi-style DOE. Prefer replication or a confirmation experiment before adding input factors because of a negative R².",
     "runOrder": "Run order",
+    "standardOrder": "Standard order",
     "hasReplicates": "Replicates present",
     "noReplicates": "No replicates; add replicates or run a confirmation experiment",
     "noEligibleModels": "No Validated or Approved models are available. Complete model validation in Model Center first.",

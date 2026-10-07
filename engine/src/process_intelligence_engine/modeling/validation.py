@@ -676,6 +676,10 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         "run_order", "runorder", "run_sequence", "runsequence", "run_number",
         "運行序", "运行序", "運行次序", "运行次序", "執行序", "执行序",
     }
+    standard_aliases = {
+        "standard_order", "standardorder", "standard_number",
+        "標準序", "标准序", "標準次序", "标准次序",
+    }
     order_column = next(
         (column for column in df.columns
          if str(column).strip().lower().replace(" ", "_") in order_aliases),
@@ -687,6 +691,13 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
     else:
         parsed_order = None
         valid_order = False
+    standard_column = next(
+        (column for column in df.columns
+         if str(column).strip().lower().replace(" ", "_") in standard_aliases),
+        None,
+    )
+    parsed_standard = pd.to_numeric(df[standard_column], errors="coerce") if standard_column is not None else None
+    valid_standard = bool(parsed_standard is not None and parsed_standard.notna().all())
 
     return {
         "model_type": model_type,
@@ -712,6 +723,16 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         "residuals": [float(v) for v in residuals],
         "observation_order": parsed_order.tolist() if valid_order and parsed_order is not None else list(range(1, n + 1)),
         "order_basis": str(order_column) if valid_order and order_column is not None else "row_order",
+        "residual_observations": [
+            {
+                "run_order": float(parsed_order.iloc[i]) if valid_order and parsed_order is not None else i + 1,
+                "standard_order": float(parsed_standard.iloc[i]) if valid_standard and parsed_standard is not None else None,
+                "actual": float(y[i]),
+                "fitted": float(y_pred[i]),
+                "residual": float(residuals[i]),
+            }
+            for i in range(n)
+        ],
         "categorical_effects": categorical_effects,
         "pareto_terms": pareto_terms,
     }

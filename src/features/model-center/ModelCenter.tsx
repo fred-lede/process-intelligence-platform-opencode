@@ -2332,6 +2332,20 @@ export default function ModelCenter() {
                         style={{ marginTop: 4 }}
                       />
                     )}
+                    {doeStats.residual_observations && <Table
+                      size="small"
+                      pagination={{ pageSize: 10 }}
+                      scroll={{ x: 560 }}
+                      rowKey={(row) => `${row.run_order}-${row.standard_order ?? 'na'}`}
+                      dataSource={[...doeStats.residual_observations].sort((a, b) => a.run_order - b.run_order)}
+                      columns={[
+                        { title: t('modelCenter.runOrder', { defaultValue: '運行序' }), dataIndex: 'run_order', key: 'run_order' },
+                        { title: t('modelCenter.standardOrder', { defaultValue: '標準序' }), dataIndex: 'standard_order', key: 'standard_order', render: (value: number | null) => value ?? '—' },
+                        { title: 'Actual', dataIndex: 'actual', key: 'actual', render: (value: number) => value.toFixed(6) },
+                        { title: 'Fitted', dataIndex: 'fitted', key: 'fitted', render: (value: number) => value.toFixed(6) },
+                        { title: 'Residual', dataIndex: 'residual', key: 'residual', render: (value: number) => value.toFixed(6) },
+                      ]}
+                    />}
                     <div>
                       <strong>{t('modelCenter.doeSigTerms')}:</strong>
                       <span style={{ marginLeft: 8 }}>{doeStats.sig_count}/{doeStats.total_terms} {t('modelCenter.doeTermsSignificant')}</span>
@@ -2410,7 +2424,7 @@ export default function ModelCenter() {
                         <Plot data={[(() => { const values = [...(doeStats.residuals ?? [])].sort((a, b) => a - b); const n = values.length; const y = values.map((_, i) => normalQuantile((i + 0.5) / Math.max(n, 1))); return { x: values, y, mode: 'markers', type: 'scatter', name: t('modelCenter.doeResidualPoints'), hovertemplate: 'Residual=%{x:.6f}<br>Normal quantile=%{y:.3f}<extra></extra>' }; })(), (() => { const values = [...(doeStats.residuals ?? [])].sort((a, b) => a - b); const n = values.length; return { x: values.length ? [values[0], values[values.length - 1]] : [-1, 1], y: n > 1 ? [normalQuantile(0.5 / n), normalQuantile(1 - 0.5 / n)] : [-1, 1], mode: 'lines', type: 'scatter', name: t('modelCenter.doeNormalReference'), line: { dash: 'dash', color: '#999' }, hoverinfo: 'skip' }; })()]} layout={{ height: 340, margin: { l: 55, r: 15, t: 10, b: 55 }, xaxis: { title: 'Residual' }, yaxis: { title: t('modelCenter.doeTheoreticalNormalQuantile') }, showlegend: true }} />
                       </Card>
                       <Card size="small" title={t('modelCenter.doeResidualHistogram')}>
-                        <Plot data={[{ x: doeStats.residuals ?? [], type: 'histogram', marker: { color: '#6699cc' }, name: t('modelCenter.doeResiduals') }]} layout={{ height: 340, margin: { l: 50, r: 15, t: 10, b: 55 }, xaxis: { title: 'Residual' }, yaxis: { title: t('modelCenter.doeFrequency') }, bargap: 0.05, showlegend: false }} />
+                        <Plot data={[{ x: doeStats.residuals ?? [], type: 'histogram', nbinsx: 7, marker: { color: '#6699cc' }, name: t('modelCenter.doeResiduals') }]} layout={{ height: 340, margin: { l: 50, r: 15, t: 10, b: 55 }, xaxis: { title: 'Residual' }, yaxis: { title: t('modelCenter.doeFrequency') }, bargap: 0.05, showlegend: false }} />
                       </Card>
                       <Card size="small" title={t('modelCenter.doeInteractionPlot')}>
                         {doeStats.model_type === 'doe_categorical_factorial' && doeStats.categorical_effects && (

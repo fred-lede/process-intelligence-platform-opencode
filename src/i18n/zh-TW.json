@@ -830,6 +830,7 @@
     "designBasedTitle": "小樣本設計型 DOE 驗證",
     "designBasedDescription": "此模型主要用於主效應、交互作用與確認實驗。一般隨機交叉驗證僅作輔助，不應單獨否定正交／田口型 DOE。優先增加重複或執行確認實驗，不要僅因負 R² 就增加輸入因子。",
     "runOrder": "運行序",
+    "standardOrder": "標準序",
     "hasReplicates": "含重複實驗",
     "noReplicates": "目前無重複實驗，建議增加重複或確認實驗",
     "noEligibleModels": "目前沒有已驗證或已核准的模型，請先到模型中心完成模型驗證。",

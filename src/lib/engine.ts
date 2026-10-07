@@ -341,6 +341,7 @@ export interface DoeStatisticsResult {
   residuals?: number[]
   observation_order?: number[]
   order_basis?: string
+  residual_observations?: Array<{ run_order: number; standard_order?: number | null; actual: number; fitted: number; residual: number }>
   categorical_effects?: {
     main: Array<{ factor: string; points: Array<{ level: string | number; mean: number }> }>
     interactions: Array<{ factors: [string, string]; lines: Array<{ series: string | number; points: Array<{ level: string | number; mean: number }> }> }>
