@@ -331,7 +331,7 @@ export interface DoeStatisticsResult {
   n_predictors: number
   r2: number | null
   adj_r2: number | null
-  anova: (DoeAnovaResult & { rows?: Array<{ source: string; df: number; adj_ss: number; adj_ms: number | null; f_stat: number | null; p_value: number | null }> }) | null
+  anova: (DoeAnovaResult & { critical_value?: number; rows?: Array<{ source: string; df: number; adj_ss: number; adj_ms: number | null; f_stat: number | null; p_value: number | null }> }) | null
   coefficients: DoeCoefficientStat[]
   sig_count: number
   total_terms: number
@@ -347,7 +347,7 @@ export interface DoeStatisticsResult {
     main: Array<{ factor: string; points: Array<{ level: string | number; mean: number }> }>
     interactions: Array<{ factors: [string, string]; lines: Array<{ series: string | number; points: Array<{ level: string | number; mean: number }> }> }>
   } | null
-  pareto_terms?: Array<{ term: string; max_abs_t: number; min_p_value: number; significant_count: number; contrast_count: number }> | null
+  pareto_terms?: Array<{ term: string; max_abs_t: number; standardized_effect?: number; min_p_value: number; significant_count: number; contrast_count: number }> | null
   residual_diagnostics?: { normality_test?: { p_value: number; is_normal: boolean }; durbin_watson?: { statistic: number; interpretation: string }; stats?: { skewness: number; kurtosis: number }; outliers?: { count: number; indices: number[]; threshold: number } }
 }
 

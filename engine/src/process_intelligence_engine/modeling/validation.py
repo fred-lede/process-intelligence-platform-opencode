@@ -681,6 +681,10 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             for key, rows in grouped.items() if rows
         ]
         pareto_terms.sort(key=lambda item: item["max_abs_t"], reverse=True)
+        anova_by_source = {row["source"]: row for row in anova_rows}
+        for term in pareto_terms:
+            row = anova_by_source.get(term["term"])
+            term["standardized_effect"] = float(np.sqrt(row["f_stat"])) if row and row["f_stat"] is not None else 0.0
         levels = design.levels
         for factor, factor_levels in levels.items():
             points = []
@@ -774,6 +778,7 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
             "pure_error": pure_error,
             "lack_of_fit": lack_of_fit,
             "rows": anova_rows,
+            "critical_value": float(stats.t.ppf(0.975, df_res)),
         },
         "coefficients": coeff_rows,
         "sig_count": sig_count,
