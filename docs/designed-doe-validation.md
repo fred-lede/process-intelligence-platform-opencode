@@ -29,6 +29,19 @@ With one observation per cell, pure error and lack-of-fit cannot be separated.
 The application reports this explicitly. Add repeated runs at selected cells
 or center conditions when estimating repeatability and lack-of-fit matters.
 
+## Residual order chart
+
+The residual-versus-order chart uses `Run Order`, meaning the actual execution
+sequence after DOE randomization. The x-axis displays consecutive observation
+numbers (`1` through `n`) so the chart remains readable even when the source
+column contains non-consecutive or non-sorted values. Hover details provide the
+observation number, `Run Order`, `Standard Order`, and residual.
+
+Use this chart to look for time, equipment, lot, operator, or other execution-
+sequence drift. `Standard Order` is retained for tracing a row back to the DOE
+design matrix; it is not used as the process sequence unless the source data
+has no valid `Run Order`.
+
 ## Confirmation experiments
 
 Use the Validation Lab to select a suggested condition, record planned and

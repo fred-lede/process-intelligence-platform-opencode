@@ -93,6 +93,17 @@ Multiple scenario fixtures are provided. See the test-data guides: [繁體中文
 
 ## Version history
 
+### v0.10.6 (2026-10-07)
+
+**DOE residual-order chart and documentation clarification**
+
+- The residual-versus-order chart sorts observations by `Run Order` and uses a fixed observation-number axis, so `Standard Order` is not mistaken for execution order.
+- The chart title identifies the execution-order meaning, and hover details retain observation number, `Run Order`, `Standard Order`, and residual.
+- The x-axis is constrained to the valid observation range and reduces tick density for larger DOE tables.
+- Documentation now states the DOE convention: use `Run Order` to inspect time, equipment, lot, or operator drift; use `Standard Order` to trace design points.
+
+Validation: `npm run build` passed; model fitting and residual calculations are unchanged.
+
 ### v0.9.1 (2026-09-16)
 
 **Time-series deep models and DOE / model governance hardening**
