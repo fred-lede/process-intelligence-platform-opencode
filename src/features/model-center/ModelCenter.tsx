@@ -2382,7 +2382,23 @@ export default function ModelCenter() {
                         <Plot data={[(() => { const rows = doeStats.model_type === 'doe_categorical_factorial' && doeStats.pareto_terms ? doeStats.pareto_terms : doeStats.coefficients.filter(c => c.name !== '1').sort((a, b) => Math.abs(b.t_stat) - Math.abs(a.t_stat)); const values = rows.map(c => 'max_abs_t' in c ? c.max_abs_t : Math.abs(c.t_stat)); const labels = rows.map(c => 'term' in c ? c.term : c.name); const pValues = rows.map(c => 'min_p_value' in c ? c.min_p_value : c.p_value); return { x: values, y: labels, type: 'bar', orientation: 'h', customdata: pValues, marker: { color: values.map(v => v >= 2 ? '#2563eb' : '#94a3b8') }, hovertemplate: '%{y}<br>|t|=%{x:.2f}<br>min p=%{customdata:.6f}<extra></extra>' }; })()]} layout={{ height: 340, margin: { l: 150, r: 25, t: 30, b: 55 }, title: { text: 'α=0.05 · 臨界值 ≈ 2', font: { size: 12 } }, xaxis: { title: '｜t｜（標準化效應）' }, yaxis: { automargin: true }, shapes: [{ type: 'line', x0: 2, x1: 2, y0: -0.5, y1: (doeStats.model_type === 'doe_categorical_factorial' && doeStats.pareto_terms ? doeStats.pareto_terms.length : doeStats.coefficients.filter(c => c.name !== '1').length) - 0.5, line: { dash: 'dash', color: '#ef4444', width: 2 } }], showlegend: false }} />
                       </Card>
                       <Card size="small" title={t('modelCenter.doeMainEffects')}>
-                        <Plot data={doeStats.model_type === 'doe_categorical_factorial' && doeStats.categorical_effects ? doeStats.categorical_effects.main.map(effect => ({ x: effect.points.map(point => String(point.level)), y: effect.points.map(point => point.mean), mode: 'lines+markers', name: effect.factor })) : doeStats.coefficients.filter(c => c.name !== '1' && !/[\\^:*]/.test(c.name)).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 80 }, xaxis: { title: doeStats.model_type === 'doe_categorical_factorial' ? 'Factor level' : '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: true, legend: { orientation: 'h', y: -0.25 } }} />
+                        {doeStats.model_type === 'doe_categorical_factorial' && doeStats.categorical_effects ? (() => {
+                          const effects = doeStats.categorical_effects.main
+                          const allMeans = effects.flatMap(effect => effect.points.map(point => point.mean))
+                          const mean = allMeans.length ? allMeans.reduce((sum, value) => sum + value, 0) / allMeans.length : 0
+                          const min = allMeans.length ? Math.min(...allMeans) : 0
+                          const max = allMeans.length ? Math.max(...allMeans) : 1
+                          const pad = Math.max((max - min) * 0.12, 0.01)
+                          return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+                            {effects.map(effect => <div key={effect.factor}>
+                              <Typography.Text strong>{effect.factor}</Typography.Text>
+                              <Plot
+                                data={[{ x: effect.points.map(point => String(point.level)), y: effect.points.map(point => point.mean), mode: 'lines+markers', type: 'scatter', name: effect.factor, hovertemplate: '%{x}<br>Mean=%{y:.6f}<extra></extra>' }]}
+                                layout={{ height: 260, margin: { l: 48, r: 12, t: 8, b: 58 }, xaxis: { title: 'Factor level', type: 'category' }, yaxis: { title: t('modelCenter.doePredictedEffect'), range: [min - pad, max + pad] }, shapes: [{ type: 'line', x0: -0.5, x1: effect.points.length - 0.5, y0: mean, y1: mean, line: { dash: 'dash', color: '#999' } }], showlegend: false }}
+                              />
+                            </div>)}
+                          </div>
+                        })() : <Plot data={doeStats.coefficients.filter(c => c.name !== '1' && !/[\\^:*]/.test(c.name)).map(c => ({ x: [-1, 1], y: [-(c.coef ?? 0), c.coef ?? 0], mode: 'lines+markers', name: c.name }))} layout={{ height: 280, margin: { l: 45, r: 15, t: 10, b: 80 }, xaxis: { title: '−1 / +1' }, yaxis: { title: t('modelCenter.doePredictedEffect') }, showlegend: true, legend: { orientation: 'h', y: -0.25 } }} />}
                       </Card>
                       <Card size="small" title={t('modelCenter.doeResidualsVsFits')}>
                         <Plot data={[{ x: doeStats.fitted_values ?? [], y: doeStats.residuals ?? [], mode: 'markers', type: 'scatter' }]} layout={{ height: 340, margin: { l: 45, r: 15, t: 10, b: 45 }, xaxis: { title: 'Fitted' }, yaxis: { title: 'Residual' } }} />
