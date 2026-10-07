@@ -601,10 +601,19 @@ def compute_doe_statistics(fit, df: pd.DataFrame) -> dict[str, Any]:
         interaction_groups = {f: indices for f, indices in term_groups.items() if len(f) == 2}
         main_indices = [index for indices in main_groups.values() for index in indices]
         interaction_indices = [index for indices in interaction_groups.values() for index in indices]
+        grand_mean = float(np.mean(y))
+        main_ss = {
+            factors: float(sum(
+                int(count) * (float(mean) - grand_mean) ** 2
+                for level, mean in df.groupby(factors[0], sort=False)[fit.target].mean().items()
+                for count in [df[factors[0]].value_counts().loc[level]]
+            ))
+            for factors in main_groups
+        }
         anova_rows.append(_anova_row("模型", list(range(1, p)), ss=ss_reg))
-        anova_rows.append(_anova_row("線性", main_indices))
+        anova_rows.append(_anova_row("線性", main_indices, ss=sum(main_ss.values())))
         for factors, indices in main_groups.items():
-            anova_rows.append(_anova_row(" × ".join(factors), indices))
+            anova_rows.append(_anova_row(" × ".join(factors), indices, ss=main_ss[factors]))
         anova_rows.append(_anova_row("2 因子交互作用", interaction_indices))
         for factors, indices in interaction_groups.items():
             anova_rows.append(_anova_row(" × ".join(factors), indices))
