@@ -5,6 +5,28 @@ from datetime import datetime
 from typing import Any
 
 
+# Canonical display names, matching the in-app model names (i18n modelType.*). The report
+# renderers previously printed the raw id, so an exported report showed
+# "doe_categorical_factorial" where the application shows a model name.
+MODEL_TYPE_LABELS: dict[str, str] = {
+    "doe_linear": "DOE 線性",
+    "doe_quadratic": "DOE 二次",
+    "doe_categorical_factorial": "DOE 三水準類別因子",
+    "random_forest": "隨機樹",
+    "residual_hybrid": "殘差混合",
+    "logistic_regression": "Logistic 迴歸",
+    "weibull_regression": "Weibull 迴歸",
+    "xgboost": "XGBoost",
+    "lightgbm": "LightGBM",
+}
+
+
+def model_type_label(model_type: Any) -> str:
+    """Display name for a model type; keeps the raw id when it is not a known type."""
+    key = str(model_type or "")
+    return MODEL_TYPE_LABELS.get(key, key)
+
+
 @dataclass
 class ReportData:
     """Data required to generate a report."""
@@ -43,6 +65,13 @@ class ReportData:
     
     # Validation / credibility
     credibility: dict[str, Any] = field(default_factory=dict)
+
+    # Designed-DOE validation: the categorical factorial design context (cells, observed
+    # cells, replicates, model/residual df, small-design warning) and the recorded
+    # confirmation experiments. Both were computed for validation/analyze but never
+    # reached the report, so a designed-DOE report showed no ANOVA basis at all.
+    design_context: dict[str, Any] = field(default_factory=dict)
+    confirmation_evidence: dict[str, Any] = field(default_factory=dict)
     
     # Recommendations + proposed process window
     recommendations: list[dict] = field(default_factory=list)

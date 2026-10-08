@@ -1051,6 +1051,32 @@ def _handle_report_generate(params: dict) -> dict:
         if not best_model and model_comparison:
             best_model = MODEL_REGISTRY._get_unlocked(model_ids[0]).to_dto()
 
+    # Designed-DOE context for the report: the same fit the report displays, described by
+    # its design (cells, replicates, model/residual df, small-design warning) plus the
+    # confirmation experiments on record. Both were previously computed for
+    # validation/analyze only, so an exported designed-DOE report carried no ANOVA basis.
+    # Empty for model types the design context does not apply to.
+    design_context: dict = {}
+    confirmation_evidence: dict = {}
+    if best_model:
+        try:
+            best_fit = MODEL_REGISTRY._get_unlocked(best_model["model_id"])
+            design_context = _build_design_context(best_fit, df) or {}
+            records = EXPERIMENT_REGISTRY.list_by_model(best_fit.model_id)
+            pass_count = sum(1 for item in records if item["result"] == "pass")
+            confirmation_evidence = {
+                "count": len(records),
+                "pass_count": pass_count,
+                "pass_rate": (pass_count / len(records)) if records else None,
+                "mean_abs_prediction_error": (
+                    float(np.mean([abs(item["prediction_error"]) for item in records]))
+                    if records
+                    else None
+                ),
+            }
+        except Exception:
+            design_context, confirmation_evidence = {}, {}
+
     fields_list = []
     if model_ids:
         for mid in model_ids:
@@ -1263,6 +1289,8 @@ def _handle_report_generate(params: dict) -> dict:
         anomalies=anomalies,
         model_comparison=model_comparison,
         best_model=best_model,
+        design_context=design_context,
+        confirmation_evidence=confirmation_evidence,
         interactions=interactions,
         sensitivity_effects=sensitivity_effects,
         monte_carlo=monte_carlo_result,

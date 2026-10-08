@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from .base import ReportGenerator, flatten_rows
-from .models import ReportData
+from .models import ReportData, model_type_label
 from .charting import histogram_svg, heatmap_svg, control_chart_svg
 
 SEVERITY_BADGE = {
@@ -247,7 +247,7 @@ class HTMLReportGenerator(ReportGenerator):
         for m in self.data.model_comparison:
             metrics = m.get("metrics") or {}
             body += (
-                f"<tr><td>{self._e(m.get('model_id'))}</td><td>{self._e(m.get('model_type'))}</td>"
+                f"<tr><td>{self._e(m.get('model_id'))}</td><td>{self._e(model_type_label(m.get('model_type')))}</td>"
                 f"<td>{self._fmt(metrics.get('r2'))}</td><td>{self._fmt(metrics.get('rmse'))}</td>"
                 f"<td>{self._fmt(metrics.get('mae'))}</td><td>{self._fmt(metrics.get('adj_r2'))}</td>"
                 f"<td>{self._e(m.get('status'))}</td></tr>"
@@ -259,7 +259,7 @@ class HTMLReportGenerator(ReportGenerator):
         bm = self.data.best_model
         if not bm:
             return ""
-        body = f"<div class='info-box'><strong>模型類型:</strong> {self._e(bm.get('model_type'))}<br>"
+        body = f"<div class='info-box'><strong>模型類型:</strong> {self._e(model_type_label(bm.get('model_type')))}<br>"
         body += f"<strong>切目標:</strong> {self._e(bm.get('target'))}<br>"
         body += f"<strong>輸入:</strong> {self._e(', '.join(bm.get('inputs') or []))}<br>"
         body += f"<strong>訓練樣本:</strong> {self._e(bm.get('n_train'))} / 測試樣本: {self._e(bm.get('n_test'))}<br>"
@@ -303,13 +303,77 @@ class HTMLReportGenerator(ReportGenerator):
 
     def _render_doe_chart_note(self) -> str:
         """Document DOE chart coverage and interpretation limits in reports."""
-        model_type = (self.data.best_model or {}).get("model_type", "")
-        if not str(model_type).startswith("doe_"):
+        model_type = str((self.data.best_model or {}).get("model_type", ""))
+        if not model_type.startswith("doe_"):
             return ""
-        body = ("本報告對應 DOE 統計推論頁的 Pareto、主效應、交互作用、Contour、3D Surface、"
-                "標準化效應常態機率圖，以及殘差對預測值／資料順序、殘差常態機率圖與直方圖。"
-                "圖表僅描述目前模型與資料範圍；顯著性不等於因果，Contour／Surface 為其他輸入固定下的切片。")
+        if model_type == "doe_categorical_factorial":
+            # Categorical factors are discrete levels, so there is no contour or 3D
+            # surface to show. The generic note would claim charts this report does not
+            # contain, so state what is actually covered.
+            body = ("本報告對應 DOE 統計推論頁的 Pareto、主效應、水準對比與二因子交互作用，"
+                    "以及殘差對預測值／資料順序、殘差常態機率圖與直方圖。"
+                    "類別因子為離散水準，因此不含 Contour 與 3D Surface（僅連續因子適用）。"
+                    "圖表僅描述目前模型與資料範圍；顯著性不等於因果。")
+        else:
+            body = ("本報告對應 DOE 統計推論頁的 Pareto、主效應、交互作用、Contour、3D Surface、"
+                    "標準化效應常態機率圖，以及殘差對預測值／資料順序、殘差常態機率圖與直方圖。"
+                    "圖表僅描述目前模型與資料範圍；顯著性不等於因果，Contour／Surface 為其他輸入固定下的切片。")
         return self._section("DOE 圖表與使用限制", f"<div class='info-box'>{self._e(body)}</div>")
+
+    def _render_doe_design(self) -> str:
+        """Design basis and ANOVA degrees of freedom for a designed DOE model.
+
+        Reports the design itself -- how many cells the factor levels define, how many were
+        observed, whether replicates exist, and the model/residual df -- because that is what
+        makes an ANOVA verdict readable. Without replicates pure error cannot be estimated,
+        so lack-of-fit has no basis and the report must say so rather than imply the model
+        was tested against replication.
+        """
+        ctx = self.data.design_context or {}
+        if not ctx:
+            return ""
+        evidence = self.data.confirmation_evidence or {}
+        rows = [
+            ("設計格數（水準組合）", ctx.get("n_cells")),
+            ("實際觀測格數", ctx.get("observed_cells")),
+            ("重複次數（最小／最大）", f"{ctx.get('replicate_min')} / {ctx.get('replicate_max')}"),
+            ("模型自由度", ctx.get("model_df")),
+            ("殘差自由度", ctx.get("residual_df")),
+            ("觀測值總數", ctx.get("n_obs")),
+        ]
+        body = "<table><tr><th>項目</th><th>值</th></tr>"
+        for label, value in rows:
+            body += f"<tr><td>{self._e(label)}</td><td>{self._e(value)}</td></tr>"
+        body += "</table>"
+
+        notes = []
+        if ctx.get("has_replicates"):
+            notes.append("有重複觀測，可估計純誤差並檢定缺適性（lack-of-fit）。")
+        else:
+            notes.append("沒有重複觀測，因此無法估計純誤差，也無法檢定缺適性；"
+                         "殘差自由度僅來自模式項，不足以區分模型不足與隨機誤差。")
+        observed_cells = ctx.get("observed_cells")
+        total_cells = ctx.get("n_cells")
+        if observed_cells is not None and total_cells and observed_cells < total_cells:
+            notes.append("部分水準組合未被觀測，該區域為設計缺口，不可視為已驗證。")
+        if ctx.get("warning"):
+            notes.append(str(ctx["warning"]))
+        if evidence:
+            count = evidence.get("count") or 0
+            if count:
+                rate = evidence.get("pass_rate")
+                mae = evidence.get("mean_abs_prediction_error")
+                notes.append(
+                    f"已記錄確認實驗 {count} 次（通過 {evidence.get('pass_count')} 次"
+                    + (f"，合格率 {rate:.0%}" if isinstance(rate, (int, float)) else "")
+                    + (f"，平均絕對預測誤差 {mae:.4g}" if isinstance(mae, (int, float)) else "")
+                    + "）。"
+                )
+            else:
+                notes.append("尚無確認實驗記錄；ANOVA 與殘差診斷只是模型內部的證據，"
+                             "在完成實體確認實驗前不足以支撐生產決策。")
+        body += "<div class='info-box'>" + "<br>".join(self._e(n) for n in notes) + "</div>"
+        return self._section("設計基礎與 ANOVA 自由度", body)
 
     def _render_sensitivity_effects(self) -> str:
         data = self.data.sensitivity_effects or {}
@@ -527,6 +591,7 @@ class HTMLReportGenerator(ReportGenerator):
             self._render_best_model(),
             self._render_interactions(),
             self._render_doe_chart_note(),
+            self._render_doe_design(),
             self._render_sensitivity_effects(),
             self._render_monte_carlo(),
             self._render_spc(),

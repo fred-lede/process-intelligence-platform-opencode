@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from .base import ReportGenerator, cell_value, flatten_rows
-from .models import ReportData
+from .models import ReportData, model_type_label
 
 
 class ExcelReportGenerator(ReportGenerator):
@@ -107,7 +107,7 @@ class ExcelReportGenerator(ReportGenerator):
                 m = model.get("metrics") or {}
                 ws3.append([
                     model.get("model_id", ""),
-                    model.get("model_type", ""),
+                    model_type_label(model.get("model_type")),
                     m.get("r2", ""),
                     m.get("rmse", ""),
                     m.get("mae", ""),
@@ -128,7 +128,8 @@ class ExcelReportGenerator(ReportGenerator):
             header(ws_bm, ["項目", "值"])
             for key in ("model_id", "model_type", "target", "equation", "status"):
                 if best.get(key) not in (None, ""):
-                    ws_bm.append([key, best.get(key)])
+                    value = model_type_label(best[key]) if key == "model_type" else best.get(key)
+                    ws_bm.append([key, value])
             for key, value in (best.get("metrics") or {}).items():
                 ws_bm.append([f"metrics.{key}", cell_value(value)])
             if coefs:
@@ -136,7 +137,37 @@ class ExcelReportGenerator(ReportGenerator):
                 header(ws_bm, ["係數項", "係數值"])
                 for term, value in coefs.items():
                     ws_bm.append([term, cell_value(value)])
-        
+
+        # Sheet: designed-DOE basis, mirroring the HTML "設計基礎與 ANOVA 自由度" section.
+        # Without it an Excel export of a designed DOE carried no design description at all,
+        # so the reader could not tell whether replicates existed.
+        ctx = self.data.design_context or {}
+        if ctx:
+            ws_doe = wb.create_sheet("設計基礎")
+            header(ws_doe, ["項目", "值"])
+            for label, value in (
+                ("設計格數（水準組合）", ctx.get("n_cells")),
+                ("實際觀測格數", ctx.get("observed_cells")),
+                ("重複次數（最小／最大）",
+                 f"{ctx.get('replicate_min')} / {ctx.get('replicate_max')}"),
+                ("模型自由度", ctx.get("model_df")),
+                ("殘差自由度", ctx.get("residual_df")),
+                ("觀測值總數", ctx.get("n_obs")),
+                ("有重複觀測", "是" if ctx.get("has_replicates") else "否"),
+            ):
+                ws_doe.append([label, cell_value(value)])
+            if ctx.get("warning"):
+                ws_doe.append([])
+                ws_doe.append(["注意", str(ctx["warning"])])
+            evidence = self.data.confirmation_evidence or {}
+            ws_doe.append([])
+            header(ws_doe, ["確認實驗", "值"])
+            ws_doe.append(["已記錄次數", evidence.get("count", 0)])
+            ws_doe.append(["通過次數", evidence.get("pass_count", 0)])
+            ws_doe.append(["合格率", cell_value(evidence.get("pass_rate"))])
+            ws_doe.append(["平均絕對預測誤差",
+                           cell_value(evidence.get("mean_abs_prediction_error"))])
+
         # Sheet 4: Interactions
         if self.data.interactions.get("matrix"):
             ws4 = wb.create_sheet("交互作用")
